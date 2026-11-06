@@ -772,8 +772,9 @@ async function oneModule(m) {
     return { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
   }
   /* 2.73.0 - Phase A finished it (PASS / MODULE CLEAN): no builder, straight to the judges; else the builder's brief is its needs file */
-  const time = cleanA(lineOf(m)) ? null
-    : timeOf(await place(() => buildUntilPass(m, phaseB(m))))       // 2.65.0 (Raivis) - the module clock, from the builder's report
+  const built = cleanA(lineOf(m)) ? null : await place(() => buildUntilPass(m, phaseB(m)))
+  const time = built === null ? null : timeOf(built)     // 2.65.0 (Raivis) - the module clock, from the builder's report
+  let reachedPass = built === null || passed(built)      // no PASS from build_module.py, not done - whatever the judges say
   const [d3a, fga, q] = await Promise.all([threeD(m), figures(m),
     agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })])
   const b3 = broken3d(d3a), bf = brokenFigs(fga && fga.review), bq = fixable(q)
@@ -785,9 +786,11 @@ async function oneModule(m) {
       const figs = [...new Set(bf.map((f) => f.slide))]
       await Promise.all([fixFigures(m, bf), b3.length || bq.length
         ? agent(fixAll(m, b3, [], bq, figs), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL }) : null])
-      await place(() => agent(fixBuild(m, b3, figs), { label: `fixbuild:${m.id}`, phase: 'Build', ...MECHANICAL }))
+      const fb = await place(() => agent(fixBuild(m, b3, figs), { label: `fixbuild:${m.id}`, phase: 'Build', ...MECHANICAL }))
+      reachedPass = reachedPass || passed(fb)
     } else {
-      await place(() => agent(fixAll(m, b3, bf, bq), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL }))
+      const fa = await place(() => agent(fixAll(m, b3, bf, bq), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL }))
+      reachedPass = reachedPass || passed(fa)
     }
     const [d3b, fgb, q2] = await Promise.all([
       b3.length ? threeD(m, '+fix') : null,
@@ -807,6 +810,11 @@ async function oneModule(m) {
   if (out && d3) {
     out = Object.assign({}, out, { three_d: d3 },
       broken3d(d3).length || (d3.check && !d3.check.ok) ? { blocking: true } : {})
+  }
+  if (!reachedPass) {
+    log(`module ${m.id}: build_module.py never printed PASS - NOT DONE, blocking`)
+    out = Object.assign({}, out || { module: String(m.id), findings: [] }, { blocking: true,
+      classification: 'NOT DONE - build_module.py never printed PASS (its last FAIL is in _build/M' + two(m) + '_answer.txt)' })
   }
   if (out && fg) {                                   /* the figures' left-overs are the operator's list, not a module failure */
     const left = (fg.for_aleksis || []).map((f) => `FIGURE ${f.slide}: ${f.what}`)

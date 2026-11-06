@@ -159,6 +159,13 @@ def main(argv=None):
     elif not rec:
         print("No Phase A run to wait for")
         return 1
+    elif mods and set(mods) - set(rec.get("modules") or []):
+        # a module asked for while another run goes is not in that run: joining it answered for the other modules only
+        # and never built this one (the factory trial: M01 started while M04's run was going)
+        print("Stopped - Phase A is running for module(s) %s; %s is not in that run. Wait for it (phase_a.py <course> --wait), "
+              "then start the rest" % (", ".join(str(x) for x in rec.get("modules") or []),
+                                       ", ".join(str(x) for x in sorted(set(mods) - set(rec.get("modules") or [])))))
+        return 2
     t0 = time.time()
     while time.time() - t0 < ANSWER_WITHIN:
         rec = json.load(io.open(run_p, encoding="utf-8")) if os.path.isfile(run_p) else {}

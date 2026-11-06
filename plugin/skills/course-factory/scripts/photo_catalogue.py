@@ -189,6 +189,11 @@ def kb_photos(course):
 FOUND = "photos_found"      # working_claude\photos_found: the course's one sourcing pass saves here, each with its record
 
 
+def as_words(x):
+    """a record's field as words: the visual-sourcer may write "shows" as a list"""
+    return "; ".join(str(y) for y in x) if isinstance(x, (list, tuple)) else str(x)
+
+
 def found_photos(course):
     """the photographs the course's sourcing pass found (working_claude\\photos_found, any sub-folder), each with its
     _photo_meta.json record - "found_for": "M04 s05" names the slot it was found for; one under rights review is left out"""
@@ -205,7 +210,7 @@ def found_photos(course):
             if not isinstance(rec, dict) or not os.path.isfile(p) or "REVIEW" in state or "REJECT" in state:
                 continue
             out.append({"path": p, "source": "found", "origin": rec.get("url_or_origin") or rec.get("source") or name,
-                        "description": " - ".join(x for x in (rec.get("title"), rec.get("shows"), rec.get("description")) if x)[:600],
+                        "description": " - ".join(as_words(x) for x in (rec.get("title"), rec.get("shows"), rec.get("description")) if x)[:600],
                         "topic": None, "rights": rec.get("rights_state") or "", "record": rec,
                         "found_for": str(rec.get("found_for") or "").strip(), "sha256": sha_of(p)})
     return out

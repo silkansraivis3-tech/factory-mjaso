@@ -367,13 +367,15 @@ def main():
         three = lambda b, kinds: w(os.path.join(b, "module01", "presentation", "index.html"), deck.replace(
             '<section class="slide active" id="s01"', "".join('<section class="slide" id="v%d" data-title="Tanks %d" data-kind="Theory" data-cue="- x"'
                                                              ' data-visual="%s"></section>' % (i, i, k) for i, k in enumerate(kinds)) + '<section class="slide active" id="s01"'))
-        broken("three of five teaching slides in 3D", lambda b: three(b, ["model_3d", "model_3d_scan", "model_3d", "photo"]),
-               "module01: 3 of the 5 teaching slides are 3D (60 %) - at most 50 %")
+        broken("one of five teaching slides in 3D", lambda b: three(b, ["model_3d", "photo", "photo", "schematic"]),
+               "module01: 1 of the 5 teaching slides are interactive 3D (20 %) - between 60 and 80 %")
+        broken("five of six teaching slides in 3D", lambda b: three(b, ["model_3d", "model_3d_scan", "model_3d", "model_3d", "model_3d"]),
+               "module01: 5 of the 6 teaching slides are interactive 3D (83 %) - between 60 and 80 %")
         b = os.path.join(tmp, "half", "modules")
         shutil.copytree(c, b)
-        three(b, ["model_3d", "photo", "model_3d", "schematic"])
+        three(b, ["model_3d", "model_3d_scan", "model_3d", "photo"])
         code, out = run(b, "--no-importer")
-        check("... two of five is fine", code == 0, out)
+        check("... three of five is fine", code == 0, out)
         w(os.path.join(b, "module01", "assets", "lib", "three.min.js"), "/* three */")
         w(os.path.join(b, "module01", "assets", "fig", "tanks3d.js"), "var r = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});"
           " r.setPixelRatio(window.devicePixelRatio); r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap; light.shadow.mapSize.set(2048, 2048);")

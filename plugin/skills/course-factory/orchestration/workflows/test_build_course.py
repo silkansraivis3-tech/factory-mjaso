@@ -234,6 +234,13 @@ def main():
         check("2.72.7 a builder that stopped on a build's FAIL and listed what is left gets NO retry - its module goes to the "
               "judges (2.72.5: both retries ended without PASS)",
               "error" not in lst and "build:2+1" not in ll and "qa:2" in ll and ll.index("qa:2") > ll.index("build:2"), lst)
+        nop = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_listed": ["1"], "factory": "C:/f/skills"})
+        r1 = next((q for q in (nop.get("r") or {}).get("qa", []) if q and q.get("module") == "1"), {})
+        check("a module whose build never printed PASS is NOT DONE and blocks, though its QA found nothing (the first "
+              "factory trial: four modules ended on FAIL and were reported as built)",
+              "1" in (nop.get("r") or {}).get("blocking", []) and r1.get("classification", "").startswith("NOT DONE"), nop.get("r"))
+        r2 = next((q for q in (nop.get("r") or {}).get("qa", []) if q and q.get("module") == "2"), {})
+        check("... a module that reached PASS is never called NOT DONE", not r2.get("classification", "").startswith("NOT DONE"), nop.get("r"))
         b2 = lst.get("prompts", {}).get("build:2", "")
         with open(os.path.join(HERE, "..", "..", "compile", "BUILDER_CARD.md"), encoding="utf-8") as f:
             card0 = f.read()

@@ -210,7 +210,7 @@ the audit measures it.
 Asked for by name in the build sheet: `"template"` (any of the first thirteen - the last seven come from the slide's
 own words, `script/GUIDE.md` §1; `compare-two` needs `"blocks": [[1, 2], [3, 4]]`
 and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `"split": 0.5`-`0.6` (the text's share),
-`"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
+`"box"` (the picture's box, below), `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.
 
 **Never the same look twice in a row (L62, 2.53.0) - and 80 / 20 light (owner, 2.62.1).** A slide's look is its shape
@@ -229,12 +229,23 @@ first line beside it) is yours: give it `"parts"` or a shorter picture column, a
 1600 px on its long side is enlarged once (Lanczos, a light sharpening, at most four times; the original kept in
 `working_claude/photo_originals/M01/`); under 800 px it is listed - a larger original is still the real fix.
 
-**The owner's rules, checked at every build:** a split slide is 55 / 45 (50-60 % text, never 80 / 20); more than 60
-words always has a picture beside it; never three teaching slides in a row without a teaching picture (a task launch and
-the recap neither count nor break the run); approved words are never cut, summarised or set smaller - when they need
-more room they go into parts. A drawing is now about 45 % of the slide wide, not 60 %: one whose labels become too
-small at that width is reported by the drawing check like any other - give it bigger labels, `"split": 0.5`, or the
-`figure-stage` template.
+**The picture's box.** A picture beside words gets one of four boxes (`layout-templates.json` `"boxes"`,
+`compile/scripts/layout_fit.py`): `text-wide` 40 % of the width, `even` 45 % (the default), `picture-wide` 58 %,
+`picture-large` 65 %. The compiler counts what the picture shows at once - a kit drawing's labelled parts, a 3D scene's
+labels, an SVG's words, a photograph's spots - and gives it the box those names need (up to 6 any box, 7-10 even,
+11-15 picture-wide, 16-22 picture-large, 23 or more the whole slide; a 3D model picture-wide at least), the words what
+is left, in parts when they do not fit. Growing is worth it while it costs the words at most one part more than the
+even box; past that, or when the picture needs the whole slide and the words are more than 45, the compile stops on
+the slide: make it another kind of picture - in steps (a few names a step), a 3D model whose names show on tap, the
+picture on a slide of its own (`"composition": "stage"`), or fewer names. Each such slide carries `data-box`. When the
+audit finds a drawing's words too small or its labels colliding, or the fit gate sees a picture only in part, the next
+build's layout solver gives it the next larger box (`settled: ... its picture needed more room`). `python
+compile/scripts/layout_fit.py <figure> --words N` says what a figure gets before a build.
+
+**The owner's rules, checked at every build:** a split slide is 55 / 45 by default (50-60 % text when the picture is
+simple, never 80 / 20); more than 60 words always has a picture beside it; never three teaching slides in a row without
+a teaching picture (a task launch and the recap neither count nor break the run); approved words are never cut,
+summarised or set smaller - when they need more room they go into parts.
 
 | In the script, or in the delivery file | On the screen |
 |---|---|

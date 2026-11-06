@@ -205,11 +205,10 @@
   "three_d": {
     "_authority": "Owner, 2026-10-07 (L46, 2.22.0): 'now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it makes sense; and it lags a little in these 3D models, maybe optimisation can be considered - but mainly I love these 3D models.' Second message, same day: 'I also don't need you to cut the quality of 3D models - don't make it in all slides, about 50% of the presentation is the max that can be 3D models, but also don't cut quality, and put it only on slides where it makes sense, not only because you can.'",
     "families": ["3d"],
-    "max_share": 0.5,
-    "count_from": 2,
-    "_max_share": "At most half of the presentation's teaching slides are 3D (model_3d, model_3d_scan, model_3d_licensed). Counted once a module has 2 slides with 3D or more - one 3D model in a short module is always fine. A must-fix in the content script and in the built deck (each .slide carries data-visual); the architecture page counts the plan. The cap is on how many - never on how good: every 3D model that stays is made at full quality.",
-    "max_in_a_row": 2,
-    "_in_a_row": "A suggestion: more than 2 slides in a row with a 3D model - a photograph, a drawing or an animation between them gives the eye a rest.",
+    "min_share": 0.6,
+    "max_share": 0.8,
+    "count_from": 3,
+    "_share": "L67 (owner, 2.88.0) replaces L46's cap of half: 60-80 % of a presentation's teaching slides step through interactive 3D (model_3d, model_3d_scan, model_3d_licensed); the rest are a static 3D render or a photograph, never the figure kit's flat line drawing. Counted once a module has 3 teaching slides or more. A must-fix in the content script and in the built deck (each .slide carries data-visual); the architecture page counts the plan and only suggests. The operator may keep a different share as a recorded design choice (design_choices.py, three-d-share). Every 3D model is made at full quality.",
     "fits": [
       "equipment and structures whose shape, inside or arrangement in space is what is taught - cargo tanks and containment systems, hull sections and spaces, pumps, compressors, valves, manifolds, piping runs, the reliquefaction plant, an enclosed space and its access",
       "something the trainee must later recognise or operate on board, seen from every side",

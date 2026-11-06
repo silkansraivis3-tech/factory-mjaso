@@ -138,6 +138,33 @@ def main():
         check("a true-or-false why or a revealed answer past 70 words is theory hidden in a reveal - a must-fix (the factory "
               "trial: M01 s04, 82 words, cut)", got == [("s02", "text"), ("s03", "reveal")], got)
         check("... and its words are in Latvian and Russian too", cs.LABELS["lv"].get("t_long_answer") and cs.LABELS["ru"].get("t_long_answer"))
+        print("\n-- a slide with a picture holds what the tablet shows")
+        B = cs.RULES["beside_picture"]
+        pic = {"kind": "photo", "aspect": "4:3", "shows": "a gas detector"}
+        sit = " ".join(["the tank was gas-freed and ventilated"] * 10)
+        scen = {"module": 1, "operator_language": "en", "screens": [
+            slide("s01", sit, "", picture=pic, ask="Which instrument first?", choices="Oxygen\nFlammable\nToxic",
+                  why="Right.\nNo.\nNo.", right="A")]}
+        got = [(f["screen"], f["rule"]) for f in cs.theory_check(scen)[0] if f["rule"] == "t_overfull"]
+        check("a scenario's situation past %d words beside its picture is a must-fix (the factory trial: every scenario "
+              "beside a picture was cut on the tablet)" % B["situation"], got == [("s01", "t_overfull")], got)
+        scen["screens"][0]["picture"] = {"kind": "none"}
+        check("... without a picture the whole slide is its room: not checked",
+              not [f for f in cs.theory_check(scen)[0] if f["rule"] == "t_overfull"])
+        work = {"module": 1, "operator_language": "en", "screens": [
+            slide("s01", " ".join(["open the valve slowly and watch the gauge"] * 12), "", picture=pic, ask="What next?",
+                  reveal="Close it.")]}
+        got = [f["detail"] for f in cs.theory_check(work)[0] if f["rule"] == "t_overfull"]
+        check("a worked example's steps and question past %d words beside its picture too" % B["steps"], len(got) == 1, got)
+        short = {"module": 1, "operator_language": "en", "screens": [
+            slide("s01", "Tank 2 carried ammonia. It is gas-freed. Two crew will enter it.", "", picture=pic,
+                  ask="Which instruments do you use before the entry, and in which order?",
+                  choices="The oxygen analyser, then the flammable gas detector, then ammonia tubes\nThe personal monitors only",
+                  why="Right: oxygen first, then flammable vapour, then the toxic cargo.\nThey are for the people inside.", right="A")]}
+        rules_ = [f["rule"] for f in cs.theory_check(short)[0]]
+        check("a scenario trimmed to fit is not thin: its question, choices and whys count toward the slide's %d words "
+              "(the factory trial: trimming fought the floor)" % cs.RULES["slide"]["min_words"],
+              "t_thin_slide" not in rules_ and "t_overfull" not in rules_, rules_)
         check("the words on screen: the points of a slide of short points, never its notes",
               "insulation" in cs.shown_text({"title": "T", "text": "long words", "points": "insulation", "notes": "secret"})
               and "secret" not in cs.shown_text({"title": "T", "text": "x", "notes": "secret"})

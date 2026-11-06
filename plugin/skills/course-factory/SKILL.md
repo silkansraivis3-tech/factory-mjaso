@@ -16,612 +16,300 @@ description: >
 
 # Course factory — an accredited programme becomes two tablets
 
-**v1.2 (2026-09-30) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
+**The acceptance test.** Someone who has never seen the course opens the instructor terminal, types their ID, picks the
+module, presses **Start** and **Next** to the end — and a real accredited class is taught, in the programme's minutes,
+with the trainees' tablets carrying every task the screens announce. This skill decides the mode, runs the gate and
+routes; it writes no screens, tasks or content itself.
 
-## Every reply to the operator — human, and in three parts (L25, owner 2026-10-01)
+## Every reply to the operator — human, in three parts (L25)
 
-*"Every response needs to be humanized and understandable - by points: what's done, what's next, what to check
-now - understandable for a person who knows zero about IT and all these terms."*
-
-Every message the operator reads - in the chat, at every STOP, after every step - is written for someone who knows
-the sea and the course, and nothing about computers. It has these three parts, as short points, in the operator's
-language:
+The operator knows the sea and the course, nothing about computers. Every message, at every STOP, in their language:
 
 | | English | Latviešu | Русский |
 |---|---|---|---|
-| what was done, and what it means for the course | **Done** | **Izdarīts** | **Сделано** |
-| what to open or look at now, and exactly where (the full path, and what it opens in) | **Check now** | **Pārbaudiet tagad** | **Проверьте сейчас** |
-| what happens next, and what the factory needs from them, if anything | **Next** | **Tālāk** | **Дальше** |
+| what was done and what it means for the course | **Done** | **Izdarīts** | **Сделано** |
+| what to open now, and exactly where (full path, what it opens in) | **Check now** | **Pārbaudiet tagad** | **Проверьте сейчас** |
+| what happens next, and what the factory needs from them | **Next** | **Tālāk** | **Дальше** |
 
-- **Everyday words.** No *script, JSON, commit, push, repo, plugin, render, flag, hash, schema, validate, pipeline,
-  build, folder tree* - say what it is: *"the file that holds the module's words"*, *"save and publish the factory"*,
-  *"the check found nothing wrong"*. A technical word that truly cannot be avoided gets its plain meaning beside it,
-  once. The maritime terms stay exactly as professional as they are (L28) - this is about computer words only.
-- **Short.** A few points per part, one idea a point. Numbers as the operator counts them: *"23 modules"*, *"80
-  minutes"*, not file sizes or test counts unless they asked. Test results in one plain line: *"all checks passed"*.
-- **Nothing to decode.** A question is a choice with options (the pop-up, L31), not an essay. A problem always says
-  what to do about it (the five parts below). Commands the operator must run are given ready to copy, with one
-  sentence on what they do - never as the only explanation.
-- **Offer, don't instruct.** If the factory can do it, say *"tell me and I will"*.
+- **Everyday words** — no *script, JSON, commit, push, plugin, render, flag, schema, pipeline, build*; say what it is.
+  A computer word that cannot be avoided gets its meaning beside it, once. Maritime terms stay fully professional (L28).
+- **Short** — a few points, one idea each; numbers as the operator counts them; test results in one line.
+- **A question is a choice with options** (one pop-up, L31). **A problem says** what is wrong, where (full path and
+  the module / slide), how to see it, what to do, and how they will know it worked. **Offer**: *"tell me and I will"*.
+- `knowledge/plain-language.json` → `every_reply` holds the rule; `scripts/check_plain_language.py` checks a report.
 
-`knowledge/plain-language.json` → `every_reply` holds the same rule for the checks.
+## The operator's request wins — L26
 
-**The acceptance test.** Someone who has never seen the course opens the instructor terminal,
-types their ID, picks the module, presses **Start**, and presses **Next** to the end — and a real
-accredited class gets taught, in the minutes the approved programme allows, with the trainees'
-tablets carrying every task the screens announce.
+**The course material** (content, structure, emphasis, slides, examples, tasks, wording) is **done as asked** — never
+refused, watered down or quietly ignored; their request in chat is the authorisation L18 asks for, and it reaches
+expert-edited regions too (L24). Four hard limits stay: **the programme and its Main ILOs (L1, L2) · the official
+hours (L1, L3) · no source, no maritime claim (L4) · the offline tablet (L6)**. A fact the operator states is a source:
+use it, record it as theirs, list it in that module's script review. When a request hits a limit: one or two plain
+sentences why, the closest option that works, and do that.
 
-This skill is the **entry point** for that delivery target. It decides mode, runs the gate, and
-routes. It does not itself write screens, tasks, or content.
+**The design** (colours, type, logo, shell, layouts, animation, recap, viewer, text size, space, the 3D share —
+`knowledge/design-rules.json`) **is the person's to decide**:
 
----
+1. Nothing conflicts → do it.
+2. It goes against a factory rule → name the rule and the risk in one or two sentences (`design_choices.py rules`),
+   ask **once**: *your way* / *the factory's way*.
+3. Their way → do it fully and record it: `scripts/design_choices.py add <course> --rule <id> --choice "..." --said
+   "<their words>" --risk "..."`. Every check then reports it as **their choice**; no build, fix or session changes it
+   back, and it is never asked again.
+4. The factory's way → keep the rule; their words go into `FEEDBACK_LOG.md`.
 
-## The operator's request wins — L26 (design part revised 2.30.0)
+A check is never a reason to undo a person's wish. Every other "never" here governs the factory's own choices.
 
-**The course material** — content, structure, emphasis, number of slides, examples, tasks, wording —
-is **done** as asked: never refused, never watered down, never quietly ignored. Their request in chat
-is the explicit authorisation L18 asks for, and it reaches expert-edited regions too (L24 protects an
-expert's change from the factory, not from the operator). The material keeps four hard limits, unchanged:
-**the programme and its Main ILOs (L1, L2) · the official hours (L1, L3) · no source, no maritime claim
-(L4) · the offline tablet (L6)**. A fact the operator states is a source — use it, record it as theirs,
-and list it in that module's content-script review (L29). When a request truly hits one of the four: one
-or two plain sentences why, the closest option that works, and then do that.
+## Owner decisions in force — every law, one line
 
-**The design** — how it looks and behaves on the screen: colours, typeface, logo use, the shell and its
-components, layouts, animation, the recap slide, the picture viewer, text size, free space, the 3D share
-(`knowledge/design-rules.json`) — **is the person's to decide** (owner, 2026-10-15: *"if some of persons
-ideas conflicts with plugin rules, claude should tell person about this risk, but still after person
-reviews and tells that he wants his way, plugin listens to that"*):
+Where any older text in this factory disagrees with a row below, **the row wins**. Most rows are a check that stops the
+build. Before bending, questioning or changing a law, or when a request seems to collide with one, read it in full:
+L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with its reasons in `references/laws-in-full.md`.
 
-1. **Nothing conflicts** → just do it. No question.
-2. **It goes against a factory design rule** (even the brand) → say which rule and the risk in one or two
-   plain sentences (`design_choices.py rules` has the risk for each), and ask **once** — one pop-up, two
-   answers: *your way* / *the factory's way* (L31).
-3. **Their way** → do it fully, and record it:
-   `scripts/design_choices.py add <course> --rule <id> --choice "..." --said "<their words>" --risk "..."`
-   (it is a standard in `STANDARDS.md`, L50). From then on every check reports that place as **their
-   choice**, and **no build, fix or later session changes it back**. Never ask about it again; only the
-   person removes it.
-4. **The factory's way** → keep the rule; their words go in `FEEDBACK_LOG.md` (L32).
-
-**A check is never a reason to undo a person's wish.** When a check flags something they asked for, the
-answer is step 2 — never a quiet repair. Every other "never" in this factory governs the factory's own
-choices, not the operator's requests.
-
-## Owner decisions in force — Phase 5
-
-Decided 2026-09-30. **Where an older rule anywhere in this factory disagrees with a row below, the
-row wins** — even before its step has been built out. Each row is one line; most are enforced by a check that stops
-the build. **Every row in full** — its details, file names and the owner's words — is `references/owner-decisions.md`,
-one heading per law (grep `## L45`, read that section only). Read a row in full before working on its step, and whenever a request
-seems to collide with it. The record behind the rows: `references/laws-in-full.md`.
-
-| | The rule | Built out in |
-|---|---|---|
-| **L27** | Three test levels, all on the **trainee tablet**: a self-check shows the trainee's own score; the **module check** shows the score - no pass mark and no PASSED / NOT PASSED; the **final assessment** is the only one with the pass mark (70 %) and is blind | step 6 |
-| **L28** | Course type `NEW_ENTRANT` / `EXPERIENCED` from intake shapes the build. **Never easier names** - the professional terms, explained. Every model-course instrument and simulator is assumed available | steps 2, 7 |
-| **L29** | A word-for-word **content script** per module is approved before any HTML; the slides say exactly that. See *Stage 3* | now |
-| **L30** | **Module 1 is a pilot**, approved before any other module is built | step 10 |
-| **L31** | Ask like a colleague: questions batched as **one pop-up with options** at the next STOP. Honesty markers in `factory-notes.md`, never on a slide | now |
-| **L32** | `COURSE_STATE.md` at the end of every stage; every correction in `FEEDBACK_LOG.md`. See *The course remembers* | now |
-| **L33** | Pictures: KB -> old course -> source files -> internet -> generated. KB and old-course pictures are usable as they are; small ones enlarged; **nobody is asked to take a photo** | step 8 (2.73.2) |
-| **L34** | **One module per programme topic**, in its order, with its hours; the final assessment is the last module. Topics never merged or split | now |
-| **L35** | **Two tablets**: slides on the instructor's, tasks **only** on the trainee's, opened by **OPEN TASK** | now; the app in step 6 |
-| **L36** | **Enough theory before any task** - `knowledge/theory-rules.json`, checked by `content_script.py` | now |
-| **L37** | Every slide names its picture: kind, what it shows, who makes it. `knowledge/media-and-tasks.json` | now; steps 8-9 |
-| **L38** | **Tasks varied and hands-on**, no typing (`course-task-ux` §2a); checked by `content_script.py` | now; step 6 |
-| **L39** | A colleague gets only the HTML; the real-tablet test is the owner's, at the end | now |
-| **L40** | **The factory works in `course\`**; the master folder's source files, knowledge base and old course are read only | now |
-| **L42** | **Tasks usable with zero tablet experience** - tap and drag, big controls, instant feedback. `course-task-ux` §0 | step 6 |
-| **L43** | **Every module in its own folder**, offline. `scripts/check_module_folder.py` | steps 6-10 |
-| **L44** | **Three places in `course\`:** `to_review\`, `modules\`, `working_claude\`. `workspace.py tidy` | now |
-| **L45** | **The classroom system's own rules** - `knowledge/classroom-system.json`, checked by `scripts/check_course_package.py` | steps 6-10 |
-| **L46** | **3D where shape, inside or layout in space teaches** - at most half the teaching slides, smooth on the tablet | now; step 9 |
-| **L47** | **A generated picture only within the budget the operator said yes to** - one yes per course at Stage 2 (`intake.json` `picture_budget`) | now |
-| **L48** | **Bloom measured, lifted by the tablet** - `bloom/GUIDE.md`, `scripts/bloom_map.py`; one level a course (L71) | now |
-| **L49** | **20 / 80 in class, every theory slide kept** - `active/GUIDE.md` at Stage 2; a suggestion, never a stop | now |
-| **L50** | **A fix is not a build** - `fix/GUIDE.md`, one list, one yes, one check (`fix.py`) | now |
-| **L51** | **Every picture opens full screen; every module closes with the same recap** before the module check | now |
-| **L52** | **As many real photographs as possible**; a source-book figure only cleared by a named person (`check_assets.py clear`) | now |
-| **L53** | **No empty space, good padding** - compiled decks pass the layout audits before they are shown | now |
-| **L54** | **Every drawing whole and clean** - `audit_drawing.js` | now |
-| **L55** | **Figures come from the figure kit** (`course-visuals/kit/SPEC.md`), never a one-off SVG | now |
-| **L56** | **A photograph carries what it shows and its credit into the full-screen view** - no credit text on a slide | now |
-| **L57** | **A drawing of real things carries their real photographs**, unasked | now |
-| **L58** | **Every photograph once in the whole course** | now |
-| **L59** | **No module before its map** - ILO map approved and a knowledge-base decision recorded. `scripts/course_gate.py` | now |
-| **L60** | **One 3D scene per module where the subject allows** - recommended, declined only with the operator's reason | now |
-| **L61** | **Every slide is one of the layout templates** (`course-module-ui/knowledge/layout-templates.json`), chosen by the compiler | now (2.52.0) |
-| **L62** | **Never the same look on two slides in a row; at least 80 % of slides on the light ground** - the compiler does it | now |
-| **L63** | **Equipment drawn as it looks on board** - `course-visuals/kit/PARTS.md` | now (2.56.0) |
-| **L64** | **A module in 30-40 min, its fixes in 20** - the pre-check first (`compile/scripts/precheck.py`), a rebuild is a fix (`fix.py rebuild`) | now (2.65.0) |
-| **L65** | **A drawing that moves stays smooth** - `audit_motion.js` fails a build that breaks it | now (2.78.0) |
-| **L66** | **Every item a simulator can train is trained on one** - `coverage/SIMULATORS.md`, `sim_coverage.py check` | now (2.82.0) |
-| **L67** | **A picture is 3D or a photograph, never a flat line drawing; every slide moves on Next** - the templates in `gb_upgrade.css`, `gb_steps.js` | now |
-| **L68** | **The Instructor-Led Course Development Guideline** - `instructor-led/GUIDE.md`, `scripts/instructor_led.py check` | now (2.97.0) |
-| **L69** | **The experts get the pedagogy first** - three documents before any script (`scripts/pedagogy_review.py`, `bloom/GUIDE.md` §5) | now |
-| **L71** | **Kept, lifted one level, seen whole** - the old course's order and theory kept; Bloom one level; every claim proved (`fact-checker`); the build walks every Next (`fit_gate.py`) | now |
-| **L70** | **Built after the expert's Ready** - the office PC builds unattended. See *Auto build* | now |
-| **L41** | **The old course is the foundation** - read whole at intake (`scripts/old_course.py`); its order and explanations kept (L71) | now |
-
-Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
-predict-then-reveal, worked example then own attempt. More practice than theory; theory never removed.
+| | The rule |
+|---|---|
+| **L1** | **The approved programme is law; minutes are its units.** An academic hour is what the programme says (never assume 60); each module's teaching time equals its allocated minutes exactly; what does not fit goes to the handout. `hours/scripts/check_hours.py` before believing any plan |
+| **L2** | **Main ILOs copied verbatim** — never edited, renumbered or improved. Sub-ILOs may be re-expressed, `PROVISIONAL` until ratified, never renumbered where a trainee sees them. The programme governs; the IMO model course guides |
+| **L3** | **Official hours never changed to fit a schedule**; no attendance, contact time or compliance record is ever made up |
+| **L4** | **No source, no maritime claim.** Never fill a gap from memory; a stated gap is a good answer. Every claim proved in the course's knowledge base by the `fact-checker` before approval (`fact_check.py`) |
+| **L5** | **Theory delivered as active learning** — aim for 80 % learner-active minutes (Track B, `data-active`); the programme's theory/practice split (Track A, `data-track`, `check_balance.py`) never changes; theory is never removed; never reach the target by renaming screens |
+| **L6** | **Tablet-first, touch-first, offline** — targets ≥ 44 px, no hover-only control, nothing at class time needs a network |
+| **L7** | **Nothing is useless until you have grepped** its id, class, label and filename across both terminals, the course and every generated script |
+| **L8** | **Explain and relocate; do not delete** on a complaint. When the operator tells you to remove something, remove it (after L7) |
+| **L9** | **Edit; do not regenerate** a stable artefact |
+| **L10** | **Visible must be sufficient**: a line that refers to something names it on the same line; this outranks any word budget |
+| **L11** | **A generated file is never hand-edited** — change its input or its generator and regenerate |
+| **L12** | **Every asset has provenance, a licence and a look** (open every image); unclear rights are `RIGHTS_REVIEW_REQUIRED` and never ship |
+| **L13** | **A visual explains** a mechanism, state change, relationship, flow, sequence or cause and effect — never decoration |
+| **L14** | **Read only:** the reference course, `source_files`, the knowledge base and the Android app (the L40 hook refuses writes) |
+| **L15** | **A green exit is not proof** — read the output and the line for what you changed; report failures as plainly as passes |
+| **L16** | **The factory builds and reports; the owner approves, commits, publishes and installs** |
+| **L17** | **Every screen looks composed** — a big empty box or a huddle in a corner is a defect, however green the checks |
+| **L18** | **Content is locked, delivery is free** (`retrofit/knowledge/content-lock.json`): meaning, ILOs, hours, assessment intent, exercises, terms, facts and language need authorisation; screens, layout, visuals, animation, interaction and code are rebuilt freely. An old visual is a teaching decision: keep the decision, rebuild the implementation |
+| **L19** | **Every course is in English**, never asked; the programme stays in its own language and is quoted in English; chat and notes follow the operator. `retrofit/scripts/check_language.py` |
+| **L20** | **A figure that claims to move is proved alive** (moves or responds; static is a defect for a dynamic idea) by a probe that can see |
+| **L21** | **The Android app is a publish target, not a workspace** — read only until a person approves that course and version in their own words: *"Approved. Publish this course to the NOVIKONTAS training app."* (`publish.py --approved-by`) |
+| **L22** | **A slide is not an internal document** — no file talk, sources or review notes on what a trainee reads (`check_slide_text.py`) |
+| **L23** | **A topic screen leads with what shows it** — the visual above the prose, looked for before the words are set |
+| **L24** | **An expert's change is content** (`retrofit/scripts/detect_expert_edits.py`, evidence or ask): restyled, never rewritten by the factory; the operator may still change it |
+| **L25** | **The reader does not work in IT** — see *Every reply to the operator* |
+| **L26** | **The operator's request wins** — see above |
+| **L27** | Three test levels, all on the **trainee tablet**: a self-check shows the trainee's own score; the **module check** shows the score - no pass mark and no PASSED / NOT PASSED; the **final assessment** is the only one with the pass mark (70 %) and is blind |
+| **L28** | **Course type** `NEW_ENTRANT` / `EXPERIENCED` from intake shapes the build; never easier names — the professional terms, explained; every model-course instrument and simulator is assumed available |
+| **L29** | **A word-for-word content script** per module is approved before any HTML; the slides say exactly that (`check_script_match.py`) |
+| **L30** | **Module 1 is a pilot**, approved before any other module is built |
+| **L31** | **Ask like a colleague** — questions batched into one pop-up with options at the next STOP; honesty markers in `factory-notes.md`, never on a slide |
+| **L32** | **The course remembers** — see below |
+| **L33** | **Pictures: found before made** — knowledge base → old course → source files → internet → generated; small ones enlarged; nobody is asked to take a photo; nothing a trainee must recognise is invented |
+| **L34** | **One module per programme topic**, in its order, with its hours; never merged or split; the final assessment is the last module |
+| **L35** | **Two tablets** — slides on the instructor's, tasks only on the trainee's, opened with **OPEN TASK** |
+| **L36** | **Enough theory before any task** (`knowledge/theory-rules.json`, `content_script.py`) |
+| **L37** | **Every slide names its picture** — kind, what it shows, who makes it (`knowledge/media-and-tasks.json`) |
+| **L38** | **Tasks varied and hands-on, no typing**; a self-check has at most 2 basic tasks (choose, match, order), the rest rich (3D, animation, a panel) — 3 + 2 in a set of five (`content_script.py` `t_sc_mix`) |
+| **L39** | **A colleague gets only the HTML**; the real-tablet test is the owner's, at the end |
+| **L40** | **The factory works in `course\`**; the master folder's source files, knowledge base and old course are read only (`hooks/guard_writes.py` refuses a write) |
+| **L41** | **The old course is the foundation** — read whole at intake (`scripts/old_course.py`); each module says what it keeps, modernises and adds |
+| **L42** | **Tasks usable with zero tablet experience** — tap and drag, big controls, instant feedback (`course-task-ux` §0) |
+| **L43** | **Every module in its own folder**, complete and offline (`scripts/check_module_folder.py`) |
+| **L44** | **Three places in `course\`**: `to_review\`, `modules\`, `working_claude\` (`workspace.py tidy`) |
+| **L45** | **The classroom system's own rules** (`knowledge/classroom-system.json`, `check_course_package.py`) |
+| **L46** | **3D at full quality and smooth on the tablet**; its share is L67's |
+| **L47** | **A generated picture only within the budget the operator said yes to** — one yes per course at Stage 2 (`intake.json` `picture_budget`) |
+| **L48** | **Bloom measured, and lifted by the tablet** — one level a course toward the outcome (`bloom/GUIDE.md`, `bloom_map.py`) |
+| **L49** | **20 / 80 in class, every theory slide kept** — theory-as-activity proposed per sub-topic at Stage 2 (`active/GUIDE.md`) |
+| **L50** | **A fix is not a build** — find every place, one list, one yes, change, one check (`fix/GUIDE.md`, `fix.py`) |
+| **L51** | **Every picture opens full screen; every module closes with the same recap** before its module check |
+| **L52** | **As many real photographs as possible**; a source-book figure only once a named person cleared it (`check_assets.py clear`) |
+| **L53** | **No empty space, good padding** — decks pass the layout audits before they are shown |
+| **L54** | **Every drawing whole and clean** (`audit_drawing.js`) |
+| **L55** | **Diagrams come from the figure kit** (`course-visuals/kit/SPEC.md`), never a one-off SVG; a missing part is made into the kit |
+| **L56** | **A photograph carries what it shows and its credit into the full-screen view** — no credit on the slide |
+| **L57** | **A drawing of real things carries their real photographs**, unasked |
+| **L58** | **Every photograph once in the whole course** |
+| **L59** | **No module before its map** — ILO map approved and the knowledge-base decision recorded (`course_gate.py`) |
+| **L60** | **A 3D scene in every module whose subject allows** — declined only with the operator's reason |
+| **L61** | **Every slide is one of the layout templates** (`course-module-ui/knowledge/layout-templates.json`), chosen by the compiler; a picture beside words gets the box its names need (40-65 %, `layout_fit.py`) or is made another kind - never squeezed |
+| **L62** | **Never the same look twice in a row; at least 80 % of slides on the light ground** — the compiler does it |
+| **L63** | **Equipment drawn as it looks on board** (`course-visuals/kit/PARTS.md`) |
+| **L64** | **A module in 30-40 min, its fixes in 20** — the pre-check first (`precheck.py`); a rebuild is a fix (`fix.py rebuild`) |
+| **L65** | **A drawing that moves stays smooth** (`audit_motion.js`) |
+| **L66** | **Every item a simulator can train is trained on one** (`coverage/SIMULATORS.md`, `sim_coverage.py check`) |
+| **L67** | **A slide's picture is 3D or a photograph, never a flat line drawing; every slide moves on Next** — 60-80 % of a module's teaching slides are interactive 3D, the rest a static 3D render or a photograph (`content_script.py` and `check_course_package.py` stop outside it; `gb_upgrade.css`, `gb_steps.js`) |
+| **L68** | **The Instructor-Led Course Development Guideline** — active means every trainee commits to an output; a passive run at most 15 min and 20 % of theory, or a one-line reason (`instructor-led/GUIDE.md`, `instructor_led.py check`) |
+| **L69** | **The experts get the pedagogy first** — Bloom now, Bloom proposed and the activities, before any script (`pedagogy_review.py`, `bloom/GUIDE.md` §5) |
+| **L70** | **Built after the expert's Ready** — the office PC builds unattended; see *Auto build* |
+| **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done |
 
 ## The course remembers — L32
 
-`scripts/course_memory.py` runs it; the templates are `templates/COURSE_STATE.md`,
-`FEEDBACK_LOG.md` and `COURSE_PATTERN.md`. They live in `course\working_claude\` (a pattern draft the operator reads in
-`course\to_review\`) and never ship (L44).
+`scripts/course_memory.py`; templates `templates/COURSE_STATE.md`, `FEEDBACK_LOG.md`, `COURSE_PATTERN.md`; kept in
+`course\working_claude\`, never shipped.
 
-- **Every session starts by reading `COURSE_STATE.md`** if the course folder has one, and never
-  re-asks or re-decides what it lists under *Decided*. A new course: `course_memory.py start`.
-  **Then `STANDARDS.md` and the last rows of `FEEDBACK_LOG.md`** (2.30.0): what the person wants in every
-  module, and every design choice they made against a factory rule (`design_choices.py list <course>`) -
-  built to, never re-asked, never "repaired" (L26).
-- **At every STOP**, update it: stage, what was approved, open questions, next step, file map. Then
-  `course_memory.py check` — it says whether a new session could resume from it.
-- **Every correction the operator makes** goes into `FEEDBACK_LOG.md` straight away, in their words,
-  with what changed; a fact they state is marked *operator-stated* (L29).
-- **At the end, when the operator says they are happy**, offer a pattern file. `draft-pattern` drafts
-  it from the log; **show it to the operator in plain language**, and let them change or remove any
-  point. Save it only when they approve: `approve-pattern --by "<name>"`, which refuses until it
-  names the course, the course type and who made it. The owner copies it into
-  `resources/course-patterns/`, and every colleague gets it with the next update.
-- **A new course** lists the approved patterns (`course_memory.py patterns --course-type <type>`)
-  and reads the ones that fit. They are guidance, never rules, and never above the current
-  operator's request. Drafts are never read.
-
----
+- **Every session starts by reading `COURSE_STATE.md`** (a new course: `course_memory.py start`), then `STANDARDS.md`
+  and the last rows of `FEEDBACK_LOG.md` and `design_choices.py list` — never re-ask or re-decide what they hold.
+- **At every STOP** update it (stage, approvals, open questions, next step, file map); `course_memory.py check` says
+  whether a new session could resume from it.
+- **Every correction** goes into `FEEDBACK_LOG.md` at once, in the operator's words; a stated fact is *operator-stated*.
+- **When the operator is happy**, offer a pattern file: `draft-pattern`, **show it to the operator in plain language**,
+  let them change any point, then `approve-pattern --by "<name>"`. Approved patterns (`patterns --course-type <type>`)
+  are guidance for later courses, never rules.
 
 ## Mode first, then read one lane
 
 | Mode | You are asked to | Read |
 |---|---|---|
-| **plan** | turn an accredited programme into a module set with hours that add up | `hours/GUIDE.md` |
-| **retrofit** | upgrade, redesign, modernise or "make presentable" material that **already exists** | `retrofit/GUIDE.md` |
-| **preview** | let a colleague SEE the course — "how does it look", "let me review it", "open it in the browser" | `course-tablet-publisher` → `references/preview-and-approval.md` |
-| **edit** | make the content or structure change the operator named — add, remove, split, merge, reword, keep, more examples. **Do it** (L26) | `retrofit/knowledge/routing.json` § edit_triggers; once the module is built, check it as a fix (`fix/GUIDE.md` §4) |
-| **fix** | correct modules that are **already built** — one, some or **all**: "the last slide in every module", "find the same free space in the others", "text bigger everywhere", the operator's review points. Find every place at once, one list, one yes, change, **one** check (L50) | `fix/GUIDE.md` — and nothing else **2.65.0:** also ONE built module - a rebuild (`fix.py rebuild`: pre-check, design files, compile, one check) or one named change in it |
-| **restyle** | make one **narrow** cosmetic change and nothing else | `retrofit/knowledge/routing.json` § restyle |
-| **ship** | put an **approved** course onto the trainee and instructor terminals | `tablet/GUIDE.md`, and `course-tablet-publisher` owns the act |
-| **audit** | check an existing course against the programme and the terminals | `coverage/GUIDE.md`, then both lanes' verify sections |
-| **orchestrate** | build a WHOLE course from a knowledge base, with one agent per module | `orchestration/GUIDE.md` |
+| **plan** | turn an accredited programme into modules with hours that add up | `hours/GUIDE.md` |
+| **retrofit** | upgrade, redesign or "make presentable" material that **already exists** | `retrofit/GUIDE.md` |
+| **preview** | let a colleague see the course | `course-tablet-publisher` → `references/preview-and-approval.md` |
+| **edit** | make the content or structure change the operator named — **do it** (L26) | `retrofit/knowledge/routing.json` § edit_triggers; once built, check it as a fix |
+| **fix** | correct **built** modules — one, some or all; also a rebuild of one (`fix.py rebuild`) (L50) | `fix/GUIDE.md` and nothing else |
+| **restyle** | one **narrow** cosmetic change and nothing else | `retrofit/knowledge/routing.json` § restyle |
+| **ship** | put an **approved** course onto the terminals | `tablet/GUIDE.md`; `course-tablet-publisher` does it |
+| **audit** | check a course against the programme and the terminals | `coverage/GUIDE.md`, then the lanes' verify sections |
+| **orchestrate** | build a WHOLE course, one agent per module | `orchestration/GUIDE.md` |
 
-`retrofit/knowledge/routing.json` is the authority on which mode a free-form request selects, and
-on telling **retrofit** apart from **restyle**. Match the operator's *intent*, never a phrase — a
-colleague in Cowork types "Redesign Module 1 using the NOVIKONTAS Course Factory" and that has to
-be enough, with no skill name, validator name, folder path or git in it.
+`retrofit/knowledge/routing.json` decides the mode from the operator's intent, never a phrase. A restyle needs a narrow
+target *and* a limiter ("only the colours"); give exactly that and say in one line what a retrofit would add. Never load
+a lane the mode does not need (a retrofit reads `hours/` for Track A only). Why each lane exists:
+`references/routing-notes.md`.
 
-Restyle needs **both** a narrow cosmetic target *and* a scope limiter: "only change the colours" is
-a restyle; "change the colours and make it like GAS BASIC" is a retrofit. When someone asks for a
-restyle, give them a restyle — say in one line what a full retrofit would additionally do, and
-stop. Doing more than was asked is not generosity.
+**Outside this bundle — point, never copy:** screen craft and measurement `course-module-ux` · the look
+`course-module-ui` · what visual teaches a concept, assets and rights `course-visuals` · task screens `course-task-ux` ·
+publishing `course-tablet-publisher` · intake, course plan, `COURSE_START.json`, ILO wording, exercises, handouts, tests,
+pptx and the brand: the `novikontas-*` skills · source PDFs: the knowledge base, read only through
+`kb/scripts/kb_tool.py`. An organisation skill that is not installed: its fallback in `org/ORG_DEPENDENCIES.md` (three
+are blocking: pedagogy-toolkit, handouts, course-start), the route recorded in `factory-notes.md` §0; never paraphrase
+an absent skill from memory.
 
-Never load a lane the mode does not need. `hours/` answers "how long may this be"; `tablet/`
-answers "where does it live and how is it wired"; `coverage/` answers "is everything the programme
-**and the model course** ask for actually taught"; `retrofit/` answers "what of this existing
-module survives, and what gets rebuilt". They never run together — except that a retrofit still
-obeys the hours law, so `retrofit/` reads `hours/` for Track A and nothing else.
+## The brief — a call and a folder (Stage 1, intake)
 
-`orchestration/` is the only lane that is about the *run* rather than the course, and `coverage/`
-exists because exact hours and perfect wiring still cannot see a missing outcome. What each is
-for, and the one rule that keeps a parallel build from losing work: `references/routing-notes.md`.
+The operator calls the factory and gives a folder; nothing else is required, and nothing derivable is asked back (no
+skill names, module split, screen count, task codes, pass marks, layout or lane). **Look in the folder before asking.**
+`knowledge/intake.json` is the authority. In order:
 
-### Deliberately outside this bundle — point at these, never copy them
+0. **The folder is the master folder** (L40): `python scripts/workspace.py <folder>` names `course\` beside it.
+1. **Find** the programme, the IMO model course, the knowledge base and the old course; propose the course type.
+   **Read the old course whole** (`old_course.py inventory` and `images`). **No knowledge base?** `kb_tool.py find
+   <folder>` — suggest one unasked, in plain words, its question in the pop-up. **A shared subject library?**
+   `course-visuals/scripts/subject_library.py covers "<title, STCW ref>"` — used before the knowledge base and the
+   internet; findings go back with `contribute`; a new course is registered once its modules folder exists.
+2. **Sort the sources** — `kb_tool.py sources <kb> --course <course>` (`kb/GUIDE.md`); several editions → one question.
+3. **Ask what is missing, once**, in one pop-up of up to four questions: the programme (the one blocking answer), the
+   knowledge base, the old course, the course type (the programme's pointer *Recommended*), editions, and in retrofit
+   only when `detect_expert_edits.py` says `nothing-to-go-on`, whether anyone edited it by hand (L24).
+4. **Record** in `working_claude\intake.json`; editions with `kb_tool.py decide`, the knowledge base with `kb_tool.py
+   decision`. Never web-search during intake; `UNKNOWN` means asked and not known.
 
-| Concern | Owned by |
-|---|---|
-| Screen craft, one-page architecture, deck measurement, run-script generation | `course-module-ux` |
-| **The visual layer** — palette, typography, light/dark-photo modes, header band, cards, pills, takeaway, semantic status colour | **`course-module-ui`** |
-| **What representation teaches a concept** — photo, schematic, animation, chart, cutaway, or no visual at all; the asset pipeline, provenance and rights | **`course-visuals`** |
-| Trainee task screens — answering, navigation, typed input, completion | `course-task-ux` |
-| Publishing a finished course to the two terminals and the shared repository | `course-tablet-publisher` |
-| Course intake — course type, accreditation, equipment, regulations | `novikontas-course-intake` |
-| The course plan document, competence matrix, session plan | `novikontas-course-plan` |
-| `COURSE_START.json` contract, honesty markers, traceability tiers, gap report | `novikontas-course-start` |
-| ILO wording, verbs, constructive alignment, assessment design | `novikontas-pedagogy-toolkit` |
-| Exercise forms, handouts, written tests, decks as pptx | the `novikontas-*` material skills |
-| Visual identity — logo, colour, type | `novikontas-brandbook` |
-| Getting text and figures out of source PDFs | the operator's knowledge base — Course Source Processor or docling — read only through `kb/scripts/kb_tool.py` (`kb/GUIDE.md`) |
+Corrections arrive in the operator's words ("too much text on screen 4"): act on them, never turn one into an interview.
 
-If a question belongs to a row above, say so and point. Do not re-derive it here.
+## The gate — Stage 2, approved before anything is built
 
-### When an organisation skill is not installed
-
-The `novikontas-*` skills are **not** part of this plugin and are not guaranteed to be present.
-Owner decision **D-3**: use the organisation skill when it is installed; otherwise use the minimal
-fallback in **`org/ORG_DEPENDENCIES.md`**; either way record which route was taken in
-`factory-notes.md` §0.
-
-Three are **blocking** — `novikontas-pedagogy-toolkit`, `novikontas-handouts` and
-`novikontas-course-start` own required build steps and have a fallback each. The rest are pointer
-rows: name the skill that would have owned the question, answer it within this factory's own rules,
-and say so. Never paraphrase an absent organisation skill from memory and present it as its content.
-
----
-
-## The brief — a call and a folder, and that is the whole contract
-
-> **The operator calls the factory and gives a folder. Nothing else is required of them.**
-> Everything after that is either derived, or found inside that folder. They type a correction
-> only when they want something other than what the factory would do on its own.
-
-That is the acceptance test for this section. A colleague who types
-
-    Redesign this module using the NOVIKONTAS Course Factory.
-    C:\courses\Module_04
-
-has given a complete brief. No skill name, no validator, no script, no flag, no folder layout,
-no module split, no screen count — and none of those may be asked back.
-
-**Look in the folder before asking anybody anything.** The programme, the sources, the existing
-module, the expert's notes and the factory's own build record are usually all in there or one
-level up, and a question whose answer was sitting in the folder is the fastest way to teach an
-operator that this tool is hard work.
-
-**Stage 1 — intake.** `knowledge/intake.json` is the authority: what to look for first, the
-questions, and what to record. In order:
-
-0. **The folder given is the master folder** (L40): work in `course\` beside the material - `python scripts/workspace.py
-   <folder>` says where. Never write into `source_files\`, the knowledge base or the old course.
-1. **Look in the folder** for the programme, the IMO model course, the knowledge base, the old
-   course; propose the course type from the programme. The course language is always English.
-   **Read the old course whole** (L41): `python scripts/old_course.py inventory <old course> --course <folder>`
-   and `... images ...` - it is the foundation the architecture is planned from.
-   **No knowledge base? Suggest one, unasked** (owner, 2026-10-16; 2.42.0): `kb_tool.py find <folder>` prints
-   what it is, which of their files it would be built from, how (the Course Source Processor - the factory has
-   no tool for it, never pretend it does) and what the course loses without it. Say that to the operator in
-   plain words, and put its ready question into the pop-up.
-   **A shared subject library?** (2.52.0) `course-visuals/scripts/subject_library.py covers "<programme
-   title, STCW ref>"` - the Gas Library for every gas course. Found: its `find` runs before the knowledge
-   base and the internet (CONFLICT rows are not settled - `OPEN_DECISIONS.md`), what the course finds
-   goes back with `subject_library.py contribute` (pictures, documents, facts and terms - to its inbox,
-   never straight into its facts), and **a new course is registered in it** once its modules folder
-   exists - `contribute register-course <id> --module-root ... --module-glob ... --map T05=M03` - so the
-   library harvests its pictures (`intake.json` → *the subject library*). None: nothing to do or say.
-2. **Sort the sources** — `kb/scripts/kb_tool.py sources <kb> --course <course>` (read `kb/GUIDE.md`):
-   exact copies and .doc/.docx pairs are settled without asking; each publication found in more than
-   one edition becomes a "which edition is current?" question.
-3. **Ask what is still missing — once, as pop-up questions with options** (the ask-question tool; up
-   to four per pop-up, most important first): the programme if not found (the one blocking answer),
-   the knowledge base, the old course (a local folder; a Drive link only if it reads reliably), the
-   course type (`NEW_ENTRANT` / `EXPERIENCED`, the programme's pointer first as *Recommended*), the
-   model course only if not found, the edition questions, and — in retrofit, only
-   when `detect_expert_edits.py` says `nothing-to-go-on` — whether anyone edited it by hand (L24).
-4. **Record** it in `working_claude\intake.json`, editions via `kb_tool.py decide`, the knowledge base via
-   `kb_tool.py decision` (yes / built / declined with their reason). Nothing is asked twice.
-
-**No module starts before the ILO map is approved and the knowledge base is decided** (owner, 2026-10-16:
-*"before creating any module the AI should have already made the ILO mapping and suggested for
-KNOWLEDGE_BASE to be created"*). `content_script.py` and `compile_module.py --init-build` stop, exit 2,
-and `scripts/course_gate.py <course>` says what is missing.
-
-Every instrument and simulator in the IMO model course is **assumed available** (L28) — never asked.
-Never ask the module split, screen count, task codes, pass marks, file layout or which lane to
-load: those are derived. Never web-search during intake; `UNKNOWN` means asked and not known.
-
-**Corrections are the operator's only other input, and they arrive in their words.** "Too much
-text on screen 4", "keep the old pump drawing", "this should be two screens" — act on them, and
-do not turn a correction into an interview.
-
----
-
-## The laws — the operative rule of each
-
-These are not preferences; each is here because breaking it cost real rework. Numbered as in
-`docs/FACTORY_LAWS.md`, the one numbering the whole factory uses.
-
-> **The full text of every law — its reasons, its cases and its edge rules — is in
-> `references/laws-in-full.md`.** Read the law in full before bending, questioning or changing
-> one, and whenever an operator's request seems to collide with it.
-
-**L1 · The approved programme is law, and minutes are its units.**
-`hours/knowledge/hours-rules.json` is the authority. An academic hour is whatever the programme
-says (GAS BASIC: 40 min) — never assume 60. Every module's built teaching time equals its
-allocated minutes **exactly**; anything that will not fit becomes self-study in the handout.
-Run `hours/scripts/check_hours.py` before believing any plan.
-
-**L2 · Main ILOs are untouchable.** Main ILOs and the approved programme are copied
-**verbatim** — never edited, renumbered or "improved". Sub-ILOs may be re-expressed; a
-re-expressed Sub-ILO is `PROVISIONAL` until ratified and never renumbered in anything a trainee
-sees. The programme governs; an IMO model course is guidance.
-
-**L5 · Two tracks, and only one of them is yours.** Track A — the programme's theory/practice
-allocation — is fixed: declare each block's bucket with `data-track` and run `check_balance.py`.
-Track B — learner-active minutes — is designed: aim for 80 %, declared with `data-active`. Where
-the practical share is small, the theory hours are delivered as active learning; a theory block
-with no trainee activity in it is a defect. Never reach the target by renaming screens.
-Since 2.26.0 it is measured (L49): plain theory against active minutes, on both review pages.
-
-**L7 · Nothing is useless until you have grepped for what depends on it** — its id, class, label
-and filename, across both terminals, the course tree and every generated script.
-
-**L18 · Content is locked. The delivery implementation is not.**
-`retrofit/knowledge/content-lock.json` is the authority. Locked, needing explicit authorisation:
-technical meaning, programme requirements, ILOs and Sub-ILOs, official hours, assessment intent,
-intended practical exercises, course terminology, source-supported facts, COURSE_LANGUAGE. Free:
-screen count and order, HTML, layouts, density, visuals, animation, interaction, navigation,
-CSS/JS, composition. An existing visual is evidence of a teaching decision — preserve the
-decision, rebuild the implementation. The operator's request in chat **is** the explicit
-authorisation (L26).
-
-**L24 · Where the expert has already changed something, that change is content.**
-`retrofit/knowledge/expert-edits.json` and `retrofit/scripts/detect_expert_edits.py`. Decided from
-evidence — a marker the expert left, the factory's build record, a commit the factory did not
-author — and if none exist, **ask**. A protected region is restyled, never rewritten; where it
-breaks another law, name the law and propose the fix in the report — do not apply it. It is
-protected from the factory, never from the operator: when they ask for a change there, make it (L26).
-
-**L21 · The production Android application is a publish target, not a workspace.** READ ONLY
-without a person's own approval for that named course and version: *"Approved. Publish this
-course to the NOVIKONTAS training app."* Review happens in the colleague's own folder
-(`course-tablet-publisher` → `preview.py`); `publish.py --publish` refuses without `--approved-by`.
-
-**L19 · COURSE_LANGUAGE is declared, and the operator's language is not it.** Detect it, state it
-back in one line, lock it — in plan and retrofit alike. Course-facing material stays in it unless
-translation is explicitly requested; the chat report and `factory-notes.md` follow the operator.
-`retrofit/scripts/check_language.py` is the drift check. **Every Novikontas course is in English**
-(owner, 2026-09-30) - COURSE_LANGUAGE is English and is never asked. The programme may be in another language
-and stays as it is; the course quotes it in English (the Stage 2 rendering), its own words only on the review pages.
-
-**L25 · The person reading this does not work in IT.** Every reply has three parts - **Done · Check now · Next** -
-in everyday words (see *Every reply to the operator* at the top). `knowledge/plain-language.json` is the
-authority; `scripts/check_plain_language.py` enforces it. Every problem message carries all five:
-
-| | |
-|---|---|
-| **What is wrong** | one sentence, in the words of the course, not of the software |
-| **Where it is** | the full path from the drive letter, plus the human landmark — which module, which slide, which heading |
-| **How to see it** | the literal steps. Double-click what, opens in what, what appears |
-| **What to do** | the fix in steps — and if the factory can do it, offer: *"tell me to fix it and I will"* |
-| **How they know it worked** | what they will see afterwards. Never *"run the check again"* as the only proof |
-
-This is not dumbing down: the maritime content stays exactly as technical as it is; what changes
-is the language about computers and this tool. Offer to do the work before explaining how they
-could.
-
----
-
-## The gate — approved before anything is built
-
-Changing a table row is free. Changing eight built modules is not. This is **Stage 2 → STOP**.
-
-**First, the experts' documents (L69).** Before the page is shown and before any content script, the course experts get
-three documents, topic by topic and module by module: **Bloom now** (what the old course really made the trainee do),
-**Bloom proposed** (what the new course will) and **Teaching and learning activities** (the `active_learning`
-proposals and the course-wide upgrades) - Word, HTML and PDF in `to_review\pedagogy\`. Judge every topic in
-`working_claude\pedagogy_review.json` by `bloom/GUIDE.md` §5, then `scripts/pedagogy_review.py check` and `render`.
-The page cannot be approved until they are clean and written from the current files. The experts review them in the
-training app's editor: `scripts/course_portal.py create`, `push --pedagogy`, then `pull` their answers back (GUIDE §5).
-
-Then the operator reviews it as **one page**:
-
-    python scripts/make_architecture_page.py --course <course folder>
-
-It reads `programme.json` and `architecture.json` (and `plan.json`, optional) from the course folder and writes
-`ARCHITECTURE_REVIEW.html` — one file that opens with a double-click and prints to PDF. On it:
-
-| | |
-|---|---|
-| **Modules** | **one per programme topic** (L34), in the programme's order: the topic and its sub-topics word for word → theory / practice → minutes → where they go (slides, self-checks, module check, practice); the last module is the final assessment only; the total checked against the programme's own total row (L1) |
-| **Tablets** | how the course runs: slides on the instructor tablet, tasks only on the trainee tablet, opened with OPEN TASK (L35) |
-| **Main ILOs** | exactly as the programme writes them (L2) - and, when the programme is not in English, the English the course shows beside each (`text_en`, L19) |
-| **Sub-ILOs** | every one beside the programme's own wording, marked **kept / re-expressed / added**, with the reason — the operator's "next" ratifies them |
-| **Per module** | where theory is taught as activity (L5) · practical tasks and their equipment (L28) · self-checks — only where the theory time allows one (L36) — and the module check: the trainee's own score, not counted (L27) |
-| **Final assessment** | graded, with the programme's pass mark |
-| **Theory as activity** | per sub-topic, what the factory proposes the trainees *do* instead of only listening - minutes, what it needs, the slides staying - each with **Keep** / **Strike**; the class split now and if all are kept (L49, `active/GUIDE.md`). Record with `scripts/active_plan.py decide`; **every proposal is decided before the operator's "next" is recorded** - a proposal left waiting is not built |
-| **Bloom levels** | what level every Main ILO and Sub-ILO asks for, what the planned task types reach, and how to lift a gap (L48, `bloom/GUIDE.md`) - suggestions, never a stop |
-| **ILO map** | one row per Sub-ILO per module - what every module's script is written against - with the model-course items under each topic. Written with the page as `working_claude\ilo_map.json` (`scripts/ilo_map.py`); approving the page approves it (2.42.0) |
-| **Knowledge base** | the intake decision: used, made for this course, or declined with the operator's reason - a declined one stays on the page |
-
-Programme text appears verbatim in the programme's own language, module titles in COURSE_LANGUAGE; when the programme
-is not in English, its Main ILOs, topics and kept Sub-ILOs carry an English rendering beside them (architecture.json
-`text_en` / `topic_en`), written at Stage 2 and shown under the verbatim text - the page is not approved while one is
-missing, and the course (module plans, ACP) shows only the English. The headings and explanations are in the
-operator's language (`architecture.json` → `operator_language`: `en` / `lv` / `ru`,
-`knowledge/page-labels.json`). Run it with `--check` first: anything the page would flag — hours
-that disagree, a Sub-ILO change without the programme wording, a graded module check — is fixed or
-shown at the top. Markers stay in `factory-notes.md` (L31). Nothing is built until the operator
-says "next"; then record it - `python scripts/make_architecture_page.py --course <course> --approve --by "<name>"`
-(2.42.0: it fingerprints the ILO map, and is refused while the knowledge-base decision is missing, a teaching
-module has nothing in the map, or a theory-as-activity proposal waits) - and in `COURSE_STATE.md` (L32). A later
-change to any Sub-ILO stops new modules until the page is approved again.
-
-**Simulators (L66), before the gate, unasked.** `python coverage/scripts/sim_coverage.py needed <course>` - for an
-advanced course, or one whose programme names a simulator, read `coverage/SIMULATORS.md` and make the simulator map,
-the coverage map and the GAP task drafts; `sim_coverage.py check <course>` passes before the operator's "next" is
-recorded. The page's practical tasks are planned from it; its decisions for the course director (what is installed,
-which minutes move) go into the same one pop-up, and the drafts' review README points at them.
-
-## How the modules are built — asked once, with the Stage 2 approval (2.73.1)
-
-The operator never has to know about agents (owner, 2026-10-28: *"user dont need to tell about agents, it asks user"*).
-In the same pop-up as the Stage 2 "next" (L31: one pop-up), unless `intake.json` already has `"build_mode"`, ask:
-
-> **How should the modules be built?**
-> - **All at once, with agents (Recommended for 4 or more modules)** - the whole-course workflow
->   (`orchestration/workflows/build_course.js`): this session leads and writes the words, Sonnet agents build and check,
->   Phase A runs with no agent first. Fastest by the clock (a 21-module course in hours, not days); the most usage at once.
-> - **Module by module, in this session** - one module at a time, each shown before the next. Slower; less usage at once.
->
-> **(2.73.2) And in the same pop-up: the picture budget** - "About N pictures will be generated (what the course's own
-> pictures do not show), about €X. Yes?" (N from `photo_catalogue.py assign`'s count to make, or the scripts' photo slots
-> less the catalogue's picks). Recorded as `"picture_budget": {"pictures": N, "eur": X, "said": "<date>"}`; with no yes,
-> nothing is generated and those slots wait in the needs file.
-
-Record the answer as `"build_mode": "workflow"` or `"session"` in `working_claude\intake.json` and as a row of
-COURSE_STATE's "Decided" - it is never asked again; the operator may change it by saying so. The answer IS the operator's
-own request for multi-agent orchestration: with `"workflow"` recorded, run `build_course.js` (the `Workflow` tool) when the
-modules' scripts are written and approved, without asking again. With `"session"`, build each module here with
-`compile/scripts/build_module.py` (Phase A first, then the needs file). A course already under way with neither recorded:
-ask at the next STOP.
+1. **Experts first (L69).** Bloom now, Bloom proposed and the activities, per topic, in `to_review\pedagogy\` (Word,
+   HTML, PDF): judge each topic in `pedagogy_review.json` by `bloom/GUIDE.md` §5, `pedagogy_review.py check` and
+   `render`; the experts answer in the training app's editor (`course_portal.py create`, `push --pedagogy`, `pull`).
+2. **Simulators (L66), unasked.** `coverage/scripts/sim_coverage.py needed <course>`; where needed, the maps and GAP
+   drafts from `coverage/SIMULATORS.md`, and `sim_coverage.py check` passes before "next".
+3. **One page:** `python scripts/make_architecture_page.py --course <course> --check`, then without `--check`. It
+   shows: modules one per topic with minutes and the total against the programme (L1, L34) · the two tablets (L35) ·
+   Main ILOs verbatim, with `text_en` when the programme is not English (L2, L19) · Sub-ILOs kept / re-expressed /
+   added with reasons · per module the activities, tasks, equipment, self-checks and module check (L5, L27, L28, L36) ·
+   the final with its pass mark · theory as activity with **Keep / Strike** per proposal, all decided before "next"
+   (`active_plan.py decide`, L49) · Bloom levels (L48) · the ILO map (`working_claude\ilo_map.json`) · the
+   knowledge-base decision. Headings in the operator's language (`operator_language`).
+4. **In the same pop-up as "next":** how the modules are built — *all at once with agents* (Recommended for 4 or more;
+   `orchestration/workflows/build_course.js`) or *module by module in this session* — and the picture budget ("about
+   N pictures, about €X. Yes?"). Record `build_mode` and `picture_budget` in `intake.json` and COURSE_STATE; never ask
+   again. `"workflow"` is the operator's own request for agents: run the workflow once the scripts are approved.
+5. **Record "next":** `make_architecture_page.py --course <course> --approve --by "<name>"` — refused while the
+   knowledge-base decision is missing, a module has nothing in the map, or a proposal waits. A later Sub-ILO change
+   stops new modules until it is approved again. **No module before the map (L59):** `content_script.py` and
+   `compile_module.py --init-build` exit 2, and `course_gate.py <course>` says what is missing.
 
 ## Stage 3 — the content script, approved before any HTML (L29)
 
-`script/GUIDE.md` is the lane; `scripts/content_script.py` does it. Per module, the whole lesson in
-teaching order, shown on the two tablets it runs on (L35): **part 1, the instructor tablet** — every
-slide's exact words, planned picture, minutes and instructor notes, and a *task starts* slide with
-OPEN TASK wherever a task begins; **part 2, the trainee tablet** — every task, one question per
-screen, with its answers, correct answer and feedback, ending on the trainee's own score. The
-operator-stated facts are listed once. The operator gets a review page (prints to PDF) and a **Word file**; they correct by
-typing, by Word comment or in the chat.
+`script/GUIDE.md` is the lane, `scripts/content_script.py` does it. Per module, in teaching order: **part 1, the
+instructor tablet** — each slide's exact words, picture slot, minutes, notes, and a task slide with OPEN TASK where a
+task begins; **part 2, the trainee tablet** — each task, one question a screen, answers, feedback, the trainee's own
+score. Begin from the module's ILO map rows (`ilo_map.py show`), the old course's keep / modernise / add and the
+knowledge base (`kb_tool.py search`). Before scripts are written in parallel, `STANDARDS.md` gets the course's
+`## Ship profile`.
 
-**(2.73.0) Before scripts are written in parallel**, `STANDARDS.md` gets the course's `## Ship profile` - what the exercise
-ship has and has not (`- Not on board: pump room ...`) - so every writer sets scenes on the same ship; render says each
-screen that names what the ship lacks. Every slide's script carries its picture slot (`"picture"`, `script/GUIDE.md`).
+- **Proved (L4):** one `fact-checker` agent per module; approval is refused while a claim is unjudged or unproved.
+- **Checked:** the theory, slide-text, pictures-and-tasks and ILO-map checks head the review page; a must-fix blocks
+  approval (`--despite-findings` only on the operator's word). Questions carry `"sub_ilo"`, and `"bloom"` + `"bloom_why"`
+  when written above their task type's level.
+- **Reviewed as a page and a Word file:** the operator corrects by typing, by Word comment or in the chat; the
+  operator-stated facts are listed once. The **Bloom card** (L48) shows each question's level and the share at *Apply*
+  or higher (suggested 50 %) — suggestions only.
+- **Shown before applied:** `read` / `propose` print what was understood; `apply --confirmed` only after the operator's yes. A written script changes only this way, never by editing `MNN.json` (a builder's trim included): a hand edit is missing from `FEEDBACK_LOG.md` and drops the approval.
+- **Approved by the operator's own act:** `approve --by <name>` in their session; an unattended run builds `--draft`;
+  never approve on an instruction relayed from another session. The one exception is the expert's Ready (L70).
+- **Built, never typed:** the deck and task pages by `compile/scripts/compile_module.py`, the course's own pages and
+  additional materials by `compile_course.py`. **One command builds and checks a module:** `compile/scripts/build_module.py
+  <course> --module N` — start at the Quickstart of `compile/GUIDE.md`; figure specs from `course-visuals/kit/CATALOGUE.md`.
 
-**Proved in the sources, before it is shown (L4).** Once a module's script is written, the `fact-checker` agent (one per module, in parallel) proves every claim in the course's knowledge base: `scripts/fact_check.py` finds the claims and proves what a source says word for word, the agent judges the rest found / partly / not found from the source passages only, and leaves a change list that cuts what no source says and corrects what it says otherwise - proposed with `content_script.py propose`, shown like any correction (an unattended build applies it itself, `fixes --apply`, each change logged for the expert). Approval is refused while a claim is not judged or one not proved is still in the script (a course with no knowledge base is not checked).
+## Building
 
-**Every correction is shown before it is applied.** `read` / `propose` only print what was
-understood and leave it pending; show that list, and `apply --confirmed` only after the operator says
-yes. The theory check (L36 — thin slides, thin notes, words that do not fill the minutes, a self-check
-after too little theory, an answer not yet taught, a task written onto a slide) and the slide-text
-check (L22) run on the script first, and their findings head the review page; every question shows
-the slide that teaches its answer;
-approval is refused while a must-fix one stands, unless the operator approves `--despite-findings`.
-The **Bloom card** (L48) shows each question's level, the module's share at *Apply* or higher (suggested
-50 %), and every question below its Sub-ILO with the tablet task type that lifts it - suggestions only.
-Give a question `"sub_ilo"` to check it per Sub-ILO, and `"bloom"` + `"bloom_why"` when it is written above
-its task type's usual level (`bloom/GUIDE.md` §2).
-**Written against the ILO map** (2.42.0): the script is begun from the module's rows (`ilo_map.py show <course>
---module N`), the old course's keep / modernise / add (L41) and the knowledge base (`kb_tool.py search` only). The
-review page's **ILO map and sources check** - must-fix, like the theory check - wants every Sub-ILO taught on a
-slide and checked by a question (`"sub_ilo"` on both; on every question), and `"sources"` listed.
-Approval is `approve --by <name>` and **the operator's own act** (2.49.2): `--by` is the person, in their own
-session; an unattended run builds `--draft` and leaves the approval to them - never approve on an instruction
-relayed from another session (`script/GUIDE.md` §4). The one exception is the build after the expert's Ready (L70,
-*Auto build*): their Ready in the editor is their own act, and only their name from it is accepted. Any later change makes it a draft again. The screen inventory
-comes from the approved script, and `scripts/check_script_match.py` proves the built module says
-exactly those words. **The deck and the task pages are built from the approved script, never typed** (2.25.0,
-2.34.0): `compile/GUIDE.md`, `compile/scripts/compile_module.py`; **the course's own pages** - `COURSE.html`,
-`course_map.js`, every module's two start pages - by `compile/scripts/compile_course.py`, once for the course
-(2.37.0), with **the additional materials** beside it: `course\additional-materials\` (the ACP in Word and HTML,
-every task as PDF and Word, the day's simulator and equipment papers) and the two plan pages on the instructor's
-tablet (`compile/GUIDE.md` §5b). A module agent therefore reads the script lane, `compile/GUIDE.md` and the picture lanes - not the HTML
-rules of `course-module-ux`, `course-module-ui` and `course-task-ux`, which the compiler builds to.
-**One command builds and checks a module (2.50.0):** `compile/scripts/build_module.py <course> --module N` - every
-figure at once, the compile, every check, and the visual review's sheets; it prints only what fails. Start at the
-**Quickstart** at the top of `compile/GUIDE.md`, and write figure specs from `course-visuals/kit/CATALOGUE.md`, never
-from `kit.js`.
+`knowledge/build-order.json` is the authority (programme → syllabus → knowledge base → ILO map → modules → **gate** →
+screen inventory → visual system → visual plan → tasks → screens → handout → assessment → module plans → terminals →
+verify). Not negotiable: the screen inventory and the visual system before any screen; task pages before the deck
+announces them (`tablet/` cross-check).
 
-## Auto build — the course built after the expert's Ready (L70)
+- **Two phases (2.73.0):** Phase A with no agent — placeholders of each picture slot's shape and every check that does
+  not need the pictures (`compile/scripts/phase_a.py`); Phase B fills the pictures from `MNN_VISUAL_NEEDS.md` and the
+  photo catalogue. A placeholder never ships.
+- **The look is routed:** `course-module-ui` (`design_system.py install`, `references/vocabulary.md`); to choose and fill
+  a screen read one file, `course-module-ui/knowledge/blueprints.json`. GAS BASIC Module 1 is the visual reference,
+  not a template: no fixed slide count, and low density is not low depth.
+- **Done means PASS:** a module is built only when `build_module.py` printed PASS; the workflow blocks a module without
+  one, and `course_portal.py upload` refuses while a module's last build failed.
 
-A run started by `course_portal.py watch --once` on the office PC (its prompt says so, and `NOVIKONTAS_AUTO_BUILD=1`
-is set) has nobody to answer. The expert's answers, already pulled into `working_claude`, are the approval, signed with
-the name they gave at Ready:
+## Auto build — after the expert's Ready (L70)
 
-- Carry out every expert note (`pedagogy_review.py check` lists them) and write its `done`; render the documents.
-- Every STOP is passed with the expert's signature: Stage 2 `make_architecture_page.py --approve --by "<expert> (Ready in
-  editor)"`, each module's content script `content_script.py approve <course> --module N --by "<expert> (Ready in editor)"`. The
-  build plan question is answered with its first option. Do not wait for "next".
-- Never ask. A question for a person goes into `working_claude/OPEN_EXPERT_QUESTIONS.md` with the choice the factory
-  made, and the build carries on with that choice.
-- No paid pictures or videos (they are refused). Fill the picture spaces from what costs nothing, in this order
-  : free-licensed internet photos - Wikimedia Commons, US Navy / DVIDS, USCG, NOAA - the old
-  course and the knowledge base (the visual-sourcer agent; a small one enlarged with Real-ESRGAN); then Nano Banana
-  in the Gemini app on the operator's Google AI Pro account (nano-banana `gemini-browser`), when the run has a browser
-  signed in to it; never the paid API unless the operator asked. `picture_briefs.py queue` lists every placeholder,
-  `picture_briefs.py place` puts each picture into its place (record, build sheet, tap boxes with `--areas`). A space
-  nobody could fill keeps its brief and does not stop the build: end with `AUTO BUILD DONE - PICTURES PENDING: <n>`,
-  and the course goes up as a draft that says so (a placeholder never reaches the tablets).
-- Build every module, compile COURSE.html under the course's name, run the factory's checks and fix what they find.
-- Never push to git and never change a file outside the course folder.
-- End with one line: `AUTO BUILD DONE`, or `AUTO BUILD STOPPED: <why>` when something only a person can fix stops it.
-  The watch then imports `modules\` into the staging editor as a draft, or shows the reason in the editor. A run that
-  stopped with only picture spaces left still goes up, as pictures pending.
+A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobody to answer:
 
-**After an attended session** the course goes up too, unasked: `fix.py rebuild` ends with `course_portal.py upload`,
-and so does an attended build, after its compile and checks - run `course_portal.py upload --course <course>` as its
-last step. Once nothing but picture spaces stops it, the course is imported as a draft and the editor's old "Build
-stopped" message goes with it; while something else stops it, the message is replaced by what still does, today.
+- Carry out every expert note (`pedagogy_review.py check`) and write its `done`. Pass every STOP with the expert's name:
+  `--approve --by "<expert> (Ready in editor)"`, `content_script.py approve ... --by "<expert> (Ready in editor)"`; the
+  build plan question takes its first option.
+- Never ask: a question goes to `working_claude/OPEN_EXPERT_QUESTIONS.md` with the choice made, and the build goes on.
+- No paid pictures. Free sources first — Wikimedia Commons, DVIDS, USCG, NOAA, the old course, the knowledge base (the
+  `visual-sourcer`; small ones enlarged) — then Nano Banana in the Gemini app if a signed-in browser is there
+  (`gemini-browser`). `picture_briefs.py queue` / `place`. An unfilled space keeps its brief and does not stop the build.
+- Build every module, compile COURSE.html, run the checks, fix what they find. Never push to git; never write outside
+  the course folder.
+- End with one line: `AUTO BUILD DONE`, `AUTO BUILD DONE - PICTURES PENDING: <n>` or `AUTO BUILD STOPPED: <why>`.
 
-## Build order
-
-`knowledge/build-order.json` is the authority. Read it; it names the owning skill for each step
-and what each step must not start without.
-
-The shape, for orientation only (the file wins if this line ever disagrees with it): programme →
-model-course syllabus → knowledge base → ILO map → module split → **gate** → per-module screen
-inventory → **visual system** → **visual plan** → tasks → screens → handout → assessment → module
-plans → terminals → verify.
-
-Three orderings that are not negotiable, all three learned by getting them wrong:
-
-- **Screen inventory before any screen exists.** `course-module-ux` owns that gate.
-- **The visual system before any screen exists.** `course-module-ui` owns it, and for a new
-  module it is a **required** step, not an optional polish pass — see below.
-- **Task pages before the deck announces them.** A screen that announces `T3` when the tablet
-  has no `T3` is the worst failure in the room, and it is only caught by the three-way
-  cross-check in `tablet/`.
-
-**(2.73.0) An approved module builds in two phases.** Phase A needs no agent - placeholders of each picture slot's shape,
-every check that does not depend on the pictures (`compile/scripts/phase_a.py` for many modules at once, queued by the
-computer's browser slots). Phase B is the one judgement - the pictures - from the module's `MNN_VISUAL_NEEDS.md` and the
-course photo catalogue (`scripts/photo_catalogue.py`). A placeholder never ships. `compile/GUIDE.md` 2g.
-
-### The visual layer is routed, never improvised
-
-When a new module reaches visual production, **route it to `course-module-ui`** — it owns the look,
-and this skill restates none of it. Its `scripts/design_system.py install` copies the style files
-(never read them); its `references/vocabulary.md` is what to read. **To choose and fill a screen, read one file:
-`course-module-ui/knowledge/blueprints.json`** - every slide and task screen, what information it is for, where its
-Title, Text, Info, Picture, Animation and 3D go and what fills each, and its live reference (`design/slide-templates`,
-`design/task-templates`). Its empty layouts are `design/template-blueprints/index.html`. GAS BASIC **Module_01 is the canonical visual reference** for the look, and
-**not** a template: there is no canonical screen count, and low visible density is not low
-learning depth. `build-order.json` step 8, `no_fixed_slide_count` and `density_is_not_depth` are
-the contract; the reasoning is in `references/routing-notes.md`.
-
----
+**After an attended session** the course goes up unasked: `course_portal.py upload --course <course>` is the last step
+of a build and of `fix.py rebuild`; it imports a draft once nothing but picture spaces stops it, else says what does.
 
 ## Honesty markers
 
-One set, identical to the rest of the family (`novikontas-course-start` owns the definitions):
-
-| Marker | Means |
-|---|---|
-| `UNKNOWN` | Asked, operator did not know. Record that it was asked. |
-| `PLACEHOLDER` | Structure right, real content missing. |
-| `PROVISIONAL` | Content exists but depends on something unapproved — every re-expressed Sub-ILO, every pass mark not yet ratified. |
-| `[VERIFY: <what to check>]` | Asserted from a source this skill could not confirm. Always carries its payload. |
-
-Never invent regulatory content, hours, pass marks or citations. Every marker must appear in the
-companion file — a marker used and never reported is the failure this rule exists to stop.
-
----
+`novikontas-course-start` owns the definitions: `UNKNOWN` asked and not known · `PLACEHOLDER` structure right, content missing · `PROVISIONAL` depends on something
+unapproved (every re-expressed Sub-ILO, every unratified pass mark) · `[VERIFY: <what>]` asserted from a source not
+confirmed. Never invent regulatory content, hours, pass marks or citations; every marker used is listed in
+`factory-notes.md`.
 
 ## Verify before reporting done
 
-**After a change to the factory itself**, `scripts/factory_trial.py run` builds the trial course's few modules from scratch and scores them against the last trial (`setup` once, from a real course).
-
-**This list is the sign-off of a build, a retrofit and the handover — not of a fix.** A fix runs only the one check
-for its kind of change (`fix/GUIDE.md` §4, L50).
-
-Run these, read the output, then report. A green exit is not proof the work happened — inspect
-the line for the thing you changed. **Why each check exists, and what got through without it:
-`references/verify-in-full.md`** — read it at sign-off.
+After a change to the factory itself, `scripts/factory_trial.py run` builds the trial modules from scratch and scores
+them against the last trial. The list below is the sign-off of a build, a retrofit and the handover — a fix runs only
+the one check for its kind of change (`fix/GUIDE.md` §4). Read every output (L15); why each check exists:
+`references/verify-in-full.md`.
 
 1. `hours/scripts/check_hours.py` — minutes match the programme
-2. `coverage/scripts/check_syllabus_coverage.py` — every **itemised outcome** of the model course is taught
-3. `tablet/scripts/verify_course.py` — structure, counts, check→hand-off order
-4. `tablet/scripts/verify_links.py` — every link resolves in the **merged** asset root
-5. `tablet/scripts/audit_navigation.py` — every page is **reachable** and has a way back
-6. `tablet/scripts/crosscheck_tasks.py` — deck ↔ run script ↔ tablet manifest agree
-7. `course-module-ux`'s measurement lane for the screens themselves
-8. `course-visuals/scripts/check_visuals.py` and `check_assets.py`; then, in the page,
-   `GBVerifyFigures.run()` and `await GBVerifyFigures.motion()` (L20); then
-   `course-visuals/review/GUIDE.md`. Nothing at `RIGHTS_REVIEW_REQUIRED` may ship.
-9. `course-visuals/scripts/check_visual_first.py <module> --strict` (L23), then
-   `course-visuals/scripts/write_visual_handoff.py <module>`
-10. `course-module-ui/scripts/design_system.py check <module>`, then `audit_ui.py --strict` over a
-    **new** module's stylesheets — never a delivered deck
-11. `scripts/check_slide_text.py <course>` — what the pages SAY (L22); then
-    `scripts/check_script_match.py <course> --module <n>` — the words are exactly the approved script (L29)
-12. `scripts/check_plain_language.py <course>` — your own report, last before sending it (L25)
-13. `retrofit/scripts/detect_expert_edits.py <module> --record --version <v>` — **last of all**, after everything else passes (L24)
-14. **In retrofit only** — `retrofit/scripts/check_language.py <course> --declare <LANG>`, and
-    `retrofit/scripts/classify_module.py` **again**
+2. `coverage/scripts/check_syllabus_coverage.py` — every itemised model-course outcome is taught
+3. `tablet/scripts/verify_course.py`, `verify_links.py` (merged asset root), `audit_navigation.py`, `crosscheck_tasks.py`
+4. `course-module-ux`'s measurement lane for the screens
+5. `course-visuals/scripts/check_visuals.py`, `check_assets.py`; in the page `GBVerifyFigures.run()` and `await
+   GBVerifyFigures.motion()` (L20); `course-visuals/review/GUIDE.md`; nothing at `RIGHTS_REVIEW_REQUIRED` ships
+6. `course-visuals/scripts/check_visual_first.py <module> --strict` (L23), then `write_visual_handoff.py <module>`
+7. `course-module-ui/scripts/design_system.py check <module>`; `audit_ui.py --strict` over a **new** module's stylesheets
+8. `scripts/check_slide_text.py <course>` (L22), then `check_script_match.py <course> --module <n>` (L29)
+9. `instructor-led`: `scripts/instructor_led.py check` (L68); `coverage/scripts/sim_coverage.py check` (L66)
+10. `scripts/check_plain_language.py <course>` — your own report, last before sending it (L25)
+11. `retrofit/scripts/detect_expert_edits.py <module> --record --version <v>` — last of all (L24)
+12. In retrofit only — `retrofit/scripts/check_language.py <course> --declare <LANG>` and `classify_module.py` again
 
-Then write `templates/factory-notes.md` into the course folder: what was produced, every marker
-with its source, the achieved ratio, what was moved to the handout and why, and a final section
-of **feedback on this skill**. That last section is the only channel through which real use
-reaches the skill — it is written by this skill during the run, never left for a human.
+Then write `templates/factory-notes.md` into the course folder: what was made, every marker with its source, the
+achieved ratio, what moved to the handout and why, and a last section of **feedback on this skill** — written during
+the run, never left for a human.

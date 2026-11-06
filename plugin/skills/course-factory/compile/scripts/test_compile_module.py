@@ -227,6 +227,10 @@ SHAPED_SCREENS = [
     {"id": "s36", "kind": "slide", "title": "Spot the difference", "visual_kind": "photo", "visual": "A ship taking gas.",
      "text": "Gas safe | ESD-protected\nThe gas pipe | inside an outer pipe | a single wall\nA leak | is held in the outer pipe | reaches the room",
      "notes": "- Drag the line.", "minutes": 2},
+    {"id": "s41", "kind": "slide", "title": "Before the entry", "visual_kind": "photo", "visual": "A gas detector.",
+     "active": "scenario", "text": "Tank 2 is gas-freed. Two crew will enter it.", "ask": "Which instrument first?",
+     "choices": "The oxygen analyser.\nThe personal monitor.", "why": "Yes - oxygen first.\nNo - it is for the people inside.",
+     "right": "A", "notes": "- Pairs agree first.", "minutes": 2},
     {"id": "s40", "kind": "slide", "title": "Put the bunkering in order", "visual_kind": "none", "active": "predict-then-reveal",
      "text": "The ship takes LNG from a truck tomorrow morning.", "ask": "Put the four steps in order.",
      "reveal": "1 Safety meeting\n2 Connect the hose\n3 Transfer\n4 Disconnect", "notes": "- Pairs agree first.", "minutes": 2},
@@ -269,7 +273,8 @@ def shapes_part(tmp):
     cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
         "s30": {"figure": "assets/img/ship2.jpg"}, "s34": {"figure": "assets/img/ship.jpg"},
         "s35": {"figure": "assets/img/parts.jpg", "spots": {"1": [300, 400], "2": [700, 500]}},
-        "s36": {"figure": "assets/img/ship.jpg", "figure_b": "assets/img/ship2.jpg"}, "t01": {"try_tablet": False}}})
+        "s36": {"figure": "assets/img/ship.jpg", "figure_b": "assets/img/ship2.jpg"}, "s41": {"figure": "assets/img/ship2.jpg"},
+        "t01": {"try_tablet": False}}})
     code, out = run(COMPILE, c, "--module", "1")
     page = deck(md) if os.path.isfile(os.path.join(md, "presentation", "index.html")) else ""
     check("the fixture deck is built", code in (0, 1) and page, out[-1500:])
@@ -278,7 +283,8 @@ def shapes_part(tmp):
     tpl = lambda sid: (re.search(r'data-template="([\w-]+)\.v1" data-variant="([\w-]+)"', section(page, sid)) or re.search("$^", ""))
     want = {"s30": ("true-false", "picture"), "s31": ("key-numbers", "cards"), "s32": ("scenario", "text-only"),
             "s33": ("worked-example", "text-only"), "s34": ("long-explanation", "points"), "s35": ("name-parts", "picture"),
-            "s36": ("before-after", "slider"), "s37": ("drill", "quick-fire"), "s38": ("drill", "say-it")}
+            "s36": ("before-after", "slider"), "s37": ("drill", "quick-fire"), "s38": ("drill", "say-it"),
+            "s41": ("scenario", "picture-left")}
     got = {k: tpl(k) and tpl(k).groups() for k in want}
     check("each kind of information gets its template: a claim, numbers, a situation, a worked example, short points, parts to "
           "name, two states, the drills", got == want, got)
@@ -297,6 +303,12 @@ def shapes_part(tmp):
     check("what would you do: the situation, the question, the choices with why; the right one marked for the check",
           'data-script-field="ask">What do you do first?' in o and o.count('data-script-field="choices"') == 3
           and 'data-correct="true">Stop the bunkering' in o and 'data-stops="2"' in o and 'class="lt-opt ok" data-v="B"' in o, o[:1600])
+    o2 = section(page, "s41")
+    scol = o2.split('<div class="lt-scol">', 1)[1].split('<div class="copy lt-dcopy">', 1)[0] if '<div class="lt-scol">' in o2 else ""
+    check("... beside a picture, the situation under the picture and the question with its choices in the other column (the "
+          "factory trial: every scenario beside a picture ran past the slide)",
+          'src="../assets/img/ship2.jpg"' in scol and 'data-script-field="text" data-i="1">Tank 2 is gas-freed.' in scol
+          and 'data-script-field="ask"' not in scol and 'data-script-field="ask">Which instrument first?' in o2, o2[:1600])
     w = section(page, "s33")
     check("worked example: the steps light one by one, then the room's turn and its answer on the last Next",
           w.count('<li data-k=') == 3 and 'class="you"' in w and 'data-script-field="reveal">2 ÷ 5 = 0.4' in w and 'data-stops="4"' in w, w[:1600])
@@ -2299,6 +2311,38 @@ KIT3D_SPEC = {"label": "A fuel tank, cut open.", "units": "m",
               "labels": [{"part": "tank", "text": "Fuel tank </script>"}, {"part": "vm", "text": "Vent mast"}]}
 
 
+def boxes_part(tmp):
+    """the picture's box beside the words (layout-templates.json "boxes", layout_fit.py): a drawing with many names gets a
+    larger box, the words in parts beside it when they no longer fit; a picture no box beside its words can show is a
+    problem that says to make it another kind of picture"""
+    print("\n-- the picture's box: grown for a busy drawing, another kind of picture when no box shows it")
+    busy = '<svg viewBox="0 0 800 500" role="img" aria-label="Busy">%s</svg>' % "".join(
+        '<text x="%d" y="%d">Part %d</text>' % (10 + 60 * (i % 12), 30 + 40 * (i // 12), i) for i in range(12))
+    packed = busy.replace("Busy", "Packed").replace("</svg>", "".join("<text>Extra %d</text>" % i for i in range(14)) + "</svg>")
+    short = "The fuel tank holds the LNG at about minus 162 degrees.\nIts valves sit in the tank connection space."
+    sc = json.loads(json.dumps(SCREENS))
+    sc[4:4] = [{"id": "s05", "kind": "slide", "title": "The fuel system", "layout": "split", "visual_kind": "schematic",
+                "visual": "Every part.", "minutes": 3, "text": short},
+               {"id": "s06", "kind": "slide", "title": "Everything at once", "layout": "split", "visual_kind": "schematic",
+                "visual": "Every part.", "minutes": 4, "text": "\n".join(LONG_LINES)}]
+    c, md = new_course(os.path.join(tmp, "boxes"), script(screens=sc))
+    for name, svg_ in (("busy.svg", busy), ("packed.svg", packed)):
+        io.open(os.path.join(md, "assets", "fig", name), "w", encoding="utf-8").write(svg_)
+    build_of(c, lambda s: s["screens"].update(s05={"figure": "assets/fig/busy.svg"}, s06={"figure": "assets/fig/packed.svg"}))
+    code, out = run(COMPILE, c, "--module", "1", "--draft")
+    s5 = section(deck(md), "s05")
+    check("a drawing of 12 names beside two short lines gets the picture-wide box: the picture 58 %, the words 42 %",
+          'data-box="picture-wide"' in s5 and "--lt-text:42" in s5, s5[:400])
+    check("a drawing of 26 names beside %d words: no box beside them shows it - the compile says to make it another kind of "
+          "picture (in steps, a 3D model with names on tap, a slide of its own)" % sum(len(x.split()) for x in LONG_LINES),
+          code != 0 and re.search(r"\(s06\).*names on the picture need the whole slide.*another kind of picture", out), out[-900:])
+    build_of(c, lambda s: s["screens"].update(s06={"figure": "assets/fig/packed.svg", "composition": "stage"}))
+    build_of(c, lambda s: s["screens"].update(s05={"figure": "assets/fig/busy.svg", "box": "even"}))
+    code, out = run(COMPILE, c, "--module", "1", "--draft")
+    check("the build sheet's \"box\" wins; a slide asked onto the stage is not told to change its picture",
+          'data-box="even"' in section(deck(md), "s05") and "another kind of picture" not in out, out[-600:])
+
+
 def kit3d_part(tmp):
     """the 3D kit (course-visuals/kit3d): a *.kit3d.json figure is a 3D scene - its markup, its poster, its starter spec and
     the shipping of three.js, kit3d.js and kit3d.css in the right order"""
@@ -3587,6 +3631,7 @@ def main():
         layouts_part(tmp)
         three_part(tmp)
         kit3d_part(tmp)
+        boxes_part(tmp)
         variety_part(tmp)
         look_part(tmp)
         light_part(tmp)

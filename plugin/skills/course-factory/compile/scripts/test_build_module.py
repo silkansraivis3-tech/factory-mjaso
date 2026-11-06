@@ -398,7 +398,7 @@ def solver_part():
         os.makedirs(os.path.join(md, "presentation"), exist_ok=True)
         sheet = os.path.join(c, "working_claude", "script", "M01.build.json")
         sheet0 = io.open(sheet, encoding="utf-8").read()
-        calls, rule = [], {}
+        calls, rule, small = [], {}, {}
 
         def audit(page, size, only):              # run_audits.measure's answer: a slide fits as rule[sid](its section) says
             deck = io.open(page, encoding="utf-8").read()
@@ -406,6 +406,8 @@ def solver_part():
             secs = {k: (sid, x) for k, sid, x in b.slide_order(deck)}
             bad = [{"slide": k + 1, "id": secs[k][0], "scroll": [{"sel": "div.slide-body", "overflowPx": 21}]}
                    for k in only if not rule.get(secs[k][0], lambda x: True)(secs[k][1])]
+            bad += [{"slide": k + 1, "id": secs[k][0], "svgSmall": [{"txt": "Vent mast", "effPx": 9.5}]}
+                    for k in only if small.get(secs[k][0], lambda x: False)(secs[k][1])]
             return {"deck": {"exit": 1 if bad else 0, "res": {"failingSlides": bad, "slidesTotal": len(secs)}},
                     "collide": {"exit": 0, "res": {}}, "compose": {"exit": 0, "res": {"screens": len(secs), "problems": []}}}, ""
         sizes = [(1280, 800), (1024, 768)]
@@ -475,6 +477,29 @@ def solver_part():
               b.fit_misses(deck_html, "  slide 2 (s02): scrolls div.slide-body by 21 px\n  slide 1 (s01): drawing text too small"
                                       "\n  over-filled: 3 (104 %)") == ["s02", "s03"]
               and b.last_misses(logdir, "M09") == "all", b.fit_misses(deck_html, ""))
+        rule.clear()
+        calls.clear()
+        small["d1"] = lambda x: 'data-box="even"' in x or 'data-box="text-wide"' in x
+        os.remove(os.path.join(logdir, "M01_precheck_fit.json"))
+        lines4, _ = b.layout_precheck(c, 1, md, logdir, "M01", sizes, audit, extra={"d1"})
+        av4 = json.load(io.open(os.path.join(logdir, "M01_layout_avoid.json"), encoding="utf-8"))
+        check("a drawing whose words the audit finds too small: the solver gives it the next larger picture box, never "
+              "smaller words (layout-templates.json \"boxes\")",
+              any(x.startswith("settled: d1 - its picture needed more room; the picture's box picture-wide") for x in lines4)
+              and (av4.get("d1") or {}).get("set", {}).get("box") == "picture-wide", (lines4, av4.get("d1")))
+        page = cm.compile_deck(script, cm.cs.load(sheet), md, os.path.join(c, "working_claude", "figures", "M01"), "x", True,
+                               cm.load_layout_avoid(os.path.join(c, "working_claude"), "M01"))[0]
+        check("... and the compile builds it: the picture 58 % of the width, the words 42 %",
+              'data-box="picture-wide"' in tcm.section(page, "d1") and "--lt-text:42" in tcm.section(page, "d1"),
+              tcm.section(page, "d1")[:300])
+        small.clear()
+        io.open(os.path.join(logdir, "M01_room_misses.json"), "w", encoding="utf-8").write(json.dumps(["d4"]))
+        lines5, _ = b.layout_precheck(c, 1, md, logdir, "M01", sizes, audit, extra=set())
+        check("a picture the last build's fit gate saw only in part is given a larger box by the next pre-check",
+              any(x.startswith("settled: d4 - its picture needed more room") for x in lines5), lines5)
+        check("the fit gate's picture lines name their slides; its cut words do not",
+              b.FIT_GATE_PICTURE.findall("1280x800  fit  FAIL 2 slide(s)\n  s05 step 2,3  picture a.png shows 60 % of itself\n"
+                                         "  s06 step 1  cut     12 px p: \"words\"") == ["s05"], "")
         src = io.open(os.path.join(HERE, "build_module.py"), encoding="utf-8").read()
         check("build_module.py: the pre-check gets the last build's misfits, the build writes them, and --slides runs "
               "in its own process at once (never beside a running build of the module)",
@@ -547,6 +572,9 @@ def review_part():
               '"--base=" + reviewed_dir(out_dir)' in src and '"%s_shots" % m' in src)
         check("a parallel build promotes at module clean (only the course package left)",
               'clean = passed or (o.no_course_pages and fails == ["course package"])' in src)
+        check("--auto fills the picture slots after a failed build too, not only at PHASE A CLEAN (the factory trial: every "
+              "builder lost a run, then filled them by hand)",
+              "    if slots_left and o.auto and not o.auto_round:" in src and "if passed and slots_left and o.auto" not in src)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

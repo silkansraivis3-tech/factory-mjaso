@@ -422,14 +422,14 @@ def check(folder):
                         probs.append("%s sends the room to work but says neither where (data-task-href) nor how (data-link-hint)" % where)
                 elif kind in ("", "Theory") and not s.get("data-cue", "").strip():
                     notes.append("%s has no instructor notes (data-cue) - the instructor's panel shows them" % where)
-            # L46 - 3D where it makes sense: at most half of the presentation's teaching slides
+            # L67 - 60-80 % of the teaching slides step through interactive 3D
             vis = [s.get("data-visual", "").strip() for s in pg.slides if s.get("data-visual", "").strip() not in ("", "none")]
             teach = [s for s in pg.slides if s.get("data-kind", "") in ("", "Theory")]
             three = [s for s in teach if MEDIA["visual_kinds"].get(s.get("data-visual", "").strip(), {}).get("family") in TD["families"]]
-            if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(teach):
-                probs.append("%s: %d of the %d teaching slides are 3D (%.0f %%) - at most %.0f %%; keep 3D where a shape, an inside or a "
-                             "layout in space is taught, the rest a photograph, a drawing or an animation - at full quality (L46)"
-                             % (mod, len(three), len(teach), 100.0 * len(three) / len(teach), 100 * TD["max_share"]))
+            if len(teach) >= TD["count_from"] and not TD["min_share"] * len(teach) <= len(three) <= TD["max_share"] * len(teach):
+                probs.append("%s: %d of the %d teaching slides are interactive 3D (%.0f %%) - between %.0f and %.0f %%; the rest a "
+                             "static 3D render or a photograph, never a flat drawing (L67)"
+                             % (mod, len(three), len(teach), 100.0 * len(three) / len(teach), 100 * TD["min_share"], 100 * TD["max_share"]))
             # L51 - the module closes with the recap, straight before its module check, in the one shared design
             checks = [i for i, s in enumerate(pg.slides) if s.get("data-kind", "") == "Check"
                       and os.path.basename(s.get("data-task-href", "")).lower() == "check.html"]
