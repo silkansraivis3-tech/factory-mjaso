@@ -1,0 +1,118 @@
+/* kit2d.css - the look of the 2D kit. Colours are the course tokens (course-module-ui gb_tokens.css), each with the
+   same value as its fallback, plus the kit's own depth tokens below. A part names a colour by class, never in code.
+   Dark is the slide; .k2-light (chosen from what is behind the figure, or the spec's "theme") is a light page. */
+
+:root{
+  --k2-ink:var(--txt-d,#F3F8FD);--k2-dim:var(--dim-d,#A2B7CF);--k2-faint:var(--faint-d,#71879F);
+  --k2-halo:#0B1C38;--k2-panel-hi:#17366A;--k2-panel-lo:#0C1E3A;--k2-grid:rgba(162,183,207,.13);
+  --k2-blue:var(--blue,#2EB6F8);--k2-amber:var(--amber,#E9A51E);--k2-warn:var(--warn-d,#FF8C82);--k2-good:var(--good-d,#4FD6A0);
+  --k2-cat-1:var(--cat-1,#2EB6F8);--k2-cat-2:var(--cat-2,#3CC8B4);--k2-cat-3:var(--cat-3,#A596F5);--k2-cat-4:var(--cat-4,#EE93B6);--k2-cat-5:var(--cat-5,#A8BBD0);
+  /* depth: every solid is an outline, a body lit from the top left, a hatched cut wall, its contents */
+  --k2-outline:#050D1A;--k2-metal-hi:#B4C4D8;--k2-metal-mid:#6A809F;--k2-metal-lo:#273A58;--k2-hatch:#0A182E;
+  --k2-cavity:#081427;--k2-liquid-hi:#2B7BC0;--k2-liquid-lo:#0F3866;--k2-particle:#D4EBFF;
+  --k2-face:#EEF3F8;--k2-face-ink:#0C1E3A;--k2-glow:rgba(46,182,248,.16);--k2-shadow:rgba(0,0,0,.55);
+  --k2-hi:#FFFFFF}
+.k2-light{--k2-ink:var(--ink,#011111);--k2-dim:var(--dim-l,#41556A);--k2-faint:var(--faint-l,#415C8F);
+  --k2-halo:#F4F7FA;--k2-panel-hi:#FFFFFF;--k2-panel-lo:#EEF2F7;--k2-grid:rgba(65,85,106,.14);
+  --k2-blue:#1A6FA8;--k2-amber:var(--amber-ink,#7A5300);--k2-warn:var(--warn,#B4453A);--k2-good:var(--good,#12805A);
+  --k2-cat-1:#1A6FA8;--k2-cat-2:#0E7468;--k2-cat-3:#5B48B8;--k2-cat-4:#A23A68;--k2-cat-5:#4A5F76;
+  --k2-outline:#1E2C3E;--k2-metal-hi:#D5DEE8;--k2-metal-mid:#8D9FB5;--k2-metal-lo:#4B5E78;--k2-hatch:#2A3A50;
+  --k2-cavity:#1B2A40;--k2-glow:rgba(26,111,168,.10);--k2-shadow:rgba(10,24,46,.28)}
+
+.k2{display:flex;gap:16px;align-items:stretch;width:100%;height:100%;font-family:var(--font,"Raleway","Segoe UI",Arial,sans-serif);color:var(--k2-ink)}
+.k2-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.k2-stage{flex:1 1 auto;min-height:0;border-radius:16px;overflow:hidden;
+  background:radial-gradient(120% 95% at 35% 0%,var(--k2-panel-hi),var(--k2-panel-lo) 72%)}
+.k2-stage svg{display:block;width:100%;height:100%}
+.k2 svg text{font-family:var(--font,"Raleway","Segoe UI",Arial,sans-serif)}
+
+/* type, in drawing units; --k2-up grows it so nothing is drawn under 12.5 px on screen */
+.k2-t-name{font-size:calc(15px * var(--k2-up,1));font-weight:700;letter-spacing:.08em;text-transform:uppercase;fill:var(--k2-dim)}
+.k2-t-val{font-size:calc(34px * var(--k2-up,1));font-weight:800;fill:var(--k2-ink);font-variant-numeric:lining-nums tabular-nums}
+.k2-t-lbl{font-size:calc(17px * var(--k2-up,1));font-weight:700;fill:var(--k2-ink)}
+.k2-t-sub{font-size:calc(15px * var(--k2-up,1));font-weight:600;fill:var(--k2-dim)}
+.k2-t-note{font-size:calc(16px * var(--k2-up,1));font-weight:700;fill:var(--k2-blue)}
+.k2-t-tick{font-size:calc(14px * var(--k2-up,1));font-weight:600;fill:var(--k2-dim);font-variant-numeric:tabular-nums}
+.k2-t-axis{font-size:calc(15px * var(--k2-up,1));font-weight:700;fill:var(--k2-dim)}
+.k2-t-tag{font-size:calc(15px * var(--k2-up,1));font-weight:800;fill:var(--k2-face-ink);font-variant-numeric:tabular-nums}
+.k2-t-face{font-size:calc(14px * var(--k2-up,1));font-weight:700;fill:var(--k2-face-ink)}
+/* words over a drawing carry a halo of the panel's colour */
+.k2-halo{paint-order:stroke;stroke:var(--k2-halo);stroke-width:5px;stroke-linejoin:round}
+.k2-halo-wide{stroke-width:14px}
+
+/* labels: a leader ending in a dot on the thing named */
+.k2-lead{fill:none;stroke:var(--k2-dim);stroke-width:1.5}
+.k2-dot{fill:var(--k2-ink);stroke:var(--k2-halo);stroke-width:2}
+
+/* paint servers: stops by class, so the light mapping reaches them */
+.k2-s-metal-hi{stop-color:var(--k2-metal-hi)}.k2-s-metal-mid{stop-color:var(--k2-metal-mid)}.k2-s-metal-lo{stop-color:var(--k2-metal-lo)}
+.k2-s-liq-hi{stop-color:var(--k2-liquid-hi)}.k2-s-liq-lo{stop-color:var(--k2-liquid-lo)}
+.k2-s-glow{stop-color:var(--k2-glow)}.k2-s-glow0{stop-color:var(--k2-glow);stop-opacity:0}
+.k2-s-shadow{stop-color:var(--k2-shadow)}.k2-s-shadow0{stop-color:var(--k2-shadow);stop-opacity:0}
+.k2-s-blue{stop-color:var(--k2-blue)}.k2-s-amber{stop-color:var(--k2-amber)}.k2-s-good{stop-color:var(--k2-good)}
+.k2-s-cat-1{stop-color:var(--k2-cat-1)}.k2-s-cat-2{stop-color:var(--k2-cat-2)}.k2-s-cat-3{stop-color:var(--k2-cat-3)}.k2-s-cat-4{stop-color:var(--k2-cat-4)}.k2-s-cat-5{stop-color:var(--k2-cat-5)}
+.k2-hatch-line{stroke:var(--k2-hatch);stroke-width:1.6;opacity:.5}
+.k2-hatch-band{stroke:var(--k2-metal-mid);stroke-width:4;opacity:.55}
+
+/* solids */
+.k2-outline{fill:var(--k2-outline)}.k2-outline-s{fill:none;stroke:var(--k2-outline)}
+.k2-cavity{fill:var(--k2-cavity)}
+.k2-face{fill:var(--k2-face)}.k2-face-ring{fill:none;stroke:var(--k2-metal-mid);stroke-width:5}
+.k2-tick{stroke:var(--k2-face-ink);stroke-width:2}.k2-tick-major{stroke:var(--k2-face-ink);stroke-width:3}
+.k2-needle{fill:var(--k2-warn)}.k2-hub{fill:var(--k2-face-ink)}
+.k2-particle{fill:var(--k2-particle)}
+.k2-edge{fill:none;stroke:var(--k2-hi);stroke-opacity:.22;stroke-width:1.5}
+.k2-spoke{fill:var(--k2-metal-lo)}
+
+/* charts */
+.k2-grid{stroke:var(--k2-grid);stroke-width:1}
+.k2-axis{stroke:var(--k2-dim);stroke-width:2;fill:none}
+.k2-drop{stroke:var(--k2-dim);stroke-width:1.5;stroke-dasharray:5 5;fill:none}
+.k2-curve{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.k2-c-1{stroke:var(--k2-cat-1)}.k2-c-2{stroke:var(--k2-cat-2)}.k2-c-3{stroke:var(--k2-cat-3)}.k2-c-4{stroke:var(--k2-cat-4)}.k2-c-5{stroke:var(--k2-cat-5)}
+.k2-f-1{fill:var(--k2-cat-1)}.k2-f-2{fill:var(--k2-cat-2)}.k2-f-3{fill:var(--k2-cat-3)}.k2-f-4{fill:var(--k2-cat-4)}.k2-f-5{fill:var(--k2-cat-5)}
+.k2-pt{fill:var(--k2-face);stroke-width:4}
+.k2-pt-ghost{fill:none;stroke:var(--k2-dim);stroke-width:2.5;stroke-dasharray:4 4}
+.k2-tag{fill:var(--k2-face)}
+.k2-band-good{fill:var(--k2-good);opacity:.16}.k2-bracket-good{fill:none;stroke:var(--k2-good);stroke-width:3;stroke-linecap:round}
+.k2-t-good{font-size:calc(22px * var(--k2-up,1));font-weight:800;fill:var(--k2-good)}
+.k2-hit{fill:transparent;cursor:grab;touch-action:none}
+.k2-hit:focus{outline:none}.k2-hit:focus-visible+*{stroke:var(--k2-hi)}
+
+/* concept shapes */
+.k2-side-blue{fill:none;stroke:var(--k2-blue);stroke-width:7;stroke-linecap:round}
+.k2-side-amber{fill:none;stroke:var(--k2-amber);stroke-width:7;stroke-linecap:round}
+.k2-node{fill:var(--k2-ink)}.k2-node-ring{fill:none;stroke:var(--k2-blue);stroke-width:4}.k2-node-ring-amber{fill:none;stroke:var(--k2-amber);stroke-width:4}
+.k2-ghost{fill:none;stroke:var(--k2-dim);stroke-width:2.5;stroke-dasharray:9 8}
+.k2-frame{fill:none;stroke:var(--k2-faint);stroke-width:5}
+.k2-frame-on{fill:none;stroke:var(--blue2,#53A7DB);stroke-width:8}
+.k2-lock{fill:var(--k2-ink);stroke:var(--k2-blue);stroke-width:3}.k2-lock-arc{fill:none;stroke:var(--k2-ink);stroke-width:5;stroke-linecap:round}
+.k2-lock-hole{fill:var(--k2-panel-lo)}
+.k2-t-amber{fill:var(--k2-amber)}
+
+/* side panel: controls a trainee tries, readouts the figure computes */
+.k2-side{flex:0 0 250px;display:flex;flex-direction:column;gap:12px}
+.k2-card{border:1px solid var(--line-d,rgba(46,182,248,.18));border-radius:14px;padding:12px 14px;background:rgba(12,30,58,.55)}
+.k2-light .k2-card{background:#FFFFFF;border-color:var(--line-l,#D3DBE5)}
+.k2-card-h{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:700;color:var(--k2-dim)}
+.k2-card-h b{color:var(--k2-ink);font-size:17px;font-variant-numeric:tabular-nums}
+.k2-range{width:100%;height:44px;margin:4px 0 0;accent-color:var(--k2-blue);cursor:pointer}
+.k2-opts{display:flex;gap:8px;margin-top:8px}
+.k2-opts button{flex:1;min-height:44px;border-radius:10px;border:1px solid var(--line-d,rgba(46,182,248,.3));background:transparent;
+  color:var(--k2-ink);font:inherit;font-weight:700;font-size:15px;cursor:pointer}
+.k2-opts button.on{background:var(--k2-blue);color:var(--on-blue,#04263A);border-color:transparent}
+.k2-reads{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.k2-read{border:1px solid var(--line-d,rgba(46,182,248,.18));border-radius:12px;padding:10px 12px}
+.k2-read span{display:block;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--k2-dim)}
+.k2-read b{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.k2-read i{font-style:normal;font-size:14px;color:var(--k2-dim);margin-left:3px}
+
+/* the step bar outside a deck (a deck's own Next walks the steps) */
+.k2-bar{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.k2-bar button{min-height:44px;padding:0 18px;border-radius:12px;border:0;background:var(--white,#FFFFFF);color:var(--navy,#0A2463);
+  font:inherit;font-weight:700;font-size:16px;cursor:pointer}
+.k2-bar button:disabled{opacity:.5;cursor:default}
+.k2-dots{display:flex;gap:7px}.k2-dots i{width:9px;height:9px;border-radius:50%;background:var(--k2-dim);opacity:.5}.k2-dots i.on{opacity:1;background:var(--k2-ink)}
+.k2-title{color:var(--k2-dim);font-size:16px}
+
+@media (max-width:900px){.k2{flex-direction:column}.k2-side{flex:0 0 auto;flex-direction:row;flex-wrap:wrap}.k2-side>*{flex:1 1 200px}}

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Category colours</title>
+<style>
+:root{--navy:#0A2463;--deep:#0A182E;--deep-3:#122A52;--txt-d:#F3F8FD;--dim-d:#A2B7CF;--dim-l:#41556A;--ink:#011111;
+  --cat-1:#2EB6F8;--cat-2:#3CC8B4;--cat-3:#A596F5;--cat-4:#EE93B6;--cat-5:#A8BBD0}
+.light{--cat-1:#1A6FA8;--cat-2:#0E7468;--cat-3:#5B48B8;--cat-4:#A23A68;--cat-5:#4A5F76}
+body{margin:0;font-family:Raleway,"Segoe UI",Arial,sans-serif;background:#0A182E;color:var(--txt-d);width:1280px}
+h1{font-size:24px;margin:20px 28px 4px}p.sub{margin:0 28px 14px;color:var(--dim-d);font-size:15px}
+.row{display:flex;gap:20px;padding:0 28px 20px}
+.panel{flex:1;border-radius:16px;padding:18px 20px;background:radial-gradient(120% 90% at 30% 0%,#163565,#0C1E3A 70%)}
+.panel.light{background:#F4F7FA;color:var(--ink)}
+.panel h2{margin:0 0 12px;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim-d)}
+.panel.light h2{color:var(--dim-l)}
+.sw{display:flex;gap:10px;margin-bottom:16px}
+.sw div{flex:1;border-radius:10px;height:64px;display:flex;align-items:flex-end;padding:8px;font-size:14px;font-weight:700;color:#04263A}
+.panel.light .sw div{color:#fff}
+svg text{font-family:Raleway,"Segoe UI",Arial,sans-serif}
+</style></head><body>
+<h1>Category colours for concept figures</h1>
+<p class="sub">Five calm colours beside the course blue, for categories (scope / time / cost, stages of a cycle). Amber, red and green stay for warning, wrong and right. Dark slide on the left, light task page on the right.</p>
+<div class="row">
+ <div class="panel"><h2>On a dark slide</h2><div class="sw"></div><svg class="demo" viewBox="0 0 560 260" width="100%"></svg></div>
+ <div class="panel light"><h2>On a light page</h2><div class="sw"></div><svg class="demo" viewBox="0 0 560 260" width="100%"></svg></div>
+</div>
+<script>
+const names=["Blue","Teal","Violet","Rose","Slate"], stages=["Plan","Do","Check","Act"];
+document.querySelectorAll('.panel').forEach(p=>{
+  const light=p.classList.contains('light'), ink=light?'#011111':'#F3F8FD';
+  p.querySelector('.sw').innerHTML=names.map((n,i)=>`<div style="background:var(--cat-${i+1})">${n}</div>`).join('');
+  let s=`<defs>${[1,2,3,4,5].map(i=>`<linearGradient id="g${i}${light?'l':'d'}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--cat-${i})" stop-opacity=".95"/><stop offset="1" stop-color="var(--cat-${i})" stop-opacity=".55"/></linearGradient>`).join('')}
+  <filter id="sh${light?'l':'d'}" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#000" flood-opacity="${light?.18:.45}"/></filter></defs>`;
+  const cx=130,cy=130,R=88;
+  stages.forEach((t,i)=>{const a0=-Math.PI/2+i*Math.PI/2+0.08,a1=a0+Math.PI/2-0.16,r0=R-26;
+    const P=(a,r)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];const [x0,y0]=P(a0,R),[x1,y1]=P(a1,R),[x2,y2]=P(a1,r0),[x3,y3]=P(a0,r0);
+    s+=`<path d="M${x0} ${y0}A${R} ${R} 0 0 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 0 0 ${x3} ${y3}Z" fill="url(#g${i+1}${light?'l':'d'})" filter="url(#sh${light?'l':'d'})"/>`;
+    const [lx,ly]=P((a0+a1)/2,R+22);s+=`<text x="${lx}" y="${ly+5}" text-anchor="middle" font-size="16" font-weight="800" fill="${ink}">${t}</text>`;});
+  const bars=[["Scope",.8],["Time",.55],["Cost",.95],["Risk",.4],["Other",.3]];
+  bars.forEach(([t,v],i)=>{const y=40+i*40,w=200*v;
+    s+=`<rect x="320" y="${y}" width="${w}" height="26" rx="8" fill="url(#g${i+1}${light?'l':'d'})" filter="url(#sh${light?'l':'d'})"/><text x="${320+w+8}" y="${y+18}" font-size="15" font-weight="700" fill="${ink}">${t}</text>`;});
+  p.querySelector('svg').innerHTML=s;
+});
+</script></body></html>

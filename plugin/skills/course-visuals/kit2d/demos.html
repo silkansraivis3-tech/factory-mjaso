@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2D kit demos</title>
+<link rel="stylesheet" href="../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="kit2d.css">
+<style>
+@font-face{font-family:"Raleway";src:url("../../course-module-ui/templates/fonts/raleway-variable.ttf") format("truetype");font-weight:100 900;font-display:block}
+:root{--cat-1:#2EB6F8;--cat-2:#3CC8B4;--cat-3:#A596F5;--cat-4:#EE93B6;--cat-5:#A8BBD0}
+body{margin:0;background:var(--deep);color:var(--txt-d);font-family:var(--font)}
+section{padding:26px 28px 30px;border-bottom:1px solid var(--line-d)}
+.kind{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--blue)}
+h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);font-size:17px;max-width:900px}
+.host{height:560px}
+.demo-note{font-size:13px;color:var(--faint-d);margin-top:10px}
+</style></head><body>
+
+<section id="d-chart">
+  <div class="kind">Graph · drag the point</div>
+  <h2>Slow steaming: fuel rises with the cube of speed</h2>
+  <p class="lead">A little less speed saves a lot of fuel. Step through it, drag the point, or use the slider.</p>
+  <div class="host" data-kit2d="#spec-chart"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-chart">
+{ "label": "Fuel burned a day against ship speed: the curve rises with the cube of speed; slowing from 14 to 10 knots more than halves the fuel.",
+  "size": [960, 540], "glow": {"x": 520, "y": 260},
+  "state": {"draw": 0, "speed": 14, "pt": 0, "slow": 0}, "rates": {"draw": 2.4},
+  "parts": [
+    {"id": "C", "type": "chart", "x": 120, "y": 70, "w": 740, "h": 380,
+     "xaxis": {"min": 0, "max": 20, "step": 2, "label": "Ship speed", "unit": "kn"},
+     "yaxis": {"min": 0, "max": 60, "step": 10, "label": "Fuel burned", "unit": "t/day"}},
+    {"id": "F", "type": "curve", "on": "C", "fn": {"kind": "power", "a": 0.0075, "n": 3}, "cat": 1, "draw": "@draw", "label": "Fuel a day"},
+    {"id": "S", "type": "span", "on": "C", "curve": "F", "from": 14, "to": "@speed", "show": "@slow", "text": "{pct} % less fuel"},
+    {"id": "P", "type": "point", "on": "C", "curve": "F", "x": "@speed", "show": "@pt", "tagx": "{x} kn", "tagy": "{y} t", "dx": 1, "dy": 1,
+     "drag": "speed", "snap": 0.5, "min": 6, "max": 20, "dragLabel": "ship speed", "ghost": {"x": 14, "show": "@slow"}}
+  ],
+  "steps": [
+    {"title": "Fuel rises with the cube of speed", "set": {"draw": 1}},
+    {"title": "At 14 knots", "set": {"pt": 1}},
+    {"title": "Slow down to 12 knots", "set": {"slow": 1, "speed": 12}},
+    {"title": "Slow steaming at 10 knots", "set": {"speed": 10}}
+  ],
+  "controls": [{"type": "slider", "state": "speed", "min": 6, "max": 20, "step": 0.5, "label": "Ship speed", "unit": "kn", "decimals": 1}],
+  "readouts": [{"label": "Speed", "value": "@speed", "unit": "kn", "decimals": 1}, {"label": "Fuel", "value": "P.y", "unit": "t/day", "decimals": 1}]
+}
+</script>
+
+<section id="d-object">
+  <div class="kind">Object · cutaway with flow</div>
+  <h2>A gate valve: the flow stops where the gate meets the seat</h2>
+  <p class="lead">Turn the handwheel and the gate slides down across the bore. Watch the liquid squeeze under it, and the pressure before it rise.</p>
+  <div class="host" data-kit2d="#spec-valve"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-valve">
+{ "label": "A gate valve cut through on a pipe: as the handwheel turns the gate slides down across the bore, the flow squeezes under it and stops when it is shut.",
+  "size": [960, 540], "glow": {"x": 560, "y": 300, "rx": 380, "ry": 260},
+  "state": {"open": 1}, "rates": {"open": 2.6},
+  "parts": [
+    {"id": "P", "type": "pipe", "pts": [[-20, 392], [980, 392]], "r": 38, "wall": 11, "flow": "V.flow", "speed": 150, "gate": {"x": 560, "open": "@open"}},
+    {"id": "V", "type": "gate_valve", "x": 560, "y": 392, "r": 38, "open": "@open", "turns": 4, "pressure": [2, 8], "label": "Handwheel", "sub": "turns the stem"},
+    {"id": "G", "type": "gauge", "x": 250, "y": 190, "r": 66, "min": 0, "max": 10, "step": 1, "value": "V.pressure", "unit": "bar", "stem": 80, "label": "Pressure before the valve"},
+    {"type": "callout", "at": [70, 392], "text": "Liquid in", "side": "down", "dist": 62},
+    {"type": "callout", "at": [890, 392], "text": "Out", "side": "down", "dist": 62},
+    {"type": "callout", "at": [580, 300], "text": "Gate", "sub": "slides across the bore", "side": "right", "dist": 110}
+  ],
+  "steps": [
+    {"title": "Half shut: the gate narrows the bore", "set": {"open": 0.5}},
+    {"title": "Nearly shut: the liquid squeezes under the gate", "set": {"open": 0.12}},
+    {"title": "Shut: the gate meets the seat and nothing flows", "set": {"open": 0}}
+  ],
+  "controls": [{"type": "slider", "state": "open", "min": 0, "max": 1, "step": 0.01, "scale": 100, "label": "Valve open", "unit": "%"}],
+  "readouts": [{"label": "Flow", "value": "V.flow", "scale": 100, "unit": "%"}, {"label": "Pressure", "value": "V.pressure", "unit": "bar", "decimals": 1}]
+}
+</script>
+
+<section id="d-concept">
+  <div class="kind">Concept · the shape changes</div>
+  <h2>The project triangle</h2>
+  <p class="lead">Scope, time and cost hold each other. Push one corner and another has to move.</p>
+  <div class="host" data-kit2d="#spec-tri"></div>
+</section>
+<script type="application/json" id="spec-tri">
+{ "label": "Project triangle: scope, time and cost are linked inside a fixed frame of safety and rules. More scope with the same end date pulls the cost corner out.",
+  "size": [1120, 640], "glow": {"x": 560, "y": 360, "rx": 420, "ry": 280},
+  "state": {"scope": 3, "cost": 100, "extra": 0, "same": 0, "strain": 0, "frame": 0},
+  "parts": [
+    {"id": "T", "type": "triangle", "strain": "@strain",
+     "frame": {"label": "Fixed frame: safety and rules", "show": "@frame"},
+     "corners": [
+       {"at": [560, 150], "dir": [0, -1], "push": "@scope", "base": "@scope", "k": 56, "name": "Scope", "value": "@scope", "fmt": "{v} jobs", "note": "Extra work", "noteShow": "@extra", "side": "right"},
+       {"at": [330, 510], "dir": [0, 0], "name": "Time", "fmt": "1 end date", "note": "Same end date", "noteShow": "@same", "hold": "@same", "side": "left", "dy": -78},
+       {"at": [790, 510], "dir": [0.94, 0.34], "push": "@cost", "base": "@cost", "k": 3.67, "name": "Cost", "value": "@cost", "fmt": "{v} %", "strain": true, "side": "right", "dy": -46}
+     ]}
+  ],
+  "steps": [
+    {"title": "Extra work", "set": {"scope": 4, "extra": 1}},
+    {"title": "Same end date", "set": {"same": 1}},
+    {"title": "Cost 130 %", "set": {"cost": 130, "strain": 1}},
+    {"title": "Fixed frame: safety and rules", "set": {"frame": 1}}
+  ]
+}
+</script>
+<script src="kit2d.js"></script>
+</body></html>
