@@ -23,9 +23,10 @@ and the like). Shown to the owner as swatches before any figure uses them.
 
 ## Build order
 
-- **A. 2D concept layer** in the figure kit (`course-visuals/kit/`): the pieces (shape, arrow, node, frame), a depth
-  helper, the category colours, and about ten concept patterns. The project triangle
-  (`design/figure-demos/pm-triangle/after.html`) is the first.
+- **A. A new 2D kit** (`course-visuals/kit2d/`, 2.108.0), not a layer on the old figure kit (owner: "i dont like how 2d
+  kit was before"). Built from the owner's reference: graphs, objects in motion, concepts; smooth motion; an overlap
+  check the fit gate runs on every step; wired into the compiler. Next: more parts (bars, pyramid, balance, events,
+  people, more objects), a light-page review, gallery cards and its own test file.
 - **B. 3D concept scenes** in `kit3d`: the same concepts as 3D objects.
 - **C. A universal kit:** the gas and IGF defaults, colours and meaning rules move into a gas pack; the core knows no
   course.

@@ -241,6 +241,13 @@
       if (!busy && f.relayout) { f.relayout = false; f.layout(); if (f.follow(0, true)) { busy = true; f.kick(); } }
       return busy;
     },
+    /* nothing on its way anywhere: every state at its target, nothing waiting, no ring still growing */
+    idle: function () {
+      var f = this, k;
+      if ((f.pending || []).length || (f.fx || []).length) { return false; }
+      for (k in f.T) { if (Math.abs(f.S[k] - f.T[k]) > 1e-3 * (1 + Math.abs(f.T[k]))) { return false; } }
+      return true;
+    },
     show: function () { this.hidden = false; this.kick(); },
     hide: function () { this.hidden = true; if (this.raf) { w.cancelAnimationFrame(this.raf); this.raf = 0; } },
 
@@ -251,6 +258,7 @@
       var scale = Math.min(r.width / f.W, r.height / f.H), up = Math.max(1, 12.6 / (14 * scale));
       f.svg.style.setProperty('--k2-up', up.toFixed(3));
       f.scale = scale;
+      f.thinNow();
       f.frame(true);
       f.layout();
       this.labels.forEach(function (L) { if (L.goal) { L.off = L.goal.slice(); } });
@@ -271,6 +279,22 @@
       return L;
     },
     solid: function (fn) { this.solids.push(fn); },
+    /* a row of axis words (ticks, week numbers): when the grown type no longer fits between them, only every 2nd, 3rd or
+       4th is shown - never two on top of each other. items: [{n: text element, at: position along the axis}] */
+    thin: function (items, axis) { (this.thins = this.thins || []).push({ items: items, axis: axis || 'x' }); },
+    thinNow: function () {
+      (this.thins || []).forEach(function (T) {
+        var it = T.items, i, need = 0, gap = 1e9, k;
+        if (it.length < 3) { return; }
+        it.forEach(function (x) { x.n.style.display = ''; });
+        for (i = 0; i < it.length; i++) {
+          var b = it[i].n.getBBox(); need = Math.max(need, (T.axis === 'x' ? b.width : b.height) + 10);
+          if (i) { gap = Math.min(gap, Math.abs(it[i].at - it[i - 1].at)); }
+        }
+        for (k = 1; k < it.length && gap * k < need; k++) { /* the smallest step that fits */ }
+        it.forEach(function (x, j) { x.n.style.display = j % k === 0 ? '' : 'none'; });
+      });
+    },
     /* a line that words keep clear of: fn returns its points; each straight piece becomes a thin box */
     line: function (fn) {
       var f = this;
@@ -436,6 +460,7 @@
       }
     };
     f.charts = f.charts || {}; f.charts[p.id] = C;
+    f.thin(C.tx, 'x'); f.thin(C.ty, 'y');
     var g = el('g', {}, f.L.back), v;
     for (v = X.min; v <= X.max + 1e-9; v += X.step) {
       el('line', { x1: C.X(v), y1: y0, x2: C.X(v), y2: y0 + H, 'class': 'k2-grid' }, g);
@@ -510,10 +535,11 @@
     var C = f.charts[p.on], F = f.fns[p.curve].fn, cat = p.cat || 1, g = el('g', {}, f.L.front), gg = el('g', {}, f.L.front);
     var X = C.xaxis;
     function tag(parent) {
-      var t = el('g', {}, parent), r = el('rect', { rx: 8, height: 28, 'class': 'k2-tag' }, t), tx = el('text', { 'class': 'k2-t-tag', y: 20 }, t);
-      return { g: t, r: r, t: tx, set: function (s, x, y, anchor) {
-        tx.textContent = s; var bw = tx.getComputedTextLength() + 18, h = 28;
-        r.setAttribute('width', bw.toFixed(1)); tx.setAttribute('x', 9); this.w = bw;
+      var t = el('g', {}, parent), r = el('rect', { rx: 8, height: 28, 'class': 'k2-tag' }, t), tx = el('text', { 'class': 'k2-t-tag', 'dominant-baseline': 'central' }, t);
+      return { g: t, r: r, t: tx, w: 0, h: 28, set: function (s, x, y, anchor) {
+        tx.textContent = s; var bb = tx.getBBox(), bw = bb.width + 18, h = Math.max(28, bb.height + 8);
+        r.setAttribute('width', bw.toFixed(1)); r.setAttribute('height', h.toFixed(1)); tx.setAttribute('x', 9); tx.setAttribute('y', (h / 2).toFixed(1));
+        this.w = bw; this.h = h;
         var ox = anchor === 'end' ? x - bw : anchor === 'middle' ? x - bw / 2 : x;
         t.setAttribute('transform', 'translate(' + ox.toFixed(1) + ' ' + (y - h / 2).toFixed(1) + ')');
       } };
@@ -540,14 +566,14 @@
         tx.set(tpl(p.tagx || '{x}', { x: x }, p.dx == null ? 0 : p.dx), px, b.y + b.h + 24, 'middle');
         ty.set(tpl(p.tagy || '{y}', { y: y }, p.dy == null ? 0 : p.dy), b.x - 8, py, 'end');
         var shw = f.get(p.show, 1);
-        C.cover.push(['x', px, tx.w / 2 + 6, shw], ['y', py, 24, shw]);
+        C.cover.push(['x', px, tx.w / 2 + 6, shw], ['y', py, ty.h / 2 + 10, shw]);
         setOp(g, f.get(p.show, 1));
         if (ghost) {
           var gx = f.get(p.ghost.x), gy = F(gx), gpx = C.X(gx), gpy = C.Y(gy);
           ghost.drop.setAttribute('d', 'M' + pt([b.x, gpy]) + ' H' + gpx.toFixed(1) + ' V' + (b.y + b.h).toFixed(1));
           ghost.dot.setAttribute('cx', gpx.toFixed(1)); ghost.dot.setAttribute('cy', gpy.toFixed(1));
           ghost.ty.set(tpl(p.tagy || '{y}', { y: gy }, p.dy == null ? 0 : p.dy), b.x - 8, gpy, 'end');
-          C.cover.push(['y', gpy, 24, f.get(p.ghost.show, 1)]);
+          C.cover.push(['y', gpy, ghost.ty.h / 2 + 10, f.get(p.ghost.show, 1)]);
           setOp(gg, f.get(p.ghost.show, 1));
         }
       }
@@ -901,6 +927,7 @@
     var t0 = p.start || 0, t1 = p.end, head = 40, rh = Math.min(p.rowH || 74, (H - head - 60) / n), bh = Math.round(rh * 0.56);
     function X(t) { return tx + (t - t0) / (t1 - t0) * tw; }
     var g = el('g', {}, f.L.back), t, heads = [];
+    f.thin(heads, 'x');
     for (t = t0; t <= t1 + 1e-9; t += (p.step || 1)) {
       el('line', { x1: X(t), y1: y0 + head - 6, x2: X(t), y2: y0 + head + n * rh, 'class': 'k2-grid' }, g);
       if (t < t1) { heads.push({ n: el('text', { x: (X(t) + X(t + (p.step || 1))) / 2, y: y0 + 24, 'text-anchor': 'middle', 'class': 'k2-t-tick' }, g, tpl(p.tick || '{v}', { v: t + 1 }, 0)), at: (X(t) + X(t + (p.step || 1))) / 2 }); }
@@ -920,9 +947,9 @@
     });
     var byId = {}; rows.forEach(function (r) { byId[r.k.id] = r; });
     var fy = y0 + head + n * rh + 10, finLine = el('path', { 'class': 'k2-finish' }, f.L.front), finTag = el('g', {}, f.L.front);
-    var finR = el('rect', { rx: 8, height: 30, 'class': 'k2-tag-amber' }, finTag), finT = new Roller(finTag, { y: 21, x: 10, 'class': 'k2-t-tag' });
+    var finR = el('rect', { rx: 8, height: 30, 'class': 'k2-tag-amber' }, finTag), finT = new Roller(finTag, { y: 15, x: 10, 'class': 'k2-t-tag', 'dominant-baseline': 'central' });
     var tdLine = el('path', { 'class': 'k2-today' }, f.L.front), tdTag = el('g', {}, f.L.front);
-    el('rect', { rx: 8, height: 28, width: 70, x: -35, y: -34, 'class': 'k2-tag' }, tdTag); el('text', { y: -14, 'text-anchor': 'middle', 'class': 'k2-t-tag' }, tdTag, p.todayLabel || 'Today');
+    var tdR = el('rect', { rx: 8, height: 28, 'class': 'k2-tag' }, tdTag), tdT = el('text', { 'text-anchor': 'middle', 'dominant-baseline': 'central', 'class': 'k2-t-tag' }, tdTag, p.todayLabel || 'Today');
     var lastFin = null;
     function plan(to) {
       var S = {}, E = {}, end = t0;
@@ -966,12 +993,17 @@
         var fx = X(q.end), fo = clamp(dr * 2 - 1, 0, 1);
         finLine.setAttribute('d', 'M' + fx.toFixed(1) + ' ' + (y0 + head - 6) + ' V' + fy); setOp(finLine, fo);
         finT.set(q.end, p.finish || 'Finish {v}', 0);
-        var fwid = 150; finR.setAttribute('width', fwid); finR.setAttribute('x', 0);
+        var fb2 = finT.a.getBBox(), fwid = fb2.width + 20, fh2 = Math.max(30, fb2.height + 8);
+        finR.setAttribute('width', fwid.toFixed(1)); finR.setAttribute('height', fh2.toFixed(1)); finR.setAttribute('x', 0);
+        finT.a.setAttribute('y', (fh2 / 2).toFixed(1)); finT.b.setAttribute('y', (fh2 / 2).toFixed(1));
         finTag.setAttribute('transform', 'translate(' + (fx - fwid / 2).toFixed(1) + ' ' + fy + ')'); setOp(finTag, fo);
         var to = clamp((today - t0) * 3, 0, 1);
         tdLine.setAttribute('d', 'M' + X(today).toFixed(1) + ' ' + (y0 + head - 4) + ' V' + (y0 + head + n * rh)); setOp(tdLine, to);
         tdTag.setAttribute('transform', 'translate(' + X(today).toFixed(1) + ' ' + (y0 + head - 4) + ')'); setOp(tdTag, to);
-        heads.forEach(function (hd) { setOp(hd.n, 1 - to * (1 - clamp((Math.abs(hd.at - X(today)) - 52) / 10, 0, 1))); });
+        var tb = tdT.getBBox(), tw2 = tb.width + 20, th2 = Math.max(28, tb.height + 8);
+        tdR.setAttribute('x', (-tw2 / 2).toFixed(1)); tdR.setAttribute('y', (-th2 - 6).toFixed(1)); tdR.setAttribute('width', tw2.toFixed(1)); tdR.setAttribute('height', th2.toFixed(1));
+        tdT.setAttribute('y', (-th2 / 2 - 6).toFixed(1));
+        heads.forEach(function (hd) { var hw = hd.n.getBBox().width / 2; setOp(hd.n, 1 - to * (1 - clamp((Math.abs(hd.at - X(today)) - tw2 / 2 - hw - 6) / 10, 0, 1))); });
       }
     };
   });

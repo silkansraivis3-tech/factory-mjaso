@@ -60,7 +60,7 @@ SCREEN_OPEN = re.compile(
 FIGURE = re.compile(
     r"<(?:img|svg|canvas|video|picture)\b"
     r"|<figure\b"
-    r'|\bdata-fig(?:ure)?=|\bclass="[^"]*\bgb-?fig\b|\bdata-kit3d=',
+    r'|\bdata-fig(?:ure)?=|\bclass="[^"]*\bgb-?fig\b|\bdata-kit3d=|\bdata-kit2d=',
     re.I)
 
 # Body text: a paragraph, a list, a card deck. Headings do not count - a heading

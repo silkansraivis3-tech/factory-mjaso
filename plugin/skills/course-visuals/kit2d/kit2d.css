@@ -5,19 +5,25 @@
 :root{
   --k2-ink:var(--txt-d,#F3F8FD);--k2-dim:var(--dim-d,#A2B7CF);--k2-faint:var(--faint-d,#71879F);
   --k2-halo:#0B1C38;--k2-panel-hi:#17366A;--k2-panel-lo:#0C1E3A;--k2-grid:rgba(162,183,207,.13);
-  --k2-blue:var(--blue,#2EB6F8);--k2-amber:var(--amber,#E9A51E);--k2-warn:var(--warn-d,#FF8C82);--k2-good:var(--good-d,#4FD6A0);
+  --k2-blue:var(--blue,#2EB6F8);--k2-amber:var(--kit-alarm,var(--amber,#E9A51E));--k2-warn:var(--warn-d,#FF8C82);--k2-good:var(--good-d,#4FD6A0);
   --k2-cat-1:var(--cat-1,#2EB6F8);--k2-cat-2:var(--cat-2,#3CC8B4);--k2-cat-3:var(--cat-3,#A596F5);--k2-cat-4:var(--cat-4,#EE93B6);--k2-cat-5:var(--cat-5,#A8BBD0);
   /* depth: every solid is an outline, a body lit from the top left, a hatched cut wall, its contents */
   --k2-outline:#050D1A;--k2-metal-hi:#B4C4D8;--k2-metal-mid:#6A809F;--k2-metal-lo:#273A58;--k2-hatch:#0A182E;
   --k2-cavity:#081427;--k2-liquid-hi:#2B7BC0;--k2-liquid-lo:#0F3866;--k2-particle:#D4EBFF;
   --k2-face:#EEF3F8;--k2-face-ink:#0C1E3A;--k2-glow:rgba(46,182,248,.16);--k2-shadow:rgba(0,0,0,.55);
+  /* on a light page */
+  --k2-l-ink:var(--ink,#011111);--k2-l-dim:var(--dim-l,#41556A);--k2-l-faint:var(--faint-l,#415C8F);
+  --k2-l-halo:#F4F7FA;--k2-l-panel-hi:#FFFFFF;--k2-l-panel-lo:#EEF2F7;--k2-l-grid:rgba(65,85,106,.14);
+  --k2-l-blue:#1A6FA8;--k2-l-amber:var(--kit-alarm-ink,var(--amber-ink,#7A5300));--k2-l-warn:var(--warn,#B4453A);--k2-l-good:var(--good,#12805A);
+  --k2-l-cat-1:#1A6FA8;--k2-l-cat-2:#0E7468;--k2-l-cat-3:#5B48B8;--k2-l-cat-4:#A23A68;--k2-l-cat-5:#4A5F76;
+  --k2-l-outline:#1E2C3E;--k2-l-metal-hi:#D5DEE8;--k2-l-metal-mid:#8D9FB5;--k2-l-metal-lo:#4B5E78;--k2-l-hatch:#2A3A50;
+  --k2-l-cavity:#1B2A40;--k2-l-glow:rgba(26,111,168,.10);--k2-l-shadow:rgba(10,24,46,.28);
+  /* the course tokens a rule needs, each with its fallback */
+  --k2-on-cat:var(--k2-on-cat);--k2-frame-hi:var(--k2-frame-hi);--k2-card-l:#FFFFFF;--k2-line-l:var(--line-l,#D3DBE5);
+  --k2-btn:var(--white,#FFFFFF);--k2-btn-ink:var(--navy,#0A2463);--k2-heat-warn:var(--warn,#B4453A);
+  --k2-line-d:var(--line-d,rgba(46,182,248,.18));--k2-line-d2:var(--line-d,rgba(46,182,248,.3));
   --k2-hi:#FFFFFF}
-.k2-light{--k2-ink:var(--ink,#011111);--k2-dim:var(--dim-l,#41556A);--k2-faint:var(--faint-l,#415C8F);
-  --k2-halo:#F4F7FA;--k2-panel-hi:#FFFFFF;--k2-panel-lo:#EEF2F7;--k2-grid:rgba(65,85,106,.14);
-  --k2-blue:#1A6FA8;--k2-amber:var(--amber-ink,#7A5300);--k2-warn:var(--warn,#B4453A);--k2-good:var(--good,#12805A);
-  --k2-cat-1:#1A6FA8;--k2-cat-2:#0E7468;--k2-cat-3:#5B48B8;--k2-cat-4:#A23A68;--k2-cat-5:#4A5F76;
-  --k2-outline:#1E2C3E;--k2-metal-hi:#D5DEE8;--k2-metal-mid:#8D9FB5;--k2-metal-lo:#4B5E78;--k2-hatch:#2A3A50;
-  --k2-cavity:#1B2A40;--k2-glow:rgba(26,111,168,.10);--k2-shadow:rgba(10,24,46,.28)}
+.k2-light{--k2-ink:var(--k2-l-ink);--k2-dim:var(--k2-l-dim);--k2-faint:var(--k2-l-faint);--k2-halo:var(--k2-l-halo);--k2-panel-hi:var(--k2-l-panel-hi);--k2-panel-lo:var(--k2-l-panel-lo);--k2-grid:var(--k2-l-grid);--k2-blue:var(--k2-l-blue);--k2-amber:var(--k2-l-amber);--k2-warn:var(--k2-l-warn);--k2-good:var(--k2-l-good);--k2-cat-1:var(--k2-l-cat-1);--k2-cat-2:var(--k2-l-cat-2);--k2-cat-3:var(--k2-l-cat-3);--k2-cat-4:var(--k2-l-cat-4);--k2-cat-5:var(--k2-l-cat-5);--k2-outline:var(--k2-l-outline);--k2-metal-hi:var(--k2-l-metal-hi);--k2-metal-mid:var(--k2-l-metal-mid);--k2-metal-lo:var(--k2-l-metal-lo);--k2-hatch:var(--k2-l-hatch);--k2-cavity:var(--k2-l-cavity);--k2-glow:var(--k2-l-glow);--k2-shadow:var(--k2-l-shadow)}
 
 .k2{display:flex;gap:16px;align-items:stretch;width:100%;height:100%;font-family:var(--font,"Raleway","Segoe UI",Arial,sans-serif);color:var(--k2-ink)}
 .k2-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
@@ -44,6 +50,8 @@
 .k2-lead{fill:none;stroke:var(--k2-dim);stroke-width:1.5}
 .k2-dot{fill:var(--k2-ink);stroke:var(--k2-halo);stroke-width:2}
 
+/* a deck's brand styles make --amber its one blue accent; the 2D kit's warning colour is the factory's alarm amber
+   (--kit-alarm), so a strain or a critical path still reads as one */
 /* paint servers: stops by class, so the light mapping reaches them */
 .k2-s-metal-hi{stop-color:var(--k2-metal-hi)}.k2-s-metal-mid{stop-color:var(--k2-metal-mid)}.k2-s-metal-lo{stop-color:var(--k2-metal-lo)}
 .k2-s-liq-hi{stop-color:var(--k2-liquid-hi)}.k2-s-liq-lo{stop-color:var(--k2-liquid-lo)}
@@ -88,31 +96,31 @@
 .k2-node{fill:var(--k2-ink)}.k2-node-ring{fill:none;stroke:var(--k2-blue);stroke-width:4}.k2-node-ring-amber{fill:none;stroke:var(--k2-amber);stroke-width:4}
 .k2-ghost{fill:none;stroke:var(--k2-dim);stroke-width:2.5;stroke-dasharray:9 8}
 .k2-frame{fill:none;stroke:var(--k2-faint);stroke-width:5}
-.k2-frame-on{fill:none;stroke:var(--blue2,#53A7DB);stroke-width:8}
+.k2-frame-on{fill:none;stroke:var(--k2-frame-hi);stroke-width:8}
 .k2-lock{fill:var(--k2-ink);stroke:var(--k2-blue);stroke-width:3}.k2-lock-arc{fill:none;stroke:var(--k2-ink);stroke-width:5;stroke-linecap:round}
 .k2-lock-hole{fill:var(--k2-panel-lo)}
 .k2-t-amber{fill:var(--k2-amber)}
 
 /* side panel: controls a trainee tries, readouts the figure computes */
 .k2-side{flex:0 0 250px;display:flex;flex-direction:column;gap:12px}
-.k2-card{border:1px solid var(--line-d,rgba(46,182,248,.18));border-radius:14px;padding:12px 14px;background:rgba(12,30,58,.55)}
-.k2-light .k2-card{background:#FFFFFF;border-color:var(--line-l,#D3DBE5)}
+.k2-card{border:1px solid var(--k2-line-d);border-radius:14px;padding:12px 14px;background:rgba(12,30,58,.55)}
+.k2-light .k2-card{background:var(--k2-card-l);border-color:var(--k2-line-l)}
 .k2-card-h{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:700;color:var(--k2-dim)}
 .k2-card-h b{color:var(--k2-ink);font-size:17px;font-variant-numeric:tabular-nums}
 .k2-range{width:100%;height:44px;margin:4px 0 0;accent-color:var(--k2-blue);cursor:pointer}
 .k2-opts{display:flex;gap:8px;margin-top:8px}
-.k2-opts button{flex:1;min-height:44px;border-radius:10px;border:1px solid var(--line-d,rgba(46,182,248,.3));background:transparent;
+.k2-opts button{flex:1;min-height:44px;border-radius:10px;border:1px solid var(--k2-line-d2);background:transparent;
   color:var(--k2-ink);font:inherit;font-weight:700;font-size:15px;cursor:pointer}
-.k2-opts button.on{background:var(--k2-blue);color:var(--on-blue,#04263A);border-color:transparent}
+.k2-opts button.on{background:var(--k2-blue);color:var(--k2-on-cat);border-color:transparent}
 .k2-reads{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.k2-read{border:1px solid var(--line-d,rgba(46,182,248,.18));border-radius:12px;padding:10px 12px}
+.k2-read{border:1px solid var(--k2-line-d);border-radius:12px;padding:10px 12px}
 .k2-read span{display:block;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--k2-dim)}
 .k2-read b{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
 .k2-read i{font-style:normal;font-size:14px;color:var(--k2-dim);margin-left:3px}
 
 /* the step bar outside a deck (a deck's own Next walks the steps) */
 .k2-bar{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
-.k2-bar button{min-height:44px;padding:0 18px;border-radius:12px;border:0;background:var(--white,#FFFFFF);color:var(--navy,#0A2463);
+.k2-bar button{min-height:44px;padding:0 18px;border-radius:12px;border:0;background:var(--k2-btn);color:var(--k2-btn-ink);
   font:inherit;font-weight:700;font-size:16px;cursor:pointer}
 .k2-bar button:disabled{opacity:.5;cursor:default}
 .k2-dots{display:flex;gap:7px}.k2-dots i{width:9px;height:9px;border-radius:50%;background:var(--k2-dim);opacity:.5}.k2-dots i.on{opacity:1;background:var(--k2-ink)}
@@ -128,17 +136,20 @@
 .k2-crit{fill:none;stroke:var(--k2-amber);stroke-width:3.5}
 .k2-bar-done{fill:var(--k2-hi);opacity:.28}
 .k2-bar-slip{fill:var(--k2-warn);opacity:.85}
-.k2-t-inbar{font-size:calc(14px * var(--k2-up,1));font-weight:800;fill:var(--on-blue,#04263A)}
+.k2-t-inbar{font-size:calc(14px * var(--k2-up,1));font-weight:800;fill:var(--k2-on-cat)}
 .k2-dep{fill:none;stroke:var(--k2-dim);stroke-width:2.5;stroke-linejoin:round}.k2-dep-head{fill:var(--k2-dim)}
 .k2-dep-crit{stroke:var(--k2-amber)}.k2-dep-head-crit{fill:var(--k2-amber)}
 .k2-finish{stroke:var(--k2-amber);stroke-width:3;stroke-dasharray:7 6;fill:none}
 .k2-tag-amber{fill:var(--k2-amber)}
 .k2-today{stroke:var(--k2-blue);stroke-width:3;fill:none}
-.k2-heat{stroke:none}.k2-heat-good{fill:var(--k2-good);opacity:.3}.k2-heat-amber{fill:var(--k2-amber);opacity:.36}.k2-heat-warn{fill:var(--warn,#B4453A);opacity:.62}.k2-heat-plain{fill:var(--k2-hi);opacity:.05}
+.k2-heat{stroke:none}.k2-heat-good{fill:var(--k2-good);opacity:.3}.k2-heat-amber{fill:var(--k2-amber);opacity:.36}.k2-heat-warn{fill:var(--k2-heat-warn);opacity:.62}.k2-heat-plain{fill:var(--k2-hi);opacity:.05}
 .k2-trail{fill:none;stroke:var(--k2-dim);stroke-width:2.5;stroke-dasharray:6 6}
-.k2-t-badge{font-size:calc(17px * var(--k2-up,1));font-weight:800;fill:var(--on-blue,#04263A)}
+.k2-t-badge{font-size:calc(17px * var(--k2-up,1));font-weight:800;fill:var(--k2-on-cat)}
 .k2-lit{fill:none;stroke:var(--k2-blue);stroke-width:12;stroke-linejoin:round;opacity:0}
 .k2-node-face{fill:var(--k2-panel-lo);opacity:.72}.k2-node-face-cat{opacity:0}
-.k2-t-oncat{font-size:calc(17px * var(--k2-up,1));font-weight:800;fill:var(--on-blue,#04263A)}
-.k2-t-oncat-sub{font-size:calc(14px * var(--k2-up,1));font-weight:700;fill:var(--on-blue,#04263A);opacity:.85}
+.k2-t-oncat{font-size:calc(17px * var(--k2-up,1));font-weight:800;fill:var(--k2-on-cat)}
+.k2-t-oncat-sub{font-size:calc(14px * var(--k2-up,1));font-weight:700;fill:var(--k2-on-cat);opacity:.85}
 .k2-arrow{fill:none;stroke:var(--k2-dim);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.k2-arrow-head{fill:var(--k2-dim)}
+
+/* in a deck: the figure fills its picture box */
+.kit2d-stage{width:100%;height:100%;min-height:0}

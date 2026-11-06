@@ -50,6 +50,13 @@ def find_deck(arg):
     return None
 
 
+# the 2D kit's own check (kit2d.js KIT2D.audit) on the figures of the slide in front: words over words, words or shapes cut
+# at the edge, a label on a line - measured once the figure has stopped moving
+KIT2D = """(id) => { const s = document.getElementById(id); if (!window.KIT2D || !s) { return null; }
+  const fs = KIT2D.figures.filter(f => s.contains(f.host)); if (!fs.length) { return null; }
+  return { idle: fs.every(f => f.idle()), found: [].concat.apply([], fs.map(f => KIT2D.audit(f))) }; }"""
+
+
 def walk(page, deck, min_shown):
     """[(slide id, step on that slide, kind, what)] for one deck at the page's size"""
     found, at = [], {}
@@ -84,6 +91,14 @@ def walk(page, deck, min_shown):
                 elif f["seen"] < 0.9:
                     found.append((r["id"], step, "picture", "%s: only %d %% of its box is seen (cut by %s)"
                                   % (f["src"], round(f["seen"] * 100), f["by"])))
+            k2 = page.evaluate(KIT2D, r["id"])
+            for _ in range(12):                       # a 2D-kit figure still moving is measured once it has settled
+                if not k2 or k2["idle"]:
+                    break
+                page.wait_for_timeout(250)
+                k2 = page.evaluate(KIT2D, r["id"])
+            for what in (k2 or {}).get("found", []):
+                found.append((r["id"], step, "figure", what))
         nxt = page.locator("#btnNext")
         if not nxt.count() or nxt.is_disabled():
             break

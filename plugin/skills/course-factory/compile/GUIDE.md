@@ -316,6 +316,11 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   price, make it within the course's approved picture budget (2.73.2: one yes per course), record it `"generated": true`
   in `_photo_meta.json`. (2.73.2, owner 2026-10-28) Equipment too - first generated, then fixed; nobody is asked to
   take a photo, and the course's own small pictures are reused, enlarged by the build (Real-ESRGAN).
+- **A 2D figure - drawn with the 2D kit (2.108.0).** A graph, an object in motion or a concept is a short JSON spec,
+  `working_claude\figures\MNN\sNN.kit2d.json` (`course-visuals\kit2d\SPEC.md` is the format; `demos.html` and `pm.html`
+  show every part), named as the slide's `"figure": "sNN.kit2d.json"`. The compile ships `kit2d.js` and `kit2d.css`; the
+  deck's Next walks its steps; `fit_gate.py` fails a step where its words overlap, are cut at the edge or lie on a line.
+  Give the spec's `size` the shape of the slide's picture box: a wide figure in a tall box is shown small.
 - **A `model_3d` slide (2.49.0, L46) - drawn with the 3D kit.** Do not write three.js. Write the scene as a short
   JSON spec, `working_claude\figures\MNN\sNN.kit3d.json` (parts, labels, steps: `course-visuals\kit3d\SPEC.md` is the
   format, `PARTS.md` lists every part; the finished IGF scenes are ported in `course-visuals\kit3d\examples\`), and

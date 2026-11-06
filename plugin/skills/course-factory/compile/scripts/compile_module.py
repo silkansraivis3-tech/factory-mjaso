@@ -131,6 +131,8 @@ KIT_PARTS = "assets/kit_parts.js"             # parts this course added to the k
 KIT3D_SPEC = ".kit3d.json"                   # a 3D scene made from the 3D kit (course-visuals/kit3d/SPEC.md)
 KIT3D_FILES = ("kit3d.css", "kit3d.js")       # shipped with the module by design_system.py, like kit.js
 KIT3D_PARTS = "assets/kit3d_parts.js"         # 3D parts this course added to the kit (KIT3D.define), until they are merged
+KIT2D_SPEC = ".kit2d.json"                   # a 2D figure made from the 2D kit (course-visuals/kit2d/SPEC.md)
+KIT2D_FILES = ("kit2d.css", "kit2d.js")       # shipped with the module by design_system.py, like kit3d.js
 PHOTO_FILES = ("gb_zoom.css", "gb_zoom.js")    # every picture opens full screen with its record (L51, L56), like gb_deck.js
 COMPOSITIONS = ("opener", "flow", "two-col", "wide-left", "wide-right", "stage")
 STAGE_MAX_WORDS = 45
@@ -703,6 +705,26 @@ def kit3d_figure(text, s, probs, where, b=None):
             '<script type="application/json" id="%s">%s</script></div>' % (sid, img, sid, data))
 
 
+def kit2d_figure(text, s, probs, where):
+    """a 2D figure made from the 2D kit (course-visuals/kit2d, SPEC.md "Where it goes"): the spec goes into the page as it is
+    and kit2d.js draws it - depth, labels clear of each other, motion on the deck's Next, the controls beside it. Only what
+    would stop the page from drawing it is checked here; the fit gate runs the kit's own overlap check on every step."""
+    try:
+        spec = json.loads(text)
+    except ValueError as err:
+        probs.append("%s: its 2D kit figure is not valid JSON - %s" % (where, err))
+        return ""
+    if not isinstance(spec, dict) or not spec.get("parts"):
+        probs.append("%s: its 2D kit figure has no parts" % where)
+        return ""
+    if not spec.get("label"):
+        spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
+    sid = "k2-" + s["id"]
+    data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    return ('<div class="fill fig kit2d-fig" data-script-ignore><div class="kit2d-stage" data-kit2d="#%s"></div>'
+            '<script type="application/json" id="%s">%s</script></div>' % (sid, sid, data))
+
+
 # 2.60.0 - a 3D scene's control hint ("Drag to turn - tap a part to look closer") is the scene's own words for the screen,
 # not the script's: its holder [data-hint] is marked data-script-ignore as the figure goes in, so check_script_match counts
 # it instead of failing the build (IGF M05 s06, M13 s07, M15 s05 - each builder marked it by hand after a FAIL)
@@ -764,6 +786,8 @@ def figure_html(mdir, figdir, s, b, probs, where):
         return kit3d_figure(body, s, probs, where, b), "", False
     if cs.flat_3d(s, b, body):                         # 2.49.7 (IGF M01 s05): a 3D slide is never quietly built in 2D
         probs.append(FLAT_3D % (where, s.get("visual_kind"), rel))
+    if rel.lower().endswith(KIT2D_SPEC):
+        return kit2d_figure(body, s, probs, where), "", False
     if rel.lower().endswith(KIT_SPEC):
         name = os.path.basename(rel)
         if name in OVERRIDE:                           # the studio trying a candidate on the real slide
@@ -4337,6 +4361,8 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     uses_kit3d = any(" data-kit3d=" in x for x in slides)       # the 3D kit (course-visuals/kit3d)
     kit3d_parts = uses_kit3d and os.path.isfile(os.path.join(mdir, KIT3D_PARTS))
     shipped += [(x, os.path.join(SKILLS, "course-visuals", "kit3d", x)) for x in (KIT3D_FILES if uses_kit3d else ())]
+    uses_kit2d = any(" data-kit2d=" in x for x in slides)       # the 2D kit (course-visuals/kit2d)
+    shipped += [(x, os.path.join(SKILLS, "course-visuals", "kit2d", x)) for x in (KIT2D_FILES if uses_kit2d else ())]
     sys.path.insert(0, os.path.join(SKILLS, "course-module-ui", "scripts"))
     import design_system
     for x, canon in shipped:                  # shipped like the deck engine: the factory's copy, byte for byte
@@ -4383,6 +4409,8 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
             head.append("<style>.slide .kit-fig{--kit-floor:%g}</style>" % deck_floor(build))
     if uses_kit3d:
         head.append('<link rel="stylesheet" href="../assets/kit3d.css">')
+    if uses_kit2d:
+        head.append('<link rel="stylesheet" href="../assets/kit2d.css">')
     head += ['<link rel="stylesheet" href="../%s">' % a(x) for x in build.get("styles", [])]
     head.append("</head>")
     rule = build.get("landing_rule") or ""
@@ -4407,6 +4435,8 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         body.append('<script src="../assets/kit.js"></script>')
     if kit_parts:
         body.append('<script src="../%s"></script>' % KIT_PARTS)
+    if uses_kit2d:                      # before GBDeck.init: kit2d.js registers each figure's slide hooks too
+        body.append('<script src="../assets/kit2d.js"></script>')
     own = ['<script src="../%s"></script>' % a(x) for x in build.get("scripts", [])]
     if uses_kit3d:                      # three.js, then kit3d.js (+ the course's own parts): before GBDeck.init, which reads the
         k3 = ['<script src="../assets/kit3d.js"></script>']      # slide hooks kit3d.js registers - and after the sheet's own scripts,

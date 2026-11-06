@@ -2286,6 +2286,56 @@ KIT3D_SPEC = {"label": "A fuel tank, cut open.", "units": "m",
               "labels": [{"part": "tank", "text": "Fuel tank </script>"}, {"part": "vm", "text": "Vent mast"}]}
 
 
+KIT2D_SPEC = {"label": "Fuel against speed.", "size": [960, 540], "state": {"d": 0},
+              "parts": [{"id": "C", "type": "chart", "x": 120, "y": 70, "w": 740, "h": 380,
+                         "xaxis": {"min": 0, "max": 20, "step": 2}, "yaxis": {"min": 0, "max": 60, "step": 10}},
+                        {"id": "F", "type": "curve", "on": "C", "fn": {"kind": "power", "a": 0.0075, "n": 3}, "draw": "@d", "label": "a </script> b"}],
+              "steps": [{"title": "Draw it", "set": {"d": 1}}]}
+
+
+def kit2d_part(tmp):
+    """the 2D kit (course-visuals/kit2d): a *.kit2d.json figure - its markup, and kit2d.js / kit2d.css shipped with the module"""
+    print("\n-- the 2D kit: sNN.kit2d.json figures")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    s4 = {"id": "s04", "title": "Fuel and speed", "visual": "The fuel curve. More."}
+    probs = []
+    h = cm.kit2d_figure(json.dumps(KIT2D_SPEC), s4, probs, "s04")
+    check("kit2d_figure: the box, the stage [data-kit2d], the spec as data; its words are the kit's, not the script's",
+          h.startswith('<div class="fill fig kit2d-fig" data-script-ignore><div class="kit2d-stage" data-kit2d="#k2-s04"></div>'
+                       '<script type="application/json" id="k2-s04">') and h.endswith("</script></div>") and not probs, (h, probs))
+    check("... a '</script>' inside the spec cannot end the page's script early, and the spec comes back whole",
+          "</script>" not in h.split('id="k2-s04">')[1][:-len("</script></div>")]
+          and json.loads(h.split('id="k2-s04">')[1].rsplit("</script>", 1)[0].replace("<\\/", "</")) == KIT2D_SPEC, h)
+    nolabel = dict(KIT2D_SPEC)
+    del nolabel["label"]
+    check("... a spec with no label gets the slide's own", '"label":"The fuel curve."' in cm.kit2d_figure(json.dumps(nolabel), s4, [], "s04"))
+    bad = []
+    check("... not JSON, or no parts: said, and nothing is built",
+          cm.kit2d_figure("{nope", s4, bad, "s04") == "" and cm.kit2d_figure('{"label": "x"}', s4, bad, "s04") == "" and len(bad) == 2
+          and "not valid JSON" in bad[0] and "has no parts" in bad[1], bad)
+
+    os.makedirs(os.path.join(tmp, "k2"))
+    c, md = new_course(os.path.join(tmp, "k2"), script())
+    cs.save(os.path.join(c, "working_claude", "figures", "M01", "s04.kit2d.json"), KIT2D_SPEC)
+    build_of(c, lambda s: s["screens"].update(s04={"figure": "s04.kit2d.json", "dark": True}))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    p = deck(md)
+    sec4 = section(p, "s04")
+    check("a build-sheet figure s04.kit2d.json goes into its slide as a 2D-kit figure",
+          'data-kit2d="#k2-s04"' in sec4 and 'id="k2-s04"' in sec4 and "kit2d-fig" in sec4, out + sec4[:500])
+    k2js, init = p.find('src="../assets/kit2d.js"'), p.find("GBDeck.init")
+    check("kit2d.js loads after the deck's engines, once, before GBDeck.init; kit2d.css in the head; no 3D or old kit with it",
+          0 < p.find("../assets/gb_zoom.js") < k2js < init and p.count("kit2d.js") == 1
+          and p.index('href="../assets/kit2d.css"') < p.index("</head>") and "three.min.js" not in p
+          and "assets/kit.js" not in p, p[-800:])
+    kit2d_dir = os.path.join(SKILLS, "course-visuals", "kit2d")
+    same = lambda a, b: os.path.isfile(a) and os.path.isfile(b) and io.open(a, "rb").read() == io.open(b, "rb").read()
+    check("... the module holds the factory's kit2d.js and kit2d.css, byte for byte (design_system.py ships them)",
+          same(os.path.join(md, "assets", "kit2d.js"), os.path.join(kit2d_dir, "kit2d.js"))
+          and same(os.path.join(md, "assets", "kit2d.css"), os.path.join(kit2d_dir, "kit2d.css")), out)
+
+
 def kit3d_part(tmp):
     """the 3D kit (course-visuals/kit3d): a *.kit3d.json figure is a 3D scene - its markup, its poster, its starter spec and
     the shipping of three.js, kit3d.js and kit3d.css in the right order"""
@@ -3483,6 +3533,7 @@ def main():
         layouts_part(tmp)
         three_part(tmp)
         kit3d_part(tmp)
+        kit2d_part(tmp)
         variety_part(tmp)
         look_part(tmp)
         light_part(tmp)

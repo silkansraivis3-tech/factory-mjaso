@@ -33,6 +33,8 @@
     {"name": "kit.css",             "from": "course-visuals/kit/kit.css",                 "for": "the figure kit's look"},
     {"name": "kit3d.js",            "from": "course-visuals/kit3d/kit3d.js",              "for": "the 3D kit - draws and moves every *.kit3d.json scene (three.js r128 global THREE, loaded first)"},
     {"name": "kit3d.css",           "from": "course-visuals/kit3d/kit3d.css",             "for": "the 3D kit's look"},
+    {"name": "kit2d.js",            "from": "course-visuals/kit2d/kit2d.js",              "for": "the 2D kit - draws and moves every *.kit2d.json figure: graphs, objects in motion, concepts"},
+    {"name": "kit2d.css",           "from": "course-visuals/kit2d/kit2d.css",             "for": "the 2D kit's look"},
     {"name": "gb_run.css",          "from": "course-module-ux/assets/gb_run.css",         "for": "the step runner's look"},
     {"name": "novikontas_logo.svg", "from": "../resources/brand/novikontas_logo.svg",     "for": "the landing screen, and the top right of every light slide (L61)"},
     {"name": "novikontas_logo_white.svg", "from": "../resources/brand/novikontas_logo_white.svg", "for": "the top right of every dark (blue) or photo slide - the official file with its one colour switched to white for a dark ground (owner, 2026-10-21, L62)"},

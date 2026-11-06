@@ -240,7 +240,11 @@ sequence is a kit spec, `NAME.kit.json` in `working_claude/figures/MNN/` (`kit/S
 one-off SVG; a part the kit lacks is made into the kit (below). **A 3D model is a 3D-kit spec**,
 `sNN.kit3d.json` (`kit3d/SPEC.md`, `kit3d/PARTS.md`; made from the nine hand-made IGF scenes): parts in metres,
 labels on the parts, steps the deck's Next walks - full screen, clickable labels, the build-ahead and the poster
-come with it; never a hand-written three.js file per slide. Hand-written SVG/HTML only for what the kits cannot be
+come with it; never a hand-written three.js file per slide. **A 2D figure is a 2D-kit spec**, `sNN.kit2d.json`
+(`kit2d/SPEC.md`; see `kit2d/demos.html` and `kit2d/pm.html`): a graph, an object in motion (a cutaway with its flow) or
+a concept (cycle, timeline, matrix, process, trade-off) - depth, labels clear of each other, motion on Next and the
+trainee's controls come with it, and `fit_gate.py` runs its overlap check on every step. The figure kit (`kit/`) stays
+for a control screen the trainee reads (an HMI) and for courses already built with it. Hand-written SVG/HTML only for what the kits cannot be
 (a photo annotation); Canvas only where SVG genuinely fails;
 a generated illustration only when a realistic scene is the right medium. **Never generated imagery
 in place of a structured technical schematic.**
