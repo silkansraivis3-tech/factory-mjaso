@@ -153,6 +153,9 @@ def right_answer(q, b, w):
     if m == "categorise":
         return ["<b>%s</b>: %s" % (e(g.strip()), e("; ".join(i.strip() for i in rest.split(";") if i.strip())))
                 for g, _, rest in (x.partition(":") for x in ls)]
+    if m == "fill_matrix":                              # the grid, one line per row: row - column: value; column: value
+        vals, head, rows = cs.matrix_of(q)
+        return ["<b>%s</b>: %s" % (e(label), e("; ".join("%s = %s" % (h, c) for h, c in zip(head[1:], cells)))) for label, cells in rows]
     if m == "cloze":
         def gap(mo):
             right = [cs.unstar(p) for p in mo.group(1).split("|") if cs.starred(p)]

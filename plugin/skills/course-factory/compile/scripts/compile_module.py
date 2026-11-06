@@ -236,7 +236,7 @@ ICON_FAMILY = {"single_choice": "choose", "multi_select": "choose", "choose_and_
                "read_instrument": "choose", "scenario": "choose", "hotspot": "tap", "spot_the_hazard": "tap",
                "label_diagram": "drag", "match": "drag", "categorise": "drag", "order": "order", "build_the_plan": "order",
                "timeline": "order", "set_value": "dial", "panel_operate": "dial", "find_the_fault": "find",
-               "spot_the_error": "find", "cloze": "cloze"}
+               "spot_the_error": "find", "cloze": "cloze", "fill_matrix": "grid"}
 ICON_GLYPH = {
     "choose": '<circle cx="19" cy="17" r="4"/><circle cx="19" cy="31" r="4" fill="currentColor"/><path d="M28 17h17M28 31h17"/>',
     "tap": '<circle cx="32" cy="22" r="9"/><circle cx="32" cy="22" r="2.4" fill="currentColor"/><path d="M32 8v4M32 32v4M18 22h4M42 22h4"/>',
@@ -246,6 +246,7 @@ ICON_GLYPH = {
              '<circle cx="17" cy="24" r="1.8" fill="currentColor"/><circle cx="17" cy="34" r="1.8" fill="currentColor"/>',
     "dial": '<path d="M14 30h36"/><circle cx="38" cy="30" r="5" fill="currentColor"/><path d="M14 17h36" stroke-dasharray="2 6"/>',
     "find": '<circle cx="29" cy="21" r="8"/><path d="M35 27l9 9"/>',
+    "grid": '<rect x="13" y="10" width="38" height="28" rx="2"/><path d="M13 19h38M13 28h38M26 10v28M39 10v28"/><circle cx="32.5" cy="23.5" r="2.2" fill="currentColor"/>',
     "cloze": '<path d="M13 18h11M40 18h11M13 31h38"/><rect x="26" y="13" width="12" height="10" rx="2" stroke-dasharray="3 2"/>'}
 
 

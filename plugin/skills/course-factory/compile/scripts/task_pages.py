@@ -83,7 +83,7 @@ THEMES = {"white": "th-w", "navy": "th-n"}
 BUILT = {"single_choice", "read_instrument", "multi_select", "hotspot", "spot_the_hazard",
          "match", "categorise", "label_diagram", "order",
          "cloze", "choose_and_justify", "scenario", "set_value", "find_the_fault", "spot_the_error",     # 2.38.0
-         "build_the_plan", "timeline", "compare", "panel_operate"} | set(ip.TYPES)    # 2.74.0 - the interactive types
+         "build_the_plan", "timeline", "compare", "panel_operate", "fill_matrix"} | set(ip.TYPES)    # 2.74.0 - the interactive types
 assert BUILT == set(cs.USES), "every way of answering an approved script can hold is compiled"
 ON_PICTURE = {"hotspot", "spot_the_hazard", "label_diagram"}
 # the ways of answering that are not answered ON a picture but may show one above their controls ("figure" in the build sheet)
@@ -124,6 +124,7 @@ WORDS = {"en": {
     "timeline_order": "1. Put the events in the order they happened.",
     "timeline_stop": "2. Now tap the event where it should have been stopped.",
     "panel_say": "Put every control in the position it must end in.",
+    "matrix_say": "Tap a value, then tap the cells that take it. Tap a filled cell again to clear it.", "matrix_values": "Values",
     "sure_ask": "How sure are you?", "sure0": "Guessing", "sure1": "Fairly sure", "sure2": "Certain",
     "grp_ask": "Which group are you in?", "grp_note": "Tap your group. You get the questions for your group.",
     "grp_change": "Change"},
@@ -1313,6 +1314,22 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out.append('    <div class="tray">')
         out += chips(sid, [(cs.unstar(x), 1 if cs.starred(x) else 0) for x in ls], {t: i for i, t in enumerate(good, 1)})
         out.append("    </div>")
+    elif m == "fill_matrix":                            # 2.109.0 - the palette, then the table with every cell empty (gb_answer.js mkMatrix)
+        vals, head, rows = cs.matrix_of(q)
+        en = WORDS["en"]                                # English only for now: another language falls back to it
+        out.append('    <p class="opts-say">%s</p>' % e(w.get("matrix_say") or en["matrix_say"]))
+        out.append('    <div class="mxpal" role="group" aria-label="%s">' % a(w.get("matrix_values") or en["matrix_values"]))
+        out += ['      <button type="button" class="mxv" data-script-field="answer">%s</button>' % e(v) for v in vals]
+        out.append("    </div>")
+        out.append('    <table class="mx" data-cols="%d" data-rows="%d">' % (len(head) - 1, len(rows)))
+        out.append("      <thead><tr>%s</tr></thead>" % "".join('<th scope="col" data-script-field="answer">%s</th>' % e(h) for h in head))
+        out.append("      <tbody>")
+        for label, cells in rows:
+            out.append('        <tr><th scope="row" data-script-field="answer">%s</th>%s</tr>' % (e(label), "".join(
+                '<td><button type="button" class="mxc" data-at="%s" data-key="%s"><span class="mxt"></span></button></td>'
+                % (a("%s | %s" % (label, head[i + 1])), cs.gb_key(sid, "%s | %s" % (label, head[i + 1]), c)) for i, c in enumerate(cells))))
+        out.append("      </tbody>")
+        out.append("    </table>")
     elif m == "timeline":                               # part 1 the order, part 2 the moment it should have stopped
         ls = cs.lines_of(q.get("answer"))
         extra = many(len(ls), "part")

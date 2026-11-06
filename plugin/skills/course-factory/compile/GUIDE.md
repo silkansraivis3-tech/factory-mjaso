@@ -439,7 +439,7 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
 
 - **Built: all nineteen ways of answering** an approved script can hold (2.38.0) - single_choice, multi_select,
   read_instrument, hotspot, spot_the_hazard, match, categorise, label_diagram, order, and cloze, choose_and_justify,
-  scenario, set_value, find_the_fault, spot_the_error, build_the_plan, timeline, compare, panel_operate. No trainee
+  scenario, set_value, find_the_fault, spot_the_error, build_the_plan, timeline, compare, panel_operate, fill_matrix (2.109.0: a table the trainee fills cell by cell). No trainee
   task page is made by hand any more; the one engine grades them all, tap and drag only (L38, L42).
 - **On a picture** (hotspot, spot_the_hazard, label_diagram, read_instrument) the build sheet names the drawing, keyed
   by the question's id: `"q01": {"figure": "assets/fig/m01_ga.svg"}`. Each answer's place is found by itself - the
