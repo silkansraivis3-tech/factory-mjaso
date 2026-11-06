@@ -738,3 +738,13 @@
 .slide[data-last]:not(.dark):not(.photo) .lt-opt.no .fb{color:var(--up-b4281e)}
 .slide[data-last]:not(.dark):not(.photo) .lt-opt.no .l{color:var(--up-b4281e)}
 .lt-why > div{display:flex;flex-direction:column;gap:.3em}
+
+/* 2.109.0 (F3) - an intro line of a reveal slide is a lead, not a numbered step */
+.lt-work li.lead{display:block}
+.lt-work li.lead b{font-weight:600;color:var(--lt-dim-d)}
+
+/* 2.109.0 (F5) - a carousel of photographs: stacked in the frame, the line's photo fades in (opacity only, L65); the one
+   showing opens full screen on a tap (gb_zoom), the others do not take the tap */
+.photo-wrap:has(> img[data-ph]) > img{position:absolute;inset:0;opacity:0;transition:opacity .7s ease;pointer-events:none;animation:none!important}
+.photo-wrap:has(> img[data-ph]) > img.on{opacity:1;pointer-events:auto}
+@media (prefers-reduced-motion:reduce){.photo-wrap:has(> img[data-ph]) > img{transition:none}}

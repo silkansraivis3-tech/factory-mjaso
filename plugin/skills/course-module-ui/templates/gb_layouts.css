@@ -384,6 +384,15 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .lt-compare-note{margin-top:min(2vmin,16px);text-align:center;color:var(--lt-steel)}
 .slide[data-template].dark .lt-card{background:var(--lt-blue-06);border-color:var(--lt-line-d)}
 
+/* 2.109.0 (F2) - a room activity with no code of its own: one column, no empty first column; a long text is a lead and bullets */
+.slide[data-template^="task-launch."] .slide-body.activity.no-code{grid-template-columns:1fr}
+.slide[data-template^="task-launch."] .slide-body.activity.no-code .act-title{grid-column:1}
+.slide[data-template^="task-launch."] .slide-body.activity.no-code > svg{grid-column:1}
+.slide[data-template^="task-launch."] .slide-body.activity.no-code .act-lines{grid-column:1}
+.act-lines .act-inst.act-lead{font-weight:700;font-size:clamp(17px,2.9vmin,40px);margin-bottom:.5em}
+.act-lines .act-inst.act-bullet{position:relative;padding-left:1.1em}
+.act-lines .act-inst.act-bullet::before{content:"";position:absolute;left:0;top:.62em;width:.45em;height:.45em;border-radius:2px;background:var(--lt-blue,#2f6fb5)}
+
 /* a narrow or portrait screen keeps the gb_compose.css fallbacks: one column */
 @media (max-aspect-ratio:1/1){
   .slide[data-template] .slide-body.two-col,.slide[data-template] .slide-body.lt-compare{grid-template-columns:1fr;grid-template-rows:none}

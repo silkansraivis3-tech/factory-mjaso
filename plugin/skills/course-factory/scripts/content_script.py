@@ -1267,22 +1267,57 @@ def scene_in(body):
     return bool(body and SCENE_MARK.search(body))
 
 
+STEP_LINE = re.compile(r"^\d{1,2}[.)]?\s+\S")
+
+
+def paged_words(s, b=None):
+    """2.109.0 (F1) - the number of parts this slide's words will be paged into by the compiler's own rule (a picture beside
+    more than PARTS_FROM words becomes content-in-parts with numbered tabs), or 0: no picture, few words, a list of steps or a
+    table (own templates), or the build sheet asks for / names a layout. Never cuts a word (L61) - it is the writer's finding"""
+    b = b or {}
+    if s.get("kind") != "slide" or s.get("recap") or b.get("parts") or b.get("template"):
+        return 0
+    if picture_of(s)["kind"] == "none":
+        return 0
+    lines = lines_of(s.get("text"))
+    if len(lines) < 2 or wc(" ".join(lines)) <= PARTS_FROM:
+        return 0
+    if sum(1 for x in lines if STEP_LINE.match(x)) >= len(lines) - 1 or sum(1 for x in lines if " | " in x) >= 2:
+        return 0
+    return len(parts_of(lines, None, PART_WORDS))
+
+
+def paged_findings(script, build=None):
+    """F1 (Aigars, PM review: "the 1-2 switching isn't needed at all, just 3-4 bullet points") - a slide whose words would be
+    paged with number tabs is a MUST-FIX for the writer, unless the build sheet asks for parts ("parts" or "template")"""
+    found = []
+    for s in script.get("screens", []):
+        b = ((build or {}).get("screens") or {}).get(s.get("id")) or {}
+        n = paged_words(s, b)
+        if n:
+            found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "text", "level": FAIL,
+                          "rule": "v_paged_slide", "fix": "",
+                          "detail": T(script, "v_paged_slide", words=wc(" ".join(lines_of(s.get("text")))), n=n, limit=PARTS_FROM)})
+    return found
+
+
 def build_findings(course, script):
     """what the module's build sheet does to the planned pictures, shown with the script's own findings on the review page:
     a 3D slide built as a 2D figure, and (L60) a module built with no 3D scene at all - its best candidate named, until the
     operator declines it ("declined_3d" at the top of the build sheet). Notes - the build sheet is no part of the approved
     words, and L60 is a strong recommendation, never a block."""
-    if not course:
-        return []
     m = mid(script.get("module"))
-    try:
-        bp = os.path.join(paths(course, script.get("module"))["dir"], m + ".build.json")
-        build = load(bp) if os.path.isfile(bp) else None
-    except (OSError, ValueError):
-        build = None
-    if not build:
-        return []
-    figdir, found, scene = workspace.claude_path(course, "figures", m), [], False
+    build = None
+    if course:
+        try:
+            bp = os.path.join(paths(course, script.get("module"))["dir"], m + ".build.json")
+            build = load(bp) if os.path.isfile(bp) else None
+        except (OSError, ValueError):
+            build = None
+    paged = paged_findings(script, build)
+    if not build or not course:
+        return paged
+    figdir, found, scene = workspace.claude_path(course, "figures", m), list(paged), False
     for s in script.get("screens", []):
         b = (build.get("screens") or {}).get(s.get("id")) or {}
         rel, body = (b.get("figure") or "").replace("\\", "/"), None

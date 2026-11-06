@@ -617,8 +617,24 @@ their stops. The approved words never change - only what is round them.
 | a full photograph | a point lights on the photo with its line | `"spots": {"2": [x, y]}` |
 | a split photograph | the photo zooms to the part the line names, a ring round it | `"zoom": {"2": [x, y, 2.2]}` (scale 1-4) |
 
+| a full or split photograph, a carousel (2.109.0) | every photo stacked in the frame; Next walks the lines and the line's photo fades in (opacity only, L65); each opens full screen with its own record (L51, L56), credits in `_photo_meta.json`, never on the slide | `"photos": {"1": "assets/img/a.jpg", "2": "assets/img/b.jpg"}` |
+| a predict- / explain-then-reveal slide (2.109.0) | the intro line is a lead, not step 1; the items are numbered, or lettered A, B, C when the task is to find the order | `"letters": true` / `false` (default: lettered when the question, title or lead says order / sequence / arrange / rank / sort), `"lead": false` (every line an item) |
+| a room activity with no `"opens"` (2.109.0) | no code on the slide (never the screen id); a text of three lines or more is a lead statement and bullets | - |
+
 `"spots"` and `"zoom"` are in the photograph's own pixels and keyed by line number; a wrong one is reported. A slide
 without these fields is built as before.
+
+`"photos"` is keyed by line number too: at Next number N the photo of the latest keyed line up to N shows; a line with no
+photo of its own keeps the previous one, and the first photo (`"figure"`, or the first `"photos"` entry when there is no
+`"figure"`) shows before any line. It needs a photograph slide (composition `photo`) and cannot be combined with `"spots"` or
+`"zoom"`; a bad key or a file that is not a photograph is reported.
+
+**Content in parts is the writer's finding, not a layout trick (2.109.0).** A slide with a picture and more than 85 words is
+paged by the compiler into parts with number tabs (1 2 ...); trainees find the switching confusing (Aigars: "just 3-4
+bullet points"). The review page (`content_script.paged_findings`, rule `v_paged_slide`) lists such a slide as a must-fix: cut
+it to 3-4 short lines (by proposal - the build never cuts, L61), or keep the parts on purpose with `"parts"` (or
+`"template": "content-in-parts.v1"`) in the build sheet, which also silences the finding. The compile prints the same
+as `MUST FIX (content in parts)`.
 
 ## 3 · When the look is not enough
 

@@ -2416,6 +2416,45 @@ def step_marks(words, marks):
     return [re.sub(r'data-i="(\d+)"', one, w) for w in words]
 
 
+def carousel_keys(b, nlines, probs, where):
+    """2.109.0 (F5) - the build sheet's "photos" {"1": "assets/img/a.jpg", ...}: {line number: file}, checked. Aigars (PM review):
+    "a carousel inside the slide, each type with its own visual and description"."""
+    out = {}
+    for k, v in (b.get("photos") or {}).items():
+        try:
+            i = int(k)
+        except (TypeError, ValueError):
+            i = 0
+        if not 1 <= i <= nlines or not isinstance(v, str) or not v.strip():
+            probs.append("%s: \"photos\" %s: %r - give a line number of the slide and a photograph file" % (where, k, v))
+            continue
+        out[i] = v.replace("\\", "/")
+    return out
+
+
+def carousel_cards(keys, b, mdir, figdir, s, probs, where):
+    """each carousel photo as its picture (the same record, description and full-screen view as any photo - L51, L56; credits
+    stay in _photo_meta.json, never on the slide): {line: html}. A line with no photo of its own keeps the previous one"""
+    base, out = (b.get("figure") or "").replace("\\", "/"), {}
+    for i, rel in sorted(keys.items()):
+        if rel == base and i == min(keys):
+            continue
+        html_, _, ok = figure_html(mdir, figdir, s, dict(b, figure=rel), probs, where)
+        if html_ and not ok:
+            probs.append("%s: \"photos\" %s: %s is not a photograph - the carousel swaps photographs" % (where, i, rel))
+        elif html_:
+            out[i] = html_
+    return out
+
+
+def carousel_figure(fig, cards):
+    """the slide's first photo and the carousel's, stacked in one frame: each <img> carries data-ph (0 = the first); gb_steps.js
+    lights the one the line now holds (opacity only - a crossfade, nothing that moves carries a filter, L65)"""
+    tag = lambda h, i: h.replace("<img ", '<img data-ph="%d" ' % i, 1)
+    first = tag(fig, 0).replace('data-ph="0"', 'data-ph="0" class="on"', 1)
+    return first + "".join(tag(h, i) for i, h in sorted(cards.items()))
+
+
 def photo_points(b, nlines, key, probs, where, z=False):
     """the build sheet's "spots" {line: [x, y]} or "zoom" {line: [x, y, scale]} in the photograph's own pixels, checked"""
     out = {}
@@ -2488,6 +2527,27 @@ def joined(parts, tags):
         tag, _, cls = t.partition(" ")
         out.append("<%s%s>%s</%s>" % (tag, ' class="%s"' % cls if cls else "", e(x), tag))
     return '<span class="lt-sep"> | </span>'.join(out)
+
+
+ORDER_ASK = re.compile(r"(?i)\b(order|sequence|arrange|rank|sort)\b")
+
+
+def worked_lead(s, b, lines):
+    """2.109.0 (F3) - 1 when the first line is an intro (not a step): a predict- / explain-then-reveal slide of three lines or
+    more whose first line does not begin with a number. A worked example's lines are all steps. The build sheet's "lead"
+    (true / false) decides it"""
+    if "lead" in b and isinstance(b["lead"], bool):
+        return 1 if b["lead"] and len(lines) >= 2 else 0
+    return 1 if s.get("active") != "worked-example" and len(lines) >= 3 and not STEP_NUM.match(lines[0]) else 0
+
+
+def worked_letters(s, b, lines):
+    """2.109.0 (F3) - the items are labelled A, B, C: the build sheet's "letters": true, or an ordering prediction (the question,
+    the title or the lead asks to put things in order) - numbers would imply the very order the room is to find"""
+    if isinstance(b.get("letters"), bool):
+        return b["letters"]
+    asked = " ".join(x for x in (s.get("ask"), s.get("title"), lines[0] if worked_lead(s, b, lines) else "") if x)
+    return s.get("active") != "worked-example" and bool(ORDER_ASK.search(asked))
 
 
 def room_turn(s, k):
@@ -2576,8 +2636,14 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
 
     elif tid == "worked-example":
         # each step of the worked example lights on Next; then the room's turn, and its answer on the last Next
-        steps = "".join('\n        <li data-k="%d"><span class="n" data-script-ignore>%d</span><div data-script-field="text" data-i="%d">%s</div></li>'
-                        % (j, j + 1, j + 1, joined(cells(x), ("b", "span")) if " | " in x else "<b>%s</b>" % e(x)) for j, x in enumerate(lines))
+        # 2.109.0 (F3) - the intro line of a predict- / explain-then-reveal slide is a lead, not step 1; and when the task is to
+        # find the ORDER, its items are lettered A, B, C - a number would give the answer away (Aigars, PM M02 s02)
+        lead, letters = worked_lead(s, b, lines), worked_letters(s, b, lines)
+        steps = "".join('\n        <li data-k="%d"%s>%s<div data-script-field="text" data-i="%d">%s</div></li>'
+                        % (j, ' class="lead"' if j < lead else "",
+                           '<span class="n" data-script-ignore>%s</span>' % (
+                               "" if j < lead else chr(65 + j - lead) if letters else j + 1 - lead) if j >= lead else "",
+                           j + 1, joined(cells(x), ("b", "span")) if " | " in x else "<b>%s</b>" % e(x)) for j, x in enumerate(lines))
         you = room_turn(s, len(lines))
         d["data-stops"] = str(len(lines) + 2)
         variant = "figure" if fig else "text-only"
@@ -2824,8 +2890,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         graded = is_check(code)
         # 2.62.1 - on the light ground unless the build sheet asks "dark" (owner, 2026-10-21: 80 / 20 - every task
         # launch and module check was dark: 4-6 of a 20-slide module before any teaching slide)
-        d = {"class": "slide %sactivity" % ("dark " if b.get("dark") else ""), "data-title": "%s — %s" % (code, short[:1].upper() + short[1:]),
-             "data-kind": "Check" if graded else "Task", "data-block": "%s · %s" % (m, code), "data-visual": "none",
+        d = {"class": "slide %sactivity" % ("dark " if b.get("dark") else ""), "data-title": ("%s — %s" % (code, short[:1].upper() + short[1:])) if kind == "task-slide" or (s.get("opens") or "").strip()
+             else (title[:1].upper() + title[1:]),
+             "data-kind": "Check" if graded else "Task",
+             "data-block": "%s · %s" % (m, code) if kind == "task-slide" or (s.get("opens") or "").strip() else "%s · In class" % m,
+             "data-visual": "none",
              "data-activity": code}
         if kind == "task-slide":
             d["data-task-href"] = task_href(code, short, mdir, script)
@@ -2840,8 +2909,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if kind == "activity" and s.get("practice_minutes"):    # 2.63.2 item 13: an exercise in the practical hours
             d.update({"data-mins": "0", "data-active": "0", "data-practical-mins": "%g" % float(s["practice_minutes"])})
         template_attrs(d, "task-launch", "room" if kind == "activity" else "check" if graded else "tablet")
-        body = ['<p class="act-code" data-script-ignore>%s</p>' % e(code),
-                '<h2 class="act-title" data-script-field="title">%s</h2>' % e(title)]
+        # 2.109.0 (F2) - a room activity with no "opens" has no code of its own: the screen id (S19) is the factory's, never
+        # shown (Aigars, PM review: a huge "S19" on a workshop slide). Only a task that opens a task set prints its code
+        shown = kind == "task-slide" or bool((s.get("opens") or "").strip())
+        body = (['<p class="act-code" data-script-ignore>%s</p>' % e(code)] if shown else []) + \
+               ['<h2 class="act-title" data-script-field="title">%s</h2>' % e(title)]
         if code == "MC" and re.search(r"\bPASSED\b|\bpass mark\b|\bnot passed\b", " ".join(lines), re.I):
             # 2.63.0 (L27, owner 2026-10-21): the module check shows no verdict - approved words that promise one are the
             # operator's to change (IGF M01 v263: "You see PASSED or NOT PASSED" on the launch slide)
@@ -2875,16 +2947,22 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                     % (attrs(d), d["data-kind"], m, code, "\n      ".join(left), right, path))
         body.append(pic or icon)
         body.append('<div class="act-lines">')
-        body += ['  <p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines]
+        # 2.109.0 (F2) - a long activity text: its first line is the lead statement, the rest are bullets, as on a teaching slide
+        long_text = len(lines) >= 3
+        body += ['  <p class="act-inst%s" data-script-field="text" data-i="%d">%s</p>' % (
+            (" act-lead" if i == 1 else " act-bullet") if long_text else "", i, e(x)) for i, x in enumerate(lines, 1)]
         body.append("</div>")
-        return ('<section %s>\n  <div class="slide-kind"><b>%s</b> · %s · %s</div>\n  <div class="slide-body activity">\n    %s\n  </div>\n</section>'
-                % (attrs(d), d["data-kind"], m, code, "\n    ".join(body)))
+        return ('<section %s>\n  <div class="slide-kind"><b>%s</b> · %s%s</div>\n  <div class="slide-body activity%s">\n    %s\n  </div>\n</section>'
+                % (attrs(d), d["data-kind"], m, " · " + code if shown else "", "" if shown else " no-code", "\n    ".join(body)))
 
     if kind == "slide" and s.get("recap"):
         return recap_html(s, base, m, n, total, lines, bool(b.get("dark")), words_of(script)["tap"])
 
     own_comp = b.get("composition")
     b = asked_composition(b)                      # L61: a template asked for by name decides the composition
+    ph_keys = carousel_keys(b, len(lines), probs, where)
+    if ph_keys and not b.get("figure"):           # 2.109.0 (F5): no "figure" - the first card's photo is the slide's first picture
+        b = dict(b, figure=ph_keys[min(ph_keys)])
     fig, credit, is_photo = figure_html(mdir, figdir, s, b, probs, where)
     # what picture was BUILT (2.54.0) - its own name: `kind` stays the slide's kind, which L61's dense rule below reads
     # (the merge of 2.52.0 and 2.54.0 had both under one name, so a dense slide with no picture went uncaught)
@@ -2907,6 +2985,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         comp = "flow"
     if comp == "photo" and not is_photo:
         comp = "stage"
+    if ph_keys and comp != "photo":
+        probs.append("%s: \"photos\" (a carousel of photographs) needs the slide to be a photograph slide (composition \"photo\") - "
+                     "it is built as \"%s\", so the carousel is not used" % (where, comp))
     # 2.63.0 (IGF M01 v263 runs 2-3): a template asked for by name on a PHOTOGRAPH - words in parts, or the photo column -
     # is the photo in its own column; its "two-col" made the framed photo with the words on it, and the ask did nothing
     want_t = (b.get("template") or "").split(".v")[0]
@@ -2947,7 +3028,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         comp = "photo"
     # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat
     varied, wkey = None, fit_key(s, b)                   # 2.72.7: the key build_module.py measures a way out by
-    if recent is not None and kind == "slide" and not s.get("recap"):
+    if recent is not None and kind == "slide" and not s.get("recap") and not (ph_keys and comp == "photo"):   # a carousel keeps its photo layout
         # a photograph, or a figure-kit drawing (made for the dark panel), may move to the dark ground; a drawing or a
         # widget made for a white page keeps the light one - its own controls would vanish (gas M01 s07, s15, s19, s26)
         dark_ok = is_photo or bool(re.search(r'data-kit="|class="kit-screen', fig or ""))
@@ -3070,6 +3151,15 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         zoom = photo_points(b, len(lines), "zoom", probs, where, z=True) if split_photo else {}
         if b.get("zoom") and not split_photo:
             probs.append("%s: \"zoom\" is for a photograph beside its words (photo-explain split) - use \"spots\" on a full photograph" % where)
+        # 2.109.0 (F5) - "photos" {line: file}: a carousel, Next walks the lines and the photo changes with them
+        cards = carousel_cards(ph_keys, b, mdir, figdir, s, probs, where)
+        if cards and (spots or zoom):
+            probs.append("%s: \"photos\" (a carousel) and \"spots\" / \"zoom\" both move the photograph - use one" % where)
+            cards = {}
+        if cards:
+            fig = carousel_figure(fig, cards)
+            words = step_marks(words, dict((i, ' data-photo="%d"' % i) for i in cards))
+            d["class"] += " lt-carousel"
         if spots or zoom:
             fig = spot_width(fig, mdir, m, (b.get("figure") or "").replace("\\", "/"))
             words = step_marks(words, dict((i, ' data-x="%g" data-y="%g" data-z="%g"' % tuple(v)) for i, v in zoom.items()))
@@ -5138,6 +5228,8 @@ def main(argv=None):
         for f in cs.build_findings(o.course, script):
             if f["rule"] == "v_3d_none_built":
                 print("\n" + "=" * 78 + "\nRECOMMENDED (L60) - " + f["detail"] + "\n" + "=" * 78)
+            elif f["rule"] == "v_paged_slide":              # 2.109.0 F1 - the writer's finding; the build still pages, never cuts (L61)
+                print("MUST FIX (content in parts): %s - %s" % (f["where"], f["detail"]))
     parts = [x for x in notes if x[0]]
     if o.only in ("all", "deck"):
         listed = write_to_take(o.course, script, parts)
