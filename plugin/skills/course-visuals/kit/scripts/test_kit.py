@@ -196,6 +196,12 @@ probs = ck.check_part("grid_table", ck.blocks(grid)[0][1])
 check("a new part that draws only boxes and words (PM's grid_table) is refused", any("only boxes and words" in x for x in probs), probs)
 for t in ("tradeoff", "cycle", "timeline"):
     check("the Concepts family has %s" % t, t in types)
+idea = pm([{"id": "C", "type": "cycle", "x": 20, "y": 10, "r": 60, "name": "Routine work"}])
+probs = ck.check_spec(idea, types, "s")
+check("NO REAL EXAMPLE: an idea drawn only as shapes, naming no real thing, is refused (Aigars: \"just arrows and lines\")",
+      any("NO REAL EXAMPLE" in x for x in probs), probs)
+check("... and one that names its example (\"example\": [\"watch round\"]) passes",
+      ck.check_spec(dict(idea, example=["watch round"]), types, "s") == [], ck.check_spec(dict(idea, example=["watch round"]), types, "s"))
 for name in ("routine_vs_project", "triple_constraint"):
     pth = os.path.join(ck.KIT, "patterns", "%s.kit.json" % name)
     sp = json.load(open(pth, encoding="utf-8")) if os.path.isfile(pth) else {}

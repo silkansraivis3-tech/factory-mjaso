@@ -2,6 +2,7 @@
  "size": [416, 340],
  "label": "The triple constraint: scope, time and cost are the corners of one triangle; one more job with the same end date pulls the cost corner out; safety and rules are a fixed frame around it.",
  "idle": "Press Next step",
+ "example": ["ship in dry dock"],
  "parts": [
   {"id": "T", "type": "tradeoff", "x": 0, "y": 0, "w": 416, "h": 340,
    "frame": "Fixed: safety and rules", "centre": "quality",

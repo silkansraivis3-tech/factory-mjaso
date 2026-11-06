@@ -276,6 +276,11 @@ triangle that stretches inside a frame that does not; routine work is a loop; a 
 - **The look:** a figure made only of Concepts parts is shown on the **light panel** (white, `lt-light`, the kit's light
   tokens) - the compiler does it; `"theme": "dark"` keeps the Navy one. Blue is the idea, **amber what changed**, a dashed
   red frame what is never traded. Machinery, ships and screens stay on the Navy panel.
+- **An idea carries its real example** (Aigars, reviewing the rebuilt slides: drawn ideas "turn into just arrows and
+  lines"): a figure made only of Concepts parts names the real thing(s) it is about in `"example"`
+  (`["watch round", "ship in dry dock"]`) - **NO REAL EXAMPLE** is refused without it. The compiler treats each as a
+  drawn thing (L57): the course's photograph of it goes under the drawing, tappable; with none it goes on
+  `PHOTOS_TO_TAKE.md`. Shapes explain the idea, the photo keeps it on board.
 - **No step buttons** under a figure: the deck's Next walks its steps with the slide's lines (`gb_deck.js`); a lit line is
   still a tap target that plays its step.
 - **`check_kit.py` refuses** (a build FAIL): **WORDS ONLY** - every part is words or a number in a box (a readout with a

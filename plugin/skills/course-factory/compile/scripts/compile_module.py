@@ -1173,8 +1173,24 @@ def drawn_labels(fig):
             continue
         for p in spec.get("parts") or [] if isinstance(spec, dict) else []:
             out += [p[k] for k in ("label", "text") if isinstance(p.get(k), str)]
+    out += figure_examples(fig)
     out += [re.sub(r"<[^>]+>", " ", m.group(1)) for m in SVG_TEXT.finditer(JSON_DATA.sub("", fig))]
     return [" ".join(html.unescape(x).split()) for x in out]
+
+
+def figure_examples(fig):
+    """the real things an idea drawn with the Concepts family stands for - its spec's "example" (2.108.0, Aigars: drawn
+    ideas "turn into just arrows and lines"): each gets its photograph beside the drawing like a drawn part (L57), or goes
+    on the list of pictures still missing"""
+    out = []
+    for m in JSON_DATA.finditer(fig):
+        try:
+            spec = json.loads(m.group(1).replace("<\\/", "</"))
+        except ValueError:
+            continue
+        ex = spec.get("example") if isinstance(spec, dict) else None
+        out += [x for x in ([ex] if isinstance(ex, str) else ex or []) if isinstance(x, str) and x.strip()]
+    return [" ".join(x.split()) for x in out]
 
 
 def step_numbers(fig):
@@ -1556,19 +1572,23 @@ def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refu
     `not_things` (build sheet "not_things", 2.49.1): words the drawing writes that are no real thing - an axis, a line
     of a chart - are left off the list altogether (`refuse` = "no photo fits", which stays on it)"""
     strip, taps, taken = [], [], taken if taken is not None else {}
+    examples = figure_examples(fig)
+
+    def thing(name):                                      # an idea's named example is a real thing by its spec's word
+        return is_thing(name) or any(same_thing(name, x) for x in examples)
     for num, name in drawn_parts(lines, fig):
         if any(same_thing(name, x) for x in not_things):
             continue
         if any("assets/img/" + n in on_slide and any(shows_it(x, name) for x in m.get("shows") or []) for n, m, _, _ in pool):
             continue                                      # its photograph is already on the slide
         if any(same_thing(name, x) for x in refuse):
-            if is_thing(name):                            # the build sheet says no photo we have fits how it is drawn here
+            if thing(name):                               # the build sheet says no photo we have fits how it is drawn here
                 notes.append((where, num, name))
             continue
         hit = next(((n, m, d, pid) for n, m, d, pid in pool if pid not in taken
                     and any(shows_it(x, name) for x in m.get("shows") or [])), None)
         if not hit:
-            if is_thing(name):
+            if thing(name):
                 notes.append((where, num, name))
             continue
         # 2.63.0 (the instructors' review of IGF Basic: "a clickable vessel - tap Engine room, FPR, TCS, bunkering station,

@@ -68,6 +68,16 @@ def kit_types(kit_js=KIT_JS):
     return set(re.findall(r"TYPES\.(\w+)\s*=", t)) | set(DEFINE.findall(t))
 
 
+_CONCEPTS = []
+
+
+def concept_types():
+    """the parts of the Concepts family (kit.js metas, family: 'concepts'), read once"""
+    if not _CONCEPTS:
+        _CONCEPTS.append({n for n, b in blocks(read(KIT_JS)) if meta_field(b, "family") == "concepts"})
+    return _CONCEPTS[0]
+
+
 def blocks(text):
     """[(marker name, block text)] - the new parts in a kit_parts.js, or the promoted ones in kit.js"""
     return [(m.group(1), m.group(2)) for m in BLOCK.finditer(text)]
@@ -378,6 +388,13 @@ def what_it_is(spec, parts):
             out.append("DECORATION - the ship %s is drawn small (%d %% of the figure) with nothing on it or in it: a ship that "
                        "shows nothing is decoration. Draw the idea itself, or put on the ship what the words name"
                        % (g.get("id") or "", round(100 * gw * gh / (fw * fh))))
+    idea = [p.get("type") for p in ps if p.get("type") != "text"]
+    ex = spec.get("example")
+    if idea and all(t in concept_types() for t in idea) and not (
+            (isinstance(ex, str) and ex.strip()) or (isinstance(ex, list) and any(isinstance(x, str) and x.strip() for x in ex))):
+        out.append("NO REAL EXAMPLE - an idea drawn only as shapes (%s) turns into arrows and lines: name the real thing(s) it "
+                   "is about in \"example\" (\"example\": [\"watch round\", \"ship in dry dock\"]) - the course's photograph of "
+                   "each goes beside the drawing, or onto PHOTOS_TO_TAKE.md" % ", ".join(sorted(set(idea))))
     broken = sorted({s for s in _strings(spec) if MOJIBAKE.search(s)})
     if broken:
         out.append("BROKEN CHARACTERS - %r: the words were read in the wrong encoding (\"Â·\" for \"·\"); "

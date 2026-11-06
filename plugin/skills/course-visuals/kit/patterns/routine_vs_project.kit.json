@@ -2,6 +2,7 @@
  "size": [480, 300],
  "label": "Routine work is a loop that goes round every watch with no planned end; a project is a line from a start to a flag at its end, a dry-dock overhaul that leaves a new result.",
  "idle": "Press Next step",
+ "example": ["watch round", "ship in dry dock"],
  "parts": [
   {"id": "C", "type": "cycle", "x": 14, "y": 8, "r": 98, "inside": "every watch,\nevery day",
    "name": "Routine work", "note": "no planned end", "nameAt": 232},

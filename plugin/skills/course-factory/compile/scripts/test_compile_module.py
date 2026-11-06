@@ -1768,6 +1768,19 @@ def fixes_part(tmp):
     notes = []
     cm.part_photos(["Air line - x.", "Relief valve - y."], mixed, set(), md, [], notes, "s03", {}, ["air line"], [])
     check("C6: ... and 'no_photo' still lists it", sorted(n[2] for n in notes) == ["Air line", "Relief valve"], notes)
+    # 2.108.0 - an idea drawn with the Concepts family names its real example: no photo yet -> the list (Aigars: "just
+    # arrows and lines"), and the idea's own words (Routine work) are no thing to photograph
+    idea = ('<div class="fill fig kit-fig lt-light"><script type="application/json" id="k">' + json.dumps(
+        {"size": [480, 300], "example": ["watch round", "ship in dry dock"],
+         "parts": [{"type": "cycle", "id": "C", "name": "Routine work"}, {"type": "timeline", "id": "L", "name": "Project"}]})
+        + "</script></div>")
+    notes = []
+    cm.part_photos(["Routine work goes round.", "A project ends."], idea, set(), md, [], notes, "s03", {}, (), [])
+    check("2.108.0: an idea figure's examples with no photo go on PHOTOS_TO_TAKE, its own words do not",
+          sorted(n[2] for n in notes) == ["Ship in dry dock", "Watch round"], notes)
+    check("2.108.0: a figure of Concepts parts is shown on the light panel; \"theme\": \"dark\" keeps the Navy one",
+          cm.kit_light({"parts": [{"type": "tradeoff"}]}) and not cm.kit_light({"theme": "dark", "parts": [{"type": "cycle"}]})
+          and not cm.kit_light({"parts": [{"type": "cycle"}, {"type": "tank"}]}))
 
     # C7 - an inset under a drawing that leaves it a small part of its panel is warned about
     sh = cm.under_share('<script type="application/json" id="k">{"size": [640, 390], "parts": []}</script>')
