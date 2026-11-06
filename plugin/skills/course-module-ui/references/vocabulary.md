@@ -114,6 +114,7 @@ Compiled slides (2.25.1, §13b — written by `course-factory/compile/`, usable 
 | `.slide-body.dom-fig` | written by the compiler (2.52.0): the figure first in the markup - first on a portrait tablet - and the words put back first on a landscape screen by CSS `order`; never typed by hand |
 | `.slide.photo.split` | a photograph filling the right of the screen, the words on the dark left |
 | `.act-ico` · `.act-lines` | the task slide's tablet sign · its lines grouped at reading size |
+| `.no-code` · `.act-lead` · `.act-bullet` | a room activity with no task code (no `opens`): one column, no code printed · a long activity text: its first line the lead statement, the rest bullets |
 | `.act-photo` | (2.63.0) the exercise's real photograph on its task slide, in place of the sign (build sheet `"photo"`); opens full screen with its record |
 | `.aside` | small drawings that belong with the words (mini figures on a photo slide) - compact, never pushing the words off the screen |
 | `.fig` · `.fig-wide` · `.fig-first` · `.dom-fig` · `.own-numbers` · `.split` | the modifiers above, named on their own for the vocabulary check |

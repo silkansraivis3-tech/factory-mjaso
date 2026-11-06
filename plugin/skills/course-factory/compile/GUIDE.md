@@ -327,12 +327,12 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   price, make it within the course's approved picture budget (2.73.2: one yes per course), record it `"generated": true`
   in `_photo_meta.json`. (2.73.2, owner 2026-10-28) Equipment too - first generated, then fixed; nobody is asked to
   take a photo, and the course's own small pictures are reused, enlarged by the build (Real-ESRGAN).
-- **A 2D figure - drawn with the 2D kit (2.112.0).** A graph, an object in motion or a concept is a short JSON spec,
+- **A 2D figure - drawn with the 2D kit (2.113.0).** A graph, an object in motion or a concept is a short JSON spec,
   `working_claude\figures\MNN\sNN.kit2d.json` (`course-visuals\kit2d\SPEC.md` is the format; `demos.html` and `pm.html`
   show every part), named as the slide's `"figure": "sNN.kit2d.json"`. The compile ships `kit2d.js` and `kit2d.css`; the
   deck's Next walks its steps; `fit_gate.py` fails a step where its words overlap, are cut at the edge or lie on a line.
   Give the spec's `size` the shape of the slide's picture box: a wide figure in a tall box is shown small.
-  `--init-build` writes the starter itself (2.112.1) for a chart, comparison, animation or interactive-diagram slide
+  `--init-build` writes the starter itself (2.113.1) for a chart, comparison, animation or interactive-diagram slide
   whose lines are not mostly equipment and spaces: the steps of a process (a box per line, an arrow to the next, a step
   bringing each in), a cycle when the words go round, a timeline or a grid when they name one, a chart. Where the
   slide's words cannot give the values (a chart's points, a task's weeks, a grid's rows) its `"_todo"` says so, and the
@@ -461,7 +461,7 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
 
 - **Built: all nineteen ways of answering** an approved script can hold (2.38.0) - single_choice, multi_select,
   read_instrument, hotspot, spot_the_hazard, match, categorise, label_diagram, order, and cloze, choose_and_justify,
-  scenario, set_value, find_the_fault, spot_the_error, build_the_plan, timeline, compare, panel_operate. No trainee
+  scenario, set_value, find_the_fault, spot_the_error, build_the_plan, timeline, compare, panel_operate, fill_matrix (2.109.0: a table the trainee fills cell by cell). No trainee
   task page is made by hand any more; the one engine grades them all, tap and drag only (L38, L42).
 - **On a picture** (hotspot, spot_the_hazard, label_diagram, read_instrument) the build sheet names the drawing, keyed
   by the question's id: `"q01": {"figure": "assets/fig/m01_ga.svg"}`. Each answer's place is found by itself - the
@@ -639,8 +639,24 @@ their stops. The approved words never change - only what is round them.
 | a full photograph | a point lights on the photo with its line | `"spots": {"2": [x, y]}` |
 | a split photograph | the photo zooms to the part the line names, a ring round it | `"zoom": {"2": [x, y, 2.2]}` (scale 1-4) |
 
+| a full or split photograph, a carousel (2.109.0) | every photo stacked in the frame; Next walks the lines and the line's photo fades in (opacity only, L65); each opens full screen with its own record (L51, L56), credits in `_photo_meta.json`, never on the slide | `"photos": {"1": "assets/img/a.jpg", "2": "assets/img/b.jpg"}` |
+| a predict- / explain-then-reveal slide (2.109.0) | the intro line is a lead, not step 1; the items are numbered, or lettered A, B, C when the task is to find the order | `"letters": true` / `false` (default: lettered when the question, title or lead says order / sequence / arrange / rank / sort), `"lead": false` (every line an item) |
+| a room activity with no `"opens"` (2.109.0) | no code on the slide (never the screen id); a text of three lines or more is a lead statement and bullets | - |
+
 `"spots"` and `"zoom"` are in the photograph's own pixels and keyed by line number; a wrong one is reported. A slide
 without these fields is built as before.
+
+`"photos"` is keyed by line number too: at Next number N the photo of the latest keyed line up to N shows; a line with no
+photo of its own keeps the previous one, and the first photo (`"figure"`, or the first `"photos"` entry when there is no
+`"figure"`) shows before any line. It needs a photograph slide (composition `photo`) and cannot be combined with `"spots"` or
+`"zoom"`; a bad key or a file that is not a photograph is reported.
+
+**Content in parts is the writer's finding, not a layout trick (2.109.0).** A slide with a picture and more than 85 words is
+paged by the compiler into parts with number tabs (1 2 ...); trainees find the switching confusing (Aigars: "just 3-4
+bullet points"). The review page (`content_script.paged_findings`, rule `v_paged_slide`) lists such a slide as a must-fix: cut
+it to 3-4 short lines (by proposal - the build never cuts, L61), or keep the parts on purpose with `"parts"` (or
+`"template": "content-in-parts.v1"`) in the build sheet, which also silences the finding. The compile prints the same
+as `MUST FIX (content in parts)`.
 
 ## 3 · When the look is not enough
 

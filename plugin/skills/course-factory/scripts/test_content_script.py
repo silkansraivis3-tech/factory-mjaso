@@ -277,7 +277,14 @@ def main():
         check("the module in numbers: minutes against the programme's, words per theory minute",
               lv("s_sum_alloc", a="23") in page and lv("s_sum_title") in page)
         check("a clean module: the theory check found nothing", lv("s_theory_clean") in page and lv("s_textcheck_clean") in page)
-        check("... and the pictures-and-tasks check found nothing", lv("s_media_clean") in page)
+        # 2.109.0 (F1): the three long fixture slides (90-99 words beside a picture) would be paged with number tabs - the
+        # review page says so, and nothing else is found
+        paged = cs.paged_findings(SCRIPT)
+        check("... and the pictures-and-tasks check found only the slides that would be paged into number tabs (F1, 2.109.0)",
+              [f["screen"] for f in paged] == ["s01", "s02", "s03"] and all(f["level"] == cs.FAIL for f in paged)
+              and not cs.media_findings(SCRIPT) and lv("s_media_clean") not in page)
+        check("F1: the same slides with the build sheet's \"parts\" are not found",
+              not cs.paged_findings(SCRIPT, {"screens": {x: {"parts": [[1, 2], [3, 9]]} for x in ("s01", "s02", "s03")}}))
         check("operator-stated facts listed once - from the script and from FEEDBACK_LOG.md",
               "left console" in page and "tested to 7 bar" in page and page.count(lv("s_facts_title")) == 1)
         doc = zipfile.ZipFile(p["docx"]).read("word/document.xml").decode("utf-8")

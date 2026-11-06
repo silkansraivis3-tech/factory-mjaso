@@ -3021,6 +3021,96 @@ def prefill_part(tmp):
     check("... and what it filled is said, one line each", len(said) == 4 and any("s01" in x for x in said), said)
 
 
+def review_fixes_part(tmp):
+    """2.109.0 - the Project Management review's four engine faults: content in parts is a writer's finding (F1), an activity
+    with no "opens" shows no screen id (F2), a reveal slide's intro is no step and an ordering prediction is lettered (F3),
+    and a photo slide can carry a carousel of photos, one per line (F5)"""
+    print("\n-- 2.109.0: the review's four engine faults")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    long_text = "\n".join("Line %d has some words about the project and what it needs from the people on it, said plainly." % i
+                          for i in range(1, 7))
+    sl = {"id": "s60", "kind": "slide", "title": "Types", "visual_kind": "photo", "visual": "A ship.", "text": long_text,
+          "notes": "- n", "minutes": 2}
+    sc = script(screens=[sl])
+    f = cs.paged_findings(sc)
+    check("F1: a slide with a picture and over 85 words is a must-fix: it would show in parts with number tabs",
+          len(f) == 1 and f[0]["level"] == cs.FAIL and f[0]["rule"] == "v_paged_slide" and "parts" in f[0]["detail"]
+          and "85" in f[0]["detail"], f)
+    check("F1: ... not when the build sheet asks for parts (\"parts\" or a named template)",
+          not cs.paged_findings(sc, {"screens": {"s60": {"parts": [[1, 3], [4, 6]]}}})
+          and not cs.paged_findings(sc, {"screens": {"s60": {"template": "content-in-parts.v1"}}}))
+    check("F1: ... not for a short slide, a slide with no picture, or one that is a list of steps",
+          not cs.paged_findings(script(screens=[dict(sl, text="Short line one.\nShort line two.")]))
+          and not cs.paged_findings(script(screens=[dict(sl, visual_kind="none", visual="")]))
+          and not cs.paged_findings(script(screens=[dict(sl, text="\n".join("%d %s" % (i, "word " * 20) for i in range(1, 6)))])))
+    check("F1: ... and the finding never cuts a word (L61): the compiler still pages when asked",
+          len(cs.parts_of(cs.lines_of(long_text), [(1, 3), (4, 6)])) == 2)
+    ordered = ["Put the phases in order.", "Dock the ship", "Clean the hull", "Paint", "Undock"]
+    sx = {"active": "predict-then-reveal", "ask": "Which comes first?", "title": "Put the dry-dock phases in order"}
+    check("F3: the intro line of a reveal slide is a lead (not numbered); a worked example's lines are all steps",
+          cm.worked_lead(sx, {}, ordered) == 1 and cm.worked_lead({"active": "worked-example"}, {}, ordered) == 0
+          and cm.worked_lead(sx, {}, ["1 Dock", "2 Clean", "3 Paint"]) == 0 and cm.worked_lead(sx, {"lead": False}, ordered) == 0)
+    check("F3: an ordering prediction is lettered; so is a slide that says \"letters\"; a plain explain slide is not",
+          cm.worked_letters(sx, {}, ordered) and cm.worked_letters({"active": "explain-then-reveal", "ask": "Why?"}, {"letters": True}, ordered)
+          and not cm.worked_letters({"active": "explain-then-reveal", "ask": "Why?", "title": "Tanks"}, {}, ["Tanks.", "A", "B"])
+          and not cm.worked_letters(sx, {"letters": False}, ordered))
+    os.makedirs(os.path.join(tmp, "rf"))
+    by = {x["id"]: x for x in json.loads(json.dumps(SCREENS))}
+    s61 = {"id": "s61", "kind": "slide", "title": "The four types", "layout": "visual_full", "visual_kind": "photo",
+                "text": "Technical project.\nOrganisational project.\nCompliance project.\nMixed project.", "visual": "A ship.",
+                "notes": "- One type per Next.", "minutes": 2}
+    screens = [s61,
+               {"id": "s62", "kind": "slide", "title": "Put the dry-dock phases in order", "visual_kind": "none", "active": "predict-then-reveal",
+                "text": "Five jobs, mixed up.\nClean the hull\nDock the ship\nPaint\nUndock\nInspect", "ask": "Which order?",
+                "reveal": "Dock, clean, inspect, paint, undock.", "notes": "- Pairs first.", "minutes": 3},
+               {"id": "s63", "kind": "activity", "title": "Workshop - plan your project", "visual_kind": "none",
+                "text": "In pairs, plan a small project.\nName the goal.\nList three risks.\nAgree the first step.",
+                "notes": "- Walk round.", "minutes": 0, "practice_minutes": 15},
+               by["s02"], by["t01"], by["q01"], by["t02"], by["m01"]]
+    c, md = new_course(os.path.join(tmp, "rf"), script(screens=screens), build=False)
+    for n in ("ship2.jpg", "ship3.jpg"):
+        io.open(os.path.join(md, "assets", "img", n), "wb").write(b"\xff\xd8\xff\xd9")
+    cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), dict(PHOTO_META, **{
+        n: dict(PHOTO_META["ship.jpg"], description="Another ship.") for n in ("ship2.jpg", "ship3.jpg")}))
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s61": {"figure": "assets/img/ship.jpg", "composition": "photo",
+                "photos": {"2": "assets/img/ship2.jpg", "4": "assets/img/ship3.jpg"}},
+        "s02": {"figure": "assets/fig/scale.svg"}, "t01": {"try_tablet": False}}})
+    code, out = run(COMPILE, c, "--module", "1")
+    page = deck(md) if os.path.isfile(os.path.join(md, "presentation", "index.html")) else ""
+    check("the F-fixture deck is built", code in (0, 1) and page, out[-1500:])
+    if not page:
+        return
+    a = section(page, "s63")
+    check("F2: a room activity with no \"opens\" shows no code - not the screen id - and keeps its title",
+          'class="act-code"' not in a and ">S63<" not in a and 'data-activity="S63"' in a
+          and "no-code" in a and 'data-script-field="title">Workshop' in a, a[:1200])
+    check("F2: ... a long activity text is a lead statement and bullets (first line, then the rest)",
+          'class="act-inst act-lead" data-script-field="text" data-i="1"' in a and a.count("act-bullet") == 3, a[:1600])
+    r = section(page, "s62")
+    check("F3: the intro line is not numbered (a lead), the five jobs are A-E - an ordering must not hand out an order",
+          '<li data-k="0" class="lead">' in r
+          and all('<span class="n" data-script-ignore>%s</span>' % x in r for x in "ABCDE") and ">1</span>" not in r, r[:1600])
+    k = section(page, "s61")
+    check("F5: a photo carousel - every photo stacked in the frame (data-ph), the first showing, a line carrying its photo (data-photo)",
+          k.count("data-ph=") == 3 and 'data-ph="0" class="on"' in k and 'data-ph="2"' in k and 'data-ph="4"' in k
+          and 'data-i="2" data-k="2" data-photo="2"' in k and 'data-i="4" data-k="4" data-photo="4"' in k
+          and "lt-carousel" in k.split(">")[0], k[:1800])
+    check("F5: ... each opens full screen with its own record (L51, L56), no credit text on the slide",
+          k.count("data-about=") == 3 and 'class="credit"' not in k, k[:1800])
+    steps = io.open(os.path.join(md, "assets", "gb_steps.js"), encoding="utf-8").read()
+    css = io.open(os.path.join(md, "assets", "gb_upgrade.css"), encoding="utf-8").read()
+    check("F5: gb_steps.js swaps the photo with the stop and gb_upgrade.css crossfades it by opacity only (no filter, L65)",
+          "data-photo" in steps and "photo-wrap:has(> img[data-ph])" in css
+          and "filter" not in css.split("2.109.0 (F5)")[1].split("@media")[0])
+    code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
+    check("... and check_script_match finds exactly the approved words on every one of these slides", code == 0, out[-1500:])
+    probs = []
+    cm.carousel_keys({"photos": {"9": "x.jpg"}}, 4, probs, "s61")
+    check("F5: a photos key outside the slide's lines is reported", probs and "photos" in probs[0], probs)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -3596,6 +3686,7 @@ def main():
         prefill_part(tmp)
         recap_part(tmp)
         upgrade_part(tmp)
+        review_fixes_part(tmp)
         shapes_part(tmp)
         reveal_part(tmp)
         tasks_part(tmp)

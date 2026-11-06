@@ -125,14 +125,14 @@ kit3d/                          the 3D kit: a 3D scene is a spec of parts, label
 - **Level 3 of the pipeline is not automated.** Judging whether a source is technically credible is
   not a regex. It belongs to the `visual-sourcer` agent.
 
-## The 2D kit (2.112.0)
+## The 2D kit (2.113.0)
 
 `kit2d/` replaced the figure kit for new 2D figures (owner, 2026-11-06: the 2D kit was "awful", made for one gas
 course; the figure kit stays for control screens). Built from the owner's reference (`2d-kit-reference/`, outside the
 repository): one hero, the cause moves the picture, depth from layers, words beside with a halo, colour that means
 something. Measured, not judged by eye: a frame-by-frame probe found no jump in any figure after the motion rewrite;
 `KIT2D.audit` is clean at every step of the seven demo figures at both tablet sizes, and caught the week labels and
-the Today tag colliding inside a compiled deck before they were fixed. 2.113.0: more parts (bars, pyramid, balance,
+the Today tag colliding inside a compiled deck before they were fixed. 2.114.0: more parts (bars, pyramid, balance,
 events, compare, person, tank, pump) and `kit2d/scripts/test_kit2d.py`, which walks every demo figure through the audit.
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 

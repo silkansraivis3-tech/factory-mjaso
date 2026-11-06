@@ -299,7 +299,14 @@ def cmd_propose(course, changes_file):
         if "module" not in c:
             print("Stopped - every change needs its \"module\".")
             return 2
-        by_mod.setdefault(int(c["module"]), []).append(c)
+        try:
+            key = int(c["module"])
+        except (TypeError, ValueError):            # "FINAL" crashed here (Project Management, 2026-11-06)
+            m = str(c["module"])
+            print("Stopped - fix.py takes numbered modules. For %s use content_script.py propose / apply --confirmed / approve "
+                  "--module %s, then compile/scripts/build_module.py --module %s." % (m, m, m))
+            return 2
+        by_mod.setdefault(key, []).append(c)
     lines, written, ready = [], [], []
     for m, chs in sorted(by_mod.items()):                 # everything is checked before anything is written
         p = cs.paths(course, m)

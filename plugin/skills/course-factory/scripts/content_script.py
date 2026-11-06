@@ -159,7 +159,9 @@ USES = {"single_choice": {"options"}, "multi_select": {"options"}, "choose_and_j
         "scenario": {"answer"},
         # L49 step 4 (2.28.0) - the higher Bloom levels: investigate, judge a document, build, rebuild, compare
         "find_the_fault": {"answer", "visual"}, "spot_the_error": {"answer"}, "build_the_plan": {"answer"},
-        "timeline": {"answer"}, "compare": {"options", "answer"}}
+        "timeline": {"answer"}, "compare": {"options", "answer"},
+        # 2.109.0 - fill a grid (a RACI matrix): "values" is the palette, "answer" the header row then one row per line
+        "fill_matrix": {"values", "answer"}}
 USES.update(interact_formats.USES)          # 2.74.0 - true or false, check a colleague, work it out, predict, explore, investigate,
                                             # line it up, inspection round, take it apart, test before entry
 OLD_MECHANIC = {"tap to choose": "single_choice", "": "single_choice", None: "single_choice"}
@@ -174,6 +176,17 @@ def mech(s):
 
 def uses(s, part):
     return part in USES.get(mech(s), {"options"})
+
+
+def matrix_of(s):
+    """fill_matrix (2.109.0): the script's "values" (the palette: 'R, A, C, I, -') and "answer" (the header line, then one line per
+    row, cells separated by |) taken apart as (values, header cells, [(row label, [right value per column])]).
+    The first header cell titles the row-label column; the other header cells are the columns."""
+    vals = [x.strip() for x in str(s.get("values") or "").split(",") if x.strip()]
+    ls = lines_of(s.get("answer"))
+    cells = [[c.strip() for c in x.split("|")] for x in ls]
+    head = cells[0] if cells else []
+    return vals, head, [(r[0], r[1:]) for r in cells[1:]]
 
 
 # ------------------------------------------------------------------ files
@@ -393,6 +406,8 @@ def fields_of(screen, lang="en"):
             for L, o in zip(letters(len(screen.get("options", []))), screen.get("options", [])):
                 out.append(("opt." + L, o))
             out.append(("correct", screen.get("correct", "")))
+        if uses(screen, "values"):
+            out.append(("values", screen.get("values", "")))
         if uses(screen, "answer"):
             out.append(("answer", screen.get("answer", "")))
         out.append(("feedback", screen.get("feedback", "")))
@@ -582,6 +597,22 @@ def read_answer(s):
             if len(r) < 2 or not r[1].strip():
                 probs.append("%s: every wrong line says why after =>: %s" % (sid, unstar(r[0])))
         right += [r[1].strip() for r in errors if len(r) > 1]
+    elif m == "fill_matrix":
+        vals, head, rows = matrix_of(s)
+        if len(vals) < 2 or len(set(vals)) != len(vals):
+            probs.append("%s: 'fill the table' needs at least two different values to choose from, written as: R, A, C, I" % sid)
+        if len(head) < 3 or len(rows) < 2 or any(not x.strip() for x in head):
+            probs.append("%s: 'fill the table' needs a header line (the row title, then at least two column names) and at least two rows, "
+                         "cells separated by |" % sid)
+        if len(set(x.strip().lower() for x in head)) != len(head) or len({r[0].lower() for r in rows}) != len(rows) or any(not r[0] for r in rows):
+            probs.append("%s: 'fill the table' - every column name and every row name is different, none empty" % sid)
+        for label, cs_ in rows:
+            if len(cs_) != len(head) - 1:
+                probs.append("%s: 'fill the table' - the row '%s' has %d cell(s), the header has %d column(s)" % (sid, label, len(cs_), len(head) - 1))
+            for c in cs_:
+                if c not in vals:
+                    probs.append("%s: 'fill the table' - '%s' in the row '%s' is not one of the values (%s)" % (sid, c, label, ", ".join(vals)))
+        right += [c for _, cs_ in rows for c in cs_ if c]
     elif m == "build_the_plan":
         good = [x for x in ls if starred(x)]
         if len(good) < 3 or len(ls) - len(good) < 2:
@@ -652,6 +683,9 @@ def answer_items(s):
     elif m in ("build_the_plan", "timeline"):
         items = [unstar(x) for x in ls]
         right = [unstar(x) for x in ls if starred(x)]
+    elif m == "fill_matrix":                     # the cells themselves are empty on the page: its words are the grid's names and the palette
+        vals, head, rows = matrix_of(s)
+        items = list(head) + [r for r, _ in rows] + vals
     elif m == "compare":
         for x in ls:
             what, _, vals = x.partition(":")
@@ -1128,7 +1162,7 @@ def text_findings(script):
     found, seen = [], set()
     for s in script.get("screens", []):
         course_facing = ["title", "text"] if s["kind"] not in TASKS else \
-            ["question"] + ["opt." + L for L in letters(len(s.get("options", [])))] + (["answer"] if uses(s, "answer") else []) + ["feedback"]
+            ["question"] + ["opt." + L for L in letters(len(s.get("options", [])))] + (["values"] if uses(s, "values") else []) + (["answer"] if uses(s, "answer") else []) + ["feedback"]
         opening = ("%s\n%s" % (s.get("title", ""), s.get("text", ""))) if s["id"] == first_slide else ""
         for f, kind in [(x, "presentation") for x in course_facing] + [("notes", "instructor"), ("visual", "instructor")]:
             text = get_field(s, f) or ""
@@ -1267,22 +1301,57 @@ def scene_in(body):
     return bool(body and SCENE_MARK.search(body))
 
 
+STEP_LINE = re.compile(r"^\d{1,2}[.)]?\s+\S")
+
+
+def paged_words(s, b=None):
+    """2.109.0 (F1) - the number of parts this slide's words will be paged into by the compiler's own rule (a picture beside
+    more than PARTS_FROM words becomes content-in-parts with numbered tabs), or 0: no picture, few words, a list of steps or a
+    table (own templates), or the build sheet asks for / names a layout. Never cuts a word (L61) - it is the writer's finding"""
+    b = b or {}
+    if s.get("kind") != "slide" or s.get("recap") or b.get("parts") or b.get("template"):
+        return 0
+    if picture_of(s)["kind"] == "none":
+        return 0
+    lines = lines_of(s.get("text"))
+    if len(lines) < 2 or wc(" ".join(lines)) <= PARTS_FROM:
+        return 0
+    if sum(1 for x in lines if STEP_LINE.match(x)) >= len(lines) - 1 or sum(1 for x in lines if " | " in x) >= 2:
+        return 0
+    return len(parts_of(lines, None, PART_WORDS))
+
+
+def paged_findings(script, build=None):
+    """F1 (Aigars, PM review: "the 1-2 switching isn't needed at all, just 3-4 bullet points") - a slide whose words would be
+    paged with number tabs is a MUST-FIX for the writer, unless the build sheet asks for parts ("parts" or "template")"""
+    found = []
+    for s in script.get("screens", []):
+        b = ((build or {}).get("screens") or {}).get(s.get("id")) or {}
+        n = paged_words(s, b)
+        if n:
+            found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "text", "level": FAIL,
+                          "rule": "v_paged_slide", "fix": "",
+                          "detail": T(script, "v_paged_slide", words=wc(" ".join(lines_of(s.get("text")))), n=n, limit=PARTS_FROM)})
+    return found
+
+
 def build_findings(course, script):
     """what the module's build sheet does to the planned pictures, shown with the script's own findings on the review page:
     a 3D slide built as a 2D figure, and (L60) a module built with no 3D scene at all - its best candidate named, until the
     operator declines it ("declined_3d" at the top of the build sheet). Notes - the build sheet is no part of the approved
     words, and L60 is a strong recommendation, never a block."""
-    if not course:
-        return []
     m = mid(script.get("module"))
-    try:
-        bp = os.path.join(paths(course, script.get("module"))["dir"], m + ".build.json")
-        build = load(bp) if os.path.isfile(bp) else None
-    except (OSError, ValueError):
-        build = None
-    if not build:
-        return []
-    figdir, found, scene = workspace.claude_path(course, "figures", m), [], False
+    build = None
+    if course:
+        try:
+            bp = os.path.join(paths(course, script.get("module"))["dir"], m + ".build.json")
+            build = load(bp) if os.path.isfile(bp) else None
+        except (OSError, ValueError):
+            build = None
+    paged = paged_findings(script, build)
+    if not build or not course:
+        return paged
+    figdir, found, scene = workspace.claude_path(course, "figures", m), list(paged), False
     for s in script.get("screens", []):
         b = (build.get("screens") or {}).get(s.get("id")) or {}
         rel, body = (b.get("figure") or "").replace("\\", "/"), None
@@ -2133,6 +2202,12 @@ def task_body(e, V, script, s):
             cols.append('<div class="grp"><b>%s</b>%s</div>' % (V(g.strip()), "".join(
                 '<span class="chip">%s</span>' % V(i.strip()) for i in items.split(";") if i.strip())))
         out.append('<p class="mh">%s</p><div class="grps">%s</div>' % (e(T(script, "mm_categorise")), "".join(cols)))
+    elif m == "fill_matrix":
+        vals, head, rows = matrix_of(s)
+        out.append('<p class="mh">%s</p><p>%s</p><table class="pairs"><tr>%s</tr>%s</table>' % (
+            e(T(script, "mm_matrix")), "".join('<span class="chip">%s</span>' % V(v) for v in vals),
+            "".join("<th>%s</th>" % V(h) for h in head),
+            "".join("<tr><td><b>%s</b></td>%s</tr>" % (V(r), "".join("<td>%s</td>" % V(c) for c in cs_)) for r, cs_ in rows)))
     elif m == "cloze":
         def gap(mo):
             parts = [p.strip() for p in mo.group(1).split("|")]
@@ -2449,7 +2524,7 @@ def build_docx(course, script):
                     T(script, "s_textcheck_must") if f["level"] == FAIL else T(script, "s_textcheck_note")), color="B4453A")
     names = {"title": "s_title", "text": "s_text", "visual": "s_visual", "notes": "s_notes", "minutes": "s_minutes",
              "question": "s_question", "correct": "s_correct", "feedback": "s_feedback", "mechanic": "s_mechanic",
-             "visual_kind": "s_visual_kind", "answer": "s_answer"}
+             "visual_kind": "s_visual_kind", "answer": "s_answer", "values": "s_values"}
     names.update({f: "s_" + f for f in SLIDE_EXTRA + TASK_SLIDE_EXTRA})
     slide_no, sets, set_of = plan_of(script)
 
@@ -2681,7 +2756,7 @@ def describe(script, ch):
         return "%s: answer %s becomes \"%s\" (was \"%s\")" % (where, f[4], short(ch["new"]), short(ch["old"]))
     name = {"title": "the title", "text": "the slide text", "visual": "the planned picture", "notes": "the instructor notes",
             "minutes": "the minutes", "question": "the question", "feedback": "the feedback", "mechanic": "how the trainee answers",
-            "visual_kind": "the kind of picture", "answer": "the answer"}.get(f, f)
+            "visual_kind": "the kind of picture", "answer": "the answer", "values": "the values to choose from"}.get(f, f)
     old, new = as_text(ch["old"]), as_text(ch["new"])
     if len(old) > 60 or len(new) > 60:
         return "%s, %s: %s" % (where, name, changed_words(old, new))

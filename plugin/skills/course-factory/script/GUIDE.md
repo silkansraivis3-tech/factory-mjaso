@@ -262,6 +262,7 @@ one line per item, `*` marking what is right:
 | `order`, `label_diagram` | one item per line (for `order`, in the right order — the tablet shuffles) |
 | `match` | `left = right` per line |
 | `categorise` | `Group: item; item` per line |
+| `fill_matrix` | a table the trainee fills (e.g. a RACI matrix). `"values": "R, A, C, I, –"` = the palette; `answer` = the header line `Row title \| Column \| Column`, then one row per line `Row name \| value \| value` (the right values; 2+ rows, 2+ columns, every cell one of `values`) |
 | `cloze` | the sentence, each gap `[right* \| wrong \| wrong]` |
 | `hotspot`, `spot_the_hazard` | one area per line, the right one(s) `*` |
 | `choose_and_justify` | options + correct for the action; `answer` = the reasons, the right one `*` |

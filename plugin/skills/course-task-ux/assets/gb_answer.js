@@ -48,6 +48,7 @@
     check: 'Check', next: 'Next', seeScore: 'See my score', result: 'Your result',
     correct: 'Correct.', notQuiteChoice: 'Not quite – the right answer is marked.',
     notQuitePlace: 'Not quite – the amber ones were moved to where they belong.',
+    notQuiteGrid: 'Not quite – the amber cells show the right value.',
     notQuiteValue: 'Not quite – the green band shows the values that are right.',
     notQuiteMissed: 'Not quite – what you missed is outlined in green.', alsoRight: 'Also right', alsoWrong: 'Also wrong',
     goOn: 'Go on', decimal: '.',
@@ -489,6 +490,51 @@
     return g;
   }
 
+  /* fill the table (fill_matrix, 2.109.0): tap a value in the palette, then tap cells to put it there (tap a cell that already
+     holds it to clear it); with no value held a tap on a cell steps it through the values and back to empty. Every cell
+     is a .mxc with data-at="row | column" and data-key = gbKey(id, data-at, its right value) - the grid is never in the
+     page, and a cell is right when the key of its words and what it holds is its own. The palette is .mxv buttons. */
+  function cellVal(c) { return c.getAttribute('data-v') || ''; }
+  function cellSet(c, v) {
+    var t = $('.mxt', c);
+    c.setAttribute('data-v', v);
+    if (t) { t.textContent = v; }
+    if (v) { add(c, 'filled'); } else { del(c, 'filled'); }
+    c.setAttribute('aria-label', c.getAttribute('data-at').replace(' | ', ', ') + ': ' + (v || '-'));
+  }
+  function cellRight(g, c) { return !!cellVal(c) && keyOf(c) === gbKey(g.id, c.getAttribute('data-at'), cellVal(c)); }
+  function cellRightVal(g, c) {
+    var i;
+    for (i = 0; i < g.names.length; i++) { if (gbKey(g.id, c.getAttribute('data-at'), g.names[i]) === keyOf(c)) { return g.names[i]; } }
+    return '';
+  }
+  function mkMatrix(q, part) {
+    var g = { type: 'matrix', q: q, id: q.id, sec: part, cells: $$('.mxc', part), vals: $$('.mxv', part), hold: null, locked: false };
+    g.names = g.vals.map(txt);
+    function hold(b) {
+      each(g.vals, function (x) { del(x, 'sel'); });
+      g.hold = b || null;
+      if (b) { add(b, 'sel'); }
+    }
+    g.drop = function () { hold(null); };
+    each(g.vals, function (b) {
+      b.addEventListener('click', function () { if (!g.locked) { hold(g.hold === b ? null : b); } }, false);
+    });
+    each(g.cells, function (c) {
+      cellSet(c, '');
+      c.addEventListener('click', function () {
+        if (g.locked) { return; }
+        var cur = cellVal(c), i;
+        if (g.hold) { cellSet(c, cur === txt(g.hold) ? '' : txt(g.hold)); }
+        else { i = g.names.indexOf(cur); cellSet(c, i + 1 < g.names.length ? g.names[i + 1] : ''); }
+        pop(c);
+        q.touched = true;
+        refresh();
+      }, false);
+    });
+    return g;
+  }
+
   /* set the value: drag along the track, tap it, or step with - and + ; the number is shown large */
   function mkDial(q, el) {
     var g = { type: 'dial', q: q, id: q.id, el: el, k: -1, locked: false };
@@ -600,6 +646,7 @@
       p.groups.push(mkChoose(q, el, q.multi || el.getAttribute('data-multi') === '1', '1'));
     }
     if ($('.chip', el)) { p.groups.push(mkPlace(q, el)); }
+    if ($('.mx', el)) { p.groups.push(mkMatrix(q, el)); }
     each($$('.dial', el), function (d) { p.groups.push(mkDial(q, d)); });
     each($$('.lab[data-lab]', el), function (l) { var g = mkLab(q, l, p); if (g) { p.groups.push(g); } });
     /* compare: a figure in a column chooses that column */
@@ -666,12 +713,14 @@
     if (g.type === 'lab') { return !!g.impl.answered(); }
     if (g.type === 'choose') { return g.picked.length > 0; }
     if (g.type === 'dial') { return g.k >= 0; }
+    if (g.type === 'matrix') { return g.cells.every(function (c) { return !!cellVal(c); }); }
     return g.need === 'slots' ? slotsFull(g) : placed(g) === g.chips.length;
   }
   function groupTouched(g) {
     if (g.type === 'lab') { return !!(g.impl.touched ? g.impl.touched() : g.impl.answered()); }
     if (g.type === 'choose') { return g.picked.length > 0; }
     if (g.type === 'dial') { return g.k >= 0; }
+    if (g.type === 'matrix') { return g.cells.some(function (c) { return !!cellVal(c); }); }
     return placed(g) > 0;
   }
   function hasAnswer(p) {
@@ -693,6 +742,7 @@
       return ok && g.picked.length > 0;
     }
     if (g.type === 'dial') { return g.k >= 0 && g.good(g.k); }
+    if (g.type === 'matrix') { return g.cells.every(function (c) { return cellRight(g, c); }); }
     each(g.chips, function (c) { if (!chipGood(g, c)) { ok = false; } });
     return ok;
   }
@@ -703,7 +753,7 @@
   }
   function lock(p) {
     add(p.el, 'locked');
-    each(p.groups, function (g) { g.locked = true; if (g.type === 'place') { select(g, null); } if (g.type === 'lab' && g.impl.lock) { g.impl.lock(); } });
+    each(p.groups, function (g) { g.locked = true; if (g.type === 'place') { select(g, null); } if (g.type === 'matrix') { g.drop(); } if (g.type === 'lab' && g.impl.lock) { g.impl.lock(); } });
     if (p.q.sure && p === p.q.parts[p.q.parts.length - 1]) { add(p.q.sure, 'locked'); }
   }
   function revealGroup(g, ok) {
@@ -715,6 +765,8 @@
         if (g.gap) { add(g.gap, 'wrong'); del(g.gap, 'act'); del(g.box, 'act'); }
       } else if (g.type === 'dial') {
         add(g.el, 'wrong');
+      } else if (g.type === 'matrix') {
+        each(g.cells, function (c) { if (!cellRight(g, c)) { add(c, 'wrong'); } });
       } else {
         each(g.chips, function (c) { if (!chipGood(g, c)) { add(c, 'wrong'); } });
       }
@@ -747,6 +799,16 @@
         band.style.width = (100 * (Math.min(hi + 0.5, g.n) - Math.max(lo - 0.5, 0)) / g.n) + '%';
       }
       add(g.el, ok ? 'right' : 'wrong');
+    } else if (g.type === 'matrix') {
+      /* a right cell is locked green; a wrong one is marked (red edge, what was put there struck through) and shows the right value in amber */
+      each(g.cells, function (c) {
+        var was = cellVal(c), v;
+        if (cellRight(g, c)) { add(c, 'right'); return; }
+        v = cellRightVal(g, c);
+        c.setAttribute('data-was', was || '–');
+        add(c, 'wrong'); add(c, 'fixed'); add(c, 'shake');
+        if (v) { cellSet(c, v); }
+      });
     } else {
       each(g.chips, function (c) {
         if (chipGood(g, c)) { add(c, c.parentNode === g.tray ? 'out' : 'right'); } else { bad.push(c); }
@@ -791,6 +853,15 @@
         for (k = 0; k <= g.n; k++) { if (g.good(k)) { good.push(g.shown(k)); } }
         out.push({ k: 'pick', mine: [g.k >= 0 ? g.shown(g.k) + ' ' + g.unit : ''],
           right: [good.length > 1 ? good[0] + ' – ' + good[good.length - 1] + ' ' + g.unit : (good[0] || '') + ' ' + g.unit] });
+      } else if (g.type === 'matrix') {
+        /* fill the table: each cell not right - where (row, column), what the trainee put, what was right */
+        var mx = [], rx = [];
+        each(g.cells, function (c) {
+          if (cellRight(g, c)) { return; }
+          var at = c.getAttribute('data-at').replace(' | ', ' / ');
+          mx.push(at + ': ' + cellVal(c)); rx.push(at + ': ' + cellRightVal(g, c));
+        });
+        out.push({ k: 'pick', mine: mx, right: rx });
       } else if (g.type === 'place' && $('.rows.order', g.sec)) {
         /* put in order: the trainee's order beside the right one, the cards that moved marked */
         var mine = g.zones.map(function (z) { var c = $('.chip', z); return c ? txt(c) : ''; }), right = [];
@@ -816,6 +887,7 @@
       each(p.groups, function (g) {
         if (g.type === 'place' && kind === 'notQuiteChoice') { kind = 'notQuitePlace'; }
         if (g.type === 'dial') { kind = 'notQuiteValue'; }
+        if (g.type === 'matrix') { kind = 'notQuiteGrid'; }
       });
     });
     if (kind === 'notQuiteChoice' && $('.missed', q.sec)) { kind = 'notQuiteMissed'; }
@@ -986,6 +1058,7 @@
       if (qs[cur] !== q || q.touched || q.done || ended) { return; }
       if (g.type === 'lab') { return; }                  /* an interactive type shows its own way in (gb_interact.js) */
       if (g.type === 'choose') { demoTap(neutralSpot(q.sec)); return; }
+      if (g.type === 'matrix') { if (g.vals[0]) { demoTap(centre(g.vals[0])); } return; }
       if (g.type === 'dial') {
         var r = g.track.getBoundingClientRect();
         demoDrag(centre(g.thumb), { x: r.left + r.width * 0.6, y: r.top + r.height / 2 });
