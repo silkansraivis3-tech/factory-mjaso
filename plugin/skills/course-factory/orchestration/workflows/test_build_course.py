@@ -162,9 +162,9 @@ def main():
         check("... and every module is still judged: the one whose QA brought back nothing blocks, under its own number",
               big.get("r", {}).get("blocking") == ["2"], big.get("r"))
         o = two.get("opts", {})
-        check("... an approved module is built and checked on Sonnet at medium effort (2.51.0)",
+        check("... an approved module is built on Sonnet at medium effort (2.51.0), and its QA runs on the best model",
               o.get("build:1") == {"model": "sonnet", "effort": "medium"}
-              and o.get("qa:1") == {"model": "sonnet", "effort": "medium"}, o)
+              and o.get("qa:1") == {"model": "opus", "effort": "high"}, o)
         check("... the gate runs on Sonnet at low effort, and is asked every module's script status",
               o.get("gate:ilo-map+kb") == {"model": "sonnet", "effort": "low"}
               and two.get("prompts", {}).get("gate:ilo-map+kb", "").count("content_script.py status") == 2, o)
@@ -409,6 +409,29 @@ def main():
               and "scene3d_check.py" in pa.get("fixbuild:1", "")
               and all(la.index(x) > la.index("fixbuild:1") for x in ("3d:1+fix", "figshots:1+fix", "qa:1+fix"))
               and la.count("qa:1+fix") == 1 and "fix:2" not in la, la)
+        oa, src = allx.get("opts", {}), open(WORKFLOW, encoding="utf-8").read()
+        best, loop = {"model": "opus", "effort": "high"}, {"model": "sonnet", "effort": "medium"}
+        judged = [x for x in oa if x.split(":", 1)[0] in ("3d", "review3d", "fixfig", "reviewfig", "qa", "fix", "fixbuild")]
+        check("the judgement jobs - 3D, its review, the figure fixes and review, QA and the fix round - run on the best "
+              "model at high effort; the build loop and the figure shots stay on Sonnet; one constant each, in one place",
+              len(judged) >= 10 and all(oa[x] == best for x in judged)
+              and oa.get("build:1") == loop and oa.get("figshots:1") == loop and oa.get("figshots:1+fix") == loop
+              and nine.get("opts", {}).get("fix:3") == best
+              and src.count("const JUDGEMENT = { model: 'opus', effort: 'high' }") == 1
+              and src.count("const MECHANICAL = { model: 'sonnet', effort: 'medium' }") == 1
+              and "model: 'opus'" not in src.replace("const JUDGEMENT = { model: 'opus'", ""), oa)
+        cf = os.path.join(HERE, "..", "..")
+        said = {n: open(os.path.join(cf, *n.split("/")), encoding="utf-8").read() for n in (
+            "SKILL.md", "orchestration/GUIDE.md", "compile/GUIDE.md", "compile/REVIEW_PROMPT.md",
+            "compile/scripts/build_module.py", "knowledge/build-order.json")}
+        table = said["SKILL.md"].split("**Which model each helper agent gets**", 1)[-1].split("\n- **", 1)[0]
+        check("... and a session that hands out the agents itself is told the same: SKILL.md's job -> model table puts "
+              "the judges on opus, the build loop on sonnet; no guide sends the screenshot review to haiku or sonnet",
+              "| `opus`, high effort |" in table and "QA" in table.split("| `sonnet` |", 1)[-1]
+              and "screenshot review" in table and "Build loop" in table.split("| `sonnet` |", 1)[0]
+              and not any(w in t for t in said.values() for w in ("model haiku", "model `haiku`", "haiku or sonnet",
+                                                                  "`haiku` or `sonnet`", "`haiku` subagent"))
+              and "subagent (model `opus`" in said["compile/REVIEW_PROMPT.md"], table)
         many = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_figs": ["1"], "_manyfigs": ["1"],
                          "factory": "C:/f/skills"})
         lm = many.get("labels", [])

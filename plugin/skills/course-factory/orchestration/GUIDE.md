@@ -171,7 +171,7 @@ the operator states during review goes into `working_claude\STANDARDS.md`, and b
 | **Phase A** (2.73.0) | no model: one local process, `phase_a.py`, started and waited on by a Sonnet agent at low effort | nothing | every approved module as far as it goes with placeholders, and its `MNN_VISUAL_NEEDS.md` |
 | **Photo pass** (2.73.0) | Sonnet, medium effort - ONE for the course | `visuals/PHOTOS_TO_FIND.md` | `working_claude/photos_found/` with each photo's record and `found_for` |
 | **Visual** | the `nano-banana:image-director` agent (generates) or `course-factory:visual-sourcer` (finds) | read, write, web, the nano-banana tools | a `GENERATED_ASSET_REQUIRED` brief | the asset files named in the brief |
-| **QA** | Sonnet, medium effort (2.51.0); never the builder | read + run checks: `build_module.py --no-fix --no-review` once, the checks it does not run in one more call | the module, the two maps | a findings list — **never a fix** |
+| **QA** | Opus, high effort - a judgement job (the job -> model table in SKILL.md, *Building*); never the builder | read + run checks: `build_module.py --no-fix --no-review` once, the checks it does not run in one more call | the module, the two maps | a findings list — **never a fix** |
 
 **The visual agent is how a missing picture gets made without stopping the build.** When a module
 reaches an image it cannot produce, it carries on. A real picture is searched for by `visual-sourcer`
@@ -248,9 +248,10 @@ size ÷ 4, `docs/PROPOSAL_SCRIPT_COMPILER.md` §6), and it no longer writes the 
 HTML a module of the IGF pilot has - it writes a 3-5 KB build sheet and its figures.
 A module agent builds and checks with ONE command, `compile/scripts/build_module.py <course> --module N
 --no-course-pages` (2.50.0; the orchestrator alone writes the course's pages), starting from the Quickstart of
-`compile/GUIDE.md` and `course-visuals/kit/CATALOGUE.md`; its visual review is one `haiku` subagent reading the sheets
+`compile/GUIDE.md` and `course-visuals/kit/CATALOGUE.md`; its visual review is one `opus` subagent reading the sheets
 the build made (`compile/REVIEW_PROMPT.md`). `build_course.js` does this from 2.51.0 - before, its module prompt still
 said `compile_module.py`, then fix and build again, and its QA ran 13 checks one at a time. The words come from the
-session's model (the reader, the script writer); building an approved script and QA, the mechanical loop, run on Sonnet
-at medium effort, and the gate (one command) at low. `args.factory` pins the factory's skills folder for a benchmark,
-`args.notes` passes the operator's words for the run to every module agent.
+session's model (the reader, the script writer); building an approved script, the mechanical loop, runs on Sonnet
+at medium effort (`MECHANICAL`), and the gate (one command) at low; the 3D, figure and QA judges and the fixes that act
+on them run on Opus at high effort (`JUDGEMENT`) - the job -> model table in SKILL.md, *Building*. `args.factory`
+pins the factory's skills folder for a benchmark, `args.notes` passes the operator's words for the run to every module agent.

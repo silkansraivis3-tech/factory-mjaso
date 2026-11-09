@@ -263,6 +263,14 @@ announces them (`tablet/` cross-check).
   not a template: no fixed slide count, and low density is not low depth.
 - **Done means PASS:** a module is built only when `build_module.py` printed PASS; the workflow blocks a module without
   one, and `course_portal.py upload` refuses while a module's last build failed.
+- **Which model each helper agent gets** — the same in `build_course.js` (`MECHANICAL` / `JUDGEMENT`) and in a session
+  that hands out the agents itself (the Auto build, the factory trial):
+
+  | Job | Model |
+  |---|---|
+  | Build loop (`build_module.py` until PASS, a carry-on), Phase A, photo search, figure shots, gate, assembly | `sonnet` |
+  | 3D scenes and their review, figure review and figure fixes, the screenshot review, QA, the fixes QA's findings ask for | `opus`, high effort |
+  | Reader, script writer | the session's own |
 
 ## Auto build — after the expert's Ready (L70)
 
@@ -275,7 +283,8 @@ A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobod
 - No paid pictures. Free sources first — Wikimedia Commons, DVIDS, USCG, NOAA, the old course, the knowledge base (the
   `visual-sourcer`; small ones enlarged) — then Nano Banana in the Gemini app if a signed-in browser is there
   (`gemini-browser`). `picture_briefs.py queue` / `place`. An unfilled space keeps its brief and does not stop the build.
-- Build every module, compile COURSE.html, run the checks, fix what they find. Never push to git; never write outside
+- Build every module, compile COURSE.html, run the checks, fix what they find - each helper agent on its model in
+  *Building* (a Sonnet builder per module, its judges and fixers on Opus). Never push to git; never write outside
   the course folder.
 - End with one line: `AUTO BUILD DONE`, `AUTO BUILD DONE - PICTURES PENDING: <n>` or `AUTO BUILD STOPPED: <why>`.
 

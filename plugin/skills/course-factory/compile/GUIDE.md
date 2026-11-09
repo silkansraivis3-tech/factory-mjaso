@@ -51,7 +51,7 @@
       - it has photographed every CHANGED slide (every part of a paged slide), figure step and question (asked, wrong,
       right) onto a few sheets, and checked that every question grades right and wrong answers as such. A screen
       unchanged in everything it loads keeps its picture (_build\MNN_shots); the sheets show what changed since the last
-      REVIEWED sheets. Give the sheets to ONE review subagent (model haiku) with compile/REVIEW_PROMPT.md. It labels each
+      REVIEWED sheets. Give the sheets to ONE review subagent (model opus) with compile/REVIEW_PROMPT.md. It labels each
       finding BROKEN or POLISH (2.56.0). Then mark them looked at: build_module.py <course> --module 1 --reviewed (the next
       sheets show only what changes after this). Fix every BROKEN one in one go, build again, and send the same reviewer
       a re-review (the changed screens only, with its BROKEN list: FIXED / NOT FIXED - no new polish), --reviewed again.
@@ -573,8 +573,8 @@ Every automatic probe was green on IGF Module 4 while a look at the screens stil
 showing an internal file path, a broken "choose all" and tap areas off the things they name. The probes measure what
 someone thought to measure; only looking finds the rest. So **looking is a required step**, not a courtesy:
 
-- **Who:** ONE review subagent, model `haiku` or `sonnet` (the main session never views the pictures; it gets a short
-  verdict). Its brief is `compile/REVIEW_PROMPT.md`. It reads sheets; it never drives a browser (2.50.0 - the M01
+- **Who:** ONE review subagent, model `opus` at high effort - the best model; on `haiku` the review passed weak
+  slides as fine. The main session never views the pictures; it gets a short verdict. Its brief is `compile/REVIEW_PROMPT.md`. It reads sheets; it never drives a browser (2.50.0 - the M01
   benchmark's browser-driving review took 100 model calls and a third of the module's cost).
 - **What:** a screenshot of **every slide** of the deck, **every step** of a figure that steps, and **every question**
   of every task page and the module check - as asked (every tap area and drop zone outlined by a review overlay), answered

@@ -1,6 +1,6 @@
 # The visual review - the reviewer's brief (compile GUIDE 2f, 2.50.0)
 
-Give this file and the sheet folder to ONE review subagent (model `haiku` or `sonnet`). It reads the sheets, writes
+Give this file and the sheet folder to ONE review subagent (model `opus`, high effort). It reads the sheets, writes
 nothing, and returns the verdict below. It never drives a browser: `build_module.py` already photographed every screen
 (`review_sheets.mjs`) and already checked by script that every question grades a right answer right and a wrong one
 wrong - that part of the old list is done.

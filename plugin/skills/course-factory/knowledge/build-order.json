@@ -168,7 +168,7 @@
       "visual_review": {
         "_why": "IGF Module 4 (2026-10-16): every automatic probe was green while a visual review still found invisible curves, a credit showing an internal file path, a broken 'choose all' and tap areas off the things they name. Probes measure what someone thought to measure; only looking at the screen finds the rest.",
         "required": true,
-        "who": "ONE review subagent, model haiku or sonnet, briefed by compile/REVIEW_PROMPT.md - it reads sheets and never drives a browser (2.50.0: the browser-driving review of the M01 benchmark was 100 model calls, a third of the module's cost); the main session receives a short text verdict - CLAUDE.md 'Visual QA'",
+        "who": "ONE review subagent, model opus at high effort (on haiku the review passed weak slides as fine), briefed by compile/REVIEW_PROMPT.md - it reads sheets and never drives a browser (2.50.0: the browser-driving review of the M01 benchmark was 100 model calls, a third of the module's cost); the main session receives a short text verdict - CLAUDE.md 'Visual QA'",
         "what": "a screenshot of EVERY slide of the deck, EVERY figure step and EVERY question of every task page and the module check (as asked with its tap areas outlined, answered wrong, answered right), at 1280x800 - not a sample. compile/scripts/build_module.py makes them on a pass (review_sheets.mjs, two screens to a sheet) and checks by script that every question grades right and wrong answers as such; a re-review gets only the screens that changed",
         "checklist": [
           "every curve, line and label is visible against what is behind it (nothing navy-on-dark, nothing under a shape)",

@@ -44,8 +44,11 @@
  * (Desktop\IGF_course_2.66_figures\SPEED_ANALYSIS.md: up to three fixers one after the other on one module before).
  *
  * Models (2.51.0, the M01 benchmark: the mechanical loop was most of the bill): the reader and the script writer
- * keep the session's model - that is where the words come from. Building an approved script (build_module.py
- * until PASS, the review, the fixes) and QA run on Sonnet at medium effort; the gate, one command, at low.
+ * keep the session's model - that is where the words come from. The repetitive loop (build_module.py until PASS,
+ * Phase A, the photo pass, the figure shots) runs on Sonnet at medium effort (MECHANICAL); the gate and the assembly,
+ * one command each, at low. The judgement jobs - the 3D scenes and their review, the figure review and the figure
+ * fixes, QA and the fix round that acts on its findings - run on the best model at high effort (JUDGEMENT): on Sonnet
+ * the review passed weak slides and modules shipped with labels off their parts and near-miss pictures.
  *
  * The prompts below are short on purpose. Each agent loads the skill that owns its
  * question; restating a skill's rules here is how two authorities start to disagree.
@@ -72,8 +75,10 @@ const NOTES = A.notes ? `\n\nTHE OPERATOR SAYS, FOR THIS RUN: ${A.notes}` : ''
 const CARD = A.factory ? `${SCRIPTS}/compile/BUILDER_CARD.md`
   : 'compile/BUILDER_CARD.md in the course-factory skill\'s folder (the Skill tool, name "course-factory", names the folder)'
 const SEED = A.seed_from ? ` --seed-from "${A.seed_from}"` : ''
-/* the mechanical work - building an approved script, checking it - on Sonnet; see the header */
+/* the repetitive loop - build, read the error, change a number, build again - on Sonnet; see the header */
 const MECHANICAL = { model: 'sonnet', effort: 'medium' }
+/* the judgement jobs - the 3D scenes, every review, the fixes that act on a review - on the best model */
+const JUDGEMENT = { model: 'opus', effort: 'high' }
 
 /* ---------------------------------------------------------------- 0 · READ */
 
@@ -532,7 +537,7 @@ async function fixFigures(m, bf) {
   await parallel(Array.from({ length: Math.min(FIG_FIXERS, todo.length) }, () => async () => {
     while (todo.length) {
       const [slide, fs] = todo.shift()
-      await agent(fixFig(m, slide, fs), { label: `fixfig:${m.id}:${slide}`, phase: 'Build', ...MECHANICAL })
+      await agent(fixFig(m, slide, fs), { label: `fixfig:${m.id}:${slide}`, phase: 'Build', ...JUDGEMENT })
     }
   }))
   return [...by.keys()]
@@ -562,8 +567,8 @@ const QA_SCHEMA = {
 const fixable = (q) => ((q && q.findings) || []).filter((f) => f.severity === 'BROKEN' && !/^\s*SCRIPT\b/i.test(f.where || ''))
 
 /* Module 3 is verified while Module 7 is still being written. No wasted wall-clock.
-   An approved module is built and checked on Sonnet; a draft gets its script written on the session's model and
-   has nothing built to check, so no QA agent is spent on it. */
+   An approved module is built on Sonnet and judged on the best model; a draft gets its script written on the session's
+   model and has nothing built to check, so no QA agent is spent on it. */
 /* 2.58.0 - a builder's report is checked, not trusted: no "PASS" line from build_module.py (only the course package
    failing counts as passed in a parallel build - it is judged after assembly) and a fresh agent carries the module on
    from its files, at most A.retries times (default 1). The IGF full build's Module 15 builder ended mid-build */
@@ -658,10 +663,10 @@ slide id and the picture's file name.`
 const broken3d = (d) => ((d && d.review && d.review.findings) || []).filter((f) => f.severity === 'BROKEN')
 /* the 3D check (a script; it fixes only what the check itself prints) and its reviewer; tag '+fix': after the fix round */
 async function threeD(m, tag) {
-  const s = await agent(scene3d(m, !!tag), { label: `3d:${m.id}${tag || ''}`, phase: 'Build', schema: SCENE_SCHEMA, ...MECHANICAL })
+  const s = await agent(scene3d(m, !!tag), { label: `3d:${m.id}${tag || ''}`, phase: 'Build', schema: SCENE_SCHEMA, ...JUDGEMENT })
   if (!s || !s.has_scene) return null
   const r = (s.shots || []).length
-    ? await agent(review3d(m, s), { label: `review3d:${m.id}${tag || ''}`, phase: 'Verify', schema: REVIEW3D_SCHEMA, ...MECHANICAL }) : null
+    ? await agent(review3d(m, s), { label: `review3d:${m.id}${tag || ''}`, phase: 'Verify', schema: REVIEW3D_SCHEMA, ...JUDGEMENT }) : null
   return { check: s, review: r }
 }
 
@@ -736,7 +741,7 @@ async function figures(m, only) {
   const tag = only ? '+fix' : ''
   const s = await agent(figShots(m, only), { label: `figshots:${m.id}${tag}`, phase: 'Build', schema: FIGSHOT_SCHEMA, ...MECHANICAL })
   if (!s || !s.has_figures || !s.manifest) return null
-  const r = await agent(reviewFig(m, s), { label: `reviewfig:${m.id}${tag}`, phase: 'Verify', schema: REVIEWFIG_SCHEMA, ...MECHANICAL })
+  const r = await agent(reviewFig(m, s), { label: `reviewfig:${m.id}${tag}`, phase: 'Verify', schema: REVIEWFIG_SCHEMA, ...JUDGEMENT })
   return { review: r }
 }
 
@@ -776,7 +781,7 @@ async function oneModule(m) {
   const time = built === null ? null : timeOf(built)     // 2.65.0 (Raivis) - the module clock, from the builder's report
   let reachedPass = built === null || passed(built)      // no PASS from build_module.py, not done - whatever the judges say
   const [d3a, fga, q] = await Promise.all([threeD(m), figures(m),
-    agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })])
+    agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...JUDGEMENT })])
   const b3 = broken3d(d3a), bf = brokenFigs(fga && fga.review), bq = fixable(q)
   let d3 = d3a, fg = fga, out = q
   if (b3.length || bf.length || bq.length) {
@@ -785,17 +790,17 @@ async function oneModule(m) {
       /* 2.72.7: a fixer per figure (at most FIG_FIXERS at once) and the module fixer beside them, none building; then one build */
       const figs = [...new Set(bf.map((f) => f.slide))]
       await Promise.all([fixFigures(m, bf), b3.length || bq.length
-        ? agent(fixAll(m, b3, [], bq, figs), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL }) : null])
-      const fb = await place(() => agent(fixBuild(m, b3, figs), { label: `fixbuild:${m.id}`, phase: 'Build', ...MECHANICAL }))
+        ? agent(fixAll(m, b3, [], bq, figs), { label: `fix:${m.id}`, phase: 'Build', ...JUDGEMENT }) : null])
+      const fb = await place(() => agent(fixBuild(m, b3, figs), { label: `fixbuild:${m.id}`, phase: 'Build', ...JUDGEMENT }))
       reachedPass = reachedPass || passed(fb)
     } else {
-      const fa = await place(() => agent(fixAll(m, b3, bf, bq), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL }))
+      const fa = await place(() => agent(fixAll(m, b3, bf, bq), { label: `fix:${m.id}`, phase: 'Build', ...JUDGEMENT }))
       reachedPass = reachedPass || passed(fa)
     }
     const [d3b, fgb, q2] = await Promise.all([
       b3.length ? threeD(m, '+fix') : null,
       bf.length ? figures(m, [...new Set(bf.map((f) => f.slide))].join(',')) : null,
-      bq.length ? agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL }) : null])
+      bq.length ? agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...JUDGEMENT }) : null])
     if (b3.length) d3 = { check: (d3b && d3b.check) || d3a.check, review: (d3b && d3b.review) || d3a.review, first_review: d3a.review.findings }
     /* NOTHING LOOPS (2.72.0, approved by Aleksis): what is still BROKEN after the one fix round goes to the operator's list,
        never back to a builder and never failing the module again */

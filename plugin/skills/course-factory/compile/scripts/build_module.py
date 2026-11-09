@@ -1661,7 +1661,7 @@ def main(argv=None):
             first = rout.strip().splitlines()[0] if rout.strip() else ""
             n = re.search(r"Review sheets: (\d+) of (\d+) screens.*?on (\d+) sheet", first)
             review = (("VISUAL REVIEW (required, GUIDE 2f): %s of %s screens changed since the last review, on %s sheet(s) in\n  %s\n"
-                       "  Give the sheets to ONE review subagent (model haiku or sonnet) with %s - it returns a short verdict;\n"
+                       "  Give the sheets to ONE review subagent (model opus, high effort) with %s - it returns a short verdict;\n"
                        "  then mark them looked at: build_module.py <course> --module %s --reviewed (in a whole-course workflow the "
                        "QA agent does this review, not the builder)"
                        % (n.group(1), n.group(2), n.group(3), out_dir, os.path.join(SKILLS, "course-factory", "compile", "REVIEW_PROMPT.md"),
