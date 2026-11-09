@@ -244,8 +244,12 @@ come with it; never a hand-written three.js file per slide. **A 2D figure is a 2
 (`kit2d/SPEC.md`; see `kit2d/demos.html` and `kit2d/pm.html`): a graph, an object in motion (a cutaway with its flow) or
 a concept (cycle, timeline, matrix, process, trade-off) - depth, labels clear of each other, motion on Next and the
 trainee's controls come with it, and `fit_gate.py` runs its overlap check on every step. The figure kit (`kit/`) stays
-for a control screen the trainee reads (an HMI) and for courses already built with it. Hand-written SVG/HTML only for what the kits cannot be
-(a photo annotation); Canvas only where SVG genuinely fails;
+for a control screen the trainee reads (an HMI) and for courses already built with it. **Kit first, custom allowed (2.116.0, operator
+Aleksis Vējs 2026-11-09):** when no kit part shows the idea well, a custom figure - a self-contained offline `.html` / `.svg`
+(`"custom_figure"` in the build sheet; steps Next drives; the same checks) - is allowed, and a good one is offered to the kit
+afterwards (`kit2d/SPEC.md`, "Custom figures"). **Every figure - kit, 3D or custom - carries `"why"` + `"why_text"`**: the reason it is
+drawn (mechanism, sequence, comparison, quantity-change, spatial, real-thing-recognition, still) and what the trainee sees change; 3D
+only where the reason is `spatial` ("draw the drawings 2d kit and 3d with a reason, dont just put it in just because"). Canvas only where SVG genuinely fails;
 a generated illustration only when a realistic scene is the right medium. **Never generated imagery
 in place of a structured technical schematic.**
 

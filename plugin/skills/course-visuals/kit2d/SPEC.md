@@ -103,3 +103,21 @@ Steps, sliders, toggles and drags all write the same states, so they never fight
 A part the kit does not have yet is made in `kit2d.js` with `KIT2D.define(type, function (f, p) {...})`: its colours
 by class from `kit2d.css`, its words through `f.label`, its solids and lines registered (`f.solid`, `f.line`) so labels
 keep clear, and a card in `demos.html` that `KIT2D.audit` passes at every step.
+
+## Why every figure carries a reason, and custom figures (2.116.0)
+
+Operator Aleksis Vējs, 2026-11-09, after the Project Management review: *"draw the drawings 2d kit and 3d with a reason, dont
+just put it in just because"*. Every spec carries `"why"` (`mechanism`, `sequence`, `comparison`, `quantity-change`, `spatial`,
+`real-thing-recognition`, `still`) and `"why_text"` (one sentence: what the trainee sees change, or sees), and its steps must serve
+it - `sequence` / `mechanism` need two steps tied to lines (or a `"reveal"`), `quantity-change` a state value that differs between
+stops, `comparison` two states (`course-factory/scripts/figure_why.py`; `check_kit.py`, the compile and the content script refuse
+the rest).
+
+**Custom figures - kit first, custom allowed.** When no kit part shows the idea well, draw a custom figure: a self-contained `.html`
+or `.svg` file (offline: no network, no `<script src>`; hand SVG, or canvas, or a library already bundled in the plugin) in the
+figure folder `working_claude\figures\MNN\assets\figures\sNN.html`, named in the build sheet (`"custom_figure"`, `"why"`,
+`"why_text"`). It declares its steps (`<script type="application/json" data-custom-steps>[{"line": 2}, {"line": 3, "reveal": true}]
+</script>`) and registers `GB_HOOKS.sNN = {enter, leave, step(dir)}` so the deck's Next drives it (same contract as a kit figure: steps
+keyed by line, a reveal step). It passes the same checks - why, changes on every Next (the fit gate), fit and overflow, smooth motion
+(`audit_motion.js`, L65), full-screen zoom. **A good custom figure is offered to the kit afterwards:** make it a part
+(`KIT2D.define`) with a demo card, so the next module draws it from a spec.
