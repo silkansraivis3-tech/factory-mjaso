@@ -1019,17 +1019,37 @@ def active_shape(s):
     return bool(s.get("choices") or s.get("claim") or (s.get("ask") and s.get("reveal")))
 
 
-def overfull(s):
-    """[(the part, its words, the most it holds)] of a scenario or a worked example beside a picture: what the template
-    holds on a 1024 x 768 tablet (theory-rules.json "beside_picture")"""
-    B = RULES["beside_picture"]
-    if picture_of(s)["kind"] in ("", "none"):
-        return []
+def shaped_kind(s, spots=False):
+    """the template a slide's own fields ask for - drill, true-false, scenario, long-explanation (points) or worked-example -
+    or None. The compiler builds the slide in it (compile_module.shaped_template reads it here), so the script check and the
+    build never disagree. spots: the build sheet's "spots" (a slide that asks the room to name the parts on a picture)"""
+    if s.get("drill"):
+        return "drill"
+    if s.get("claim"):
+        return "true-false"
     if s.get("choices"):
-        parts = (("t_part_situation", wc(s.get("text", "")), B["situation"]),
-                 ("t_part_choices", wc(*[as_text(s.get(f)) for f in ("ask", "choices", "why")]), B["choices"]))
-    elif s.get("ask") and s.get("reveal") and not s.get("claim"):
-        parts = (("t_part_steps", wc(s.get("text", ""), as_text(s.get("ask"))), B["steps"]),)
+        return "scenario"
+    if s.get("points"):
+        return "long-explanation"
+    if s.get("ask") and s.get("reveal") and (s.get("active") == "worked-example" or not spots):
+        return "worked-example"
+    return None
+
+
+def overfull(s):
+    """[(the part, its words, the most it holds)] of a slide over what its compiled template holds on a 1024 x 768 tablet
+    (layout-templates.json "budgets"): a scenario or a worked example beside a picture. These templates have no parts and
+    no larger box - the words would be cut or scroll, so the slide is split in two (the fix the finding names). Every
+    other slide the compiler fits by itself: a larger picture box, then its lines in parts"""
+    B = LAYOUT_RULES["budgets"]
+    if s.get("kind") != "slide" or picture_of(s)["kind"] in ("", "none"):
+        return []
+    tid = shaped_kind(s)
+    if tid == "scenario":
+        parts = (("t_part_situation", wc(s.get("text", "")), B["scenario_situation"]),
+                 ("t_part_choices", wc(*[as_text(s.get(f)) for f in ("ask", "choices", "why")]), B["scenario_choices"]))
+    elif tid == "worked-example":
+        parts = (("t_part_steps", wc(s.get("text", ""), as_text(s.get("ask"))), B["worked_steps"]),)
     else:
         return []
     return [(p, w, most) for p, w, most in parts if w > most]
@@ -1053,6 +1073,7 @@ def theory_check(script):
         if s.get("kind") != "slide":
             continue
         w_slide = wc(s.get("title", ""), s.get("text", ""))
+        w_lines = wc(s.get("text", ""))
         w_notes = wc(s.get("notes", ""))
         w_floor = w_slide + (wc(*[as_text(s.get(f)) for f in SHOWN_TOO]) if active_shape(s) else 0)
         if not s.get("active"):              # L49: the density is of PLAIN theory; an active slide's minutes are what the trainees do
@@ -1061,19 +1082,24 @@ def theory_check(script):
         if s.get("recap"):
             pass                              # L51: a recap is short on purpose - recap_findings checks its points
         elif w_floor < R["slide"]["min_words"]:
-            add(s["id"], "text", FAIL, "t_thin_slide", w=w_floor, min=R["slide"]["min_words"])
-        elif w_slide > R["slide"]["max_words"]:
-            add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
+            add(s["id"], "text", NOTE, "t_thin_slide", w=w_floor, min=R["slide"]["min_words"])
+        elif w_lines > R["slide"]["steps_from"]:
+            add(s["id"], "text", NOTE, "t_long_slide", w=w_lines, max=R["slide"]["steps_from"])
+        elif w_lines > R["slide"]["picture_from"] and picture_of(s)["kind"] in ("", "none"):
+            add(s["id"], "text", NOTE, "t_dense_slide", w=w_lines, max=R["slide"]["picture_from"])
         for part, w, most in overfull(s):
-            add(s["id"], "text", FAIL, "t_overfull", part=T(script, part), w=w, max=most)
+            tid = "worked-example" if part == "t_part_steps" else "scenario"
+            add(s["id"], "text", FAIL, "t_overfull", part=T(script, part), w=w, max=most,
+                tpl="%s (%s)" % (tid, LAYOUT_RULES["templates"][tid]["name"]))
+            found[-1]["fix"] = T(script, "t_fix_scenario" if part != "t_part_steps" else "t_fix_worked")
         if w_notes < R["notes"]["min_words"]:
-            add(s["id"], "notes", FAIL, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
+            add(s["id"], "notes", NOTE, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
         elif w_notes > R["notes"]["max_words"]:
-            add(s["id"], "notes", FAIL, "t_long_notes", w=w_notes, max=R["notes"]["max_words"])
+            add(s["id"], "notes", NOTE, "t_long_notes", w=w_notes, max=R["notes"]["max_words"])
     if th_min and not final:
         rate = th_words / th_min
         if rate < R["module"]["min_words_per_theory_minute"]:
-            add(None, "", FAIL, "t_density", w=int(th_words), min="%g" % th_min, rate="%.0f" % rate,
+            add(None, "", NOTE, "t_density", w=int(th_words), min="%g" % th_min, rate="%.0f" % rate,
                 floor=R["module"]["min_words_per_theory_minute"])
 
     # a block of new theory before every self-check; every answer taught before its task opens
@@ -1095,7 +1121,7 @@ def theory_check(script):
                     add(s["id"], "reveal", FAIL, "t_room_not_taught", share="%d" % round(share * 100))
             for field, said in (("reveal", as_text(s.get("reveal"))), ("text", s.get("text", "") if s.get("claim") else "")):
                 if wc(said) > R["answer"]["max_words"]:
-                    add(s["id"], field, FAIL, "t_long_answer", w=wc(said), max=R["answer"]["max_words"])
+                    add(s["id"], field, NOTE, "t_long_answer", w=wc(said), max=R["answer"]["max_words"])
             seen_slides.append(s)
             block_subs |= set(sub_ilos_of(s))
         elif k == "task-slide":
@@ -1107,7 +1133,7 @@ def theory_check(script):
                         fmin=rb["min_minutes"], fw=rb["min_words"])
                 n = len(st["questions"])
                 if n < R["self_check"]["min_questions"]:
-                    add(s["id"], "", FAIL, "t_sc_small", set=set_name(script, st), q=n, lo=R["self_check"]["min_questions"])
+                    add(s["id"], "", NOTE, "t_sc_small", set=set_name(script, st), q=n, lo=R["self_check"]["min_questions"])
                 elif n > R["self_check"]["max_questions"]:
                     add(s["id"], "", NOTE, "t_sc_big", set=set_name(script, st), q=n, hi=R["self_check"]["max_questions"])
                 RS = R["self_check"]        # owner: of five, three rich tasks (3D, animation, a panel) and two basic
@@ -1129,7 +1155,7 @@ def theory_check(script):
                 earlier_subs |= block_subs
                 block_subs = set()
             if st and st["kind"] == "module-check" and len(st["questions"]) < R["module_check"]["min_questions"]:
-                add(s["id"], "", FAIL, "t_mc_small", q=len(st["questions"]), lo=R["module_check"]["min_questions"])
+                add(s["id"], "", NOTE, "t_mc_small", q=len(st["questions"]), lo=R["module_check"]["min_questions"])
             if st:
                 slide_words = terms("%s %s" % (s.get("title", ""), s.get("text", "")))[1]
                 for q in st["questions"]:
@@ -1331,13 +1357,13 @@ def paged_words(s, b=None):
 
 def paged_findings(script, build=None):
     """F1 (Aigars, PM review: "the 1-2 switching isn't needed at all, just 3-4 bullet points") - a slide whose words would be
-    paged with number tabs is a MUST-FIX for the writer, unless the build sheet asks for parts ("parts" or "template")"""
+    paged with number tabs is a warning for the writer, unless the build sheet asks for parts ("parts" or "template")"""
     found = []
     for s in script.get("screens", []):
         b = ((build or {}).get("screens") or {}).get(s.get("id")) or {}
         n = paged_words(s, b)
         if n:
-            found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "text", "level": FAIL,
+            found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "text", "level": NOTE,
                           "rule": "v_paged_slide", "fix": "",
                           "detail": T(script, "v_paged_slide", words=wc(" ".join(lines_of(s.get("text")))), n=n, limit=PARTS_FROM)})
     return found
@@ -1459,13 +1485,13 @@ def media_check(script):
         ms = {mech(q) for q in st["questions"]}
         lo = F["self_check_min_mechanics"] if st["kind"] == "self-check" else F["module_check_min_mechanics"]
         if len(st["questions"]) >= lo and len(ms) < lo:
-            add(st["opened_by"], "", FAIL, "m_mix", set=set_name(script, st), n=len(ms), lo=lo)
+            add(st["opened_by"], "", NOTE, "m_mix", set=set_name(script, st), n=len(ms), lo=lo)
     if qs and not final:
         share = sum(1 for q in qs if mech(q) == "single_choice") / float(len(qs))
         if share > F["single_choice_max_share"]:
-            add(None, "", FAIL, "m_too_much_choice", pct="%.0f" % (100 * share), max="%.0f" % (100 * F["single_choice_max_share"]))
+            add(None, "", NOTE, "m_too_much_choice", pct="%.0f" % (100 * share), max="%.0f" % (100 * F["single_choice_max_share"]))
         if sum(1 for q in qs if MEDIA["mechanics"].get(mech(q), {}).get("hands_on")) < F["hands_on_min_per_module"]:
-            add(None, "", FAIL, "m_no_hands_on")
+            add(None, "", NOTE, "m_no_hands_on")
         run = 1
         for a, b in zip(qs, qs[1:]):
             run = run + 1 if mech(a) == mech(b) else 1
@@ -2394,10 +2420,10 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             e(T(script, "s_facts_title")), e(T(script, "s_facts_intro")),
             "".join("<li>%s <span class=\"sid\">(%s%s)</span></li>" % (V(f.get("fact")), e(f.get("where", "")),
                     (", " + e(f["said"])) if f.get("said") else "") for f in facts)))
-    row = lambda f: '<li><b>%s%s</b> — %s%s <i>(%s)</i></li>' % (
+    row = lambda f, note="s_finding_warn": '<li><b>%s%s</b> — %s%s <i>(%s)</i></li>' % (
         e(f["where"]), (" · " + e(f["field"])) if f["field"] else "", e(f["detail"]),
         (" <b>%s:</b> %s" % (e(T(script, "s_textcheck_instead")), e(f["fix"]))) if f["fix"] else "",
-        e(T(script, "s_textcheck_must") if f["level"] == FAIL else T(script, "s_textcheck_note")))
+        e(T(script, "s_textcheck_must") if f["level"] == FAIL else T(script, note)))
     if th_found:
         o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
             e(T(script, "s_theory_title")), e(T(script, "s_theory_intro")), "".join(row(f) for f in th_found)))
@@ -2416,7 +2442,7 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
     tf = text_findings(script)
     if tf:
         o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
-            e(T(script, "s_textcheck_title")), e(T(script, "s_textcheck_intro")), "".join(row(f) for f in tf)))
+            e(T(script, "s_textcheck_title")), e(T(script, "s_textcheck_intro")), "".join(row(f, "s_textcheck_note") for f in tf)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_textcheck_clean")))
     jf = ilo_findings(course, script)                     # 2.42.0 - the ILO map and the sources
@@ -2570,7 +2596,8 @@ def build_docx(course, script):
                 label("%s%s — %s%s (%s)" % (
                     f["where"], (" · " + f["field"]) if f["field"] else "", f["detail"],
                     (" %s: %s" % (T(script, "s_textcheck_instead"), f["fix"])) if f["fix"] else "",
-                    T(script, "s_textcheck_must") if f["level"] == FAIL else T(script, "s_textcheck_note")), color="B4453A")
+                    T(script, "s_textcheck_must") if f["level"] == FAIL else
+                    T(script, "s_textcheck_note" if head == "s_textcheck_title" else "s_finding_warn")), color="B4453A")
     names = {"title": "s_title", "text": "s_text", "visual": "s_visual", "notes": "s_notes", "minutes": "s_minutes",
              "question": "s_question", "correct": "s_correct", "feedback": "s_feedback", "mechanic": "s_mechanic",
              "visual_kind": "s_visual_kind", "answer": "s_answer", "values": "s_values"}
@@ -3284,7 +3311,7 @@ def render(course, module, quiet=False):
             if found:
                 print("\n%s found %d thing(s) - they are at the top of the review page and the Word file:" % (head, len(found)))
                 for f in found:
-                    print("  - [%s] %s%s: %s%s" % ("must fix" if f["level"] == FAIL else "note", f["where"],
+                    print("  - [%s] %s%s: %s%s" % ("must fix" if f["level"] == FAIL else "warning", f["where"],
                                                   (", " + f["field"]) if f["field"] else "", f["detail"],
                                                   (" - use instead: " + f["fix"]) if f["fix"] else ""))
         sp = split_of(script)

@@ -1301,7 +1301,7 @@ def main(argv=None):
                                                        "built again once (visual_needs.py fill --auto)")
     ap.add_argument("--auto-round", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--no-precheck", action="store_true", help="skip the pre-check (precheck.py: missing pictures, photographs "
-                                                               "under 800 px, dense text with no picture ...) - 2.65.0")
+                                                               "under 800 px, three slides in a row with no picture ...) - 2.65.0")
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     t0 = time.time()
@@ -1338,7 +1338,7 @@ def main(argv=None):
                  "; ".join("%s: %s" % (", ".join(ids), what) for ids, what in blanks), o.module))
         return 1
     # 2.65.0 - the pre-check: what would fail the build or make it look poor, found in a second from the files alone
-    # (precheck.py) - a missing picture, a photograph under 800 px, dense text with no picture - before the figures stage,
+    # (precheck.py) - a missing picture, a photograph under 800 px, three slides with no picture - before the figures stage,
     # the slowest one, is spent on a build that could not pass (owner, 2026-10-26: "cut time and usage, quality the same")
     pre_notes = []
     if str(o.module).isdigit() and o.layout_round == 0 and not o.draft:

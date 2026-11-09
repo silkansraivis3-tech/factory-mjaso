@@ -567,9 +567,9 @@ for one kind of information (worked-example, true-false, scenario, name-parts, k
 template and variant, chosen from the approved script and the build sheet or asked for by name, and an unknown or
 unsuitable one is a problem. The look is `gb_layouts.css`: brandbook colours only (the reference's amber is Novikontas
 Blue), the official logo file top right (a white plate on dark slides), Raleway bundled for the offline classroom. The
-owner's rules are build problems: 55 / 45 on a split slide (50-60 % text), a picture beside every dense slide (more than
-60 words), never three teaching slides in a row without a teaching picture, and words that need more room in readable
-parts - never cut, never smaller type. → `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui`
+owner's rules are build problems: 55 / 45 on a split slide (50-60 % text), never three teaching slides in a row without a
+teaching picture, and words that need more room in readable parts - never cut, never smaller type. Past the word
+guideline (`theory-rules.json` "slide") a picture goes beside the words or the slide is shown in steps - a warning, not a stop. → `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui`
 (`knowledge/layout-templates.json`, `templates/gb_layouts.css`), 2.52.0
 
 **L63 · Physical equipment is drawn as it looks on board.** Aleksis, 2026-10-20, approving a plain-vs-realistic mock-up of

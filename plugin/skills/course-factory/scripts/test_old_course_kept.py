@@ -135,19 +135,34 @@ def main():
             slide("s02", long_why, "", claim="A fully pressurised ship needs a reliquefaction plant.", claim_is="false"),
             slide("s03", "Short.", "", ask="Why?", reveal=long_why)]}
         got = sorted((f["screen"], f["field"]) for f in cs.theory_check(tf)[0] if f["rule"] == "t_long_answer")
-        check("a true-or-false why or a revealed answer past 70 words is theory hidden in a reveal - a must-fix (the factory "
-              "trial: M01 s04, 82 words, cut)", got == [("s02", "text"), ("s03", "reveal")], got)
+        check("a true-or-false why or a revealed answer past 70 words is theory hidden in a reveal - a warning (the factory "
+              "trial: M01 s04, 82 words, cut)", got == [("s02", "text"), ("s03", "reveal")]
+              and not [f for f in cs.theory_check(tf)[0] if f["rule"] == "t_long_answer" and f["level"] == cs.FAIL], got)
         check("... and its words are in Latvian and Russian too", cs.LABELS["lv"].get("t_long_answer") and cs.LABELS["ru"].get("t_long_answer"))
         print("\n-- a slide with a picture holds what the tablet shows")
-        B = cs.RULES["beside_picture"]
+        B = cs.LAYOUT_RULES["budgets"]
         pic = {"kind": "photo", "aspect": "4:3", "shows": "a gas detector"}
         sit = " ".join(["the tank was gas-freed and ventilated"] * 10)
         scen = {"module": 1, "operator_language": "en", "screens": [
             slide("s01", sit, "", picture=pic, ask="Which instrument first?", choices="Oxygen\nFlammable\nToxic",
                   why="Right.\nNo.\nNo.", right="A")]}
-        got = [(f["screen"], f["rule"]) for f in cs.theory_check(scen)[0] if f["rule"] == "t_overfull"]
-        check("a scenario's situation past %d words beside its picture is a must-fix (the factory trial: every scenario "
-              "beside a picture was cut on the tablet)" % B["situation"], got == [("s01", "t_overfull")], got)
+        got = [(f["screen"], f["rule"], f["level"]) for f in cs.theory_check(scen)[0] if f["rule"] == "t_overfull"]
+        f = [x for x in cs.theory_check(scen)[0] if x["rule"] == "t_overfull"]
+        check("a scenario's situation past %d words beside its picture is a must-fix at script time, with its template's real "
+              "budget (the factory trial: every scenario beside a picture was cut on the tablet)" % B["scenario_situation"],
+              got == [("s01", "t_overfull", cs.FAIL)] and "scenario (What would you do?), holds %d" % B["scenario_situation"]
+              in f[0]["detail"], got + [x["detail"] for x in f])
+        check("... it names the fix: split into two slides", f and f[0]["fix"].startswith("split into two slides"), f)
+        check("... the template is the compiler's own choice (content_script.shaped_kind, read by compile_module.shaped_template)",
+              cs.shaped_kind(scen["screens"][0]) == "scenario")
+        scen["screens"][0]["why"] = "\n".join([" ".join(["because the oxygen reading comes first"] * 6)] * 3)
+        got = sorted(f["detail"].split(" has ")[0] for f in cs.theory_check(scen)[0] if f["rule"] == "t_overfull")
+        check("... and its question, choices and whys past %d in the other column - each part said on its own" % B["scenario_choices"],
+              got == sorted([cs.T(scen, "t_part_situation"), cs.T(scen, "t_part_choices")]), got)
+        claim = {"module": 1, "operator_language": "en", "screens": [
+            slide("s01", sit, "", picture=pic, claim="Oxygen is measured first.", claim_is="true", ask="Why?", reveal="Right.")]}
+        check("... a true-or-false is built in its own template (compile_module.shaped_template): not measured as a worked example",
+              not [f for f in cs.theory_check(claim)[0] if f["rule"] == "t_overfull"])
         scen["screens"][0]["picture"] = {"kind": "none"}
         check("... without a picture the whole slide is its room: not checked",
               not [f for f in cs.theory_check(scen)[0] if f["rule"] == "t_overfull"])
@@ -155,7 +170,7 @@ def main():
             slide("s01", " ".join(["open the valve slowly and watch the gauge"] * 12), "", picture=pic, ask="What next?",
                   reveal="Close it.")]}
         got = [f["detail"] for f in cs.theory_check(work)[0] if f["rule"] == "t_overfull"]
-        check("a worked example's steps and question past %d words beside its picture too" % B["steps"], len(got) == 1, got)
+        check("a worked example's steps and question past %d words beside its picture too" % B["worked_steps"], len(got) == 1, got)
         short = {"module": 1, "operator_language": "en", "screens": [
             slide("s01", "Tank 2 carried ammonia. It is gas-freed. Two crew will enter it.", "", picture=pic,
                   ask="Which instruments do you use before the entry, and in which order?",

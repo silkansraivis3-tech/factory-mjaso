@@ -156,8 +156,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   by side are a problem; 60-80 % of the slides with interactive 3D; no flat drawings (L67). A drill comes after the
   module's last teaching slide; minutes are the module's as before (L1). `content_script.py` checks each shape
   (`shape_problems`). Beside a picture a scenario's situation holds 60 words and its question, choices and whys 85;
-  a worked example's lines and question 85 (`theory-rules.json` `beside_picture`, `t_overfull`) - an active slide's
-  question, choices, whys and answer count toward its 50 words, so trim the situation, not the teaching.
+  a worked example's lines and question 85 (`layout-templates.json` `budgets`, `t_overfull`, a must-fix that names the
+  split) - an active slide's question, choices, whys and answer count toward its words, so trim the situation, not the
+  teaching.
 - **3D and AI pictures - planned unasked (2.49.0, operator 2026-10-16: "make it so they add 3D + AI generated photos
   when needed").** Before the review page is shown, plan them yourself - the operator never has to ask:
   - **3D:** where a slide's lesson is a shape, an inside or a layout in space (a tank and its barriers, a space and
@@ -181,8 +182,8 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   The review page then shows every question below its Sub-ILO and how the tablet would lift it.
   Aim the tasks at the Sub-ILO's level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`).
 - **Enough theory (L36, `knowledge/theory-rules.json`).** A slide carries the teaching itself - the facts,
-  numbers, names and reasons its Sub-ILO needs - not a headline (50-150 words, title included); the notes
-  carry what the instructor explains, adds or asks beyond it (30 words or more); the module's slides and
+  numbers, names and reasons its Sub-ILO needs - not a headline (the word guideline below); the notes
+  carry what the instructor explains, adds or asks beyond it; the module's slides and
   notes together fill its PLAIN theory minutes (25 words a minute or more - an active slide's minutes are
   what the trainees do). A self-check comes only after a block of new theory (5 min and 125 words since the
   last task - short cycles, L49), and every question's correct answer
@@ -190,6 +191,17 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   A module with less theory than that has no self-check; its module check covers it.
 - Course text (titles, text, questions, answers, feedback) is in COURSE_LANGUAGE; the notes on the
   page and in the Word file around it are in the operator's language.
+- **Write to fit the slide's template.** Compact sentences; the theory stays. Each slide is built in one of the
+  templates (`course-module-ui/knowledge/blueprints.json`, `layout-templates.json`), and each holds so many words
+  (`layout-templates.json` `budgets`). Never cram a slide to fit: when its words are more than its template holds, split
+  it into two slides (the second may carry another photograph or picture), or give it a slide type with more room. A
+  scenario or a worked example beside a picture over its template is a must-fix at render (`t_overfull`, with the split
+  it needs); every other slide the compiler fits by itself - a larger picture box, then its lines in parts. The word
+  guideline (`knowledge/theory-rules.json` `slide`, the one place it is written): about 40 to 120 words on a slide; over
+  about 80 a picture goes beside the words or the slide is shown in steps; over 120 the build shows it in steps by
+  itself. The guideline and the other counts here (notes, words a minute, answers, the task mix) are warnings for the
+  expert. Three checks stay must-fix, because they protect the teaching: enough theory before each self-check, every
+  answer taught before it is asked, three rich + two basic in a self-check of five.
 - **Instructor notes are short** (2.18.1): two to four points per slide, one per line starting `- `, 10-50 words -
   what to ask, the one example to give, what to stress. The theory is on the slide. `render` writes them to
   `to_review/M01_INSTRUCTOR_NOTES.md` for the instructor's panel; they are never on a slide.

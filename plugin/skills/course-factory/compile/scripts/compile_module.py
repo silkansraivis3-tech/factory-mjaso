@@ -62,9 +62,11 @@ EVERY SLIDE IS ONE OF THE OWNER'S LAYOUT TEMPLATES (L61, 2.52.0)
   [[1, 4], [5, 9]] (content-in-parts), "figure_b" (compare-two's second picture), "still": true (a definition, a limit
   or a quoted regulation shown whole: no steps, its drawing at its last step). An unknown or unsuitable template is
   a problem with the slide's id. gb_layouts.css gives every template the owner's look, in the brandbook's colours,
-  with the official logo. The owner's rules are checked here: a dense slide (more than 60 words) always has a picture
-  beside it; never three teaching slides in a row without a teaching picture; words that need more room than a
-  figure slide holds (more than 135) go into readable parts - never cut, never smaller type.
+  with the official logo. The owner's rules are checked here: never three teaching slides in a row without a teaching
+  picture; words that need more room than a figure slide holds (more than 85 beside a picture) go into readable parts -
+  never cut, never smaller type. The word guideline (course-factory/knowledge/theory-rules.json "slide") is said, never a
+  stop: over picture_from words with no picture is a note, and a slide with no picture over steps_from words is shown in
+  steps - its lines in parts, Next walks them (or when its build sheet asks with "parts").
   L62 (2.53.0): two slides next to each other never look the same - a slide's look is its template, its variant and its
   ground (light, or dark / photo); when a slide would repeat the slide before it, it is built another way that holds
   its words and picture (the picture on the other side, the other ground, a photograph framed on the dark ground, a
@@ -152,6 +154,8 @@ LAYOUTS = json.load(io.open(os.path.join(SKILLS, "course-module-ui", "knowledge"
 TEMPLATES = LAYOUTS["templates"]
 DENSE_WORDS = LAYOUTS["dense"]["words"]
 PARTS_FROM, PART_WORDS = LAYOUTS["parts"]["auto_from_words"], LAYOUTS["parts"]["part_words"]
+# the one word guideline for a slide (theory-rules.json "slide"): a picture beside more than PICTURE_FROM words, steps past STEPS_FROM
+PICTURE_FROM, STEPS_FROM = cs.RULES["slide"]["picture_from"], cs.RULES["slide"]["steps_from"]
 SPLIT_LO, SPLIT_HI = LAYOUTS["split"]["text"]
 NO_VISUAL_RUN = LAYOUTS["sequence"]["max_without_visual_in_a_row"]
 FRAMED_PHOTO_WORDS = LAYOUTS["variety"]["photo_framed_max_words"]
@@ -2247,12 +2251,8 @@ def pick_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col, 
         want = "content-in-parts"                      # 2.67.0 - its own layout spilled at the build's audit (wants_parts)
     # 2.66.0 - "parts" asks for the words in parts: content-in-parts, without naming it too (the timed gas M02 build: s22's
     # "parts" did nothing beside a picture until "template" said it as well - two runs)
-    if not want and b.get("parts") and auto[0] != "content-in-parts":
-        if has_fig:
-            want = "content-in-parts"
-        else:
-            probs.append("%s: \"parts\" walks the words in parts beside a picture (content-in-parts) - this slide has no picture, "
-                         "so its parts are not used; give it a picture, or take \"parts\" out (L61)" % where)
+    if not want and b.get("parts") and auto[0] != "content-in-parts" and has_fig:
+        want = "content-in-parts"                      # with no picture its parts are steps of the words alone (text_steps)
     if not want:
         tid, var = auto
     elif want not in TEMPLATES:
@@ -2297,6 +2297,13 @@ def auto_parts(lines, ranges=None, part_words=None):
     beside a larger picture box) - the script's own rule (content_script.parts_of, 2.73.0: no part over the budget when the
     lines allow it)"""
     return cs.parts_of(lines, ranges, part_words or PART_WORDS)
+
+
+def text_steps(s, b, lines):
+    """a slide with no picture shown in steps - its lines in parts, Next walks them: past the word guideline's STEPS_FROM
+    (theory-rules.json "slide"), or when the build sheet asks for "parts" - every line kept, none cut"""
+    return s.get("kind") == "slide" and not s.get("recap") and len(lines) >= 2 and (
+        cs.wc(" ".join(lines)) > STEPS_FROM or bool(b.get("parts")))
 
 
 def parts_html(lines, parts, emph):
@@ -2664,18 +2671,15 @@ def is_two_states(lines):
 
 def shaped_template(s, b, lines):
     """the template a slide's own fields or the shape of its lines ask for; None for every other slide"""
-    if s.get("drill"):
+    # the slide's own fields first (content_script.shaped_kind - the script check measures the same template). The room's
+    # turn and its answer is a worked example: any slide with an "ask" and a "reveal" (predict- or explain-then-reveal) -
+    # its lines first, then the question, the answer on the last Next. Never built without them.
+    own = cs.shaped_kind(s, bool(b.get("spots")))
+    if own == "drill":
         return "drill", s["drill"] if s["drill"] in DRILLS else "say-it"
-    if s.get("claim"):
-        return "true-false", "picture"
-    if s.get("choices"):
-        return "scenario", "picture-left"
-    if s.get("points"):
-        return "long-explanation", "points"
-    # the room's turn and its answer: a worked example, and any slide with an "ask" and a "reveal" (predict- or
-    # explain-then-reveal) - its lines first, then the question, the answer on the last Next. Never built without them.
-    if s.get("ask") and s.get("reveal") and (s.get("active") == "worked-example" or not b.get("spots")):
-        return "worked-example", "figure"
+    if own:
+        return own, {"true-false": "picture", "scenario": "picture-left", "long-explanation": "points",
+                     "worked-example": "figure"}[own]
     if s.get("ask") and b.get("spots"):
         return "name-parts", "picture"
     if b.get("figure_b") and is_two_states(lines):
@@ -3146,6 +3150,10 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if want_t and want_t != shaped[0]:
             probs.append("%s: the build sheet asks for the template %s, and the slide's own words ask for %s - take \"template\" "
                          "out, or change the words (L61)" % (where, want_t, shaped[0]))
+        for part, w, most in (cs.overfull(s) if fig else []):     # the script's must-fix, approved despite it: said again
+            note_once("Note: %s - %s has %d words beside the picture; the %s template holds %d at 1024 x 768 and has no parts: "
+                      "expect the audit to find it cut or scrolling - split it into two slides (content_script.py propose)"
+                      % (where, cs.T(script, part), w, shaped[0], most))
         out = shaped_html(script, s, b, shaped[0], shaped[1], fig, lines, base, m, n, total, mdir, figdir, probs, where, vkind)
         if out:
             return out
@@ -3192,9 +3200,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     in_parts = wants_parts(avoid, s, b) or bool(fitc and fitc["parts"] > 1 and not want_t)
     tid, variant = pick_template(s, b, comp, is_photo, bool(fig), lines, split_photo, photo_col, probs, where, in_parts)
     nwords_all = cs.wc(" ".join(lines))
-    if kind == "slide" and not fig and nwords_all > DENSE_WORDS:
-        probs.append("%s: %d words and no picture beside them - dense text always has a drawing, a photograph, an animation or a "
-                     "3D model beside it (L61, more than %d words is dense)" % (where, nwords_all, DENSE_WORDS))
+    if kind == "slide" and not fig and not s.get("recap") and nwords_all > PICTURE_FROM:
+        note_once("Note: %s - %d words and no picture beside them: over %d words a picture goes beside the words, or the slide "
+                  "is shown in steps (theory-rules.json \"slide\"; past %d it is, by itself)" % (where, nwords_all, PICTURE_FROM, STEPS_FROM))
     split = b.get("split")
     if split is not None:
         try:
@@ -3465,8 +3473,15 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if sb:
             return '<section %s>\n%s\n  %s\n  %s%s\n</section>' % (attrs(d), head, h2, sb, credit_html)
     figure = (box_of(fig) + "\n    ") if fig else ""      # 2.54.0 (L23): first in the markup, placed under the words by CSS
+    words = words_html(lines, emph=emph)
+    if not fig and tid in ("explain-figure", "procedure") and text_steps(s, b, lines):
+        ranges = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
+        if ranges and sum(hi - lo + 1 for lo, hi in ranges) != len(lines):
+            probs.append("%s: \"parts\" leave out some lines - every approved line is in a part (L61)" % where)
+            ranges = None
+        words = parts_html(lines, auto_parts(lines, ranges), emph)
     return ('<section %s>\n%s\n  %s\n  <div class="slide-body%s">\n    %s%s\n  </div>%s\n</section>'
-            % (attrs(d), head, h2, " dom-fig" if fig else "", figure, copy(words_html(lines, emph=emph), 4), credit_html))
+            % (attrs(d), head, h2, " dom-fig" if fig else "", figure, copy(words, 4), credit_html))
 
 
 # ------------------------------------------------------------------ the page
@@ -5779,7 +5794,7 @@ def main(argv=None):
             if f["rule"] == "v_3d_none_built":
                 print("\n" + "=" * 78 + "\nRECOMMENDED (L60) - " + f["detail"] + "\n" + "=" * 78)
             elif f["rule"] == "v_paged_slide":              # 2.109.0 F1 - the writer's finding; the build still pages, never cuts (L61)
-                print("MUST FIX (content in parts): %s - %s" % (f["where"], f["detail"]))
+                print("WARNING (content in parts): %s - %s" % (f["where"], f["detail"]))
     parts = [x for x in notes if x[0]]
     if o.only in ("all", "deck"):
         listed = write_to_take(o.course, script, parts)

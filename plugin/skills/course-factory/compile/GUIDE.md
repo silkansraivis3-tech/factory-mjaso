@@ -25,9 +25,9 @@
       and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
       (2.65.0, L64) It starts with the PRE-CHECK (compile/scripts/precheck.py - a second, from the files alone): a picture
       the sheet names that is not there, an unknown template or variant, a photograph under 800 px (unless its
-      _photo_meta.json record says why in "low_resolution_ok"), more than 60 words with no picture, three teaching
-      slides in a row without one - "FAIL M01 - nothing built: the pre-check found ..." and nothing is built until it is
-      fixed. Run it alone any time: python compile/scripts/precheck.py <course> --module 1. Under the first PASS: "TIME
+      _photo_meta.json record says why in "low_resolution_ok"), three teaching slides in a row without a picture -
+      "FAIL M01 - nothing built: the pre-check found ..." and nothing is built until it is fixed. More words than the
+      word guideline (`knowledge/theory-rules.json` `slide`) is a note, never a stop. Run it alone any time: python compile/scripts/precheck.py <course> --module 1. Under the first PASS: "TIME
       M01: <n> min from its starter build sheet to its first PASS" against the gold standard, 30-40 min a module.
       A module ALREADY BUILT is rebuilt as a fix, not here: scripts/fix.py rebuild <course> --modules 1 (fix/GUIDE.md 3b).
       (2.57.0) A rebuild judges again only the slides and task pages changed in anything they load since their last
@@ -201,6 +201,7 @@ colours, the official logo top right, Raleway bundled. What the compiler chooses
 | a picture beside up to 60 words | `explain-figure` `figure-right` (`figure-left` with `"figure_first"`) |
 | a picture beside more than 60 words | `reading-with-figure` - or `long-explanation` when the picture is 3D |
 | a picture beside more than 85 words | `content-in-parts`: the lines in order, in parts of about 75 words; Next walks the parts, every part has a tab |
+| no picture and more than 120 words (the word guideline's `steps_from`), or `"parts"` in its build sheet | `explain-figure` `text-only`, its lines in the same parts: shown in steps |
 
 **Word budgets (2.63.0, measured at 1024 x 768 with these templates and the larger logo - `layout-templates.json`
 `budgets`):** beside a picture 85 words, with a photo under the words 70, beside a photo column 85, under a photograph
@@ -253,7 +254,8 @@ build's layout solver gives it the next larger box (`settled: ... its picture ne
 compile/scripts/layout_fit.py <figure> --words N` says what a figure gets before a build.
 
 **The owner's rules, checked at every build:** a split slide is 55 / 45 by default (50-60 % text when the picture is
-simple, never 80 / 20); more than 60 words always has a picture beside it; never three teaching slides in a row without
+simple, never 80 / 20); over the word guideline's 80 words (`knowledge/theory-rules.json` `slide`) a picture goes beside
+the words or the slide is shown in steps - a note, never a stop; never three teaching slides in a row without
 a teaching picture (a task launch and the recap neither count nor break the run); approved words are never cut,
 summarised or set smaller - when they need more room they go into parts.
 
@@ -671,10 +673,11 @@ photo of its own keeps the previous one, and the first photo (`"figure"`, or the
 
 **Content in parts is the writer's finding, not a layout trick (2.109.0).** A slide with a picture and more than 85 words is
 paged by the compiler into parts with number tabs (1 2 ...); trainees find the switching confusing (Aigars: "just 3-4
-bullet points"). The review page (`content_script.paged_findings`, rule `v_paged_slide`) lists such a slide as a must-fix: cut
+bullet points"). The review page (`content_script.paged_findings`, rule `v_paged_slide`) lists such a slide as a warning: cut
 it to 3-4 short lines (by proposal - the build never cuts, L61), or keep the parts on purpose with `"parts"` (or
 `"template": "content-in-parts.v1"`) in the build sheet, which also silences the finding. The compile prints the same
-as `MUST FIX (content in parts)`.
+as `WARNING (content in parts)`. The build stops on words only when the fit gate measures them cut off or scrolling;
+a scenario or a worked example over its template is stopped earlier, at the script (`t_overfull`).
 
 ## 3 · When the look is not enough
 
