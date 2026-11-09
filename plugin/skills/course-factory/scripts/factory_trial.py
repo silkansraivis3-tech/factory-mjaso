@@ -4,7 +4,8 @@
 
     factory_trial.py setup  --from <course master folder> [--modules 1,4,8,19] [--home <folder>]
     factory_trial.py run    [--modules 1,4] [--plugin-dir <plugin folder>] [--dry-run] [--home <folder>]
-    factory_trial.py report [--run <runs\\folder>] [--no-browser] [--home <folder>]
+    factory_trial.py report [--run <runs\\folder>] [--course <trial course>] [--against <scorecard.json>] [--no-browser] [--home <folder>]
+    factory_trial.py compare <scorecard.json before> <scorecard.json now>
     factory_trial.py status [--home <folder>]
 
 WHY THIS EXISTS
@@ -22,10 +23,19 @@ the way the office PC builds. Then it scores what was built and sets the score b
           never called; no paid picture is made; nothing is pushed. --plugin-dir builds with a plugin checkout instead of
           the installed one (a release before it is pushed). The log and the score go to runs\\<date>\\. Then report.
   report  the scorecard of each trial module, and what changed since the last trial:
-            built and its build's last line; slides cut or pictures cropped at 1280 x 800 (fit_gate.py); claims not
-            proved in the sources (fact_check.py); old-course findings (order, slides left out, thinner theory); Bloom
+            built, passed (its last build said PASS or MODULE CLEAN) and that build's verdict; minutes to its first PASS
+            (the build's clock, cf_timing.py); slides cut or pictures cropped at 1280 x 800 and at 1024 x 768, every Next
+            pressed (fit_gate.py); slides off their blueprint - not a known template, version and variant
+            (course-module-ui blueprints.json, layout-templates.json), or a picture slot with no picture or a placeholder;
+            picture spaces still holding a placeholder; % of the teaching slides with interactive 3D (L67, counted as the
+            course package counts it); the most words the room sees at once on one slide, and the slides over 120; claims
+            not proved in the sources (fact_check.py); old-course findings (order, slides left out, thinner theory); Bloom
             lifts of more than one level; must-fix findings left in the script; how many slide templates and the longest
-            run of one; simulator and equipment exercises written.
+            run of one; the basic tasks of each self-check and the self-checks off their mix (t_sc_mix); simulator and
+            equipment exercises written. A number that cannot be measured is "-".
+          --course scores any trial course (its master or course folder) - two trial homes compared; the scorecard is
+          saved only where --run says. --against sets it beside that scorecard instead of the last trial's.
+  compare two scorecards side by side, and each number that moved said better or worse.
   status  the trial's inputs and its last runs.
 
 The trial lives in %USERPROFILE%\\factory-trial (NOVIKONTAS_TRIAL_HOME, or --home). Exit 0, 1 problems, 2 bad input.
@@ -41,6 +51,7 @@ import shutil
 import subprocess
 import sys
 from datetime import datetime
+from html.parser import HTMLParser
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -185,21 +196,164 @@ def claude_command(prompt, plugin_dir=None):
 
 
 # ------------------------------------------------------------------ the scorecard
+COMPILE = os.path.join(os.path.dirname(HERE), "compile", "scripts")
+FIT_SIZES = ("1280x800", "1024x768")
+WORDS_OVER = 120
+VERDICT = re.compile(r"^(PASS|FAIL|MODULE CLEAN|PHASE A CLEAN|STILL RUNNING)\b")
+PICTURE_TAGS = ("img", "svg", "canvas", "video", "iframe", "object")
+
+
 def module_dir(course, m):
     return os.path.join(course, workspace.MODULES, "module%02d" % m)
 
 
-def fit_slides(deck, no_browser):
-    if no_browser or not os.path.isfile(deck):
+def measured(fn, *args):
+    """fn's answer, or None when it could not be measured - one number never stops the scorecard"""
+    try:
+        return fn(*args)
+    except Exception:  # noqa: BLE001
         return None
+
+
+def fit_slides(deck, no_browser):
+    """{size: slides with words cut or a picture cropped at that size, every Next pressed} - fit_gate.py at the tablets'
+    1280 x 800 and at 1024 x 768; {} when nothing could be measured"""
+    if no_browser or not os.path.isfile(deck):
+        return {}
     sys.path.insert(0, os.path.join(PLUGIN, "skills", "course-module-ux", "measure", "scripts"))
     import contextlib
+    import tempfile
     import fit_gate
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        code = fit_gate.main([deck, "--viewport", "1280x800"])
-    m = re.search(r"FAIL (\d+) slide", buf.getvalue())
-    return int(m.group(1)) if m else (0 if code == 0 else None)
+    out = os.path.join(tempfile.mkdtemp(prefix="trial_fit_"), "fit.json")
+    args = [deck] + [x for size in FIT_SIZES for x in ("--viewport", size)] + ["--json", out]
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            code = fit_gate.main(args)
+        found = load(out) if code in (0, 1) else None
+    finally:
+        shutil.rmtree(os.path.dirname(out), ignore_errors=True)
+    if not isinstance(found, dict):
+        return {}
+    return {size: len({x[0] for x in found.get(size) or []}) for size in FIT_SIZES if size in found}
+
+
+def build_verdict(course, mid):
+    """(the last build's verdict line, passed) from its answer file: PASS or MODULE CLEAN passed, FAIL or PHASE A CLEAN did
+    not; ("", None) when no build answered"""
+    ans = os.path.join(course, "working_claude", "_build", "%s_answer.txt" % mid)
+    if not os.path.isfile(ans):
+        return "", None
+    lines = [x.strip() for x in io.open(ans, encoding="utf-8", errors="replace").read().splitlines() if x.strip()]
+    said = [x for x in lines if VERDICT.match(x)]
+    if not said:
+        return ([x for x in lines if not x.startswith("Full log")] or [""])[-1], None
+    return said[-1], said[-1].startswith(("PASS", "MODULE CLEAN"))
+
+
+def build_minutes(course, mid):
+    """minutes from the module's starter build sheet to its first PASS, as the build's clock kept them (cf_timing.py)"""
+    rec = load(os.path.join(course, "working_claude", "_build", "%s_clock.json" % mid)) or {}
+    return rec.get("minutes") if rec.get("passed") else None
+
+
+class DeckScan(HTMLParser):
+    """each slide of a built deck: its template and variant, its pictures and the placeholders among them, and the words the
+    room sees at once - its words outside its parts and its longest part (content-in-parts shows one part at a time). The
+    header band, the source line, the controls, the words inside a drawing and the compiler's own words (a step's number, an
+    answer shown a second time over the figure: data-script-ignore) are not counted (check_script_match.py)"""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        import check_script_match as csm
+        import compile_module as cm
+        self.exempt_tags, self.exempt_classes, self.void = csm.EXEMPT_TAGS, csm.EXEMPT_CLASSES, csm.VOID
+        self.placeholder = cm.PLACEHOLDER_IMG
+        self.stack, self.slides = [], []      # stack: (tag, its words not counted, part, a slide)
+
+    def handle_starttag(self, tag, attrs):
+        a = {k: (v or "") for k, v in attrs}
+        cls = set(a.get("class", "").split())
+        slide = tag == "section" and "slide" in cls
+        if slide:
+            self.slides.append({"id": a.get("id", ""), "template": a.get("data-template", ""), "variant": a.get("data-variant", ""),
+                                "pictures": 0, "placeholders": 0, "words": 0, "parts": {}})
+        inside = any(x[3] for x in self.stack) or slide
+        if inside and not any(x[0] == "button" for x in self.stack) and (tag in PICTURE_TAGS or "data-kit3d" in a or "data-3d" in a):
+            self.slides[-1]["pictures"] += 1
+            if self.placeholder.search(a.get("src", "")):
+                self.slides[-1]["placeholders"] += 1
+        if tag not in self.void:
+            self.stack.append((tag, tag in self.exempt_tags or bool(cls & self.exempt_classes) or "data-script-ignore" in a,
+                               a.get("data-part") if "lt-part" in cls else None, slide))
+
+    def handle_endtag(self, tag):
+        for i in range(len(self.stack) - 1, -1, -1):
+            if self.stack[i][0] == tag:
+                del self.stack[i:]
+                break
+
+    def handle_data(self, data):
+        if not any(x[3] for x in self.stack) or any(x[1] for x in self.stack):
+            return
+        s = self.slides[-1]
+        part = next((x[2] for x in reversed(self.stack) if x[2] is not None), None)
+        if part is None:
+            s["words"] += cs.wc(data)
+        else:
+            s["parts"][part] = s["parts"].get(part, 0) + cs.wc(data)
+
+
+def scan_deck(deck):
+    if COMPILE not in sys.path:
+        sys.path.append(COMPILE)
+    p = DeckScan()
+    p.feed(io.open(deck, encoding="utf-8", errors="replace").read())
+    for s in p.slides:
+        s["seen_words"] = s["words"] + max(s["parts"].values(), default=0)
+    return p.slides
+
+
+def blueprints():
+    """({slide blueprint id: the picture slots it needs}, {template: its version}) - course-module-ui knowledge/blueprints.json
+    and layout-templates.json; a mirrored blueprint needs what its base needs"""
+    ui = os.path.join(PLUGIN, "skills", "course-module-ui", "knowledge")
+    bp, lt = load(os.path.join(ui, "blueprints.json")), load(os.path.join(ui, "layout-templates.json"))
+    base = {b["id"]: b for b in bp["slides"]}
+    need = {}
+    for b in bp["slides"]:
+        fill = b.get("fill") or (base.get(b.get("mirror")) or {}).get("fill") or {}
+        need[b["id"]] = sum(1 for v in fill.values() if v[0] in ("Picture", "3D") or (len(v) > 1 and str(v[1]).startswith("figure")))
+    return need, {k: v.get("version") for k, v in lt["templates"].items()}
+
+
+def off_blueprint(slides):
+    """the slides that are not a known template, version and variant (data-template="<id>.v<n>", data-variant), or whose
+    template needs a picture and that hold none, or a placeholder"""
+    need, versions = blueprints()
+    out = []
+    for s in slides:
+        m = re.match(r"^([\w-]+)\.v(\d+)$", s["template"])
+        bid = "%s.%s" % (m.group(1), s["variant"]) if m else ""
+        if not m or versions.get(m.group(1)) != int(m.group(2)) or bid not in need \
+                or (need[bid] and (s["placeholders"] or not s["pictures"])):
+            out.append(s["id"])
+    return out
+
+
+def pictures_pending(course, m, slides):
+    """the screens whose picture is still Phase A's stand-in: the build sheet's (build_module.phase_a_slots) and any slide of
+    the deck that shows a placeholder"""
+    if COMPILE not in sys.path:
+        sys.path.append(COMPILE)
+    import build_module
+    return len({sid for sid, _ in build_module.phase_a_slots(course, m)} | {s["id"] for s in slides or [] if s["placeholders"]})
+
+
+def three_d_share(deck):
+    """% of the teaching slides with interactive 3D, counted as the course package counts it for L67"""
+    import check_course_package as ccp
+    three, teach = ccp.three_d_share(ccp.parse(deck).slides)
+    return int(round(100.0 * len(three) / len(teach))) if teach else None
 
 
 def score_module(course, m, no_browser=False):
@@ -209,11 +363,18 @@ def score_module(course, m, no_browser=False):
     script = cs.load(sp) if os.path.isfile(sp) else None
     deck = os.path.join(module_dir(course, m), "presentation", "index.html")
     row["built"] = os.path.isfile(deck)
-    ans = os.path.join(course, "working_claude", "_build", "%s_answer.txt" % mid)
-    last = [x.strip() for x in io.open(ans, encoding="utf-8", errors="replace").read().splitlines() if x.strip()][-1:] \
-        if os.path.isfile(ans) else []
-    row["build_says"] = last[0][:90] if last else ""
-    row["cut_or_cropped_slides"] = fit_slides(deck, no_browser)
+    row["build_says"], row["passed"] = measured(build_verdict, course, mid) or ("", None)
+    row["build_says"] = row["build_says"][:90]
+    row["build_minutes"] = measured(build_minutes, course, mid)
+    fit = measured(fit_slides, deck, no_browser) or {}
+    row["cut_or_cropped_slides"], row["cut_at_1024x768"] = fit.get("1280x800"), fit.get("1024x768")
+    slides = measured(scan_deck, deck) if row["built"] else None
+    off = measured(off_blueprint, slides) if slides else None
+    row["off_blueprint_slides"] = None if off is None else len(off)
+    row["pictures_pending"] = measured(pictures_pending, course, m, slides)
+    row["interactive_3d_share"] = measured(three_d_share, deck) if row["built"] else None
+    row["max_words_slide"] = max(s["seen_words"] for s in slides) if slides else None
+    row["slides_over_120_words"] = sum(1 for s in slides if s["seen_words"] > WORDS_OVER) if slides else None
     if script:
         import fact_check
         if fact_check.course_kbs(course):
@@ -222,7 +383,11 @@ def score_module(course, m, no_browser=False):
         old = cs.old_course_findings(course, script)
         for rule in ("o_moved", "o_dropped", "o_thinner"):
             row[rule.replace("o_", "old_")] = sum(1 for f in old if f["rule"] == rule)
-        row["must_fix_left"] = len(cs.blocking(cs.all_findings(script, course)))
+        found = measured(cs.all_findings, script, course)
+        row["must_fix_left"] = None if found is None else len(cs.blocking(found))
+        row["self_check_basic_tasks"] = measured(lambda: [cs.sc_mix(st["questions"])[0] for st in cs.plan_of(script)[1]
+                                                          if st["kind"] == "self-check"])
+        row["self_checks_off_mix"] = None if found is None else len({f["screen"] for f in found if f["rule"] == "t_sc_mix"})
     rev = load(workspace.claude_path(course, "pedagogy_review.json"), {}) or {}
     rows = ((rev.get("modules") or {}).get(str(m)) or {}).get("rows") or {}
     row["bloom_lifts_over_one"] = sum(1 for x in rows.values() if isinstance((x.get("now") or {}).get("level"), int)
@@ -241,68 +406,130 @@ def score_module(course, m, no_browser=False):
     return row
 
 
-LOWER_IS_BETTER = ("cut_or_cropped_slides", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped", "old_thinner",
-                   "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row")
+LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped",
+                   "old_thinner", "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row", "build_minutes",
+                   "off_blueprint_slides", "pictures_pending", "max_words_slide", "slides_over_120_words", "self_checks_off_mix")
+# a number that is best inside a band: closer to it is better (L67: 60-80 % of the teaching slides with interactive 3D)
+BANDS = {"interactive_3d_share": (int(round(100 * cs.MEDIA["three_d"]["min_share"])), int(round(100 * cs.MEDIA["three_d"]["max_share"])))}
+SHOWN = ("built", "passed", "build_says", "build_minutes", "cut_or_cropped_slides", "cut_at_1024x768", "off_blueprint_slides",
+         "pictures_pending", "interactive_3d_share", "max_words_slide", "slides_over_120_words", "claims", "claims_unproven",
+         "claims_unchecked", "old_moved", "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates",
+         "same_template_in_a_row", "self_check_basic_tasks", "self_checks_off_mix", "simulator_exercises")
 
 
 def compare(now, before):
-    """[(module, metric, before, now, better or worse)] for every number that moved"""
+    """[(module, metric, before, now, better or worse)] for every number that moved - a yes/no counts as 1/0, higher better;
+    a number with a band is better closer to it ("-" when both are inside)"""
     out = []
     old = {r["module"]: r for r in (before or {}).get("modules", [])}
     for r in now.get("modules", []):
         b = old.get(r["module"]) or {}
         for k, v in r.items():
-            if k == "module" or not isinstance(v, (int, float)) or isinstance(v, bool) or not isinstance(b.get(k), (int, float)) \
-                    or b.get(k) == v:
+            if k == "module" or not isinstance(v, (int, float)) or not isinstance(b.get(k), (int, float)) or b.get(k) == v:
                 continue
-            down = v < b[k]
-            out.append((r["module"], k, b[k], v, "better" if down == (k in LOWER_IS_BETTER) else "worse"))
+            if k in BANDS:
+                lo, hi = BANDS[k]
+                off = lambda x: max(lo - x, 0, x - hi)
+                how = "-" if off(v) == off(b[k]) else "better" if off(v) < off(b[k]) else "worse"
+            else:
+                how = "better" if (v < b[k]) == (k in LOWER_IS_BETTER) else "worse"
+            out.append((r["module"], k, b[k], v, how))
     return out
 
 
-def report(home, run_dir=None, no_browser=False):
-    cfg = load(os.path.join(home, "trial.json"))
-    master = os.path.join(home, "run", TITLE)
-    mark = load(os.path.join(master, MARKER))
-    if not cfg or not mark:
-        print("No trial course to score - setup, then run.")
-        return 2
-    course = os.path.join(master, "course")
-    runs = sorted(d for d in os.listdir(os.path.join(home, "runs")) if os.path.isdir(os.path.join(home, "runs", d)))
-    run_dir = run_dir or (os.path.join(home, "runs", runs[-1]) if runs else os.path.join(home, "runs", "report"))
-    card = {"plugin": mark.get("plugin"), "started": mark.get("started"), "scored": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "modules": [score_module(course, m, no_browser) for m in mark.get("modules") or []]}
-    save(os.path.join(run_dir, "scorecard.json"), card)
-    before = None
-    for d in reversed(runs):
-        p = os.path.join(home, "runs", d, "scorecard.json")
-        if os.path.abspath(os.path.join(home, "runs", d)) != os.path.abspath(run_dir) and os.path.isfile(p):
-            before = load(p)
-            break
-    print("FACTORY TRIAL - course-factory %s, started %s" % (card["plugin"], card["started"]))
-    keys = [k for k in ("built", "build_says", "cut_or_cropped_slides", "claims", "claims_unproven", "claims_unchecked", "old_moved",
-                        "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates", "same_template_in_a_row",
-                        "simulator_exercises")]
-    for r in card["modules"]:
+def shown(v):
+    if v is None:
+        return "-"
+    if isinstance(v, list):
+        return ", ".join(str(x) for x in v) or "none"
+    return str(v)
+
+
+def show(card, before=None):
+    """the scorecard module by module, beside the one before when there is one, then what moved; -> exit code (1 when a
+    number got worse)"""
+    print("FACTORY TRIAL - course-factory %s, started %s" % (card.get("plugin"), card.get("started")))
+    old = {r["module"]: r for r in (before or {}).get("modules", [])}
+    if before:
+        print("  %-24s %-16s %s" % ("", "before %s" % before.get("plugin"), "now %s" % card.get("plugin")))
+    for r in card.get("modules", []):
+        b = old.get(r["module"])
         print("\nModule %d" % r["module"])
-        for k in keys:
-            if k in r:
-                print("  %-24s %s" % (k.replace("_", " "), "-" if r[k] is None else r[k]))
+        for k in SHOWN:
+            if k not in r and k not in (b or {}):
+                continue
+            if before is None:
+                print("  %-24s %s" % (k.replace("_", " "), shown(r.get(k))))
+            elif isinstance(r.get(k), str) or isinstance((b or {}).get(k), str):
+                print("  %-24s now:    %s\n  %-24s before: %s" % (k.replace("_", " "), shown(r.get(k)), "", shown((b or {}).get(k))))
+            else:
+                print("  %-24s %-16s %s" % (k.replace("_", " "), shown((b or {}).get(k)), shown(r.get(k))))
     moved = compare(card, before)
     if before:
-        print("\nSince the last trial (course-factory %s):" % before.get("plugin"))
+        print("\nSince course-factory %s:" % before.get("plugin"))
         for m, k, b, v, how in moved or []:
             print("  M%02d %-24s %s -> %s  %s" % (m, k.replace("_", " "), b, v, how.upper() if how == "worse" else how))
         if not moved:
             print("  nothing moved")
-    print("\n    %s" % os.path.join(run_dir, "scorecard.json"))
     return 1 if any(x[4] == "worse" for x in moved) else 0
+
+
+def course_to_score(folder):
+    """(course folder, the trial's marker) of any trial course - its master folder or its course folder; a course with no
+    marker is scored on every module it built"""
+    folder = os.path.abspath(folder)
+    course = os.path.join(folder, "course") if os.path.isdir(os.path.join(folder, "course")) else folder
+    mark = load(os.path.join(os.path.dirname(course), MARKER)) or load(os.path.join(course, MARKER))
+    if not mark:
+        mods = os.path.join(course, workspace.MODULES)
+        built = sorted(int(d[6:]) for d in (os.listdir(mods) if os.path.isdir(mods) else [])
+                       if re.match(r"^module\d+$", d) and os.path.isfile(os.path.join(mods, d, "presentation", "index.html")))
+        mark = {"plugin": "?", "started": "", "modules": built} if built else None
+    return course, mark
+
+
+def report(home, run_dir=None, no_browser=False, course=None, against=None):
+    if course:
+        course, mark = course_to_score(course)
+        if not mark:
+            print("No trial course to score in %s - no %s and no built module" % (course, MARKER))
+            return 2
+        runs = []
+    else:
+        cfg = load(os.path.join(home, "trial.json"))
+        master = os.path.join(home, "run", TITLE)
+        mark = load(os.path.join(master, MARKER))
+        if not cfg or not mark:
+            print("No trial course to score - setup, then run.")
+            return 2
+        course = os.path.join(master, "course")
+        runs = sorted(d for d in os.listdir(os.path.join(home, "runs")) if os.path.isdir(os.path.join(home, "runs", d)))
+        run_dir = run_dir or (os.path.join(home, "runs", runs[-1]) if runs else os.path.join(home, "runs", "report"))
+    if against and not isinstance(load(against), dict):
+        print("Stopped - %s is not a scorecard.json" % against)
+        return 2
+    card = {"plugin": mark.get("plugin"), "started": mark.get("started"), "scored": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "course": course, "modules": [score_module(course, m, no_browser) for m in mark.get("modules") or []]}
+    if run_dir:
+        save(os.path.join(run_dir, "scorecard.json"), card)
+    before = load(against) if against else None
+    for d in reversed(runs if not against else []):
+        p = os.path.join(home, "runs", d, "scorecard.json")
+        if os.path.abspath(os.path.join(home, "runs", d)) != os.path.abspath(run_dir) and os.path.isfile(p):
+            before = load(p)
+            break
+    code = show(card, before)
+    print("\n    %s" % (os.path.join(run_dir, "scorecard.json") if run_dir else "not saved - --run <folder> keeps it"))
+    return code
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("cmd", choices=("setup", "run", "report", "status"))
+    ap.add_argument("cmd", choices=("setup", "run", "report", "compare", "status"))
+    ap.add_argument("files", nargs="*")
     ap.add_argument("--home")
+    ap.add_argument("--course")
+    ap.add_argument("--against")
     ap.add_argument("--from", dest="source")
     ap.add_argument("--modules")
     ap.add_argument("--plugin-dir")
@@ -333,7 +560,13 @@ def main(argv=None):
                                                         ": " + ", ".join(runs[-5:]) if runs else ""))
         return 0
     if a.cmd == "report":
-        return report(home, a.run, a.no_browser)
+        return report(home, a.run, a.no_browser, a.course, a.against)
+    if a.cmd == "compare":
+        cards = [load(p) for p in a.files]
+        if len(cards) != 2 or not all(isinstance(c, dict) for c in cards):
+            print("Stopped - compare needs two scorecard.json files: the one before, then the one now")
+            return 2
+        return show(cards[1], cards[0])
     if not cfg:
         print("Stopped - no trial yet: factory_trial.py setup --from <course master folder>")
         return 2
