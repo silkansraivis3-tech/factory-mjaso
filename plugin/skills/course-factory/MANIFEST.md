@@ -7,6 +7,16 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.115.0 · Each 2D figure composed for its slide (2026-11-09)
+
+- `compile/scripts/compile_module.py`: `kit2d_candidates` scores what a 2D slide's own lines can make (bars, time line,
+  cycle, pyramid, people, comparison, schedule, grid, graph, four process layouts); `starter_kit2d` takes the best one
+  whose `kit2d_look` the 4 slides before do not have and writes `"_brief"` into the build sheet; `kit2d_variety` in
+  `compile_deck` makes a look-alike fewer than `KIT2D_APART` (5) slides apart a problem. Values come only from the
+  slide's words; what they cannot give stays a `_todo`.
+- Checked by `test_compile_module.py` (three process slides in a row come out three ways; bars, time line, pyramid,
+  people and comparison from words; two cycles 2 apart fail, 5 apart pass).
+
 ## 2.111.1 · The 2D kit's minified copy rebuilt (2026-11-06)
 
 - `course-visuals/kit/min/kit.js` rebuilt with `course-module-ui/scripts/minify_engines.py`: 2.108.0 changed `kit.js`

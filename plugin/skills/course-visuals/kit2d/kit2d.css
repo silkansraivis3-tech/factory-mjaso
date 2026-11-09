@@ -165,3 +165,210 @@
 .k2-bubble{fill:var(--k2-face)}
 .k2-surface{stroke:var(--k2-particle);stroke-width:2.5;opacity:.8}
 .k2-vane{fill:none;stroke:var(--k2-metal-lo);stroke-width:7;stroke-linecap:round}
+
+/* tanker_section: crude oil, the sea outside, the faces of the web frames */
+:root{
+  --k2-oil-hi:#8A5E2A;--k2-oil-lo:#22160A;--k2-oil-top:#F0B060;
+  --k2-sea-hi:#1D6A9C;--k2-sea-lo:#061E3A;--k2-sea-line:#9ADAF8;--k2-web:#3A5274;--k2-paint:#B4483A;
+  --k2-l-oil-hi:#93682F;--k2-l-oil-lo:#3B2810;--k2-l-oil-top:#B5741F;
+  --k2-l-sea-hi:#A8D1EC;--k2-l-sea-lo:#4D88B6;--k2-l-sea-line:#1A6FA8;--k2-l-web:#B3C1D2;--k2-l-paint:#A23A2E}
+.k2-light{--k2-oil-hi:var(--k2-l-oil-hi);--k2-oil-lo:var(--k2-l-oil-lo);--k2-oil-top:var(--k2-l-oil-top);--k2-sea-hi:var(--k2-l-sea-hi);--k2-sea-lo:var(--k2-l-sea-lo);--k2-sea-line:var(--k2-l-sea-line);--k2-web:var(--k2-l-web);--k2-paint:var(--k2-l-paint)}
+.k2-s-oil-hi{stop-color:var(--k2-oil-hi)}.k2-s-oil-lo{stop-color:var(--k2-oil-lo)}
+.k2-s-sea-hi{stop-color:var(--k2-sea-hi)}.k2-s-sea-lo{stop-color:var(--k2-sea-lo)}.k2-s-sea-line{stop-color:var(--k2-sea-line)}
+.k2-tk-web{fill:var(--k2-web);opacity:.55}
+.k2-tk-wave{fill:none;stroke:var(--k2-sea-line);stroke-width:2.5;stroke-linecap:round;opacity:.8}
+.k2-tk-glint{stroke:var(--k2-sea-line);stroke-width:2;stroke-linecap:round;opacity:.22}
+.k2-tk-liq{opacity:.88}
+.k2-tk-oiltop{stroke:var(--k2-oil-top);stroke-width:2.5;opacity:.9}
+.k2-tk-gap{fill:var(--k2-sea-hi)}
+.k2-tk-stiff{stroke:var(--k2-outline);stroke-width:1;stroke-linejoin:round}
+.k2-tk-plate{stroke:var(--k2-outline);stroke-width:1.6;stroke-linejoin:round}
+.k2-tk-zone{fill:none;stroke:var(--k2-blue);stroke-width:4;stroke-linejoin:round;stroke-linecap:round}
+.k2-tk-zone-glow{fill:none;stroke:var(--k2-blue);stroke-width:14;stroke-opacity:.22;stroke-linejoin:round;stroke-linecap:round}
+.k2-tk-mark{stroke:var(--k2-ink);stroke-width:2}
+.k2-tk-rail{fill:none;stroke:var(--k2-metal-hi);stroke-width:2.2}
+.k2-tk-vapour{fill:var(--k2-dim)}
+.k2-tk-oil{fill:var(--k2-oil-hi)}
+.k2-tk-paint{fill:none;stroke:var(--k2-paint);stroke-width:3.2;stroke-linejoin:round}
+
+/* radar_ppi - a radar display stays a dark screen on a light page too, so its light twins keep the screen's own colours */
+:root{
+  --k2-rd-scope-hi:#0F302A;--k2-rd-scope-lo:#020A09;--k2-rd-glass:#050C0F;--k2-rd-shade:#000000;--k2-rd-rim:#1A2630;
+  --k2-rd-panel-hi:#0E1D22;--k2-rd-panel-lo:#081215;--k2-rd-ring:#4FB89A;--k2-rd-echo:#9BF7B0;--k2-rd-land:#62A87A;--k2-rd-glow:#F0FFF3;
+  --k2-rd-ink:#DDF7E8;--k2-rd-dim:#86AE9F;--k2-rd-head:#F3F8FD;--k2-rd-mark:#E4ECF5;--k2-rd-halo:#03100D;
+  --k2-l-rd-scope-hi:#0F302A;--k2-l-rd-scope-lo:#020A09;--k2-l-rd-glass:#050C0F;--k2-l-rd-shade:#000000;--k2-l-rd-rim:#1A2630;
+  --k2-l-rd-panel-hi:#0E1D22;--k2-l-rd-panel-lo:#081215;--k2-l-rd-ring:#4FB89A;--k2-l-rd-echo:#9BF7B0;--k2-l-rd-land:#62A87A;--k2-l-rd-glow:#F0FFF3;
+  --k2-l-rd-ink:#DDF7E8;--k2-l-rd-dim:#86AE9F;--k2-l-rd-head:#F3F8FD;--k2-l-rd-mark:#E4ECF5;--k2-l-rd-halo:#03100D}
+.k2-light{--k2-rd-scope-hi:var(--k2-l-rd-scope-hi);--k2-rd-scope-lo:var(--k2-l-rd-scope-lo);--k2-rd-glass:var(--k2-l-rd-glass);--k2-rd-shade:var(--k2-l-rd-shade);--k2-rd-rim:var(--k2-l-rd-rim);--k2-rd-panel-hi:var(--k2-l-rd-panel-hi);--k2-rd-panel-lo:var(--k2-l-rd-panel-lo);--k2-rd-ring:var(--k2-l-rd-ring);--k2-rd-echo:var(--k2-l-rd-echo);--k2-rd-land:var(--k2-l-rd-land);--k2-rd-glow:var(--k2-l-rd-glow);--k2-rd-ink:var(--k2-l-rd-ink);--k2-rd-dim:var(--k2-l-rd-dim);--k2-rd-head:var(--k2-l-rd-head);--k2-rd-mark:var(--k2-l-rd-mark);--k2-rd-halo:var(--k2-l-rd-halo)}
+
+.k2-s-rd-scope-hi{stop-color:var(--k2-rd-scope-hi)}.k2-s-rd-scope-lo{stop-color:var(--k2-rd-scope-lo)}
+.k2-s-rd-shade{stop-color:var(--k2-rd-shade)}.k2-s-rd-sheen{stop-color:var(--k2-hi)}
+.k2-s-rd-panel-hi{stop-color:var(--k2-rd-panel-hi)}.k2-s-rd-panel-lo{stop-color:var(--k2-rd-panel-lo)}
+.k2-rd-glass{fill:var(--k2-rd-glass)}
+.k2-rd-rim{fill:none;stroke:var(--k2-rd-rim);stroke-width:6}
+.k2-rd-slot{stroke:var(--k2-outline);stroke-width:1.2}
+.k2-rd-ring{fill:none;stroke:var(--k2-rd-ring);stroke-opacity:.42;stroke-width:1.3}
+.k2-rd-edge{fill:none;stroke:var(--k2-rd-ring);stroke-opacity:.8;stroke-width:1.6}
+.k2-rd-tick{fill:none;stroke:var(--k2-rd-ring);stroke-opacity:.7;stroke-width:1.1}.k2-rd-tick-10{stroke-opacity:1;stroke-width:2}
+.k2-rd-num{fill:var(--k2-rd-ring)}
+.k2-rd-halo{stroke:var(--k2-rd-halo)}
+.k2-rd-wedge{fill:var(--k2-rd-echo);fill-opacity:.03}
+.k2-rd-trace{fill:none;stroke:var(--k2-rd-glow);stroke-width:2.2;stroke-linecap:round}
+.k2-rd-trace-glow{fill:none;stroke:var(--k2-rd-echo);stroke-opacity:.28;stroke-width:9;stroke-linecap:round}
+.k2-rd-echo{fill:var(--k2-rd-echo)}
+.k2-rd-land{fill:var(--k2-rd-land);stroke:var(--k2-rd-land);stroke-width:1.6;stroke-linejoin:round}
+.k2-rd-land-hot{fill:var(--k2-rd-echo);stroke:var(--k2-rd-echo);stroke-width:1.6;stroke-linejoin:round}
+.k2-rd-blip{fill:none;stroke:var(--k2-rd-echo);stroke-width:7.5;stroke-linecap:round}
+.k2-rd-blip-hot{fill:none;stroke:var(--k2-rd-glow);stroke-width:3;stroke-linecap:round}
+.k2-rd-sym{fill:none;stroke:var(--k2-blue);stroke-width:2.4}
+.k2-rd-vec{stroke:var(--k2-blue);stroke-width:2.6}
+.k2-rd-sel{fill:none;stroke:var(--k2-rd-head);stroke-width:2}
+.k2-rd-track{stroke:var(--k2-blue);stroke-width:1.6;stroke-dasharray:3 5;stroke-opacity:.85}
+.k2-rd-cpa{fill:var(--k2-blue);stroke:var(--k2-rd-glass);stroke-width:1.5}
+.k2-rd-sym.k2-rd-hot,.k2-rd-vec.k2-rd-hot,.k2-rd-track.k2-rd-hot{stroke:var(--k2-amber)}
+.k2-rd-cpa.k2-rd-hot{fill:var(--k2-amber)}
+.k2-rd-head{stroke:var(--k2-rd-head);stroke-width:2;stroke-linecap:butt}
+.k2-rd-own{fill:var(--k2-rd-glass);stroke:var(--k2-rd-head);stroke-width:2;stroke-linejoin:round}
+.k2-rd-ccrp{fill:var(--k2-rd-head)}
+.k2-rd-vrm{fill:none;stroke:var(--k2-rd-mark);stroke-width:1.8;stroke-dasharray:9 6}
+.k2-rd-ebl{stroke:var(--k2-rd-mark);stroke-width:1.8;stroke-dasharray:12 5 2 5;stroke-linecap:butt}
+.k2-rd-panel{stroke:var(--k2-rd-ring);stroke-opacity:.3;stroke-width:1.2}
+.k2-rd-ink{fill:var(--k2-rd-ink)}.k2-rd-dim{fill:var(--k2-rd-dim)}
+.k2-rd-alarm{fill:var(--k2-amber)}
+.k2-rd-alarm-t{fill:var(--k2-face-ink)}
+.k2-rd-seg{fill:var(--k2-rd-ring);fill-opacity:.16}.k2-rd-seg-on{fill:var(--k2-rd-echo)}
+.k2-rd-ink,.k2-rd-num,.k2-rd-dim{font-variant-numeric:lining-nums tabular-nums}
+
+/* kanban: a whiteboard on the wall, masking tape, marker ink, sticky notes, a red magnet */
+:root{
+  --k2-board-hi:#FCFDFE;--k2-board-lo:#DDE4EC;--k2-sheen:#FFFFFF;
+  --k2-alu-hi:#F2F5F8;--k2-alu-mid:#AAB5C2;--k2-alu-lo:#5C6876;--k2-corner-hi:#5C6675;--k2-corner-lo:#232A34;
+  --k2-tape-hi:#F2EACF;--k2-tape-lo:#D4C69C;
+  --k2-marker-ink:#15233B;--k2-marker-blue:#1F5FAF;--k2-marker-red:#C42B27;
+  --k2-note-1:var(--cat-1,#2EB6F8);--k2-note-2:var(--cat-2,#3CC8B4);--k2-note-3:var(--cat-3,#A596F5);--k2-note-4:var(--cat-4,#EE93B6);--k2-note-5:var(--cat-5,#A8BBD0);
+  --k2-tag-bug:#C42B27;--k2-tag-feat:#1E3F73;--k2-on-tag:#FFFFFF;--k2-on-alarm:#2A1A00;
+  --k2-felt:#8C939C;--k2-magnet-hi:#FF7A6E;--k2-magnet-lo:#A81C17;
+  --k2-l-board-hi:#FFFFFF;--k2-l-board-lo:#D6DEE7;--k2-l-sheen:#FFFFFF;
+  --k2-l-alu-hi:#F4F6F9;--k2-l-alu-mid:#A3AFBD;--k2-l-alu-lo:#56626F;--k2-l-corner-hi:#5C6675;--k2-l-corner-lo:#232A34;
+  --k2-l-tape-hi:#F0E7CA;--k2-l-tape-lo:#CDBE92;
+  --k2-l-marker-ink:#15233B;--k2-l-marker-blue:#1F5FAF;--k2-l-marker-red:#B3241F;
+  --k2-l-note-1:var(--cat-1,#2EB6F8);--k2-l-note-2:var(--cat-2,#3CC8B4);--k2-l-note-3:var(--cat-3,#A596F5);--k2-l-note-4:var(--cat-4,#EE93B6);--k2-l-note-5:var(--cat-5,#A8BBD0);
+  --k2-l-tag-bug:#B3241F;--k2-l-tag-feat:#1E3F73;--k2-l-on-tag:#FFFFFF;--k2-l-on-alarm:#FFFFFF;
+  --k2-l-felt:#8C939C;--k2-l-magnet-hi:#FF7A6E;--k2-l-magnet-lo:#A81C17}
+.k2-light{--k2-board-hi:var(--k2-l-board-hi);--k2-board-lo:var(--k2-l-board-lo);--k2-sheen:var(--k2-l-sheen);--k2-alu-hi:var(--k2-l-alu-hi);--k2-alu-mid:var(--k2-l-alu-mid);--k2-alu-lo:var(--k2-l-alu-lo);--k2-corner-hi:var(--k2-l-corner-hi);--k2-corner-lo:var(--k2-l-corner-lo);--k2-tape-hi:var(--k2-l-tape-hi);--k2-tape-lo:var(--k2-l-tape-lo);--k2-marker-ink:var(--k2-l-marker-ink);--k2-marker-blue:var(--k2-l-marker-blue);--k2-marker-red:var(--k2-l-marker-red);--k2-note-1:var(--k2-l-note-1);--k2-note-2:var(--k2-l-note-2);--k2-note-3:var(--k2-l-note-3);--k2-note-4:var(--k2-l-note-4);--k2-note-5:var(--k2-l-note-5);--k2-tag-bug:var(--k2-l-tag-bug);--k2-tag-feat:var(--k2-l-tag-feat);--k2-on-tag:var(--k2-l-on-tag);--k2-on-alarm:var(--k2-l-on-alarm);--k2-felt:var(--k2-l-felt);--k2-magnet-hi:var(--k2-l-magnet-hi);--k2-magnet-lo:var(--k2-l-magnet-lo)}
+.k2-s-kb-board-hi{stop-color:var(--k2-board-hi)}.k2-s-kb-board-lo{stop-color:var(--k2-board-lo)}.k2-s-kb-sheen{stop-color:var(--k2-sheen)}.k2-s-kb-ink{stop-color:var(--k2-marker-ink)}
+.k2-s-kb-alu-hi{stop-color:var(--k2-alu-hi)}.k2-s-kb-alu-mid{stop-color:var(--k2-alu-mid)}.k2-s-kb-alu-lo{stop-color:var(--k2-alu-lo)}
+.k2-s-kb-corner-hi{stop-color:var(--k2-corner-hi)}.k2-s-kb-corner-lo{stop-color:var(--k2-corner-lo)}
+.k2-s-kb-tape-hi{stop-color:var(--k2-tape-hi)}.k2-s-kb-tape-lo{stop-color:var(--k2-tape-lo)}
+.k2-s-kb-magnet-hi{stop-color:var(--k2-magnet-hi)}.k2-s-kb-magnet-lo{stop-color:var(--k2-magnet-lo)}
+.k2-kb-wall{fill:var(--k2-shadow)}
+.k2-kb-shine{fill:none;stroke:var(--k2-sheen);stroke-width:1.3;stroke-opacity:.7}
+.k2-kb-inner{fill:none;stroke:var(--k2-alu-lo);stroke-width:1.5}
+.k2-kb-screw{fill:var(--k2-corner-lo);stroke:var(--k2-corner-hi);stroke-width:1}
+.k2-kb-ghost{fill:none;stroke:var(--k2-marker-ink);stroke-width:7;stroke-linecap:round;opacity:.04}
+.k2-kb-tape-edge{fill:none;stroke:var(--k2-tape-lo);stroke-width:1;opacity:.9}
+.k2-t-kb-head{font-size:calc(18px * var(--k2-up,1));font-weight:800;fill:var(--k2-marker-ink);letter-spacing:.01em}
+.k2-kb-ul{fill:none;stroke:var(--k2-marker-blue);stroke-width:3.5;stroke-linecap:round;opacity:.9}
+.k2-kb-badge{fill:var(--k2-board-hi);stroke:var(--k2-marker-ink);stroke-width:2}
+.k2-kb-badge-alarm{fill:var(--k2-amber);stroke:var(--k2-amber)}
+.k2-t-kb-badge{font-size:calc(14px * var(--k2-up,1));font-weight:800;fill:var(--k2-marker-ink);font-variant-numeric:tabular-nums}
+.k2-t-kb-alarm{fill:var(--k2-on-alarm)}
+.k2-kb-wash{fill:var(--k2-amber)}
+.k2-kb-note-1{fill:var(--k2-note-1)}.k2-kb-note-2{fill:var(--k2-note-2)}.k2-kb-note-3{fill:var(--k2-note-3)}.k2-kb-note-4{fill:var(--k2-note-4)}.k2-kb-note-5{fill:var(--k2-note-5)}
+.k2-kb-contact{fill:var(--k2-shadow)}
+.k2-kb-fold{fill:none;stroke:var(--k2-sheen);stroke-width:1.6;stroke-linecap:round;opacity:.7}
+.k2-t-kb-card{font-size:calc(15px * var(--k2-up,1));font-weight:700;fill:var(--k2-face-ink)}
+.k2-kb-tag-bug{fill:var(--k2-tag-bug)}.k2-kb-tag-feat{fill:var(--k2-tag-feat)}
+.k2-t-kb-tag{font-size:calc(14px * var(--k2-up,1));font-weight:800;fill:var(--k2-on-tag)}
+.k2-kb-av{fill:var(--k2-marker-ink);stroke:var(--k2-sheen);stroke-width:2}
+.k2-kb-av-hi{fill:var(--k2-sheen);opacity:.16}
+.k2-t-kb-av{font-size:calc(14px * var(--k2-up,1));font-weight:800;fill:var(--k2-on-tag);letter-spacing:.02em}
+.k2-kb-bar{fill:var(--k2-sheen)}
+.k2-kb-mag-hi{fill:var(--k2-sheen);opacity:.35}
+.k2-kb-tray-back{fill:var(--k2-alu-lo)}
+.k2-kb-cap-blue{fill:var(--k2-marker-blue)}.k2-kb-cap-red{fill:var(--k2-marker-red)}.k2-kb-cap-ink{fill:var(--k2-marker-ink)}
+.k2-kb-ring{fill:var(--k2-marker-ink);opacity:.35}
+.k2-kb-glint{fill:var(--k2-sheen);opacity:.55}
+.k2-kb-felt{fill:var(--k2-felt)}
+.k2-kb-handle{fill:var(--k2-marker-ink)}
+.k2-kb-plug{fill:var(--k2-corner-lo)}
+.k2-t-kb-call{font-size:calc(17px * var(--k2-up,1));font-weight:800;fill:var(--k2-marker-red)}
+.k2-kb-lbl .k2-halo{stroke:var(--k2-board-hi)}
+.k2-kb-lbl .k2-t-sub{fill:var(--k2-marker-ink)}
+.k2-kb-lbl .k2-lead{stroke:var(--k2-marker-red);stroke-width:2}
+.k2-kb-lbl .k2-dot{fill:var(--k2-marker-red);stroke:var(--k2-board-hi)}
+
+/* motherboard: a dark board, its plastics, chips, gold and copper, the card's shroud and fans, a monitor's picture */
+:root{
+  --k2-pcb-hi:#1D3042;--k2-pcb-lo:#0A1420;--k2-trace:#2A4762;--k2-via:#3E5C78;--k2-silk:#C3D0DE;
+  --k2-plastic-hi:#3A4352;--k2-plastic-lo:#11151C;--k2-plastic2-hi:#7C899B;--k2-plastic2-lo:#485365;
+  --k2-chip-hi:#2E333C;--k2-chip-lo:#07080B;--k2-gold-hi:#F4D88E;--k2-gold-lo:#A9792A;
+  --k2-copper-hi:#E6A878;--k2-copper-lo:#8A4F26;--k2-bus:#7E5E3E;--k2-sub-hi:#1F5545;--k2-sub-lo:#0C2A21;
+  --k2-shroud-hi:#343D4B;--k2-shroud-lo:#10141A;--k2-fan-hi:#566275;--k2-fan-lo:#1A1F27;
+  --k2-sky-hi:#0E2554;--k2-sky-lo:#E07A4A;--k2-ground-hi:#1C1740;--k2-ground-lo:#05060F;--k2-sun:#FFD27A;
+  /* on a light page the board stays a dark board */
+  --k2-l-pcb-hi:#24384C;--k2-l-pcb-lo:#0E1A28;--k2-l-trace:#33536F;--k2-l-via:#4A6884;--k2-l-silk:#C3D0DE;
+  --k2-l-plastic-hi:#434C5B;--k2-l-plastic-lo:#161B23;--k2-l-plastic2-hi:#8794A6;--k2-l-plastic2-lo:#525E70;
+  --k2-l-chip-hi:#33383F;--k2-l-chip-lo:#0B0C10;--k2-l-gold-hi:#F4D88E;--k2-l-gold-lo:#A9792A;
+  --k2-l-copper-hi:#E6A878;--k2-l-copper-lo:#8A4F26;--k2-l-bus:#8A6A48;--k2-l-sub-hi:#24604E;--k2-l-sub-lo:#103227;
+  --k2-l-shroud-hi:#3A4352;--k2-l-shroud-lo:#141820;--k2-l-fan-hi:#5E6A7D;--k2-l-fan-lo:#1E232C;
+  --k2-l-sky-hi:#123060;--k2-l-sky-lo:#E07A4A;--k2-l-ground-hi:#221C4A;--k2-l-ground-lo:#080A16;--k2-l-sun:#FFD27A}
+.k2-light{--k2-pcb-hi:var(--k2-l-pcb-hi);--k2-pcb-lo:var(--k2-l-pcb-lo);--k2-trace:var(--k2-l-trace);--k2-via:var(--k2-l-via);--k2-silk:var(--k2-l-silk);
+  --k2-plastic-hi:var(--k2-l-plastic-hi);--k2-plastic-lo:var(--k2-l-plastic-lo);--k2-plastic2-hi:var(--k2-l-plastic2-hi);--k2-plastic2-lo:var(--k2-l-plastic2-lo);
+  --k2-chip-hi:var(--k2-l-chip-hi);--k2-chip-lo:var(--k2-l-chip-lo);--k2-gold-hi:var(--k2-l-gold-hi);--k2-gold-lo:var(--k2-l-gold-lo);
+  --k2-copper-hi:var(--k2-l-copper-hi);--k2-copper-lo:var(--k2-l-copper-lo);--k2-bus:var(--k2-l-bus);--k2-sub-hi:var(--k2-l-sub-hi);--k2-sub-lo:var(--k2-l-sub-lo);
+  --k2-shroud-hi:var(--k2-l-shroud-hi);--k2-shroud-lo:var(--k2-l-shroud-lo);--k2-fan-hi:var(--k2-l-fan-hi);--k2-fan-lo:var(--k2-l-fan-lo);
+  --k2-sky-hi:var(--k2-l-sky-hi);--k2-sky-lo:var(--k2-l-sky-lo);--k2-ground-hi:var(--k2-l-ground-hi);--k2-ground-lo:var(--k2-l-ground-lo);--k2-sun:var(--k2-l-sun)}
+.k2-s-hi{stop-color:var(--k2-hi)}
+.k2-s-pcb-hi{stop-color:var(--k2-pcb-hi)}.k2-s-pcb-lo{stop-color:var(--k2-pcb-lo)}
+.k2-s-plastic-hi{stop-color:var(--k2-plastic-hi)}.k2-s-plastic-lo{stop-color:var(--k2-plastic-lo)}
+.k2-s-plastic2-hi{stop-color:var(--k2-plastic2-hi)}.k2-s-plastic2-lo{stop-color:var(--k2-plastic2-lo)}
+.k2-s-chip-hi{stop-color:var(--k2-chip-hi)}.k2-s-chip-lo{stop-color:var(--k2-chip-lo)}
+.k2-s-gold-hi{stop-color:var(--k2-gold-hi)}.k2-s-gold-lo{stop-color:var(--k2-gold-lo)}
+.k2-s-copper-hi{stop-color:var(--k2-copper-hi)}.k2-s-copper-lo{stop-color:var(--k2-copper-lo)}
+.k2-s-sub-hi{stop-color:var(--k2-sub-hi)}.k2-s-sub-lo{stop-color:var(--k2-sub-lo)}
+.k2-s-shroud-hi{stop-color:var(--k2-shroud-hi)}.k2-s-shroud-lo{stop-color:var(--k2-shroud-lo)}
+.k2-s-fan-hi{stop-color:var(--k2-fan-hi)}.k2-s-fan-lo{stop-color:var(--k2-fan-lo)}
+.k2-s-sky-hi{stop-color:var(--k2-sky-hi)}.k2-s-sky-lo{stop-color:var(--k2-sky-lo)}
+.k2-s-ground-hi{stop-color:var(--k2-ground-hi)}.k2-s-ground-lo{stop-color:var(--k2-ground-lo)}
+.k2-s-sun{stop-color:var(--k2-sun)}
+.k2-mb-trace{fill:none;stroke:var(--k2-trace);stroke-width:1.3;stroke-linejoin:round;opacity:.8}
+.k2-mb-via{fill:var(--k2-via)}
+.k2-mb-hole{fill:var(--k2-chip-lo)}
+.k2-mb-silk{fill:none;stroke:var(--k2-silk);stroke-width:1.2;opacity:.45}
+.k2-mb-silk-f{fill:var(--k2-silk);opacity:.5}
+.k2-mb-edge{fill:none;stroke:var(--k2-hi);stroke-opacity:.16;stroke-width:1}
+.k2-mb-seam{stroke:var(--k2-outline);stroke-width:1.2;opacity:.7}
+.k2-mb-pinline{stroke:var(--k2-metal-mid);stroke-width:1.6}
+.k2-mb-slit{fill:var(--k2-metal-lo);opacity:.85}
+.k2-mb-groove{fill:var(--k2-chip-lo)}
+.k2-mb-groove-s{stroke:var(--k2-plastic-lo);stroke-width:2;opacity:.8}
+.k2-mb-mark{fill:var(--k2-hi);opacity:.14}
+.k2-mb-capband{fill:var(--k2-plastic-lo);opacity:.85}
+.k2-mb-ihs-line{fill:none;stroke:var(--k2-metal-lo);stroke-width:1.2;opacity:.35}
+.k2-mb-tint{fill:var(--k2-outline);opacity:.35}
+.k2-mb-hot{fill:var(--k2-amber)}
+.k2-mb-fin{stroke:var(--k2-metal-mid);stroke-width:2.2}
+.k2-mb-fin-dark{stroke:var(--k2-metal-lo);stroke-width:2.4;opacity:.55}
+.k2-mb-blade{stroke:var(--k2-fan-lo);stroke-width:1}
+.k2-mb-rim{fill:none;stroke:var(--k2-metal-mid);stroke-width:2;opacity:.6}
+.k2-mb-bus{fill:none;stroke:var(--k2-bus);stroke-width:1.6;stroke-linejoin:round;opacity:.8}
+.k2-mb-lit{fill:none;stroke:var(--k2-blue);stroke-width:2.2;stroke-linejoin:round}
+.k2-mb-lit-amber{fill:none;stroke:var(--k2-amber);stroke-width:2.2;stroke-linejoin:round}
+.k2-mb-glow{fill:none;stroke:var(--k2-blue);stroke-linejoin:round;opacity:.17}
+.k2-mb-glow-amber{fill:none;stroke:var(--k2-amber);stroke-linejoin:round;opacity:.17}
+.k2-mb-pkt{stroke:var(--k2-hi);stroke-width:3;stroke-linecap:round}
+.k2-mb-pkt-glow{stroke:var(--k2-blue);stroke-width:9;stroke-linecap:round}
+.k2-mb-pkt-glow-amber{stroke:var(--k2-amber);stroke-width:9;stroke-linecap:round}
+.k2-mb-cable{fill:none;stroke:var(--k2-plastic-lo);stroke-linecap:round;stroke-linejoin:round}
+.k2-mb-cable-hi{fill:none;stroke:var(--k2-plastic-hi);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
+.k2-mb-dim{fill:var(--k2-pcb-lo)}
+.k2-mb-focus{fill:none;stroke:var(--k2-blue);stroke-width:3}
+.k2-mb-focus-glow{fill:none;stroke:var(--k2-blue);stroke-width:12;opacity:.22}
+.k2-mb-screen{fill:var(--k2-chip-lo)}
+.k2-mb-hill{fill:var(--k2-ground-hi)}
+.k2-mb-grid{stroke:var(--k2-blue);stroke-width:1;opacity:.55;fill:none}
+.k2-mb-shine{fill:var(--k2-hi);opacity:.05}
+.k2-mb-led{fill:var(--k2-good)}
+.k2-mb-smd{fill:var(--k2-chip-hi);stroke:var(--k2-metal-mid);stroke-width:.8}
+.k2-mb-smd2{fill:var(--k2-gold-lo);opacity:.8}

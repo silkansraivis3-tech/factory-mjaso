@@ -134,6 +134,9 @@ something. Measured, not judged by eye: a frame-by-frame probe found no jump in 
 `KIT2D.audit` is clean at every step of the seven demo figures at both tablet sizes, and caught the week labels and
 the Today tag colliding inside a compiled deck before they were fixed. 2.114.0: more parts (bars, pyramid, balance,
 events, compare, person, tank, pump) and `kit2d/scripts/test_kit2d.py`, which walks every demo figure through the audit.
+2.115.0: four detailed scene parts (tanker section, radar, kanban, motherboard), pipes joined to pumps and tanks by
+ports, and the composer in `compile_module.py`: each 2D starter is chosen from its slide's own words, never the same
+look within 5 slides (the compile fails it), with a `_brief` the builder reads before changing the kind.
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
 ## Known limits

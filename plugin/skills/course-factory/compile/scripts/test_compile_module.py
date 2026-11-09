@@ -2378,6 +2378,42 @@ def kit2d_part(tmp):
     lay = dict(proc, id="s08", visual_kind="interactive_diagram", text="Fuel tank.\nTank connection space.\nFuel preparation room.")
     check("... a slide whose lines are mostly equipment and spaces (a layout) keeps the figure kit's starter",
           not cm.kit2d_slide({"module": 1}, lay) and not cm.kit2d_slide({"module": 1}, dict(proc, visual_kind="schematic")))
+    # each figure composed from its own slide's words, never one template after another
+    looks, seen = [], []
+    for i in range(3):
+        sp = cm.starter_kit2d({"module": 1}, dict(proc, id="s1%d" % i), seen)
+        looks.append(sp["_look"]); seen.append(sp["_look"])
+    check("starter_kit2d: three process slides in a row are laid out three ways (across, two rows, down the page), and "
+          "\"_brief\" says what each shows and why",
+          looks == ["process:row", "process:rows", "process:column"] and "Composed as" in sp["_brief"]
+          and "Not " in sp["_brief"], (looks, sp.get("_brief")))
+    bars = cm.starter_kit2d({"module": 1}, dict(proc, visual_kind="step_animation", title="Fuel a day",
+                                                text="Main engine - 30 t/day.\nGenerators - 7 t/day.\nBoiler - 3 t/day."))
+    times = cm.starter_kit2d({"module": 1}, dict(proc, visual_kind="step_animation", title="The incident",
+                                                 text="02:10 - gas alarm.\n02:13 - pump stopped.\n02:29 - all clear."))
+    pyr = cm.starter_kit2d({"module": 1}, dict(proc, title="The hierarchy of controls",
+                                               text="Eliminate.\nSubstitute.\nEngineering controls.\nPPE."))
+    say = cm.starter_kit2d({"module": 1}, dict(proc, title="A helm order", text='Master: "Port twenty."\nOfficer of the watch: "Port twenty, sir."'))
+    vs = cm.starter_kit2d({"module": 1}, dict(proc, title="Gas safe vs ESD-protected",
+                                              text="Failure - no gas released / gas may be released.\nPipe - double-walled / single-walled."))
+    check("... the slide's own numbers make bars, its times a time line, its ranked levels a pyramid, people speaking "
+          "people with their words, two things compared a comparison - nothing invented, no \"_todo\"",
+          [x["value"] for x in bars["parts"][0]["items"]] == [30, 7, 3] and bars["parts"][0]["unit"] == "t/day"
+          and times["parts"][0]["clock"] and [e["at"] for e in times["parts"][0]["events"]] == [130, 133, 149]
+          and pyr["_look"] == "pyramid" and say["parts"][1]["say"] == "Port twenty, sir."
+          and [c["title"] for c in vs["parts"][0]["cols"]] == ["Gas safe", "ESD-protected"]
+          and not any("_todo" in x for x in (bars, times, pyr, say, vs)), (bars, times, pyr, say, vs))
+    cyc_spec = {k: v for k, v in sc.items() if not k.startswith("_")}
+
+    def page(sid, spec):
+        return '<script type="application/json" id="k2-%s">%s</script>' % (sid, json.dumps(spec).replace("</", "<\\/"))
+    near, far = [], []
+    scr = [dict(cyc, id="s%02d" % i) for i in range(1, 8)]
+    cm.kit2d_variety({"module": 1, "screens": scr}, scr, [page("s01", cyc_spec), "", page("s03", cyc_spec), "", "", "", ""], near)
+    cm.kit2d_variety({"module": 1, "screens": scr}, scr, [page("s01", cyc_spec), "", "", "", "", page("s06", cyc_spec), ""], far)
+    check("kit2d_variety: two 2D figures that look alike two slides apart are a problem naming the other slide and what else "
+          "the slide's words make; five slides apart they are not",
+          len(near) == 1 and "s01" in near[0] and "a cycle" in near[0] and "also make" in near[0] and not far, (near, far))
     check("... the module holds the factory's kit2d.js and kit2d.css, byte for byte (design_system.py ships them)",
           same(os.path.join(md, "assets", "kit2d.js"), os.path.join(kit2d_dir, "kit2d.js"))
           and same(os.path.join(md, "assets", "kit2d.css"), os.path.join(kit2d_dir, "kit2d.css")), out)

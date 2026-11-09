@@ -2,7 +2,7 @@
 
 The 2D kit (`kit2d.js`, `kit2d.css`) draws a 2D teaching figure from a short JSON spec, the way the 3D kit draws a
 scene: a graph, an object in motion (a cutaway with its flow), or a concept (a cycle, a timeline, a matrix, a process).
-Plain SVG, no library. Open `demos.html`, `pm.html` and `more.html` to see every part step by step;
+Plain SVG, no library. Open `demos.html`, `pm.html`, `more.html` and `courses.html` (a figure for each of five courses) to see every part step by step;
 `scripts/test_kit2d.py` walks them all and runs the overlap check at every step.
 
 The figure kit (`../kit/`) stays for what is a control screen (panels, gauges, alarm lists - an HMI the trainee reads)
@@ -37,9 +37,12 @@ In a course the build sheet names the spec as the slide's figure: `"s05": {"figu
 <script type="application/json" id="k2-s05">{ ...the spec... }</script></div>
 ```
 
-and ships `kit2d.js` and `kit2d.css` with the module. `--init-build` writes a starter from the slide's lines (a
-process, a cycle, a timeline, a grid or a chart); its `"_todo"`, when it has one, names the values only the course's
-sources can give, and the compile reports it until it is gone. Alone: `KIT2D.mount(element, spec)` returns the figure
+and ships `kit2d.js` and `kit2d.css` with the module. `--init-build` composes a starter from the slide's own lines -
+the best fit of everything they can make (bars of its numbers, a time line of its times, a cycle, people speaking, a
+comparison, a pyramid, a schedule, a grid, a graph, a process laid out four ways) whose look the slides just before do
+not have - and says why in the build sheet's `"_brief"`. Two figures that look alike less than 5 slides apart fail the
+compile. Its `"_todo"`, when it has one, names the values only the course's sources can give, and the compile reports
+it until it is gone. Alone: `KIT2D.mount(element, spec)` returns the figure
 (`goStep(n)`, `next()`, `prev()`, `idle()`).
 
 ## Top level
@@ -76,11 +79,11 @@ Steps, sliders, toggles and drags all write the same states, so they never fight
 
 | type | settings |
 |---|---|
-| `pipe` | `pts` (straight runs), `r` (bore), `wall`, `flow` (0..1), `speed`, `n`, `gate: {x, open}` - cut along its length, the flow as streaks that follow it, faster through a gap, stopped when nothing flows |
+| `pipe` | `pts` (straight runs), `r` (bore), `wall`, `flow` (0..1), `speed`, `n`, `gate: {x, open}`, `from` / `to` (a pump's or tank's id: it starts at the pump's nozzle and ends through the tank's wall, bolted flange to flange, leaving and arriving level; `pts` are then only the bends) - cut along its length, the flow as streaks that follow it, faster through a gap, stopped when nothing flows |
 | `gate_valve` | `x y` (the pipe's axis), `r`, `open`, `turns`, `pressure: [open, shut]`, `label`, `sub` - publishes `flow`, `open`, `pressure` |
 | `gauge` | `x y r min max step value unit label stem` |
-| `tank` | `x y w h`, `level` (0..1), `label`, `sub`, `scale`, `unit` - cut open, the liquid rising and falling, its level on a tag; publishes `level` |
-| `pump` | `x y` (the shaft), `r`, `speed` (0..1; the impeller stops at 0), `rpm`, `vanes`, `label`, `sub` - a centrifugal pump cut open; publishes `flow`, `speed` |
+| `tank` | `x y w h`, `level` (0..1), `inlet` (the y where a pipe comes in through its left wall), `label`, `sub`, `scale`, `unit` - cut open, the liquid rising and falling, its level on a tag; publishes `level` |
+| `pump` | `x y` (the shaft), `r`, `speed` (0..1; the impeller stops at 0), `rpm`, `vanes`, `label`, `sub` - a centrifugal pump cut open, its volute widening into a flanged discharge nozzle; publishes `flow`, `speed` |
 
 **Concepts**
 
@@ -95,10 +98,19 @@ Steps, sliders, toggles and drags all write the same states, so they never fight
 | `token` | `route: [arrow ids]`, `at` (k = the end of the k-th arrow), `show` |
 | `pyramid` | `x y w h`, `levels: [{name, cat}]` (top first), `at` (levels shown from the top), `pick`, `top` / `bottom` (the side note) |
 | `balance` | `x y` (the pivot), `w`, `left` / `right`: `{label, items: [names], weight, cat}`, `k`, `max` - the beam tips on a spring; a pan shows as many items as its weight |
-| `events` | `x y w start end step tick`, `events: [{at, label, sub, cat}]`, `cursor`, `cursorTag` - each comes in as the cursor reaches it |
+| `events` | `x y w start end step tick`, `clock` (times in minutes after midnight, shown as 02:10), `events: [{at, label, sub, cat}]`, `cursor`, `cursorTag` - each comes in as the cursor reaches it |
 | `compare` | `x y w h`, `cols: [{title, cat}]`, `rows: [{cells: [..], marks: [1, 0, null]}]` (a tick, a cross, none), `at` (rows shown) |
 | `person` | `x y` (feet), `scale`, `name`, `role`, `cat`, `say`, `sayShow`, `side` (`up` / `right` / `left`: the bubble), `bubbleW`, `bubbleH`, `show`, `lit` |
 | `callout` | `at: [x, y]`, `text`, `sub`, `side`, `dist`, `show` |
+
+**Hero figures** - one detailed scene a module can build its story on; `courses.html` shows each step by step.
+
+| type | settings |
+|---|---|
+| `tanker_section` | `x` (centreline), `sea` (waterline y), `k` (px a metre), `beam`, `depth`, `cargo`, `ballast` (0..1), `breach` (0..1: the starboard wing tank floods, the oil stays in), `list`, `highlight` (1 outer hull, 2 inner hull, 3 ballast, 4 cargo), `labels` + `sets` + `words` (the words each step shows) - the double-hull midship section afloat at the draught its load gives; publishes `draught`, `list`, `cargo`, `ballast` |
+| `radar_ppi` | `x y r`, `range`, `rings`, `up` (`north` / `head`), `own: {course, speed}`, `sweep` (revolutions, turned at a steady speed - echoes paint as it passes), `t` (minutes), `alter`, `trails`, `vectors`, `vecmin`, `limit`, `clutter`, `targets: [{name, brg, rng, course, speed}]` (true motion), `land`, `vrm`, `ebl`, `labels` - relative motion with ARPA vectors and the CPA; publishes `cpa`, `tcpa`, `rng`, `brg` of the first target |
+| `kanban` | `x y w h`, `columns: [{name, wip}]`, `cards: [{id, text, who, cat, tag, col, order, blocked}]`, `labels: [{text, sub, card, edge, col, show}]` - sticky notes pulled from column to column, a WIP badge that turns amber over its limit; publishes `done`, `over`, `n0`, `n1`, .. |
+| `motherboard` | `x y w`, `ram` (2 / 4), `focus` (1 CPU and VRM, 2 RAM, 3 graphics card, 4 SSD, 5 chipset, 6 CPU and RAM), `power`, `buses: [{pts, lanes, lit, send, both, tone, fans, cable, label, show}]` (each whole step up of `send` sends one burst of data), `tags: [{on, text, sub, show}]`, `display: {x, y, w, show}` - a PC board from above, its buses lighting up |
 
 A part the kit does not have yet is made in `kit2d.js` with `KIT2D.define(type, function (f, p) {...})`: its colours
 by class from `kit2d.css`, its words through `f.label`, its solids and lines registered (`f.solid`, `f.line`) so labels

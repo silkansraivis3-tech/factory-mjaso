@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2D kit - five courses</title>
+<link rel="stylesheet" href="../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="kit2d.css">
+<style>
+@font-face{font-family:"Raleway";src:url("../../course-module-ui/templates/fonts/raleway-variable.ttf") format("truetype");font-weight:100 900;font-display:block}
+:root{--cat-1:#2EB6F8;--cat-2:#3CC8B4;--cat-3:#A596F5;--cat-4:#EE93B6;--cat-5:#A8BBD0}
+body{margin:0;background:var(--deep);color:var(--txt-d);font-family:var(--font)}
+.course{padding:30px 28px 6px;font-size:15px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);border-top:3px solid var(--blue)}
+section{padding:14px 28px 30px;border-bottom:1px solid var(--line-d)}
+.kind{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--faint-d)}
+h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);font-size:17px;max-width:900px}
+.host{height:600px}
+.demo-note{font-size:13px;color:var(--faint-d);margin-top:10px}
+</style></head><body>
+
+<!-- ============ TANKER ============ -->
+<div class="course">1 · Tanker familiarisation</div>
+
+<section id="h-tanker">
+  <div class="kind">Object · tanker section</div>
+  <h2>The double hull</h2>
+  <p class="lead">Two hulls with ballast space between them. When the outer hull is torn, the sea floods the ballast tank - the oil stays in the cargo tank.</p>
+  <div class="host" data-kit2d="#spec-tanker"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-tanker">
+{ "label": "A double-hull oil tanker cut through midships: loading cargo while ballast goes out sinks her deeper; a collision tears the outer hull below the waterline, sea water floods the wing ballast tank and the inner hull keeps the oil in.",
+  "size": [1000, 600], "glow": {"x": 500, "y": 300, "rx": 470, "ry": 300}, "idle": "A double-hull tanker in ballast",
+  "state": {"cargo": 0, "ballast": 1, "breach": 0, "hl": 0, "lb": 0},
+  "rates": {"cargo": 1.8, "ballast": 1.8, "breach": 2, "hl": 5, "lb": 6},
+  "parts": [
+    {"id": "S", "type": "tanker_section", "x": 500, "sea": 340, "k": 12.5, "beam": 43, "depth": 21,
+     "cargo": "@cargo", "ballast": "@ballast", "breach": "@breach", "highlight": "@hl", "labels": "@lb"}
+  ],
+  "steps": [
+    {"title": "Cut through midships: two hulls", "set": {"lb": 1}},
+    {"title": "Between the hulls: ballast tanks", "set": {"lb": 2, "hl": 3}},
+    {"title": "Loading: cargo in, ballast out", "set": {"lb": 3, "hl": 0, "cargo": 0.96, "ballast": 0}},
+    {"title": "Collision: the outer hull is torn", "set": {"lb": 4, "breach": 1}},
+    {"title": "The inner hull keeps the oil in", "set": {"lb": 5, "hl": 2}}
+  ],
+  "controls": [{"type": "slider", "state": "cargo", "min": 0, "max": 1, "step": 0.01, "scale": 100, "label": "Cargo", "unit": "%"}],
+  "readouts": [{"label": "Draught", "value": "S.draught", "unit": "m", "decimals": 1}, {"label": "Cargo", "value": "S.cargo", "scale": 100, "unit": "%"},
+               {"label": "List", "value": "S.list", "unit": "°", "decimals": 1}]
+}
+</script>
+
+
+<section id="t-load">
+  <div class="kind">Object · pump, pipe, tank</div>
+  <h2>Loading a cargo tank</h2>
+  <p class="lead">Full rate while the tank is low, slow down to top off, stop before it is full.</p>
+  <div class="host" data-kit2d="#spec-t-load"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-t-load">
+{ "label": "Loading a cargo tank: the shore pump runs at full rate, slows down for topping off, and stops before the tank is full.",
+  "size": [1000, 600], "state": {"s": 0, "lv": 0.1, "top": 0}, "rates": {"s": 3, "lv": 1.0},
+  "parts": [
+    {"id": "U", "type": "pump", "x": 230, "y": 380, "r": 82, "speed": "@s", "label": "Shore pump", "sub": "the loading rate"},
+    {"id": "T", "type": "tank", "x": 700, "y": 110, "w": 190, "h": 400, "inlet": 200, "level": "@lv", "label": "Cargo tank 3 port"},
+    {"id": "L", "type": "pipe", "from": "U", "to": "T", "pts": [[600, 0], [600, 0]], "flow": "U.flow", "speed": 160},
+    {"type": "callout", "at": [700, 130], "text": "Topping off", "sub": "slow rate, close watch", "side": "left", "show": "@top"}
+  ],
+  "steps": [
+    {"title": "Loading starts at full rate", "set": {"s": 1, "lv": 0.7}, "after": {"lv": 400}},
+    {"title": "Near the top: slow down to top off", "set": {"s": 0.3, "lv": 0.92, "top": 1}},
+    {"title": "At the ordered level: stop", "set": {"s": 0, "lv": 0.97}}
+  ],
+  "controls": [{"type": "slider", "state": "s", "min": 0, "max": 1, "step": 0.01, "scale": 100, "label": "Loading rate", "unit": "%"}],
+  "readouts": [{"label": "Level", "value": "T.level", "scale": 100, "unit": "%"}, {"label": "Rate", "value": "U.flow", "scale": 100, "unit": "%"}]
+}
+</script>
+
+<section id="t-inert">
+  <div class="kind">Graph · curve</div>
+  <h2>Inerting a cargo tank</h2>
+  <p class="lead">Inert gas pushes the air out. The oxygen falls fast at first, then slowly, until it is under the limit.</p>
+  <div class="host" data-kit2d="#spec-t-inert"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-t-inert">
+{ "label": "Oxygen in a cargo tank against the inert gas put in: it falls from 21 % and goes under the 8 % limit after about one and a half tank volumes.",
+  "size": [960, 540], "glow": {"x": 480, "y": 260},
+  "state": {"draw": 0, "lim": 0, "n": 0, "pt": 0}, "rates": {"draw": 3.2, "lim": 4, "n": 3},
+  "parts": [
+    {"id": "C", "type": "chart", "x": 120, "y": 60, "w": 740, "h": 390,
+     "xaxis": {"min": 0, "max": 5, "step": 1, "label": "Inert gas put in", "unit": "tank volumes"},
+     "yaxis": {"min": 0, "max": 24, "step": 4, "label": "Oxygen in the tank", "unit": "%"}},
+    {"id": "LIM", "type": "curve", "on": "C", "pts": [[0, 8], [5, 8]], "cat": 4, "area": false, "draw": "@lim", "label": "Limit 8 %"},
+    {"id": "F", "type": "curve", "on": "C", "fn": {"kind": "exp", "a": 17, "k": -1, "b": 4}, "cat": 2, "draw": "@draw", "area": true, "label": "Oxygen"},
+    {"id": "P", "type": "point", "on": "C", "curve": "F", "x": "@n", "show": "@pt", "tagx": "{x} volumes", "tagy": "{y} %", "dx": 1, "dy": 1,
+     "drag": "n", "snap": 0.1, "min": 0, "max": 5, "dragLabel": "inert gas put in"}
+  ],
+  "steps": [
+    {"title": "Air in the tank: 21 % oxygen", "set": {"pt": 1}},
+    {"title": "Inert gas goes in: the oxygen falls", "set": {"draw": 1, "n": 1}, "after": {"n": 500}},
+    {"title": "The limit: under 8 %", "set": {"lim": 1}},
+    {"title": "Under the limit after about 1.5 volumes", "set": {"n": 1.6}}
+  ],
+  "controls": [{"type": "slider", "state": "n", "min": 0, "max": 5, "step": 0.1, "label": "Inert gas put in", "unit": "volumes", "decimals": 1}],
+  "readouts": [{"label": "Oxygen", "value": "P.y", "unit": "%", "decimals": 1}]
+}
+</script>
+
+<!-- ============ RADAR ============ -->
+<div class="course">2 · Radar and ARPA</div>
+
+<section id="d-radar">
+  <div class="kind">Object · radar and ARPA</div>
+  <h2>Radar: a target on a steady bearing is a risk of collision</h2>
+  <p class="lead">One sweep paints the picture. Trails show where the targets came from, ARPA vectors show where they go. Target A heads straight for you until you alter course.</p>
+  <div class="host" data-kit2d="#spec-radar"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-radar">
+{ "label": "A ship's radar in relative motion, north up, 6 nautical mile range: the sweep paints a coast, sea clutter and three targets; Target A closes on a steady bearing with a CPA near zero until own ship alters 60 degrees to starboard and the CPA opens to 1.4 miles.",
+  "size": [1000, 600], "glow": false,
+  "state": {"sweep": 0, "t": 0, "trails": 0, "vectors": 0, "clutter": 1, "crs": 0, "vrm": 3, "vrmon": 0, "ebl": 45, "eblon": 0,
+            "lcoast": 0, "lown": 0, "lhead": 0, "lrings": 0, "lnames": 0, "la": 0, "lcpa": 0},
+  "rates": {"t": 3, "crs": 3, "trails": 5},
+  "parts": [
+    {"id": "R", "type": "radar_ppi", "x": 300, "y": 300, "r": 214, "range": 6, "rings": 1.5, "up": "north",
+     "own": {"course": "@crs", "speed": 12}, "sweep": "@sweep", "t": "@t", "alter": 6,
+     "trails": "@trails", "vectors": "@vectors", "vecmin": 6, "limit": 1, "clutter": "@clutter", "wind": 30, "ringAt": 160,
+     "targets": [
+       {"name": "Target A", "brg": 45, "rng": 5.0, "course": 262, "speed": 14.5, "size": 16, "show": "@la"},
+       {"name": "Target B", "brg": 300, "rng": 3.6, "course": 75, "speed": 9, "size": 13},
+       {"name": "Target C", "brg": 335, "rng": 2.6, "course": 0, "speed": 7, "size": 11}
+     ],
+     "land": [{"from": 210, "to": 336, "rng": 5.0, "depth": 2.2, "wiggle": 0.9}, {"from": 98, "to": 113, "rng": 4.6, "depth": 0.45, "wiggle": 0.3, "step": 1.2}],
+     "vrm": {"rng": "@vrm", "show": "@vrmon"}, "ebl": {"brg": "@ebl", "show": "@eblon"},
+     "labels": {"own": "@lown", "heading": "@lhead", "rings": "@lrings", "coast": "@lcoast", "names": "@lnames", "cpa": "@lcpa"}}
+  ],
+  "idle": "The radar screen, before the first sweep",
+  "steps": [
+    {"title": "One sweep paints the picture", "set": {"sweep": 1, "lcoast": 1}, "after": {"lcoast": 2000}},
+    {"title": "Own ship at the centre, heading line up, rings 1.5 nm apart", "set": {"lcoast": 0, "lown": 1, "lhead": 1, "lrings": 1}},
+    {"title": "Trails show where each target came from", "set": {"lown": 0, "lhead": 0, "lrings": 0, "trails": 1, "lnames": 1, "la": 1}},
+    {"title": "ARPA vectors: Target A heads straight for you", "set": {"vectors": 1, "lcpa": 1, "eblon": 1}},
+    {"title": "6 minutes on: steady bearing, range closing", "set": {"t": 6, "sweep": 2, "vrmon": 1, "lnames": 0}},
+    {"title": "Alter 60° to starboard: the vector clears", "set": {"crs": 60, "sweep": 3, "vrmon": 0, "eblon": 0, "lhead": 1}}
+  ],
+  "controls": [{"type": "toggle", "state": "clutter", "label": "Anti-clutter sea", "options": [["Off", 1], ["On", 0.2]]}],
+  "readouts": [{"label": "CPA", "value": "R.cpa", "unit": "nm", "decimals": 2}, {"label": "TCPA", "value": "R.tcpa", "unit": "min", "decimals": 1},
+               {"label": "Range", "value": "R.rng", "unit": "nm", "decimals": 1}]
+}
+</script>
+
+
+<section id="r-cpa">
+  <div class="kind">Graph · curve, point</div>
+  <h2>Closest point of approach</h2>
+  <p class="lead">The range to a target falls, reaches its closest point, and opens again. If the CPA is under your limit, act early.</p>
+  <div class="host" data-kit2d="#spec-r-cpa"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-r-cpa">
+{ "label": "Range to a target against time: it falls from 3.2 nautical miles to a closest point of 1 mile in 12 minutes, under the 2 mile limit, then opens.",
+  "size": [960, 540], "glow": {"x": 480, "y": 260},
+  "state": {"draw": 0, "lim": 0, "t": 0, "pt": 0}, "rates": {"draw": 3, "t": 2.6},
+  "parts": [
+    {"id": "C", "type": "chart", "x": 120, "y": 60, "w": 740, "h": 390,
+     "xaxis": {"min": 0, "max": 24, "step": 4, "label": "Time from now", "unit": "min"},
+     "yaxis": {"min": 0, "max": 4, "step": 1, "label": "Range to the target", "unit": "nm"}},
+    {"id": "LIM", "type": "curve", "on": "C", "pts": [[0, 2], [24, 2]], "cat": 4, "area": false, "draw": "@lim", "label": "Your CPA limit 2 nm"},
+    {"id": "R", "type": "curve", "on": "C", "cat": 1, "draw": "@draw", "label": "Range",
+     "pts": [[0, 3.16], [2, 2.69], [4, 2.24], [6, 1.80], [8, 1.41], [10, 1.12], [12, 1.0], [14, 1.12], [16, 1.41], [18, 1.80], [20, 2.24], [22, 2.69], [24, 3.16]]},
+    {"id": "P", "type": "point", "on": "C", "curve": "R", "x": "@t", "show": "@pt", "tagx": "{x} min", "tagy": "{y} nm", "dx": 0, "dy": 1,
+     "drag": "t", "snap": 1, "min": 0, "max": 24, "dragLabel": "time"}
+  ],
+  "steps": [
+    {"title": "Now: the target is 3.2 nm away", "set": {"pt": 1}},
+    {"title": "The range closes", "set": {"draw": 1}},
+    {"title": "CPA 1.0 nm in 12 minutes (TCPA)", "set": {"t": 12}},
+    {"title": "Under your 2 nm limit: act early", "set": {"lim": 1}}
+  ],
+  "controls": [{"type": "slider", "state": "t", "min": 0, "max": 24, "step": 1, "label": "Time from now", "unit": "min"}],
+  "readouts": [{"label": "Range", "value": "P.y", "unit": "nm", "decimals": 1}]
+}
+</script>
+
+<section id="r-band">
+  <div class="kind">Concept · compare</div>
+  <h2>X-band or S-band</h2>
+  <p class="lead">Two radars on the bridge, each better at something. Row by row.</p>
+  <div class="host" data-kit2d="#spec-r-band"></div>
+</section>
+<script type="application/json" id="spec-r-band">
+{ "label": "X-band and S-band radar compared: wavelength, detail, rain and sea clutter, small targets.",
+  "size": [1000, 600], "state": {"r": 0}, "rates": {"r": 4},
+  "parts": [
+    {"id": "C", "type": "compare", "x": 40, "y": 30, "w": 920, "h": 540, "at": "@r",
+     "cols": [{"title": "X-band", "cat": 1}, {"title": "S-band", "cat": 3}],
+     "rows": [{"cells": ["Short wave, about 3 cm", "Long wave, about 10 cm"], "marks": [null, null]},
+              {"cells": ["Sharp picture, fine detail", "Coarser picture"], "marks": [1, 0]},
+              {"cells": ["Rain and sea clutter hide targets", "Sees through rain and sea clutter"], "marks": [0, 1]},
+              {"cells": ["Best for pilotage and small targets", "Best for long range in bad weather"], "marks": [1, 1]}]}
+  ],
+  "steps": [
+    {"title": "The wavelength", "set": {"r": 1}},
+    {"title": "The picture", "set": {"r": 2}},
+    {"title": "In rain and heavy sea", "set": {"r": 3}},
+    {"title": "What each is for", "set": {"r": 4}}
+  ]
+}
+</script>
+
+<!-- ============ PROJECT MANAGEMENT ============ -->
+<div class="course">3 · Project management</div>
+
+<section id="p-kanban">
+  <div class="kind">Board</div>
+  <h2>Stop starting, start finishing</h2>
+  <p class="lead">A kanban board shows where the work is. Each column has a limit; a card is pulled on only when the next column has room.</p>
+  <div class="host" data-kit2d="#spec-kanban"></div>
+  <div class="demo-note">A made-up team for the demo.</div>
+</section>
+<script type="application/json" id="spec-kanban">
+{ "label": "A team's kanban board with four columns, To do, In progress, Review and Done. Cards are pulled into In progress, too many are started and its WIP limit is broken, finished work piles up in Review where one card is blocked, then the team finishes cards before starting new ones and every column is back within its limit.",
+  "size": [1100, 600], "glow": {"x": 550, "y": 290, "rx": 600, "ry": 340},
+  "state": {"c_a": 1, "c_b": 3, "c_c": 2, "c_d": 0, "c_e": 0, "c_f": 0, "c_g": 0, "b_d": 0,
+            "l_pull": 0, "l_wip": 0, "l_bn": 0, "l_blk": 0},
+  "parts": [
+    {"id": "K", "type": "kanban", "x": 22, "y": 12, "w": 1056, "h": 542,
+     "columns": [{"name": "To do"}, {"name": "In progress", "wip": 2}, {"name": "Review", "wip": 2}, {"name": "Done"}],
+     "cards": [
+       {"id": "b", "text": "Fix crash on save", "who": "MK", "cat": 4, "tag": "Bug", "col": "@c_b", "order": 1},
+       {"id": "c", "text": "Search filter", "who": "JS", "cat": 2, "tag": "Feature", "col": "@c_c", "order": 2},
+       {"id": "a", "text": "Login page", "who": "AL", "cat": 1, "tag": "Feature", "col": "@c_a", "order": 3},
+       {"id": "d", "text": "Export to PDF", "who": "RB", "cat": 3, "tag": "Feature", "col": "@c_d", "order": 4, "blocked": "@b_d"},
+       {"id": "e", "text": "Update help text", "who": "AL", "cat": 5, "col": "@c_e", "order": 5},
+       {"id": "f", "text": "Slow report", "who": "JS", "cat": 4, "tag": "Bug", "col": "@c_f", "order": 6},
+       {"id": "g", "text": "Payment form", "who": "MK", "cat": 1, "tag": "Feature", "col": "@c_g", "order": 7}
+     ],
+     "labels": [
+       {"text": "Pulled, not pushed", "sub": "taken when there is room", "card": "d", "edge": "right", "side": "right", "dist": 32, "show": "@l_pull"},
+       {"text": "Too much started", "sub": "4 cards, the limit is 2", "card": "f", "edge": "left", "side": "left", "dist": 32, "show": "@l_wip"},
+       {"text": "Bottleneck", "sub": "finished work waits here", "col": 2, "side": "down", "dist": 8, "show": "@l_bn"},
+       {"text": "Blocked", "sub": "waits for a test server", "card": "d", "edge": "pin", "side": "right", "dist": 34, "show": "@l_blk"}
+     ]}
+  ],
+  "readouts": [
+    {"label": "Cards done", "value": "K.done"},
+    {"label": "Cards in progress", "value": "K.n1"}
+  ],
+  "idle": "The board: every card is a piece of work, every column a stage",
+  "steps": [
+    {"title": "Pull, not push: a card moves on when there is room for it", "set": {"c_d": 1, "l_pull": 1}},
+    {"title": "Too much started: In progress is over its WIP limit", "set": {"c_e": 1, "c_f": 1, "l_pull": 0, "l_wip": 1}, "after": {"c_f": 300}},
+    {"title": "Review is the bottleneck: finished work piles up there", "set": {"c_a": 2, "c_d": 2, "l_wip": 0, "l_bn": 1}},
+    {"title": "A card is blocked: it waits for a test server", "set": {"b_d": 1, "l_blk": 1}},
+    {"title": "Finish before starting: cards flow to Done, then the next is pulled", "set": {"b_d": 0, "c_c": 3, "c_a": 3, "c_e": 2, "c_g": 1, "l_bn": 0, "l_blk": 0},
+     "after": {"c_c": 250, "c_a": 550, "c_e": 900, "c_g": 1250}}
+  ]
+}
+</script>
+
+
+<section id="p-mile">
+  <div class="kind">Timeline · events</div>
+  <h2>Project milestones</h2>
+  <p class="lead">A milestone is a point you can check: done or not done, on its date or late.</p>
+  <div class="host" data-kit2d="#spec-p-mile"></div>
+  <div class="demo-note">A made-up project for the demo.</div>
+</section>
+<script type="application/json" id="spec-p-mile">
+{ "label": "A project time line in weeks: kick-off, requirements signed, design approved, build complete, go-live.",
+  "size": [1000, 600], "state": {"t": 0}, "rates": {"t": 2.4},
+  "parts": [
+    {"id": "E", "type": "events", "x": 80, "y": 300, "w": 840, "start": 0, "end": 20, "step": 4, "tick": "Week {v}", "cursor": "@t", "cursorTag": "Today",
+     "events": [{"at": 0.5, "label": "Kick-off", "sub": "team and sponsor", "cat": 1}, {"at": 4, "label": "Requirements signed", "sub": "scope is fixed", "cat": 1},
+                {"at": 8, "label": "Design approved", "cat": 3}, {"at": 15, "label": "Build complete", "sub": "tested", "cat": 2},
+                {"at": 19, "label": "Go-live", "sub": "handed over", "cat": 4}]}
+  ],
+  "steps": [
+    {"title": "Kick-off", "set": {"t": 1}},
+    {"title": "Requirements signed: the scope is fixed", "set": {"t": 5}},
+    {"title": "Design approved", "set": {"t": 9}},
+    {"title": "Build complete, then go-live", "set": {"t": 20}}
+  ]
+}
+</script>
+
+<section id="p-sprint">
+  <div class="kind">Concept · balance</div>
+  <h2>Plan a sprint to the team's capacity</h2>
+  <p class="lead">Ask for more than the team can do and the sprint tips over. Take out work until it balances.</p>
+  <div class="host" data-kit2d="#spec-p-sprint"></div>
+  <div class="demo-note">A made-up team for the demo.</div>
+</section>
+<script type="application/json" id="spec-p-sprint">
+{ "label": "A balance: the work asked for in a sprint on one side, the team's capacity on the other.",
+  "size": [1000, 600], "state": {"w": 0, "c": 0},
+  "parts": [
+    {"id": "S", "type": "balance", "x": 500, "y": 170, "w": 600, "k": 5, "max": 6,
+     "left": {"label": "Work asked for", "weight": "@w", "cat": 4, "items": ["Login", "Search", "Reports", "Payments", "Export", "Dark mode"]},
+     "right": {"label": "Team capacity", "weight": "@c", "cat": 2, "items": ["Anna", "Ben", "Chen", "Dina"]}}
+  ],
+  "steps": [
+    {"title": "The team: four people this sprint", "set": {"c": 4}},
+    {"title": "Six features asked for: it tips over", "set": {"w": 6}},
+    {"title": "Take out two: now it balances", "set": {"w": 4}}
+  ]
+}
+</script>
+
+<!-- ============ PC ARCHITECTURE ============ -->
+<div class="course">4 · PC component architecture</div>
+
+<section id="h-board">
+  <div class="kind">Object in motion · motherboard</div>
+  <h2>Inside the PC: who talks to whom</h2>
+  <p class="lead">A game loads from the SSD into RAM, the CPU works on it, and the graphics card turns it into the picture on the screen.</p>
+  <div class="host" data-kit2d="#spec-board"></div>
+  <div class="demo-note">Illustrative board, no make or model.</div>
+</section>
+<script type="application/json" id="spec-board">
+{ "label": "A PC main board seen from above: the game loads from the M.2 SSD over NVMe lanes to the CPU and into RAM, the CPU works on it over the memory bus, frames go over PCIe x16 to the graphics card and out to the display.",
+  "size": [1100, 640], "glow": {"x": 700, "y": 320, "rx": 520, "ry": 340},
+  "state": {"focus": 0, "pwr": 0, "p_pwr": 0, "x_pwr": 0, "p_ssd": 0, "x_ssd": 0, "p_ram": 0, "x_ram": 0, "p_gpu": 0, "x_gpu": 0, "p_disp": 0, "x_disp": 0, "screen": 0,
+            "n_cpu": 0, "n_vrm": 0, "n_ram": 0, "n_gpu": 0, "n_ssd": 0, "n_chip": 0, "n_disp": 0, "n_port": 0},
+  "rates": {"x_pwr": 3, "x_ssd": 3, "x_ram": 3, "x_gpu": 3, "x_disp": 3, "screen": 3},
+  "parts": [
+    {"id": "MB", "type": "motherboard", "x": 330, "y": 24, "w": 740, "ram": 4, "focus": "@focus", "power": "@pwr",
+     "display": {"x": -306, "y": 84, "w": 280, "show": "@screen"},
+     "buses": [
+       {"pts": [[176, 186], [206, 186]], "lanes": 7, "gap": 12, "tone": "amber", "lit": "@p_pwr", "send": "@x_pwr", "speed": 90, "len": 10, "packets": 2},
+       {"pts": [[407, 306], [407, 224], [374, 224]], "lanes": 4, "gap": 4.5, "lit": "@p_ssd", "send": "@x_ssd", "speed": 220, "label": "NVMe", "sub": "4 PCIe lanes"},
+       {"pts": [[374, 150], [478, 150]], "lanes": 8, "gap": 6, "at": [424, 126], "side": "up", "lit": "@p_ram", "send": "@x_ram", "both": true, "speed": 220, "label": "Memory bus"},
+       {"pts": [[250, 268], [250, 284], [176, 284], [176, 392]], "lanes": 6, "gap": 4.4, "lit": "@p_gpu", "send": "@x_gpu", "fans": true, "speed": 260, "label": "PCIe x16", "at": [168, 356], "side": "left"},
+       {"pts": [[-20, 475], [-100, 475], [-166, 409], [-166, 300]], "lanes": 3, "gap": 3, "cable": true, "lit": "@p_disp", "send": "@x_disp", "speed": 260, "label": "Display cable"}
+     ],
+     "tags": [
+       {"on": "cpu", "text": "CPU", "show": "@n_cpu", "at": [290, 199], "side": "up", "dist": 1, "fixed": true},
+       {"on": "vrm", "text": "VRM", "sub": "power for the CPU", "show": "@n_vrm", "at": [284, 57], "side": "up", "dist": 1, "fixed": true},
+       {"on": "ram", "text": "RAM", "show": "@n_ram"},
+       {"on": "gpu", "text": "Graphics card", "show": "@n_gpu", "at": [-8, 548], "side": "left"},
+       {"on": "ssd", "text": "M.2 SSD", "show": "@n_ssd", "at": [194, 322], "side": "left"},
+       {"on": "chipset", "text": "Chipset", "show": "@n_chip"},
+       {"on": "display", "text": "Display", "show": "@n_disp"},
+       {"on": "port", "text": "Display port", "show": "@n_port", "at": [-32, 488], "side": "down", "dist": 10}
+     ]}
+  ],
+  "idle": "A PC main board, seen from above",
+  "steps": [
+    {"title": "The board and its parts", "set": {"n_cpu": 1, "n_ram": 1, "n_gpu": 1, "n_ssd": 1, "n_chip": 1}},
+    {"title": "The CPU: the brain, fed by the VRM", "set": {"focus": 1, "n_ram": 0, "n_gpu": 0, "n_ssd": 0, "n_chip": 0, "n_vrm": 1, "pwr": 1, "p_pwr": 1, "x_pwr": 2}},
+    {"title": "The game loads: SSD to RAM", "set": {"focus": 4, "n_vrm": 0, "n_ssd": 1, "n_ram": 1, "pwr": 0.35, "p_pwr": 0, "p_ssd": 1, "x_ssd": 2, "p_ram": 1, "x_ram": 1}, "after": {"p_ram": 900, "x_ram": 1100}},
+    {"title": "The CPU works on it with RAM", "set": {"focus": 6, "n_ssd": 0, "p_ssd": 0.2, "x_ram": 5}},
+    {"title": "Frames go to the graphics card over PCIe x16", "set": {"focus": 3, "n_cpu": 0, "n_ram": 0, "n_gpu": 1, "p_ram": 0.2, "p_gpu": 1, "x_gpu": 3}},
+    {"title": "The picture goes out to the display", "set": {"n_gpu": 0, "n_disp": 1, "n_port": 1, "p_gpu": 0.3, "p_disp": 1, "x_disp": 2, "screen": 1}, "after": {"screen": 500}}
+  ]
+}
+</script>
+
+
+<section id="c-path">
+  <div class="kind">Process · node, arrow, token</div>
+  <h2>From the disk to the screen</h2>
+  <p class="lead">Opening a game: the data moves from the SSD to memory, the CPU prepares it, the graphics card draws it.</p>
+  <div class="host" data-kit2d="#spec-c-path"></div>
+</section>
+<script type="application/json" id="spec-c-path">
+{ "label": "The data path in a PC: SSD to RAM, RAM to CPU, CPU to the graphics card over PCI Express, the graphics card to the display.",
+  "size": [1120, 560], "glow": {"x": 560, "y": 270, "rx": 520, "ry": 280},
+  "state": {"n": 0, "a": 0, "t": 0}, "rates": {"n": 6, "a": 3.5, "t": 1.4},
+  "parts": [
+    {"id": "SSD", "type": "node", "x": 150, "y": 130, "w": 210, "h": 84, "text": "SSD", "sub": "keeps the files", "show": "@n", "cat": 5},
+    {"id": "RAM", "type": "node", "x": 560, "y": 130, "w": 210, "h": 84, "text": "RAM", "sub": "working memory", "show": "@n", "cat": 2},
+    {"id": "CPU", "type": "node", "x": 970, "y": 130, "w": 210, "h": 84, "text": "CPU", "sub": "runs the program", "show": "@n", "cat": 1},
+    {"id": "GPU", "type": "node", "x": 970, "y": 410, "w": 210, "h": 84, "text": "Graphics card", "sub": "draws each frame", "show": "@n", "cat": 3},
+    {"id": "DSP", "type": "node", "kind": "end", "x": 560, "y": 410, "w": 210, "h": 70, "text": "Display", "show": "@n"},
+    {"id": "a1", "type": "arrow", "from": "SSD", "to": "RAM", "label": "NVMe", "draw": "@a"},
+    {"id": "a2", "type": "arrow", "from": "RAM", "to": "CPU", "label": "memory bus", "draw": "@a"},
+    {"id": "a3", "type": "arrow", "from": "CPU", "to": "GPU", "label": "PCIe x16", "draw": "@a"},
+    {"id": "a4", "type": "arrow", "from": "GPU", "to": "DSP", "label": "HDMI / DP", "draw": "@a"},
+    {"type": "token", "route": ["a1", "a2", "a3", "a4"], "at": "@t"}
+  ],
+  "steps": [
+    {"title": "The parts and how they connect", "set": {"n": 1, "a": 1}, "after": {"a": 350}},
+    {"title": "The game loads from the SSD into RAM", "set": {"t": 1}},
+    {"title": "The CPU reads it and prepares the scene", "set": {"t": 2}},
+    {"title": "Over PCIe to the graphics card", "set": {"t": 3}},
+    {"title": "The frame goes to the display", "set": {"t": 4}}
+  ]
+}
+</script>
+
+<section id="c-mem">
+  <div class="kind">Concept · pyramid</div>
+  <h2>The memory hierarchy</h2>
+  <p class="lead">The closer to the CPU, the faster and the smaller. Each level holds what the one above needs next.</p>
+  <div class="host" data-kit2d="#spec-c-mem"></div>
+</section>
+<script type="application/json" id="spec-c-mem">
+{ "label": "The memory hierarchy, from the top: registers, cache, RAM, SSD, hard disk - faster and smaller at the top, slower and larger at the bottom.",
+  "size": [1000, 600], "state": {"at": 0, "pick": 0}, "rates": {"at": 4},
+  "parts": [
+    {"id": "P", "type": "pyramid", "x": 200, "y": 40, "w": 560, "h": 520, "at": "@at", "pick": "@pick", "top": "Fastest, smallest", "bottom": "Slowest, largest",
+     "levels": [{"name": "Registers", "cat": 1}, {"name": "Cache", "cat": 1}, {"name": "RAM", "cat": 2}, {"name": "SSD", "cat": 3}, {"name": "Hard disk", "cat": 5}]}
+  ],
+  "steps": [
+    {"title": "Registers: inside the CPU itself", "set": {"at": 1}},
+    {"title": "Cache: on the CPU chip", "set": {"at": 2}},
+    {"title": "RAM: the working memory", "set": {"at": 3, "pick": 3}},
+    {"title": "Storage: kept when the power is off", "set": {"at": 5, "pick": 0}}
+  ]
+}
+</script>
+
+<!-- ============ FIRST AID ============ -->
+<div class="course">5 · First aid</div>
+
+<section id="f-chain">
+  <div class="kind">Process · node, arrow, token</div>
+  <h2>The chain of survival</h2>
+  <p class="lead">Four links, one after another. Every link you do well makes the next one work.</p>
+  <div class="host" data-kit2d="#spec-f-chain"></div>
+</section>
+<script type="application/json" id="spec-f-chain">
+{ "label": "The chain of survival: recognise and call for help, start CPR, defibrillate, hand over to professional care.",
+  "size": [1120, 560], "glow": {"x": 560, "y": 270, "rx": 520, "ry": 280},
+  "state": {"n": 0, "a": 0, "t": 0}, "rates": {"n": 6, "a": 3.5, "t": 1.4},
+  "parts": [
+    {"id": "N1", "type": "node", "x": 180, "y": 150, "w": 250, "h": 90, "text": "Call for help", "sub": "recognise, call 112", "show": "@n", "cat": 4},
+    {"id": "N2", "type": "node", "x": 820, "y": 150, "w": 250, "h": 90, "text": "Start CPR", "sub": "push hard and fast", "show": "@n", "cat": 1},
+    {"id": "N3", "type": "node", "x": 820, "y": 400, "w": 250, "h": 90, "text": "Defibrillate", "sub": "use the AED", "show": "@n", "cat": 3},
+    {"id": "N4", "type": "node", "kind": "end", "x": 180, "y": 400, "w": 250, "h": 76, "text": "Professional care", "show": "@n"},
+    {"id": "a1", "type": "arrow", "from": "N1", "to": "N2", "draw": "@a"},
+    {"id": "a2", "type": "arrow", "from": "N2", "to": "N3", "label": "AED arrives", "draw": "@a"},
+    {"id": "a3", "type": "arrow", "from": "N3", "to": "N4", "label": "ambulance", "draw": "@a"},
+    {"type": "token", "route": ["a1", "a2", "a3"], "at": "@t"}
+  ],
+  "steps": [
+    {"title": "The four links", "set": {"n": 1, "a": 1}, "after": {"a": 350}},
+    {"title": "Help is called: start CPR at once", "set": {"t": 1}},
+    {"title": "The AED arrives: defibrillate", "set": {"t": 2}},
+    {"title": "Hand over to the ambulance crew", "set": {"t": 3}}
+  ]
+}
+</script>
+
+<section id="f-cpr">
+  <div class="kind">Graph · two curves</div>
+  <h2>Every minute counts</h2>
+  <p class="lead">Without CPR the chance of survival falls fast. CPR slows the fall until the AED arrives.</p>
+  <div class="host" data-kit2d="#spec-f-cpr"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-f-cpr">
+{ "label": "Chance of survival against minutes since collapse: it falls steeply with no CPR and much more slowly with CPR.",
+  "size": [960, 540], "glow": {"x": 480, "y": 260},
+  "state": {"d1": 0, "d2": 0, "t": 0, "pt": 0}, "rates": {"d1": 3, "d2": 3, "t": 2.6},
+  "parts": [
+    {"id": "C", "type": "chart", "x": 120, "y": 60, "w": 740, "h": 390,
+     "xaxis": {"min": 0, "max": 10, "step": 2, "label": "Minutes since collapse", "unit": "min"},
+     "yaxis": {"min": 0, "max": 100, "step": 20, "label": "Chance of survival", "unit": "%"}},
+    {"id": "NO", "type": "curve", "on": "C", "cat": 4, "draw": "@d1", "label": "No CPR",
+     "pts": [[0, 100], [2, 80], [4, 60], [6, 40], [8, 22], [10, 8]]},
+    {"id": "YES", "type": "curve", "on": "C", "cat": 2, "draw": "@d2", "label": "With CPR",
+     "pts": [[0, 100], [2, 93], [4, 86], [6, 79], [8, 72], [10, 65]]},
+    {"id": "P", "type": "point", "on": "C", "curve": "NO", "x": "@t", "show": "@pt", "tagx": "{x} min", "tagy": "{y} %", "dx": 0, "dy": 0,
+     "drag": "t", "snap": 1, "min": 0, "max": 10, "dragLabel": "minutes"}
+  ],
+  "steps": [
+    {"title": "No CPR: the chance falls fast", "set": {"d1": 1}},
+    {"title": "After 6 minutes", "set": {"pt": 1, "t": 6}},
+    {"title": "With CPR it falls much more slowly", "set": {"d2": 1}}
+  ],
+  "controls": [{"type": "slider", "state": "t", "min": 0, "max": 10, "step": 1, "label": "Minutes", "unit": "min"}],
+  "readouts": [{"label": "No CPR", "value": "P.y", "unit": "%", "decimals": 0}]
+}
+</script>
+
+<script src="kit2d.js"></script>
+</body></html>

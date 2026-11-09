@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """test_kit2d.py - the 2D kit in a hidden browser: every figure of the three demo pages (demos.html, pm.html, more.html)
-walked step by step at 1280 x 800 and 1024 x 768, and KIT2D.audit clean at the end of each step - no words over words,
+(and courses.html) walked step by step at 1280 x 800 and 1024 x 768, and KIT2D.audit clean at the end of each step - no words over words,
 no words out of their box, nothing cut at the edge, no label on a line, no box on another. Then that the audit itself
 still finds each of those, that Next and Previous both move things (never a jump to the end), and that kit2d.css has no
 colour defined as itself.
@@ -24,7 +24,7 @@ SKILLS = KIT.parents[1]
 sys.path.insert(0, str(SKILLS / "course-module-ux" / "measure" / "scripts"))
 from test_audit_drawing import browser  # noqa: E402  - the one place that finds Chrome or Edge
 
-PAGES = ["demos.html", "pm.html", "more.html"]
+PAGES = ["demos.html", "pm.html", "more.html", "courses.html"]
 SIZES = [(1280, 800), (1024, 768)]
 FAILS = []
 
@@ -98,6 +98,23 @@ def main():
           const back = c(); return [a, mid, end, back]; }""")
         check("the triangle's corner is part-way 120 ms after Next, and part-way back 120 ms after Previous",
               len(set(moved)) == 4, moved)
+        resized = pg.evaluate("""async () => {
+          const f = KIT2D.figures[2], c = () => f.svg.querySelector('.k2-node-ring').closest('g').getAttribute('transform');
+          f.goStep(0, true); await new Promise(r => setTimeout(r, 100)); f.next(); await new Promise(r => setTimeout(r, 60));
+          f.host.style.height = (f.host.offsetHeight - 40) + 'px'; f.resize(); const mid = c();
+          await new Promise(r => setTimeout(r, 1800)); const end = c(); f.host.style.height = ''; return [mid, end]; }""")
+        check("a resize mid-step (a step title wrapping) lets the step play on, never a jump to its end",
+              resized[0] != resized[1], resized)
+        pg.close()
+
+        pg = b.new_page(viewport={"width": 1280, "height": 800})
+        pg.goto((KIT / "more.html").as_uri())
+        pg.wait_for_timeout(900)
+        print("\n-- a pipe joined to a pump and a tank starts at the pump's flange and ends at the tank's wall")
+        ends = pg.evaluate("""() => { const f = KIT2D.figures.find(x => x.byId.U && x.byId.L && x.byId.T), u = f.byId.U.port, t = f.byId.T.port;
+          const d = f.svg.querySelector('.k2-l-back path[stroke-linejoin]').getAttribute('d').match(/-?[0-9.]+/g).map(Number);
+          return [Math.hypot(d[0] - u.x, d[1] - u.y), Math.hypot(d[d.length - 2] - t.x, d[d.length - 1] - t.y)]; }""")
+        check("the pipe meets the pump's nozzle and the tank's inlet, not a point in the casing or on a corner", max(ends) < 1, ends)
         pg.close()
         b.close()
     print("\n%d failed" % len(FAILS) if FAILS else "\nall passed")

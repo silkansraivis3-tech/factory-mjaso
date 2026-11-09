@@ -164,9 +164,9 @@ h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);fon
 { "label": "A centrifugal pump fills a tank through a pipe: the impeller turns, the flow moves, the level rises.",
   "size": [1000, 600], "state": {"s": 0, "lv": 0.15}, "rates": {"s": 3, "lv": 1.2},
   "parts": [
-    {"id": "L", "type": "pipe", "pts": [[330, 280], [620, 280], [620, 140], [710, 140]], "r": 22, "wall": 8, "flow": "U.flow", "speed": 160},
     {"id": "U", "type": "pump", "x": 230, "y": 380, "r": 82, "speed": "@s", "label": "Pump", "sub": "the impeller turns"},
-    {"id": "T", "type": "tank", "x": 700, "y": 110, "w": 190, "h": 400, "level": "@lv", "label": "Tank"}
+    {"id": "T", "type": "tank", "x": 700, "y": 110, "w": 190, "h": 400, "inlet": 200, "level": "@lv", "label": "Tank"},
+    {"id": "L", "type": "pipe", "from": "U", "to": "T", "pts": [[600, 0], [600, 0]], "flow": "U.flow", "speed": 160}
   ],
   "steps": [
     {"title": "The pump starts", "set": {"s": 1}},
