@@ -169,9 +169,9 @@ do not loop.
   own image?"*, *"put each picture next to the visualizations"*). Three tanks side by side in one drawing → a row of
   three pictures directly under it, one under each tank (`.m02-tankrow` in the IGF M02 drawing fragment).
 - **No scrollbar on a slide, ever** (owner, 2026-10-16). A dense two-column slide has no room in the words column -
-  a picture there made the slide body scroll by 8 px. Use the room the drawing column has spare, and keep the
-  pictures small (about 76 px high at 1280 x 800); do not shrink the drawing (its labels keep their px size and
-  collide). A tap opens each one full screen with its record.
+  a picture there made the slide body scroll by 8 px. Use the room the drawing column has spare; do not shrink the
+  drawing (its labels keep their px size and collide). **A photograph is never shown smaller than about 200 px on
+  screen**: where there is no room for that, it gets its own step, or a tap opens it full screen with its record.
 - On a stepped slide a picture that would give the answer away comes with its own step, never before: "predict,
   then reveal" is spoiled by a picture of the answer (CSS `:has(.<steptext>[data-step="N"].cur)`). A picture may
   fade with its drawing's part while another part is talked about.

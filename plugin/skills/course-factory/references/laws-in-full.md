@@ -784,6 +784,11 @@ explaining in detail what you want to see.' This will reduce failed attempts and
 - **The prompt is shown, and only a yes generates - once.** The nano-banana tools (1.2.0) refuse to run without the
   person's own words in `approved_by_user`; a redo is a new paid picture and needs a new yes; an edit of the good picture
   is preferred to a new one; no draft-then-final. The `image-director` agent makes approved pictures only, each once.
+- **In a course build, one yes per course.** The picture budget is asked once, at the start (`intake.json`
+  `picture_budget`, SKILL.md Stage 2); after it there is no question before each picture - the prompts are drafted
+  from the approved script (`picture_briefs.py queue`), the person may correct any line, and the budget yes is the
+  words in `approved_by_user`. An unattended build makes no paid pictures and never stops to wait. The steps above are
+  for a picture outside a course, or a course whose person gives no budget.
 - **What it cost is said every time.** Each picture is logged on the computer (`~/.config/nano-banana/usage.jsonl`) and
   per module (`working_claude/picture_briefs/M01.json`); each result says the count and the estimate (about €0.10 a
   picture, `NANO_BANANA_EUR_PER_IMAGE`); a video clip costs much more and says so.

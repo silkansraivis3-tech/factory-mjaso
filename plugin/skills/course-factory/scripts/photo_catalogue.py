@@ -14,7 +14,8 @@ what it shows (the old-course slide's own words, the knowledge base's caption or
 from and its rights (L33: every old-course and knowledge-base picture is usable as it is, credited). The scripts' photo
 slots ("picture": {"kind": "photo", "shows"}) are then matched to them for the whole course at once, so no picture is
 given to two slots (L58) before the parallel builds start. What has no good match is listed for ONE visual-sourcer pass
-for the whole course, at 1600 px or more (L52, L64) - not one search per builder.
+for the whole course, at 1600 px or more where the original is that large, 1024 px or more accepted (L52, L64) - not
+one search per builder.
 
 A pick is only a proposal: the build sheet takes it in Phase B (the builder, or compile/scripts/visual_needs.py fill
 --auto for a slide whose top candidate scores at least AUTO and is 800 px or more), marked "auto_picked", and the visual

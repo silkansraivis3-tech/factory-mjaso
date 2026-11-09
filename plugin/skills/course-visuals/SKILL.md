@@ -100,8 +100,8 @@ Build the module as far as it goes, then **leave the request with it**.
 `scripts/write_visual_handoff.py` writes one `VISUAL_HANDOFF.md`: a paste-ready prompt, every brief
 in full, the destination path and mount line for each asset, and the verification command. Where the
 agents are available, the factory spawns the work instead of writing a note — `visual-sourcer` to find,
-and, **only for a picture the person has described and said yes to** (L47: every picture costs about
-€0.10), `nano-banana:image-director` to generate it once — and the run continues. A module never stops because one image is
+and, **only within the course's picture budget, said yes to once** (L47: every picture costs about
+€0.10; no question before each picture), `nano-banana:image-director` to generate it once — and the run continues. A module never stops because one image is
 missing, and a missing image is never closed by inventing a schematic.
 
 ---
@@ -147,6 +147,12 @@ Every substantial animation answers all four questions **in the storyboard, befo
 
 **The failure signature:** if question 4 is answered by the caption alone, with the motion removed,
 the motion is not carrying the teaching. Ship the caption and a static figure.
+
+**An animation the person asks for is theirs (L26).** If the course office asks for an animation
+these rules see as decoration, never refuse it: say the risk once, in plain words (*"movement that
+does not teach pulls the eye away from what does"*), then make it, and record it as their choice -
+`course-factory/scripts/design_choices.py add <course> --rule motion --choice "<what they asked for>" --said "<their words>" --risk "<the risk told>"`. Every later build, fix and check (`check_visuals.py` among them)
+reports it as their choice, keeps it, and never asks again.
 
 Rejected by name — `review/knowledge/motion-rules.json` carries the full list and the reasons:
 random floating · decorative pulsing · bouncing icons · unnecessary fade sequences · moving arrows
@@ -213,8 +219,9 @@ generic HTML, which is where the card grids come from.
 > --source-work "<book, edition, page / figure>"` sets `rights_state: OWNER_CLEARED`, `cleared_by` (`"<name>, <date> -
 > <reason>"`) and `source_work` in the picture's `_photo_meta.json` / `_figure_meta.json`, and refuses without all three.
 > check_assets accepts it, L57 may place it as a thumbnail, and the credit - the full-screen view and the course's
-> credits page - is its `source_work`. Without a whole `cleared_by` it stays blocked: `RIGHTS_REVIEW_REQUIRED` blocks,
-> an `OWNER_CLEARED` book figure without it fails and L57 never uses it.
+> credits page - is its `source_work`. Without a whole `cleared_by` it is never published: `RIGHTS_REVIEW_REQUIRED` is
+> marked *rights not cleared* in the module's findings - the build carries on; publishing to the tablets is refused
+> while any is left (`course-tablet-publisher`); an `OWNER_CLEARED` book figure without it fails and L57 never uses it.
 
 > **A small photograph made sharp on this computer (2.68.0):** `scripts/upscale_photos.py <course> --modules 1-3`
 > (`--list` first shows what it would do) enlarges a module's photographs under 1000 px with Real-ESRGAN, run locally on
@@ -266,14 +273,14 @@ in place of a structured technical schematic.**
 
 Two escalations, and neither is silent:
 
-- **`RIGHTS_REVIEW_REQUIRED`** — rights unclear or restricted on a **download** (since 2.19.0 it goes on the owner's
-  licence list and does not stop the build; the knowledge base and the old course are `OWNER_CLEARED`). Before: **Blocks shipping.** An uncleared
-  publisher figure has already blocked a whole course in this system once.
+- **`RIGHTS_REVIEW_REQUIRED`** — rights unclear or restricted on a **download** (it goes on the owner's licence list;
+  the knowledge base and the old course are `OWNER_CLEARED`). The picture is marked *rights not cleared* in the module's findings - the build carries on; publishing to the tablets is refused while any is left (`course-tablet-publisher`, `gates.py` rights). An uncleared publisher
+  figure has already blocked a whole course in this system once.
 - **`GENERATED_ASSET_REQUIRED`** — nothing suitable exists at any level. Emit the full generation
-  brief in `source/schemas/GENERATED_ASSET_BRIEF.md`. If the **`nano-banana`** plugin is installed,
-  the person is asked to describe the picture first (its `realistic-visuals` §0, L47: every picture
-  costs money), shown the prompt, and only their yes sends it to `generate_image` / `generate_video` -
-  once; a redo needs a new yes. Otherwise the brief is the handoff.
+  brief in `source/schemas/GENERATED_ASSET_BRIEF.md`. If the **`nano-banana`** plugin is installed, it
+  is made once within the course's picture budget, said yes to once at the start - no question before
+  each picture (its `realistic-visuals` §0, *Which applies when*; L47: every picture costs money);
+  outside a course the person describes it and says yes first. Otherwise the brief is the handoff.
 
 `scripts/resolve_asset.py` runs levels 1 and 2 mechanically. Level 3 is judgement and belongs to the
 **`visual-sourcer`** agent, which works in isolated context and returns a short report.
@@ -366,7 +373,7 @@ skill's own:
 
 | Marker | Means |
 |---|---|
-| `RIGHTS_REVIEW_REQUIRED` | rights unclear or restricted. Blocks shipping. Owner decides - for a source-book figure, by name: `check_assets.py clear` (`cleared_by`, 2.63.2). |
+| `RIGHTS_REVIEW_REQUIRED` | rights unclear or restricted: *rights not cleared* - the build carries on, publishing is refused. Owner decides - for a source-book figure, by name: `check_assets.py clear` (`cleared_by`, 2.63.2). |
 | `GENERATED_ASSET_REQUIRED` | no suitable asset exists at any level; a generation brief is attached. |
 
 Every marker written into an artefact must also appear in the notes file.

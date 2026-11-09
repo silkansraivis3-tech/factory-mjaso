@@ -29,7 +29,8 @@ The key is never printed, logged or returned in a tool result.
 EVERY PICTURE COSTS MONEY (1.2.0, owner 2026-10-14) - about EUR 0.10 a picture on the NOVIKONTAS
 Google account, a video clip much more. So generate_image and generate_video refuse to run without
 approved_by_user: the person's own words saying yes to this exact picture, after they described it
-and saw the prompt. Every generation is written to ~/.config/nano-banana/usage.jsonl, and each
+and saw the prompt - or, in a Course Factory course build, the course's picture budget yes, asked once
+per course and used only within that budget. Every generation is written to ~/.config/nano-banana/usage.jsonl, and each
 result reports how many pictures were made today and this month, and roughly what they cost.
 
 THE WORDS ARE NOT ENOUGH ON THEIR OWN (1.3.1). approved_by_user is text Claude passes, so:
@@ -250,7 +251,9 @@ def cfg(name, default):
 NEED_YES = ("Not generated - every picture costs money (about EUR %.2f; a video clip much more). Ask the person "
             "first: show the place, the description they gave and the prompt, and ask \"Generate this one picture?\". "
             "Then call again with their own words of approval in approved_by_user. Never fill it in yourself, and "
-            "never reuse an earlier yes for a different picture or a redo.")
+            "never reuse an earlier yes for a different picture or a redo. In a Course Factory course build the one yes "
+            "is the course's picture budget (working_claude/intake.json picture_budget) - pass its words; no budget "
+            "recorded: ask for it once.")
 
 
 def _eur(name, default):
@@ -879,7 +882,8 @@ TOOLS = [
         "name": "generate_image",
         "description": (
             "COSTS MONEY (about EUR 0.10 a picture): call it only after the person described this picture and said "
-            "yes to the prompt you showed them - pass their words in approved_by_user. "
+            "yes to the prompt you showed them - pass their words in approved_by_user (in a Course Factory course "
+            "build: the course's picture budget yes, no question per picture). "
             "Generate a photorealistic, 3D-rendered or illustrated still image with Google Nano Banana "
             "(Gemini image models) and save it to disk. Use this - never hand-drawn SVG - whenever a "
             "slide, deck, handout or course screen needs a realistic photo-like picture, a 3D render, a "
@@ -897,7 +901,7 @@ TOOLS = [
                 "model": {"type": "string", "description": "Default gemini-3.1-flash-image (Nano Banana 2). Use gemini-3-pro-image (or 'pro') for complex scenes, fine detail or when Flash failed twice. If Pro fails, the server tries the same picture once with Flash and says so (fell_back_from)."},
                 "reference_images": {"type": "array", "items": {"type": "string"}, "description": "Local image paths to edit, restyle, keep consistent with, or combine (max 14)."},
                 "format": {"type": "string", "enum": ["png", "jpeg"], "description": "Default png."},
-                "approved_by_user": {"type": "string", "description": "The person's own words approving THIS picture after seeing the prompt, e.g. 'yes, generate it'. Required - never write it yourself, never reuse an earlier yes for a redo."},
+                "approved_by_user": {"type": "string", "description": "The person's own words approving THIS picture after seeing the prompt, e.g. 'yes, generate it'; in a Course Factory course build, the words of the course's picture budget yes. Required - never write it yourself, never reuse an earlier yes for a redo outside that budget."},
             },
             "required": ["prompt", "out_path", "approved_by_user"],
         },

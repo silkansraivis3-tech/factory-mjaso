@@ -18,7 +18,9 @@ MUST (the build stops before its figures; build_module.py runs this first):
   * a teaching slide with more than 60 words and no picture (L61: dense text has a picture beside it)
   * three teaching slides in a row with no picture (L61)
 NOTE (said, never stops it):
-  * a photograph of 800-1599 px - the compile enlarges it (L62), a larger original would be sharper
+  * a picture whose rights are not cleared (RIGHTS_REVIEW_REQUIRED) - the build carries on; publishing is refused
+  * a photograph of 800-1023 px - the compile enlarges it (L62), a larger original would be sharper; from 1024 px it is
+    accepted without a note
   * the same template forced on three slides in a row or more - the compiler chooses and varies the look (L62); a
     forced template only takes that away
 The still picture inside a 3D scene (its poster) is not judged: the live scene is what the room sees. A still the module
@@ -43,7 +45,7 @@ SKILLS = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(SKILLS, "course-factory", "scripts"))
 sys.path.insert(0, os.path.join(SKILLS, "course-visuals", "scripts"))
-from image_size import PHOTO_FLOOR, PHOTO_MIN_LONG, found_size, pixel_size  # noqa: E402
+from image_size import PHOTO_ACCEPT_LONG, PHOTO_FLOOR, PHOTO_MIN_LONG, found_size, pixel_size  # noqa: E402
 
 PHOTO_EXT = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 FORCED_RUN = 3
@@ -171,9 +173,11 @@ def check(course, module, rebuild=False):
         notes.append("the build sheet forces the template %s on %d slides in a row (%s ... %s) - the compiler chooses the template "
                      "and varies the look of neighbouring slides itself (L62); take \"template\" out unless a slide really needs it"
                      % (tid, len(ids), ids[0], ids[-1]))
-    soft, kept, renders, ai = [], [], [], []
+    soft, kept, renders, ai, unclear = [], [], [], [], []
     # the photographs: found large enough, or kept with a reason
     for rel, ids in sorted(photos.items()):
+        if str(cm.photo_meta(mdir, rel).get("rights_state") or "").upper() == "RIGHTS_REVIEW_REQUIRED":
+            unclear.append("%s (on %s)" % (os.path.basename(rel), ", ".join(sorted(set(ids)))))
         size = photo_size(course, mdir, m, rel)
         if not size:
             continue
@@ -185,7 +189,7 @@ def check(course, module, rebuild=False):
         keep = os.path.join(course, "working_claude", "photo_originals", m, os.path.basename(rel))
         if str(meta.get("enlarged") or "").startswith("Real-ESRGAN") and os.path.isfile(keep):
             was = pixel_size(keep)
-            if was and max(was) < PHOTO_MIN_LONG:
+            if was and max(was) < PHOTO_ACCEPT_LONG:
                 ai.append("%s from %dx%d" % (os.path.basename(rel), was[0], was[1]))
             continue
         if long < PHOTO_MIN_LONG and origin == "render":
@@ -201,7 +205,7 @@ def check(course, module, rebuild=False):
             must.append("%s (on %s) is only %d x %d px - no enlargement makes it sharp: %s (%d px or more on its long side), "
                         "or write why this one stays in its _photo_meta.json entry: \"low_resolution_ok\": \"<reason>\""
                         % (rel, on, size[0], size[1], find, PHOTO_MIN_LONG))
-        elif long < PHOTO_MIN_LONG:
+        elif long < PHOTO_ACCEPT_LONG:
             soft.append("%s %dx%d" % (os.path.basename(rel), size[0], size[1]))
     if kept:
         notes.append("%d picture(s) under %d px - the course's own (old course, knowledge base) or ones the module already "
@@ -218,10 +222,14 @@ def check(course, module, rebuild=False):
     if renders:
         notes.append("%d still(s) rendered from the module's own 3D model under %d px - render again at %d px or more: %s"
                      % (len(renders), PHOTO_MIN_LONG, PHOTO_MIN_LONG, ", ".join(renders)))
+    if unclear:
+        notes.append("%d picture(s) with rights not cleared - the build carries on; publishing to the tablets is refused while "
+                     "any is left (course-tablet-publisher): %s. The owner clears each by name (course-visuals "
+                     "check_assets.py clear), or it is replaced" % (len(unclear), ", ".join(unclear)))
     if soft:
         notes.append("%d photograph(s) found under %d px (the size it was found at - the compile's enlargement is not judged; L62) "
                      "- a larger original would be sharper: %s"
-                     % (len(soft), PHOTO_MIN_LONG, ", ".join(soft)))
+                     % (len(soft), PHOTO_ACCEPT_LONG, ", ".join(soft)))
     return must, notes
 
 

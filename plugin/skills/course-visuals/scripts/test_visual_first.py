@@ -142,6 +142,35 @@ def svg_part(tmp):
         check("%s: %s" % (name, "warns" if want else "no warning"), n == want, "%d warning(s)\n%s" % (n, p.stdout + p.stderr))
 
 
+def motion_choice_part(tmp):
+    """An animation the person asked for, recorded as their design choice (course-factory design_choices.py, rule motion), is
+    reported as their choice - never a warning - in every module of that course; a course with no such choice still warns."""
+    print("\n-- a requested animation, recorded as the person's choice, is kept")
+    sys.path.insert(0, os.path.join(SKILLS, "course-factory", "scripts"))
+    import design_choices
+    css = "@keyframes pulse { from { opacity: .4 } to { opacity: 1 } } .x { animation: pulse 2s 1; }"
+    found = {}
+    for name in ("plain", "chosen"):
+        work = os.path.join(tmp, "motion_" + name, "course")
+        page = os.path.join(work, "modules", "module01", "presentation", "css")
+        os.makedirs(page)
+        os.makedirs(os.path.join(work, "working_claude"))
+        io.open(os.path.join(page, "m01.css"), "w", encoding="utf-8").write(css)
+        if name == "chosen":
+            design_choices.add(work, "motion", "The pulsing lamp on the cargo slides", "I want the lamp to pulse",
+                               "movement that does not teach pulls the eye away from what does")
+        p = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_visuals.py"), os.path.dirname(page), "--json"],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        try:
+            found[name] = [(f["kind"], f["message"]) for f in json.loads(p.stdout)["findings"] if "decorative vocabulary" in f["message"]]
+        except (ValueError, KeyError):
+            found[name] = p.stdout + p.stderr
+    check("no choice recorded: a decorative animation warns", [k for k, _ in found["plain"]] == ["WARN"], found["plain"])
+    check("recorded as the person's choice: a note naming it, never a warning",
+          [k for k, _ in found["chosen"]] == ["NOTE"] and "the operator's choice S1" in found["chosen"][0][1]
+          and "I want the lamp to pulse" in found["chosen"][0][1], found["chosen"])
+
+
 def main() -> int:
     tmp = tempfile.mkdtemp(prefix="visfirst_")
     print("=" * 72)
@@ -272,6 +301,7 @@ def main() -> int:
 
         tooling_part(tmp)
         svg_part(tmp)
+        motion_choice_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

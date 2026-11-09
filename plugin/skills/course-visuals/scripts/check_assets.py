@@ -3,15 +3,17 @@
 
 Every image in an asset folder has an entry beside it; every entry has its
 required fields; visually_verified is real; rights states are valid; and
-nothing ships at RIGHTS_REVIEW_REQUIRED.
+every picture at RIGHTS_REVIEW_REQUIRED is marked "rights not cleared" - the
+build carries on, and course-tablet-publisher refuses to publish while one is left.
 
   python check_assets.py <assets-dir> [...] [--strict] [--json]
   python check_assets.py clear <assets-dir> <file> --by "<name>" --reason "..." --source-work "<book, edition, page / figure>"
 
 `clear` (2.63.2, L52) records a person's decision that a source-book figure may be used: rights_state OWNER_CLEARED,
-cleared_by "<name>, <date> - <reason>", source_work. Without a whole cleared_by the figure stays blocked.
+cleared_by "<name>, <date> - <reason>", source_work. Without a whole cleared_by the figure is never published.
 
-Exit 0 clean (or warnings only) · 1 failures · 2 bad usage.
+Exit 0 clean (or warnings and rights not cleared only) · 1 failures · 2 bad usage. --strict: warnings and rights not
+cleared are failures too.
 """
 from __future__ import annotations
 
@@ -25,7 +27,7 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from image_size import PHOTO_FLOOR, PHOTO_MIN_LONG, found_size, pixel_size  # noqa: E402
+from image_size import PHOTO_ACCEPT_LONG, PHOTO_FLOOR, PHOTO_MIN_LONG, found_size, pixel_size  # noqa: E402
 SKILL = os.path.dirname(HERE)
 SCHEMA_DIR = os.path.join(SKILL, "source", "schemas")
 
@@ -75,7 +77,7 @@ def add(kind, where, msg, hint=""):
 
 def fail(w, m, h=""): add("FAIL", w, m, h)
 def warn(w, m, h=""): add("WARN", w, m, h)
-def block(w, m, h=""): add("BLOCK", w, m, h)
+def not_cleared(w, m, h=""): add("RIGHTS", w, m, h)
 
 
 def required_fields(kind: str) -> list[str]:
@@ -217,7 +219,8 @@ def check_folder(folder: str) -> None:
                 fail(where, "entry is not an object")
                 continue
             described[fname] = mname
-            # 2.65.0 - a photograph found at 1600 px or more on its long edge; under 800 px no enlargement makes it sharp
+            # a photograph looked for at 1600 px or more on its long edge, accepted from 1024 px; under 800 px no enlargement
+            # makes it sharp
             if kind == "photo" and os.path.splitext(fname)[1].lower() in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
                 kept = original_of(folder, fname)
                 size = found_size(os.path.join(folder, fname), kept if kept != os.path.join(folder, fname) else None)
@@ -225,9 +228,9 @@ def check_folder(folder: str) -> None:
                     warn(where, "only %d x %d px - no enlargement makes it sharp, and the module's pre-check stops the build on it"
                          % size, "find the original (%d px or more on its long edge - not a web preview), a photograph to take, "
                          "or record why it stays: \"low_resolution_ok\": \"<reason>\"" % PHOTO_MIN_LONG)
-                elif size and max(size) < PHOTO_MIN_LONG:
+                elif size and max(size) < PHOTO_ACCEPT_LONG:
                     warn(where, "%d x %d px - under %d px the compile enlarges it; the original would be sharper"
-                         % (size[0], size[1], PHOTO_MIN_LONG), "the original file, not a web preview")
+                         % (size[0], size[1], PHOTO_ACCEPT_LONG), "the original file, not a web preview")
 
             if not os.path.isfile(os.path.join(folder, fname)):
                 warn(where, "entry describes a file that is not here",
@@ -249,10 +252,11 @@ def check_folder(folder: str) -> None:
                 fail(where, f'rights_state "{rs}" is not valid',
                      "one of: " + ", ".join(sorted(VALID_RIGHTS)))
             elif rs == "RIGHTS_REVIEW_REQUIRED":
-                block(where, "RIGHTS_REVIEW_REQUIRED - this asset must not ship",
-                      "the owner decides, by name: check_assets.py clear <assets-dir> %s --by \"<name>\" --reason \"...\" "
-                      "--source-work \"<book, edition, page / figure>\" (a source-book figure); an uncleared publisher "
-                      "figure has blocked a whole course in this system before" % fname)
+                not_cleared(where, "rights not cleared (RIGHTS_REVIEW_REQUIRED) - the build carries on; publishing to "
+                            "the tablets is refused while it is unclear",
+                            "the owner decides, by name: check_assets.py clear <assets-dir> %s --by \"<name>\" --reason "
+                            "\"...\" --source-work \"<book, edition, page / figure>\" (a source-book figure), or the "
+                            "picture is replaced" % fname)
             elif rs == "REJECTED":
                 warn(where, "rights_state REJECTED but the file is still here",
                      "remove the file, or keep only the entry as a record")
@@ -377,7 +381,7 @@ def main() -> int:
         check_folder(f)
 
     fails = [x for x in findings if x["kind"] == "FAIL"]
-    blocks = [x for x in findings if x["kind"] == "BLOCK"]
+    rights = [x for x in findings if x["kind"] == "RIGHTS"]
     warns = [x for x in findings if x["kind"] == "WARN"]
 
     if a.json:
@@ -387,7 +391,7 @@ def main() -> int:
         print("check_assets - provenance, licences and rights")
         print("=" * 72)
         for f in findings:
-            print("  %-5s %s" % (f["kind"], f["where"]))
+            print("  %-6s %s" % (f["kind"], f["where"]))
             print("        %s" % f["message"])
             if f["hint"]:
                 print("        -> %s" % f["hint"])
@@ -395,15 +399,16 @@ def main() -> int:
             print("  every image has provenance, every entry is complete, "
                   "no rights are outstanding")
         print()
-        print("%d folder(s) - %d failure(s), %d blocked, %d warning(s)"
-              % (len(folders), len(fails), len(blocks), len(warns)))
-        if blocks:
+        print("%d folder(s) - %d failure(s), %d rights not cleared, %d warning(s)"
+              % (len(folders), len(fails), len(rights), len(warns)))
+        if rights:
             print()
-            print("BLOCKED assets must not ship. Report them to the owner.")
+            print("Rights not cleared: the build carries on, and the module's findings list them; publishing to the "
+                  "tablets is refused while any is left (course-tablet-publisher, gates.py rights). Report them to the owner.")
 
-    if fails or blocks:
+    if fails:
         return 1
-    if warns and a.strict:
+    if (warns or rights) and a.strict:
         return 1
     return 0
 

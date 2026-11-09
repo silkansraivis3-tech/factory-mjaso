@@ -100,13 +100,15 @@ image is not a slow image, it is a broken one.
 
 ---
 
-## Rights, and the one escalation that blocks
+## Rights, and the one escalation that stops publishing
 
 `asset-pipeline.json` → `rights_states`. Six states: `CLEARED` · `PROJECT_OWNED` ·
 `PUBLIC_DOMAIN` · `ATTRIBUTION_REQUIRED` · **`RIGHTS_REVIEW_REQUIRED`** · `REJECTED`.
 
 > **If usage rights are unclear, the state is `RIGHTS_REVIEW_REQUIRED` and the asset does not
-> ship.** Do not resolve it by assumption, and do not quietly use it anyway.
+> ship.** The build carries on with it, marked *rights not cleared* in the module's findings;
+> publishing to the tablets is refused while any is left (`course-tablet-publisher`). Do not
+> resolve it by assumption, and do not quietly publish it anyway.
 
 This is not theoretical. Six publisher figures in the reference course are marked *not cleared for
 issue or publication*, and they currently block that course from being issued. One quiet decision
@@ -181,10 +183,11 @@ When nothing suitable exists at any level and a realistic illustration genuinely
 medium, emit the marker **with a complete brief** — `schemas/GENERATED_ASSET_BRIEF.md`.
 
 There is **no image-generation MCP in this plugin**, deliberately — it lives in the sibling
-**`nano-banana`** plugin of the same marketplace. When that is installed, ask the person to describe
-the picture (its `realistic-visuals` §0 - every picture costs about €0.10, L47), turn the brief and
-their answers into the prompt, show it, and generate with `generate_image` only after their yes
-(the `image-director` agent for a set of approved ones). When it is not, the brief is still useful immediately: a human can take it to
+**`nano-banana`** plugin of the same marketplace. When that is installed, turn the brief into the
+prompt and generate with `generate_image` within the course's picture budget, said yes to once at
+the start - no question before each picture; outside a course, ask the person to describe the
+picture and generate only after their yes (its `realistic-visuals` §0 - every picture costs about
+€0.10, L47; the `image-director` agent for a set of approved ones). When it is not, the brief is still useful immediately: a human can take it to
 any generator, or commission a photograph from it.
 
 A brief without every field is not a brief. The forbidden-inaccuracies field is the one that stops

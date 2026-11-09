@@ -40,7 +40,7 @@
       {"id": "unnecessary_cards", "ask": "Are these cards carrying a relationship, or are they a paragraph with borders?"},
       {"id": "text_that_should_be_visual", "ask": "Is a spatial, sequential or causal relationship being described in a sentence instead of shown?"},
       {"id": "visual_that_should_be_text", "ask": "Does the figure restate the sentence beside it without adding location, relationship or change?"},
-      {"id": "decorative_animation", "ask": "Remove the motion. Is anything lost? If not, remove it."},
+      {"id": "decorative_animation", "ask": "Remove the motion. Is anything lost? If not, remove it - unless the person asked for it and it is recorded as their choice (course-factory design_choices.py, rule motion): then it stays, reported as their choice."},
       {"id": "weak_hierarchy", "ask": "What does the eye land on first? Is that the thing that matters?"},
       {"id": "misleading_relationships", "ask": "Does the drawing imply a connection, direction or order that the real system does not have?"},
       {"id": "tiny_labels", "ask": "Read it at arm's length on the tablet, not zoomed on a desktop."},
@@ -57,6 +57,6 @@
     "PASS": "teaches something nameable, technically unambiguous, readable on the tablet, and motion (if any) is declared and earns its place",
     "REWORK": "the learning need is right but the representation or the execution is not - say which, and which representation to try instead",
     "REJECT": "the visual should not exist - the need is better served by plain text, or by an asset that does not exist yet",
-    "BLOCKED": "rights unresolved (RIGHTS_REVIEW_REQUIRED) or the asset is missing - not a quality verdict"
+    "BLOCKED": "rights unresolved (RIGHTS_REVIEW_REQUIRED: rights not cleared - the build carries on, publishing is refused) or the asset is missing - not a quality verdict"
   }
 }

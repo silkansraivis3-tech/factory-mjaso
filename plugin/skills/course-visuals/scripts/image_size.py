@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import struct
 
-PHOTO_MIN_LONG = 1600       # a photograph is found at this size or larger on its long side (asset-pipeline.json)
+PHOTO_MIN_LONG = 1600       # the size a photograph is looked for, and enlarged to, on its long side (asset-pipeline.json)
+PHOTO_ACCEPT_LONG = 1024    # at this size or larger a photograph is accepted without a warning
 PHOTO_FLOOR = 800           # below this, enlarging cannot make it sharp: find a larger original
 
 

@@ -43,7 +43,8 @@ not.
 
 ### `RIGHTS_REVIEW_REQUIRED`
 
-Blocks shipping. The owner decides, not the factory.
+Rights not cleared: the build carries on; publishing to the tablets is refused while any is left. The owner decides,
+not the factory.
 
 | Picture, drawing or photograph | Why the rights are unclear | What would clear it |
 |---|---|---|

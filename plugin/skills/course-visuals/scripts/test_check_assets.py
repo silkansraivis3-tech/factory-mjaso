@@ -3,7 +3,7 @@
 
     python -I test_check_assets.py
 
-Pinned: a book figure at RIGHTS_REVIEW_REQUIRED stays blocked; one marked OWNER_CLEARED with its source_work but no
+Pinned: a book figure at RIGHTS_REVIEW_REQUIRED is marked "rights not cleared" and does not stop the build; one marked OWNER_CLEARED with its source_work but no
 whole cleared_by fails (the old check passed it); `check_assets.py clear` refuses without --by, --reason and
 --source-work and leaves the record alone; with them it writes the clearance and the figure passes; the knowledge
 base's and the old course's plain OWNER_CLEARED (no source_work, no cleared_by) is unchanged.
@@ -55,7 +55,10 @@ def main():
     tmp = tempfile.mkdtemp(prefix="check_assets_")
     try:
         code, out = run(folder(tmp, "held", record()))
-        check("a book figure at RIGHTS_REVIEW_REQUIRED stays blocked", code == 1 and "BLOCK" in out, out[-400:])
+        check("a book figure at RIGHTS_REVIEW_REQUIRED is marked rights not cleared - the build carries on (exit 0)",
+              code == 0 and "rights not cleared" in out and "publishing to the tablets is refused" in out, out[-400:])
+        code, out = run(folder(tmp, "held_strict", record()), "--strict")
+        check("... and --strict (a released course) still refuses it", code == 1, out[-400:])
 
         d = folder(tmp, "claimed", record(rights_state="OWNER_CLEARED", source_work="ITF Guideline, p. 10"))
         code, out = run(d)
@@ -113,7 +116,7 @@ def main():
     print("%d passed, %d failed" % (len(PASS), len(FAIL)))
     if FAIL:
         return 1
-    print("\nA book figure is used only on a named person's recorded decision; without it, it stays blocked.")
+    print("\nA book figure is used only on a named person's recorded decision; without it, it is never published.")
     return 0
 
 

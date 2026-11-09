@@ -107,8 +107,9 @@ Always give a zoomed card an X. Never put the hint text over the picture.
 A photo screen is always dark (`.photo` sets the dark ground) so the image is not framed in
 white.
 
-**Never squeeze a photograph to make it fit.** If a screen cannot afford the picture at its
-own aspect ratio, the picture gets its own screen. And never cap a figure with a percentage
+**Never squeeze a photograph to make it fit** - never smaller than about 200 px on screen. If a
+screen cannot afford the picture at its own aspect ratio, the picture gets its own screen or its own
+step, or a tap opens it full screen. And never cap a figure with a percentage
 of a percentage — the two multiply and the image collapses on the tablet.
 
 ## The takeaway

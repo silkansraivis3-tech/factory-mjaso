@@ -28,7 +28,7 @@
                        "checked_by": ["content_script.py (v_3d_share)", "check_course_package.py"]},
     "motion":         {"says": "animation that teaches - it shows a change, a sequence or a cause - never decoration, and still once it has made its point", "law": "course-visuals motion-rules.json",
                        "risk": "movement that does not teach pulls the eye away from what does",
-                       "checked_by": ["the model's own judgment", "course-visuals review"]},
+                       "checked_by": ["the model's own judgment", "course-visuals review", "course-visuals check_visuals.py"]},
     "layout":         {"says": "the screen compositions and the two slide modes (light, dark/photo) as the factory picks them", "law": "course-module-ui, course-module-ux",
                        "risk": "the screen may read less clearly in the room",
                        "checked_by": ["the model's own judgment", "measure audit"]}

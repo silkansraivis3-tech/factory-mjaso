@@ -135,7 +135,9 @@ tablet even if someone copies a whole folder.
 
 `gates.py` classifies every published file as **TRAINEE**, **INSTRUCTOR**, **SHARED** or
 **INTERNAL**, then runs: identity · roles · secrets · offline · addresses · junk · assets ·
-rights · **runtime** · **scopes**.
+rights · **runtime** · **scopes**. **`rights` refuses a picture whose rights are still unclear**
+(`rights_state: RIGHTS_REVIEW_REQUIRED`, *rights not cleared*): the build carried on with it, publishing
+does not, until the owner clears it by name or it is replaced.
 
 **`scopes` keeps two courses from sharing one live unlock.** An instructor unlocks "Module
 1's check" and it is stored under a scope; if two courses produce the same string, unlocking

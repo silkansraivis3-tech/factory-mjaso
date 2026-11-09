@@ -13,14 +13,18 @@
 WHY THIS EXISTS
 Every generated picture is billed to the NOVIKONTAS Google account - about EUR 0.10 each, a video clip much more
 (owner, 2026-10-14). Four developers redoing pictures 10-15 times each spend the budget, and most redos come from
-a vague first description. So the factory never generates on its own: it finds the places first, asks the person
-to describe each picture (the questions are knowledge/media-and-tasks.json -> generation_brief), shows the prompt,
-and generates only after their yes - the nano-banana tools refuse to run without the person's words.
+a vague first description. So the factory never generates on its own: it finds the places first, and the course's
+picture budget is asked once, at the start (working_claude/intake.json "picture_budget": about N pictures, about EUR X,
+and the person's yes). Within that budget there is no question before each picture: the prompts are drafted from the
+approved script, the person may correct any line, and the budget yes is the words the nano-banana tools need. With no
+budget recorded the person is asked for it once; only while they give none is each place described and said yes to
+on its own.
 
   list   every screen of the approved content script whose picture the generator makes (visual_kind made_by
          nano_banana), and any other place a description was saved for: the slide, its title, what the script says
-         the picture shows, and where it stands - to describe / described / made N time(s), about EUR x. For a place
-         still to describe it prints the questions, each with the script's own words as the starting suggestion.
+         the picture shows, and where it stands - to make / to describe / described / made N time(s), about EUR x -
+         and the course's picture budget, or that it is still to be asked once. Without a budget, a place still to
+         describe prints the questions, each with the script's own words as the starting suggestion.
   save   keeps the person's answers and the prompt written from them: brief.json = {"answers": {...}, "prompt": "..."};
          a builder may make the drafted prompt better without the person's answers - {"prompt": "...", "refined":
          "<what was made better>"} - never inventing answers; it is shown as the builder's until the person's yes
@@ -90,7 +94,20 @@ def generated(s):
     return cs.MEDIA["visual_kinds"].get(cs.parse_kind(s.get("visual_kind", "")), {}).get("made_by") == "nano_banana"
 
 
+def picture_budget(course):
+    """the course's one picture-budget yes (intake.json "picture_budget") in words, or '' when none is recorded"""
+    p = workspace.claude_path(course, "intake.json")
+    try:
+        got = json.load(io.open(p, encoding="utf-8-sig")).get("picture_budget") if os.path.isfile(p) else None
+    except (ValueError, OSError, AttributeError):
+        got = None
+    if isinstance(got, dict):
+        got = "; ".join("%s: %s" % (k, v) for k, v in got.items() if v not in ("", None))
+    return str(got).strip() if got not in (None, False, "", 0) else ""
+
+
 def cmd_list(course, module, script, store):
+    budget = picture_budget(course)
     screens = {s["id"]: s for s in script.get("screens", [])}
     places = [s["id"] for s in script.get("screens", []) if generated(s)]
     places += [sid for sid in store if sid not in places and sid in screens]
@@ -98,25 +115,40 @@ def cmd_list(course, module, script, store):
     made = sum(len(store.get(sid, {}).get("made", [])) for sid in places)
     print("Module %s: %d place(s) for a generated picture - %d picture(s) made so far, about EUR %.2f (EUR %.2f each)."
           % (module, len(places), made, paid(store.get(sid, {}) for sid in places) * e, e))
+    if budget:
+        print("  Within the course's picture budget, said yes to once (%s): no question before each picture - the prompts "
+              "are drafted from the script (queue), the person may correct any line, and the budget yes is the approval."
+              % budget)
+    else:
+        print("  No picture budget recorded for this course: ask it once - \"about N pictures, about EUR X. Yes?\" - and "
+              "record it in working_claude/intake.json \"picture_budget\"; only while the person gives none is each place "
+              "below described and said yes to on its own.")
     if not places:
         print("  Nothing to generate: the approved script plans no AI illustration or AI video.")
         return 0
     for sid in places:
         s, b = screens[sid], store.get(sid, {})
         n = len(b.get("made", []))
-        state = ("made %d time(s), about EUR %.2f" % (n, paid([b]) * e)) if n else ("described - show the prompt and ask for a yes" if b.get("prompt") else "to describe")
+        state = ("made %d time(s), about EUR %.2f" % (n, paid([b]) * e)) if n else (
+            ("described - made within the budget" if budget else "described - show the prompt and ask for a yes")
+            if b.get("prompt") else ("to make - prompt drafted from the script" if budget else "to describe"))
         print("\n- %s (%s) \"%s\" - %s" % (cs.place(script, sid), sid, s.get("title") or s.get("question", ""), state))
         print("    the script says it shows: %s" % (s.get("visual") or "(nothing yet)"))
         if b.get("prompt") and b.get("refined"):
-            print("    prompt made better by the builder (%s), not yet the person's - show it and ask: %s" % (b["refined"], b["prompt"]))
+            print("    prompt made better by the builder (%s)%s: %s"
+                  % (b["refined"], "" if budget else ", not yet the person's - show it and ask", b["prompt"]))
         elif b.get("prompt"):
             print("    agreed prompt: %s" % b["prompt"])
-        elif not n:
+        elif not n and not budget:
             print("    ask the person, one place at a time - each picture costs about EUR %.2f, so the first try should be right:" % e)
             for i, q in enumerate(GB["questions"], 1):
                 print("      %d. %s" % (i, q["en"]))
             print("    starting suggestion from the script: %s" % (s.get("visual") or s.get("title", "")))
-    print("\nNothing is generated until the person has described the picture, seen the prompt and said yes (L47).")
+    if budget:
+        print("\nMade within the course's picture budget - one yes for the course, no question before each picture (L47).")
+    else:
+        print("\nNothing is generated until the person has described the picture, seen the prompt and said yes (L47) - or "
+              "the course's picture budget is recorded once.")
     return 0
 
 
