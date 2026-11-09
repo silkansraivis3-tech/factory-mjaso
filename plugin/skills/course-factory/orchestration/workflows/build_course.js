@@ -968,7 +968,7 @@ could not answer:
   * every cross-reference between modules resolves
   * every row of working_claude/ilo_map.json is taught somewhere, and no outcome is claimed twice
   * every page reachable and every page has a way back (audit_navigation.py)
-  * nothing at RIGHTS_REVIEW_REQUIRED, no honesty marker on a course-facing page
+  * every picture still at RIGHTS_REVIEW_REQUIRED listed (publishing refuses it), no honesty marker on a course-facing page
 
 Report. Do not fix.`,
   { label: 'crosscheck:course', phase: 'Cross-check', schema: QA_SCHEMA }

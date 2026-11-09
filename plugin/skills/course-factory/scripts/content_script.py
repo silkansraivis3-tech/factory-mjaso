@@ -1233,7 +1233,7 @@ def propose_3d(teach, three, declined):
 def propose_ai(teach, kinds, declined):
     """2.49.0 - in a module with no AI picture yet, a teaching slide with no picture whose words name a scene or a
     situation (floors.ai_scene_words): (screen, the words, rule). Context only - never equipment to recognise (L33);
-    each picture is still described, priced and said yes to before it is made (L47)."""
+    each picture is made within the course's picture budget, said yes to once (L47)."""
     F = MEDIA["floors"]
     if any(MEDIA["visual_kinds"][k]["made_by"] == "nano_banana" for k in kinds):
         return []
