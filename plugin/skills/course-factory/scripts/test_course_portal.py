@@ -472,6 +472,9 @@ def main():
         else:
             os.environ["APPDATA"] = real_appdata
         shutil.rmtree(tmp, ignore_errors=True)
+    env = cp.unattended_env(NOVIKONTAS_AUTO_BUILD="1")
+    check("an unattended run waits for its helper agents without limit, and keeps its own switches",
+          env.get("CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS") == "0" and env.get("NOVIKONTAS_AUTO_BUILD") == "1")
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 
