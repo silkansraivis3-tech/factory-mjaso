@@ -178,6 +178,15 @@ def uses(s, part):
     return part in USES.get(mech(s), {"options"})
 
 
+def sc_mix(questions):
+    """(basic, rich) tasks of one self-check, as t_sc_mix counts them: basic a choose, match or order task; rich a 3D scene,
+    an animation or a control panel"""
+    RS = RULES["self_check"]
+    rich = sum(1 for q in questions if mech(q) in RS["rich"])
+    basic = sum(1 for q in questions if MEDIA["mechanics"].get(mech(q), {}).get("family") in RS["basic_families"])
+    return basic, rich
+
+
 def matrix_of(s):
     """fill_matrix (2.109.0): the script's "values" (the palette: 'R, A, C, I, -') and "answer" (the header line, then one line per
     row, cells separated by |) taken apart as (values, header cells, [(row label, [right value per column])]).
@@ -1102,8 +1111,7 @@ def theory_check(script):
                 elif n > R["self_check"]["max_questions"]:
                     add(s["id"], "", NOTE, "t_sc_big", set=set_name(script, st), q=n, hi=R["self_check"]["max_questions"])
                 RS = R["self_check"]        # owner: of five, three rich tasks (3D, animation, a panel) and two basic
-                rich = sum(1 for q in st["questions"] if mech(q) in RS["rich"])
-                basic = sum(1 for q in st["questions"] if MEDIA["mechanics"].get(mech(q), {}).get("family") in RS["basic_families"])
+                basic, rich = sc_mix(st["questions"])
                 need = min(RS["rich_min"], max(0, n - RS["basic_max"]))
                 if basic > RS["basic_max"] or rich < need:
                     add(s["id"], "", FAIL, "t_sc_mix", set=set_name(script, st), b=basic, r=rich, q=n, lo=need)
