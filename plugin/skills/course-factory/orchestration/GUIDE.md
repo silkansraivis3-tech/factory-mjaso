@@ -35,6 +35,8 @@ guide exists is that the failures are all in that seam, not in the parallelism.
      v
   Q  QA              per module as it lands, then one cross-module pass
      |
+  P  POLISH          a module that passes with nothing BROKEN left: one round on opus, about ten minutes, through its
+     |               POLISH list - each change kept only if the module still passes (fix.py polish, compile/GUIDE.md 6)
      v
   +  ASSEMBLY        the orchestrator alone: compile_course.py, handout, hours total, publish
 ```

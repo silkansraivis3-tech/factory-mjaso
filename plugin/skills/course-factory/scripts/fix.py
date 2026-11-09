@@ -12,6 +12,10 @@
     fix.py sync-shared <course> [--confirmed]            one shared file -> every module's own copy
     fix.py rebuild  <course> [--modules 1-3] [--force]   built modules again from their approved words (2.65.0): the
                                                          pre-check, the design files, the compile, then ONE check
+    fix.py polish begin|check|end <course> --module N [--what "<the POLISH line>"]
+                                                         the polish round after a PASS: begin snapshots what a change may
+                                                         touch, check builds again and puts the snapshot back if the
+                                                         module no longer passes, end closes the round
 
 WHY THIS EXISTS
 On GAS ADVANCED one module took 1-1.5 h to build and a small fix about 30 minutes (FEEDBACK_LOG #61-#93).
@@ -43,6 +47,7 @@ import argparse
 import contextlib
 import filecmp
 import glob
+import hashlib
 import html
 import io
 import json
@@ -717,6 +722,165 @@ def upload(course):
     print("\nThe training app's editor:\n" + "\n".join("  " + x for x in out.splitlines()))
 
 
+# ---------------------------------------------------------------- the polish round: a change is kept only if the module still passes
+
+POLISH_MINUTES = 10                                  # the round's time box; what is left stays on the POLISH list
+POLISH_STALE = 3600                                  # s: a round never ended is not carried into a later build
+
+
+def polish_paths(course, module):
+    """(MNN, the build's record, its answer, the round's file, the snapshot folder, what a polish change may touch)"""
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "compile", "scripts"))
+    import compile_module as cm
+    import build_module as bm
+    rec, ans, m = bm.running_files(course, module)
+    logdir = os.path.dirname(rec)
+    mdir, _ = cm.module_folder(course, module)
+    touched = [mdir, cm.build_path(course, module), workspace.claude_path(course, "figures", m), cs.paths(course, module)["script"],
+               rec, ans, os.path.join(logdir, m + "_last.json"), os.path.join(logdir, m + "_streak.json")]
+    return m, rec, ans, os.path.join(logdir, m + "_polish.json"), os.path.join(logdir, m + "_polish"), touched
+
+
+def polish_build(args):
+    """the module's build, the same command that last answered PASS"""
+    return run([os.path.join(os.path.dirname(HERE), "compile", "scripts", "build_module.py")] + args)
+
+
+def passes(code, out):
+    return code == 0 or (code == 1 and "MODULE CLEAN" in (out or ""))
+
+
+def file_hash(p):
+    try:
+        with open(p, "rb") as fh:
+            return hashlib.sha256(fh.read()).hexdigest()
+    except OSError:
+        return None
+
+
+def take_snapshot(paths, into):
+    shutil.rmtree(into, ignore_errors=True)
+    os.makedirs(into)
+    taken = []
+    for i, p in enumerate(paths):
+        dst = os.path.join(into, str(i))
+        if os.path.isdir(p):
+            shutil.copytree(p, dst)
+        elif os.path.isfile(p):
+            shutil.copy2(p, dst)
+        else:
+            dst = None                               # not there before: not there after a restore either
+        taken.append([p, dst])
+    return taken
+
+
+def put_back(taken):
+    for p, src in taken:
+        if os.path.isdir(p):
+            shutil.rmtree(p)
+        elif os.path.isfile(p):
+            os.remove(p)
+        if src and os.path.isdir(src):
+            shutil.copytree(src, p)
+        elif src:
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            shutil.copy2(src, p)
+
+
+def cmd_polish(course, step, module, what=""):
+    """the one polish round after a module passed and its BROKEN findings were fixed: one change at a time, each between
+    a begin (the snapshot) and a check (the build again); a change that makes the module fail is put back by itself.
+    Only layout, size, placement, cropping and label positions change - the approved words never (their file is
+    compared, and the build's own word checks run)."""
+    m, rec_p, ans_p, round_p, snap, touched = polish_paths(course, module)
+    now = time.time()
+    rnd = cs.load(round_p) if os.path.isfile(round_p) else None
+    if step == "begin":
+        if not rnd or rnd.get("ended") or now - rnd.get("started", 0) > POLISH_STALE:
+            rnd = {"module": m, "started": now, "items": []}
+        if rnd.get("open"):
+            print("Stopped - a change for \"%s\" is waiting for its check: fix.py polish check %s --module %s"
+                  % (rnd["open"]["what"], course, module))
+            return 2
+        used = (now - rnd["started"]) / 60.0
+        if used >= POLISH_MINUTES:
+            cs.save(round_p, rnd)
+            print("TIME BOX OVER - %.0f of %d minutes used. Change nothing more: what is left stays on the POLISH list for "
+                  "the course office. Close the round: fix.py polish end %s --module %s" % (used, POLISH_MINUTES, course, module))
+            return 1
+        try:
+            last = json.load(io.open(rec_p, encoding="utf-8"))
+            text = io.open(ans_p, encoding="utf-8", errors="replace").read()
+        except (OSError, ValueError):
+            last, text = {}, ""
+        if not last.get("args") or not passes(last.get("exit"), text):
+            print("Stopped - %s's last build did not answer PASS (or MODULE CLEAN): the polish round starts only from a "
+                  "module that passes. Build it first: build_module.py %s --module %s" % (m, course, module))
+            return 2
+        flags, a = [], last["args"]
+        for i, x in enumerate(a):                    # the same command, without the build's own inner switches
+            if x == "--no-course-pages":
+                flags.append(x)
+            elif x == "--viewport" and i + 1 < len(a):
+                flags += [x, a[i + 1]]
+        rnd["open"] = {"what": what or "(not named)", "script": file_hash(cs.paths(course, module)["script"]),
+                       "args": [course, "--module", str(module)] + flags, "taken": take_snapshot(touched, snap)}
+        cs.save(round_p, rnd)
+        print("Snapshot of %s taken (the module folder, its build sheet, its figures, the build's last answer). Make ONE "
+              "change for: %s\nThen: fix.py polish check %s --module %s   (%.0f of %d minutes used)"
+              % (m, rnd["open"]["what"], course, module, used, POLISH_MINUTES))
+        return 0
+    if step == "check":
+        if not rnd or not rnd.get("open"):
+            print("Nothing to check - start each change with: fix.py polish begin %s --module %s --what \"...\"" % (course, module))
+            return 2
+        op = rnd["open"]
+        if file_hash(cs.paths(course, module)["script"]) != op["script"]:
+            code, out, why = 1, "", "the approved script changed - polish never changes the approved words"
+        else:
+            code, out = polish_build(op["args"] + (["--wait"] if op.get("building") else []))
+            if code == 3:
+                op["building"] = True
+                cs.save(round_p, rnd)
+                print("STILL BUILDING - run the same check again: fix.py polish check %s --module %s" % (course, module))
+                return 3
+            fails = [x for x in out.splitlines() if re.match(r"(FAIL|PHASE A CLEAN|Stopped)\b", x)]
+            why = "" if passes(code, out) else (fails[0] if fails else "the build answered %s" % code)
+        if not why:
+            shutil.rmtree(snap, ignore_errors=True)
+            rnd["items"].append({"what": op["what"], "kept": True})
+            print("KEPT - %s still passes with the change for: %s" % (m, op["what"]))
+            rc = 0
+        else:
+            put_back(op["taken"])
+            shutil.rmtree(snap, ignore_errors=True)
+            rnd["items"].append({"what": op["what"], "kept": False, "why": why})
+            print("RESTORED - the change for \"%s\" made %s fail (%s). The snapshot is back: the module is exactly as it was "
+                  "before this change and still passes. Leave this item on the POLISH list." % (op["what"], m, why))
+            rc = 1
+        del rnd["open"]
+        cs.save(round_p, rnd)
+        return rc
+    if not rnd:
+        print("No polish round of %s to end." % m)
+        return 0
+    if rnd.get("open"):                              # a change never checked is never kept
+        put_back(rnd["open"]["taken"])
+        shutil.rmtree(snap, ignore_errors=True)
+        rnd["items"].append({"what": rnd.pop("open")["what"], "kept": False, "why": "never checked"})
+    rnd["ended"] = now
+    cs.save(round_p, rnd)
+    kept = [x["what"] for x in rnd["items"] if x["kept"]]
+    back = ["%s (%s)" % (x["what"], x.get("why", "")) for x in rnd["items"] if not x["kept"]]
+    print("Polish round of %s ended after %.0f min: %d change(s) kept, %d put back." % (m, (now - rnd["started"]) / 60, len(kept), len(back)))
+    for x in kept:
+        print("  kept: " + x)
+    for x in back:
+        print("  put back: " + x)
+    print("Take the kept items off working_claude\\review\\%s_POLISH.md; everything else stays there for the course office." % m)
+    return 0
+
+
 # ---------------------------------------------------------------- the course's house decisions
 
 STANDARDS_HEAD = design_choices.STANDARDS_HEAD       # one head for the file, whoever writes it first
@@ -763,6 +927,8 @@ def main(argv=None):
     s.add_argument("--departs", help="the design rule (knowledge/design-rules.json) this standard departs from - L26")
     s.add_argument("--risk", default="", help="the risk the operator was told before they chose")
     s = sub.add_parser("rebuild"); s.add_argument("course"); s.add_argument("--modules"); s.add_argument("--force", action="store_true")
+    s = sub.add_parser("polish"); s.add_argument("step", choices=("begin", "check", "end")); s.add_argument("course")
+    s.add_argument("--module", required=True); s.add_argument("--what", default="", help="the POLISH line this change is for")
     s = sub.add_parser("sync-shared"); s.add_argument("course"); s.add_argument("--confirmed", action="store_true")
     s.add_argument("--from", dest="source")
     a = ap.parse_args(argv)
@@ -781,6 +947,8 @@ def main(argv=None):
         return cmd_standard(a.course, a.add, a.said, a.departs, a.risk)
     if a.cmd == "rebuild":
         return cmd_rebuild(a.course, a.modules, a.force)
+    if a.cmd == "polish":
+        return cmd_polish(a.course, a.step, a.module, a.what)
     return cmd_sync_shared(a.course, a.confirmed, a.source)
 
 
