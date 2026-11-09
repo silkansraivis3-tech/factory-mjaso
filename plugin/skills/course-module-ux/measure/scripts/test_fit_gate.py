@@ -95,6 +95,20 @@ def main():
     check("a worked example's figure that never changes is named (k2), the one that moves is not (k1)",
           any(x.strip().startswith("k2 ") and "does not change on any Next" in x for x in out.splitlines())
           and not any(x.strip().startswith("k1 ") for x in out.splitlines()), out)
+    print("-- the walk review's input (2.116.0): every stop saved at 1280x800 only")
+    import json
+    import tempfile
+    wd = tempfile.mkdtemp(prefix="walk_")
+    code, out = cli(str(KDECK), "--viewport", "1280x800", "--viewport", "1024x768", "--walk-dir", wd)
+    wj = json.loads(Path(wd, "walk.json").read_text(encoding="utf-8")) if Path(wd, "walk.json").is_file() else {}
+    stops = wj.get("stops", [])
+    k1s = [s for s in stops if s["slide"] == "k1"]
+    check("--walk-dir: walk.json has a record for every stop, at 1280x800 only", wj.get("viewport") == "1280x800" and len(k1s) >= 4
+          and [s["k"] for s in k1s] == list(range(1, len(k1s) + 1)), wj)
+    check("... a screenshot of each stop, about 480 px wide", all(Path(wd, s["file"]).is_file() for s in stops) and k1s
+          and (lambda im: im.width <= 480)(__import__("PIL.Image", fromlist=["Image"]).open(Path(wd, k1s[0]["file"]))), k1s[:1])
+    check("... with the lit line's text and the figure's signature at each stop",
+          all("lit" in s and "fig" in s for s in k1s) and len({s["fig"] for s in k1s}) > 1, k1s[:2])
     from playwright.sync_api import sync_playwright
     with browser_slot_page(KDECK) as page:
         seen = []

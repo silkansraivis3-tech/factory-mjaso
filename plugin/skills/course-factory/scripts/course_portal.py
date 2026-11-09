@@ -501,6 +501,26 @@ def failed_builds(course):
     return out
 
 
+def walk_problems(course):
+    """2.116.0 - the walk review (walk_review.py) of every built module with a deck: missing, stale or failing stops the
+    upload. -> ["walk review missing for M03 - ...", ...]"""
+    mods = os.path.join(workspace.work_folder(course, create=False), "modules")
+    if not os.path.isdir(mods):
+        return []
+    measure = os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-module-ux", "measure", "scripts")
+    if measure not in sys.path:
+        sys.path.insert(0, measure)
+    import walk_review
+    import re
+    out = []
+    for n in sorted({int(m.group(1)) for d in os.listdir(mods) for m in [re.match(r"(?:module|M|m)(\d+)", d)] if m}):
+        if walk_review.deck_file(workspace.work_folder(course, create=False), n):
+            ok, _kind, msg = walk_review.verify(workspace.work_folder(course, create=False), n)
+            if not ok:
+                out.append(msg)
+    return out
+
+
 def _stop_message(cid, why):
     """the editor's 'Build stopped' message replaced by the course's state now - only where one is shown: a course
     waiting in the queue without one would be held back by it"""
@@ -523,6 +543,7 @@ def cmd_upload(course):
         print("Not uploaded yet - this is the unattended build: the watch uploads it when the run ends.")
         return 0
     pics, other = blockers(course)
+    other = other + walk_problems(course)              # 2.116.0: no upload without the walk review of every built module
     if other:
         why = "Not uploaded after the session of %s - %d thing(s) still stop it: %s" % (
             date.today().isoformat(), len(other), "; ".join(other[:3]) + (" ..." if len(other) > 3 else ""))

@@ -6,7 +6,8 @@
     fix.py propose  <course> --changes changes.json      words for many modules -> ONE list, nothing changed yet
     fix.py apply    <course> --confirmed                 after the operator's one yes: scripts AND built slides
     fix.py approve  <course> --by "<name>" [--despite-findings]   one approval for every module in the batch
-    fix.py check    <course> --kind words|layout|package [--modules ...] [--slides s03,s07]
+    fix.py check    <course> --kind words|layout|package|walk [--modules ...] [--slides s03,s07]
+                                                         walk (2.116.0): the touched slides walked like a trainee (walk_review.py)
     fix.py standard <course> [--add "<rule>" --said "<operator's words>" [--departs <design rule> --risk "..."]]
                                                          the course's house decisions; --departs: a design choice (L26)
     fix.py sync-shared <course> [--confirmed]            one shared file -> every module's own copy
@@ -208,7 +209,9 @@ def sweep(course, find, modules, floor=None, like=None, kind=None, words=None, w
                         "ink": s["ink"], "empty_bottom": s["empty_bottom"], "min_text": s["min_text"], "overflow": s["overflow"]}
                 sparse = s["kind"] in sp["sparse_kinds"]
                 if find in ("space", "layout") and ((s["ink"] or 0) < sp["ink_floor"] or (s["empty_bottom"] or 0) > sp["empty_bottom_max"]):
-                    found.append(dict(base, kind="space", sparse_by_design=sparse, problem="%d%% of the slide carries content, %d%% is empty below it"
+                    # 2.116.0 (operator, 2026-11-09): free space is a NOTE, never a fail (overflow, collide and the figure's EMPTY stay)
+                    found.append(dict(base, kind="space", level="note", sparse_by_design=sparse,
+                                      problem="note: %d%% of the slide carries content, %d%% is empty below it"
                                       % (round(100 * (s["ink"] or 0)), round(100 * (s["empty_bottom"] or 0)))))
                 if find in ("text", "layout") and s["min_text"] is not None and s["min_text"] < fl:
                     found.append(dict(base, kind="text", problem="smallest text %s px (\"%s\") - %d run(s) under %g px"
@@ -571,6 +574,38 @@ def cmd_check(course, kind, modules, slides=None, floor=None):
         rc, out = run([os.path.join(HERE, "check_course_package.py"), course])
         fails += rc != 0
         lines.append(out if rc else "The course folder follows the classroom system's rules.")
+    elif kind == "walk":
+        # 2.116.0 - after any fix, the walk review runs on every touched slide (walk it like a trainee): the module is walked
+        # at 1280x800 (fit_gate.py saves every stop), the touched slides' contact sheets and brief are made, and the check
+        # passes only when the reviewer has signed those slides (walk_review.py sign)
+        measure = os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-module-ux", "measure", "scripts")
+        if measure not in sys.path:
+            sys.path.insert(0, measure)
+        import walk_review
+        want = [x.strip() for x in slides.split(",") if x.strip()] if slides else None
+        for m in chosen:
+            d = deck_file(mods[m])
+            if not d:
+                fails += 1
+                lines.append("Module %d: no deck to walk" % m)
+                continue
+            if not os.environ.get("CF_FIX_NO_WALK_RUN"):
+                rc, out = run([os.path.join(measure, "fit_gate.py"), d, "--viewport", "1280x800",
+                               "--walk-dir", walk_review.walk_dir(course, m)])
+                if rc == 2:
+                    fails += 1
+                    lines.append("Module %d: the walk could not be made - %s" % (m, (out.splitlines() or ["?"])[-1]))
+                    continue
+            ok, why_kind, msg = walk_review.verify(course, m, want)
+            if ok:
+                lines.append("Module %d, walk review: %s" % (m, msg))
+                continue
+            fails += 1
+            rc2, said = walk_review.prepare(course, m, want)
+            lines.append("Module %d, walk review: %s" % (m, msg))
+            lines += ["    " + x for x in said]
+            lines.append("    Run the reviewer on that brief (one Sonnet subagent per batch of 3-4 contact sheets, returning reviewer "
+                         "JSON), then: walk_review.py sign <course> --module %d --review <reviewer.json>, and this check again." % m)
     elif kind == "layout":
         import measure_slides as ms
         fl = floor or RULES["sweeps"]["text"]["floor_px"]
@@ -611,7 +646,7 @@ def cmd_check(course, kind, modules, slides=None, floor=None):
             lines.append("Module %d, layout at %dx%d: %s" % (m, r["viewport"][0], r["viewport"][1],
                                                           "nothing off the screen, no text under %g px" % fl if not bad else "; ".join(bad)))
     else:
-        print("Stopped - the check is one of: words, layout, package (knowledge/fix-rules.json -> checks).")
+        print("Stopped - the check is one of: words, layout, package, walk (knowledge/fix-rules.json -> checks).")
         return 2
     print("\n".join(lines))
     print("\n%s" % ("The check passed - the fix is done." if not fails else "%d thing(s) to fix before it is done." % fails))
@@ -713,6 +748,7 @@ def upload(course):
     spaces still to fill stop it - and the editor's old 'Build stopped' message goes with it (course_portal.py upload)"""
     if not os.path.isfile(workspace.claude_path(course, "portal.json")):
         return
+    # 2.116.0: course_portal.py upload refuses while a built module's walk review is missing, stale or failing
     rc, out = run([os.path.join(HERE, "course_portal.py"), "upload", "--course", course])
     print("\nThe training app's editor:\n" + "\n".join("  " + x for x in out.splitlines()))
 

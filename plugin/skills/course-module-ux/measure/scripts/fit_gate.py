@@ -60,9 +60,11 @@ KIT2D = """(id) => { const s = document.getElementById(id); if (!window.KIT2D ||
 # 2.115.0 - a figure with steps that does not change on any Next is a dead drawing (PM M02 s12, s13: the chart stayed an empty
 # axis on every Next). Its state at a stop: a hash of what it drew.
 KITSTATE = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
-  const hs = [].slice.call(s.querySelectorAll('[data-kit], [data-kit2d]')); if (!hs.length) { return null; }
+  const hs = [].slice.call(s.querySelectorAll('[data-kit], [data-kit2d], [data-custom-fig]')); if (!hs.length) { return null; }
   let steps = 0, sig = '';
   hs.forEach(h => { const f = h.__kit || h.__k2; if (f && f !== 'bad') { steps += (f.spec && f.spec.steps || f.steps || []).length; }
+    const cs = h.querySelector && h.querySelector('script[data-custom-steps]');       /* 2.116.0: a custom figure's declared steps */
+    if (cs) { try { const d = JSON.parse(cs.textContent); steps += (Array.isArray(d) ? d : (d.steps || [])).length; } catch (e) {} }
     const t = h.innerHTML; let x = 0; for (let i = 0; i < t.length; i++) { x = (x * 31 + t.charCodeAt(i)) | 0; } sig += ':' + t.length + ':' + x; });
   return { steps: steps, sig: sig }; }"""
 
@@ -102,8 +104,38 @@ def dead_figures(states):
     return out
 
 
-def walk(page, deck, min_shown):
-    """[(slide id, step on that slide, kind, what)] for one deck at the page's size"""
+# 2.116.0 - the walk review's stop record: the lit lines' text, whether the room's question / its answer is on screen, and
+# the figure's signature - saved beside a ~480 px screenshot of the slide, at 1280x800 only (walk_review.py reads them)
+WALKINFO = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
+  const vis = e => { for (let x = e; x && x !== document.body; x = x.parentElement) { const c = getComputedStyle(x);
+    if (c.display === 'none' || c.visibility === 'hidden' || parseFloat(c.opacity) < 0.05) { return false; } } return true; };
+  const t = e => (e.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 160);
+  const a = s.hasAttribute('data-stops') || s.querySelector('[data-k]') ? 'data-k' : 'data-i';
+  const lit = [].slice.call(s.querySelectorAll('.cur')).filter(x => !x.hasAttribute('data-ks')).map(t).filter(Boolean);
+  const ask = [].slice.call(s.querySelectorAll('.ask')).filter(vis).map(t);
+  const rev = [].slice.call(s.querySelectorAll('.lt-ans-under, .lt-ans-over, .reveal, [data-reveal]')).filter(vis).map(t).filter(Boolean);
+  let sig = ''; [].slice.call(s.querySelectorAll('[data-kit], [data-kit2d], svg, canvas')).forEach(h => { const q = h.innerHTML || '';
+    let x = 0; for (let i = 0; i < q.length; i++) { x = (x * 31 + q.charCodeAt(i)) | 0; } sig += ':' + q.length + ':' + x; });
+  return { lit: lit, ask: ask, reveal: rev, fig: sig, title: t(s.querySelector('h1, h2, .title') || s).slice(0, 80) }; }"""
+WALK_WIDTH = 480
+
+
+def save_shot(page, sid, path):
+    """the slide in front, clipped, as a PNG about WALK_WIDTH px wide (Pillow shrinks it when it is there)"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    page.locator("#" + sid).screenshot(path=str(path))
+    try:
+        from PIL import Image
+        im = Image.open(path)
+        if im.width > WALK_WIDTH:
+            im.convert("RGB").resize((WALK_WIDTH, round(im.height * WALK_WIDTH / im.width)), Image.LANCZOS).save(path)
+    except ImportError:
+        pass
+
+
+def walk(page, deck, min_shown, shots=None, record=None):
+    """[(slide id, step on that slide, kind, what)] for one deck at the page's size. shots: a folder - each stop is saved as
+    <slide>_k<step>.png there (the walk review), record: a list that gets one dict per stop"""
     found, at, states, seqs = [], {}, {}, {}
     page.goto(deck.as_uri())
     page.wait_for_timeout(600)
@@ -122,6 +154,15 @@ def walk(page, deck, min_shown):
         if r:
             step = at[r["id"]] = at.get(r["id"], 0) + 1
             seqs.setdefault(r["id"], []).append(page.evaluate(CURSIG, r["id"]))
+            if shots is not None:
+                try:
+                    name = "%s_k%d.png" % (r["id"], step)
+                    save_shot(page, r["id"], Path(shots) / name)
+                    info = page.evaluate(WALKINFO, r["id"]) or {}
+                    if record is not None:
+                        record.append(dict(info, slide=r["id"], k=step, file=name))
+                except Exception:          # a shot that could not be taken never fails the fit walk; the review finds the gap
+                    pass
             ks = page.evaluate(KITSTATE, r["id"])
             if ks:
                 seen = states.setdefault(r["id"], {"steps": ks["steps"], "sigs": set(), "stops": 0})
@@ -167,6 +208,7 @@ def main(argv=None):
     ap.add_argument("--viewport", action="append", default=[])
     ap.add_argument("--min-shown", type=float, default=0.8)
     ap.add_argument("--json")
+    ap.add_argument("--walk-dir", help="2.116.0: save each stop at 1280x800 here (sNN_kK.png) with walk.json - the walk review's input")
     o = ap.parse_args(argv)
     deck = find_deck(o.deck)
     if not deck:
@@ -197,7 +239,12 @@ def main(argv=None):
             for w, h in sizes:
                 page = b.new_page(viewport={"width": w, "height": h})
                 page.add_init_script(PROBE)
-                res["%dx%d" % (w, h)] = walk(page, deck, o.min_shown)
+                rec = [] if (o.walk_dir and (w, h) == (1280, 800)) else None
+                res["%dx%d" % (w, h)] = walk(page, deck, o.min_shown, o.walk_dir if rec is not None else None, rec)
+                if rec is not None:
+                    Path(o.walk_dir).mkdir(parents=True, exist_ok=True)
+                    (Path(o.walk_dir) / "walk.json").write_text(
+                        json.dumps({"viewport": "1280x800", "stops": rec}, indent=1, ensure_ascii=False), encoding="utf-8")
                 page.close()
             b.close()
     except Exception as err:                                # the browser did not start or the page did not answer
