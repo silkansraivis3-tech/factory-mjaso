@@ -81,6 +81,10 @@ def module_dir(course, module):
     """modules\\module01, else modules\\M01_<title>, else modules\\m1 - the folder fix.py also finds"""
     n = int(module) if str(module).isdigit() else None
     mods = os.path.join(_work(course), "modules")
+    if str(module).lower() == "final":       # 2.116.1 (PM): the final assessment is the last module's folder (L34)
+        found = [d for pat in ("module[0-9][0-9]", "M[0-9][0-9]_*") for d in glob.glob(os.path.join(mods, pat)) if os.path.isdir(d)]
+        nums = [(int(re.search(r"(\d+)", os.path.basename(d)).group(1)), d) for d in found]
+        return max(nums)[1] if nums else None
     for pat, rx in (("module[0-9][0-9]", r"module(\d+)$"), ("M[0-9][0-9]_*", r"M(\d+)_"), ("m[0-9]*", r"m(\d+)$")):
         for d in sorted(glob.glob(os.path.join(mods, pat))):
             m = re.match(rx, os.path.basename(d))

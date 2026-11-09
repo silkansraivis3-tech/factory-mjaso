@@ -198,7 +198,10 @@ def starter_blanks(course, module):
         if e is None:
             continue
         fig = (e.get("figure") or "").strip() or ("tiles" if e.get("tiles") else "")   # (merge) "tiles" are its picture too
-        if s["kind"] == "slide" and not s.get("recap") and not fig and (s.get("visual_kind") or "none") != "none":
+        # 2.116.1 (PM M03) - a slide whose words read on their own drops its planned picture with "no_figure": "<reason>" in the
+        # build sheet; the approved script's visual_kind is the plan, not a quota
+        if s["kind"] == "slide" and not s.get("recap") and not fig and (s.get("visual_kind") or "none") != "none" \
+                and not str(e.get("no_figure") or "").strip():
             pics.append(s["id"])
         elif s["kind"] in cs.TASKS and cs.mech(s) in cm.STARTER_ON_PICTURE and not fig:
             ons.append(s["id"])

@@ -2669,7 +2669,12 @@ def carousel_figure(fig, cards):
     lights the one the line now holds (opacity only - a crossfade, nothing that moves carries a filter, L65)"""
     tag = lambda h, i: h.replace("<img ", '<img data-ph="%d" ' % i, 1)
     first = tag(fig, 0).replace('data-ph="0"', 'data-ph="0" class="on"', 1)
-    return first + "".join(tag(h, i) for i, h in sorted(cards.items()))
+
+    def own_alt(h):
+        # 2.116.1 (PM M01 s06): every carousel photo carried the slide's alt (the first photo's); its own description is its alt
+        m = re.search(r'data-about="([^"]*)"', h)
+        return re.sub(r'\balt="[^"]*"', lambda _: 'alt="%s"' % m.group(1), h, count=1) if m and m.group(1) else h
+    return first + "".join(own_alt(tag(h, i)) for i, h in sorted(cards.items()))
 
 
 def photo_points(b, nlines, key, probs, where, z=False):
@@ -2963,8 +2968,28 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
                     % (attrs(d), img, sp, head, h2, asks, clock(True, run), hint, e(w["clock"])))
     if body is None:
         return None
+    body = split_cols(body, b)
     template_attrs(d, tid, variant)
     return '<section %s>\n%s\n  %s\n  %s\n</section>' % (attrs(d), head, h2, body)
+
+
+def split_cols(body, b):
+    """2.116.1 (PM M03 s05, s13) - the shaped templates fixed their two columns ("46fr 54fr"...), so the build sheet's "split"
+    (the text's share) was ignored and a narrow text column overflowed at 1024. The text column takes "split", whichever side
+    it is on"""
+    try:
+        t = float(b.get("split"))
+    except (TypeError, ValueError):
+        return body
+    if not SPLIT_LO <= t <= SPLIT_HI:
+        return body                                   # the problem is reported where "split" is checked
+    m = re.search(r'(<div class="slide-body lt-split" style="--cols:)\d+(?:\.\d+)?fr \d+(?:\.\d+)?fr(">)', body)
+    if not m:
+        return body
+    text_first = body[m.end():].lstrip().startswith('<div class="copy')
+    a = int(round(100 * t))
+    cols = "%dfr %dfr" % ((a, 100 - a) if text_first else (100 - a, a))
+    return body[:m.start()] + m.group(1) + cols + m.group(2) + body[m.end():]
 
 
 def spot_width(fig, mdir, m, rel):

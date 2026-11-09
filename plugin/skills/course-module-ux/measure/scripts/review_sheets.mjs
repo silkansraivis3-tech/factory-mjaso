@@ -268,7 +268,11 @@ window.__rv = (function(){
   function k(el){ return (el.getAttribute('data-key')||'').toLowerCase(); }
   function keyEl(it){ return it.hasAttribute('data-key') ? it : (it.parentNode.querySelector('[data-key]') || it); }
   function $$(s,r){ return [].slice.call((r||document).querySelectorAll(s)); }
-  function go(){ var g=document.getElementById('go'); if(g && !g.disabled){ g.click(); return true; } return false; }
+  function go(){
+    /* 2.116.1 (PM FINAL): a page whose questions differ per group opens on #grpScr - pick the first group, as a trainee would */
+    var gs=document.getElementById('grpScr'), gp=gs && gs.classList.contains('on') && gs.querySelector('.grp-pick');
+    if(gp){ gp.click(); return true; }
+    var g=document.getElementById('go'); if(g && !g.disabled){ g.click(); return true; } return false; }
   function press(el){ var r=el.getBoundingClientRect(), o={bubbles:true,button:0,clientX:r.left+5,clientY:r.top+5};
     el.dispatchEvent(new MouseEvent('mousedown',o)); document.dispatchEvent(new MouseEvent('mouseup',o)); }
   function zv(z){ return norm(z.getAttribute('data-val')||''); }
@@ -450,7 +454,7 @@ window.__rv = (function(){
     return out;
   }
   return {
-    start: function(){ if (!document.querySelector('.scr.on[data-script]')) go(); return 1; },     /* the try / intro screen's own button */
+    start: function(){ for (var t = 0; t < 2 && !document.querySelector('.scr.on[data-script]'); t++) go(); return 1; },   /* group pick, then the intro */     /* the try / intro screen's own button */
     current: function(){ var s = document.querySelector('.scr.on[data-script]') || $$('.scr[data-script]').filter(function(x){ return x.offsetParent; })[0]; return s ? s.getAttribute('data-script') : null; },
     ids: function(){ return $$('.scr[data-script]').map(function(s){ return s.getAttribute('data-script'); }); },
     overlay: function(on){
