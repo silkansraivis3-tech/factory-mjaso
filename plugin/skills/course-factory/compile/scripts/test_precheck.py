@@ -134,14 +134,17 @@ def main():
         scr.insert(4, dense)
         c, md = course(tmp, "dense", screens=scr)
         code, out = run(PRE, c, "--module", "1")
-        check("more than 60 words with no picture beside them (L61)", code == 1 and "(s05): 96 words and no picture" in out, out)
+        # 2.116.0 (operator, 2026-11-09): "dense text always has a picture" was the rule - now a note, a slide may have no picture
+        check("more than 60 words with no picture beside them is a note only (no picture quota)",
+              code == 0 and "(s05): 96 words and no picture" in out and "fine when the words read on their own" in out, out)
         short = lambda i: {"id": "x%d" % i, "kind": "slide", "title": "Point %d" % i, "visual_kind": "none", "minutes": 1,
                            "text": "A short point."}
         scr = json.loads(json.dumps(tc.SCREENS))
         scr[4:4] = [short(1), short(2), short(3)]
         c, md = course(tmp, "three", screens=scr)
         code, out = run(PRE, c, "--module", "1")
-        check("three teaching slides in a row without a picture (L61)", code == 1 and "three teaching slides in a row without a picture (x1, x2, x3)" in out, out)
+        check("three teaching slides in a row without a picture are fine (L61's 'two in a row' removed, 2.116.0)",
+              code == 0 and "three teaching slides in a row" not in out, out)
         drawn = [{"id": "d%d" % i, "kind": "slide", "title": "Drawing %d" % i, "layout": "split", "visual_kind": "schematic",
                   "visual": "x", "minutes": 2, "text": "A line about the drawing."} for i in range(1, 5)]
         c, md = course(tmp, "forced", screens=drawn + tc.SCREENS[-2:],
@@ -194,21 +197,17 @@ def main():
         sid = next(x["id"] for x in sc["screens"] if x["kind"] == "slide" and (sheet.get(x["id"]) or {}).get("figure")
                    and not (sheet.get(x["id"]) or {}).get("template") and len(tc.cs.lines_of(x.get("text"))) >= 2)
         deck_html = io.open(os.path.join(md, "presentation", "index.html"), encoding="utf-8").read()
-        own = bm.spilled_own(deck_html, "1024x768  deck  FAIL\n   slide 3 (%s): scrolls div.slide-body by 40 px" % sid, c, 1)
-        check("the audit's \"scrolls\" on a slide the compiler laid out itself is found (%s)" % sid, list(own) == [sid], own)
-        avoid_p = os.path.join(c, "working_claude", "_build", "M01_layout_avoid.json")
-        bm.parts_out(avoid_p, own)
-        run(tc.COMPILE, c, "--module", "1", "--no-drawing-check")
-        tag = re.search(r'<section [^>]*data-script="%s"[^>]*>' % sid, io.open(os.path.join(md, "presentation", "index.html"),
-                                                                              encoding="utf-8").read()).group(0)
-        check("... and the next compile builds it with its words in parts (content-in-parts)", 'data-template="content-in-parts' in tag, tag)
+        # 2.116.0 (operator, 2026-11-09): the automatic paging of a slide whose own layout spilled (spilled_own / parts_out, and the
+        # pre-check fallback that overrode a requested template) was the rule - removed: the factory never pages or moves the words
+        check("2.116.0: the factory has no automatic words-in-parts fallback any more (spilled_own, parts_out, wants_parts are gone)",
+              not hasattr(bm, "spilled_own") and not hasattr(bm, "parts_out") and not hasattr(cm, "wants_parts"))
+        tag = re.search(r'<section [^>]*data-script="%s"[^>]*>' % sid, deck_html).group(0)
+        check("... a slide the compiler laid out itself is never built content-in-parts unasked", 'data-template="content-in-parts' not in tag, tag)
         tc.build_of(c, lambda b: b["screens"][sid].update({"template": "explain-figure"}))
-        own2 = bm.spilled_own(deck_html, "slide 3 (%s): scrolls div.slide-body by 40 px" % sid, c, 1)
         run(tc.COMPILE, c, "--module", "1", "--no-drawing-check")
         tag2 = re.search(r'<section [^>]*data-script="%s"[^>]*>' % sid, io.open(os.path.join(md, "presentation", "index.html"),
                                                                                encoding="utf-8").read()).group(0)
-        check("... a template the builder asked for by name is never overruled", own2 == {} and 'data-template="explain-figure' in tag2,
-              (own2, tag2))
+        check("... and a template the builder asked for by name is built as asked", 'data-template="explain-figure' in tag2, tag2)
 
         print("\n-- a rebuild of a built module is a fix (fix.py rebuild)")
         c, md = course(tmp, "rebuild")

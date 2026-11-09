@@ -193,7 +193,7 @@ colours, the official logo top right, Raleway bundled. What the compiler chooses
 | a drawing on a stage | `figure-stage` |
 | a picture beside up to 60 words | `explain-figure` `figure-right` (`figure-left` with `"figure_first"`) |
 | a picture beside more than 60 words | `reading-with-figure` - or `long-explanation` when the picture is 3D |
-| a picture beside more than 85 words | `content-in-parts`: the lines in order, in parts of about 75 words; Next walks the parts, every part has a tab |
+| a picture beside more than 85 words | `reading-with-figure`, the words whole (2.116.0: never paged by the factory - the writer shortens them, `v_paged_slide`); `content-in-parts` (the lines in order, in parts of about 75 words, a tab each) only when the build sheet asks for it |
 
 **Word budgets (2.63.0, measured at 1024 x 768 with these templates and the larger logo - `layout-templates.json`
 `budgets`):** beside a picture 85 words, with a photo under the words 70, beside a photo column 85, under a photograph
@@ -212,6 +212,11 @@ own words, `script/GUIDE.md` §1; `compare-two` needs `"blocks": [[1, 2], [3, 4]
 and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `"split": 0.5`-`0.6` (the text's share),
 `"box"` (the picture's box, below), `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.
+
+**2.116.0 (operator Aleksis Vējs, 2026-11-09): this is now a NOTE.** The compiler never builds a slide another way to avoid a
+repeat and `build_module.py` never settles one (`compile_module.LAYOUT_FLIP` is off; `CF_LAYOUT_FLIP=1` only for the
+factory's own tests); a repeat, or more than a fifth of slides on the dark ground, is a `Note:` line, never a problem.
+The paragraph below describes the old machinery.
 
 **Never the same look twice in a row (L62, 2.53.0) - and 80 / 20 light (owner, 2.62.1).** A slide's look is its shape
 and its ground. When a slide would look like the one before it, the compiler builds it another way that holds the same
@@ -387,8 +392,10 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   uses the factory's classes (`fill fig`, `[data-stage]`); a class of the module's own (`m02-3d-col`, `cards4`,
   `m04-3d`) needs a rule in the module's stylesheet or a query in its script - a class nothing styles or finds is a
   defect in `audit_ui.py` / `check_task_pages.py`. Layout goes in the stylesheet, never in a `style=""` attribute.
-  **At least one scene per module where the subject allows it - strongly recommended (L60, 2.49.7).** `--init-build`
-  gives a `model_3d` slide a starter scene entry: its figure (`s05.kit3d.json` - nothing goes into `"scripts"`), a
+  **2.116.0 (operator, 2026-11-09: "draw the drawings 2d kit and 3d with a reason, dont just put it in just because"): the
+  factory no longer picks a scene unasked, and the RECOMMENDED block and its review-page card are gone; 3D only where the
+  slide's `why` is `spatial` (section 2i). What follows describes a `model_3d` slide the script plans itself.**
+  `--init-build` gives a `model_3d` slide a starter scene entry: its figure (`s05.kit3d.json` - nothing goes into `"scripts"`), a
   `"_figure"` note on how to build it, and writes the starter spec itself (a label, metres, a view, parts guessed from the
   slide's words and laid side by side, each with a label, and a `"_todo"` to place them as on board - never overwritten).
   It also writes the slide's 2D starter spec (`sNN.kit.json`, 2.50.6), named in the entry's `"_2d"` note but not in
@@ -662,12 +669,62 @@ photo of its own keeps the previous one, and the first photo (`"figure"`, or the
 `"figure"`) shows before any line. It needs a photograph slide (composition `photo`) and cannot be combined with `"spots"` or
 `"zoom"`; a bad key or a file that is not a photograph is reported.
 
-**Content in parts is the writer's finding, not a layout trick (2.109.0).** A slide with a picture and more than 85 words is
-paged by the compiler into parts with number tabs (1 2 ...); trainees find the switching confusing (Aigars: "just 3-4
+**Content in parts is the writer's finding, not a layout trick (2.109.0; 2.116.0: the factory never pages by itself).** A slide
+with a picture and more than 85 words would need parts with number tabs (1 2 ...); the factory does not make them any more - no
+automatic `content-in-parts`, no automatic `points`, no pre-check fallback; trainees find the switching confusing (Aigars: "just 3-4
 bullet points"). The review page (`content_script.paged_findings`, rule `v_paged_slide`) lists such a slide as a must-fix: cut
 it to 3-4 short lines (by proposal - the build never cuts, L61), or keep the parts on purpose with `"parts"` (or
 `"template": "content-in-parts.v1"`) in the build sheet, which also silences the finding. The compile prints the same
-as `MUST FIX (content in parts)`.
+as `MUST FIX (too many words for the picture)`.
+
+## 2i · Every figure has a reason, custom figures, and the walk review (2.116.0)
+
+**Why (operator Aleksis Vējs, 2026-11-09, after the Project Management review: "draw the drawings 2d kit and 3d with a reason,
+dont just put it in just because").** Every kit figure (`sNN.kit.json`, `sNN.kit2d.json`), 3D model (`sNN.kit3d.json`) and
+custom figure carries `"why"` and `"why_text"` - in the spec, or in the figure's build-sheet entry:
+
+| why | what the trainee sees | the steps must |
+|---|---|---|
+| `mechanism`, `sequence` | how a thing works / what comes in which order | be at least two, tied to lit lines (`"line"`) or a `"reveal"` |
+| `quantity-change` | a number or level change | change a state value between stops |
+| `comparison` | two states side by side | show two states (a step that changes the figure, or `"figure_b"`) |
+| `spatial` | where things are, in space | - (a 3D model; refused when the slide's visual is a flat idea: chart, matrix, checklist ...) |
+| `real-thing-recognition` | what the real thing looks like | - (also asks for the real photographs under the drawing) |
+| `still` | one picture that needs no steps | - |
+
+`"why_text"` is ONE sentence: what the trainee sees change, or sees. Refused: no why, no why_text, a why its steps do not
+serve, `spatial` / 3D on a flat idea (`figure_why.py`; `v_why` in the content script, the compile before it builds, `check_kit.py`).
+A slide may have **no picture** at all when its words read on their own - there is no picture quota anywhere.
+
+**Custom figures - kit first, custom allowed.** When no kit part shows the idea well, draw a custom figure: a self-contained
+`.html` or `.svg` file in `working_claude\figures\MNN\assets\figures\sNN.html`, named in the build sheet:
+`"custom_figure": "assets/figures/s09.html", "why": "sequence", "why_text": "..."`. The contract (the same checks as a kit figure):
+- **steps that Next drives**: `<script type="application/json" data-custom-steps>[{"line": 2}, {"line": 3, "reveal": true}]</script>`
+  (steps keyed by line, a `"reveal"` step plays with the answer) and a hook `GB_HOOKS.s09 = {enter, leave, step(dir)}` where
+  `step(dir)` returns true while it has a step to play - the deck's Next walks it; the figure changes on Next (the fit gate fails a
+  drawing that does not - `dead`);
+- **offline**: no `src` / `href` / `url()` / `import` / `fetch` to the network, no `<script src>` - the code is inside the file (a chart
+  library only when it is already bundled in the plugin; otherwise hand SVG);
+- **fits and does not overflow** (fit gate, audits), **smooth motion** (`audit_motion.js`, L65), **full-screen zoom** (it sits in the
+  slide's `.fill.fig` box, so the viewer opens it like any picture).
+A good custom figure is offered to the kit afterwards (`course-visuals/kit2d/SPEC.md`, "Custom figures").
+
+**The walk review - "walk it like a trainee" (the module is not done without it).** `build_module.py` walks the deck at 1280x800
+(`fit_gate.py --walk-dir`: every Start and every Next, a ~480 px picture of each stop, `working_claude\_build\walk\MNN\walk.json`).
+When every other check passes it prints `NOT DONE: walk review missing/stale/failing` until an AI reviewer has looked. The factory
+cannot call the reviewer; **the lead session runs it:**
+1. `python course-module-ux\measure\scripts\walk_review.py prepare <course> --module N` - one contact sheet per slide
+   (`walk\MNN\sheets\sNN.png`) and `walk\MNN\review_brief.md`: the sheets in batches of 3-4 slides with each slide's stop texts, its
+   figure's why / why_text, and the rubric (1 something visibly changes on each Next; 2 the picture shows what the lit line says;
+   3 nothing empty, hidden, cut, duplicated or contradictory; 4 a trainee knows what to do / what the slide teaches; 5 the drawing has
+   a reason and serves it; 6 the answer / reveal is visible and does not cover the figure). (Pillow: `python -m pip install pillow`.)
+2. **One Sonnet subagent per batch** (3-4 contact sheets - several images in one look, never one screenshot at a time): give it the
+   batch's section of the brief and the sheet files; it returns JSON `{"reviewed_by": "...", "slides": {"s03": {"ok": true, "fails": []},
+   "s07": {"ok": false, "fails": ["stop 3: the chart is still an empty axis"]}}}`.
+3. Save each batch's JSON and `walk_review.py sign <course> --module N --review <reviewer.json>` (the results merge by slide).
+4. **Fix every fail, build again, walk and review again** until `walk_review.py verify <course> --module N` says OK (exit 0). A
+   changed deck makes the review stale (the hash ignores build timestamps and comments). `--no-walk` is for the factory's own tests.
+`fix.py upload` and `course_portal.py upload` refuse while a built module's walk review is missing, stale or failing.
 
 ## 3 · When the look is not enough
 

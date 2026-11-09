@@ -554,20 +554,10 @@ def fit_tries(s, b, have, sec):
     except (TypeError, ValueError):
         split = cm.LAYOUTS["split"]["default"]
     wider = {"split": cm.SPLIT_HI} if split < cm.SPLIT_HI else {}
-    paged, said = {}, ""
-    if len(lines) >= 2:
-        if 'data-template="content-in-parts.' in sec:
-            n = int((re.search(r'data-parts="(\d+)"', sec) or re.search(r"()", "")).group(1) or 0)
-            more = parts_in(lines, n + 1) if n else []
-            if len(more) > n:
-                paged, said = {"parts": more}, "its words in %d parts (\"parts\": %s)" % (len(more), json.dumps(more))
-        else:
-            paged, said = {"template": "content-in-parts"}, "its words in parts (\"template\": \"content-in-parts\")"
+    # 2.116.0 (operator, 2026-11-09): the factory never moves the words into parts by itself - only a wider words' column
+    # is tried. Words that still do not fit are the writer's finding (v_paged_slide): shorten them with the operator's approval.
     w = "the words' column at %d %% (\"split\": %g)" % (round(100 * cm.SPLIT_HI), cm.SPLIT_HI)
-    out = [(w, dict(have, **wider))] if wider else []
-    out += [(said, dict(have, **paged))] if paged else []
-    out += [(said + " and " + w, dict(have, **dict(paged, **wider)))] if wider and paged else []
-    return out
+    return [(w, dict(have, **wider))] if wider else []
 
 
 def room_tries(have, sec):
@@ -696,7 +686,9 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
         tried = set(a0.get("tried") or [])
         plan = [(w, with_set(sid, st), True) for w, st in fit_tries(s, (build.get("screens") or {}).get(sid) or {},
                                                                   a0.get("set") or {}, sec_of(deck, sid)) if w not in tried]
-        if s.get("kind") == "slide" and not s.get("recap"):
+        # 2.116.0: no "other ways" (layout flipping) any more - a slide's look is never changed by the factory
+        # (compile_module.LAYOUT_FLIP, off in a real build, keeps the old solver reachable for the factory's own tests)
+        if cm.LAYOUT_FLIP and s.get("kind") == "slide" and not s.get("recap"):
             plan += [(w, a_, False) for w, a_ in ways(sid)]
         why = ""
         for what, av2, is_set in plan:
@@ -724,7 +716,7 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
             if is_set:
                 rec(av, sid).setdefault("tried", []).append(what)
         else:
-            if sid not in done and plan:
+            if sid not in done and (plan or a0.get("tried")):
                 lines.append("%s: no way found that fits (%s) - fewer words in a part, or a smaller picture beside them"
                              % (sid, why or "every try made before"))
             elif not plan and s.get("kind") == "activity" and not ((build.get("screens") or {}).get(sid) or {}).get("figure") \
@@ -770,7 +762,8 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
     # the old column may be built again
     # every try laid out first and the ones the layout already rules out dropped (no audit); then the slide with a side
     # measured out and the slide before it built its next way, fewest slides changed first; then the rest
-    for prev, sid in [x for x in l62_pairs(deck) if pairs is None or x in pairs]:
+    for prev, sid in ([x for x in l62_pairs(deck) if pairs is None or x in pairs] if cm.LAYOUT_FLIP else []):
+        # 2.116.0: an L62 repeat is a note, never settled by changing a slide (only with the test switch CF_LAYOUT_FLIP=1)
         if (prev, sid) not in l62_pairs(deck):
             continue
         cands = []
@@ -917,7 +910,7 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None, extra=No
     room = {sid: v for sid, v in room.items() if v}
     for sid in last_room(logdir, m):
         room.setdefault(sid, ["the last build's fit gate: its picture shown in part"])
-    if bad or l62_pairs(deck) or room:
+    if bad or room or (cm.LAYOUT_FLIP and l62_pairs(deck)):
         t = time.time()
         av, said, done, fits = solve_layouts(script, build, mdir, figdir, avoid, last,
                                              {sid: bad[sid] for _, sid, _ in slide_order(deck) if sid in bad}, audit, sizes,
@@ -997,51 +990,6 @@ def check_slides(course, module, sids, sizes, audit=None):
                          "part, \"parts\", a smaller picture) and check again")
     lines.append("  (%.0f s; nothing written)" % (time.time() - t0))
     return (1 if bad else 0), lines
-
-
-def spilled_own(deck_html, audit_out, course, module):
-    """2.67.0 - the slides whose OWN layout scrolls or spills at the audit - the compiler's choice (no "template" in the
-    build sheet, not built another way for L62), with a picture and more than one line: {slide id: its words key}. Their
-    words go in parts at once (compile_module.wants_parts) - on gas M01 (2.65) six slides scrolled at 1024 x 768, each a
-    builder's run to put them in parts by hand"""
-    # 2.69.0 - and a photograph cropped to a strip: its words in parts give it the height (gas M01 s11, the ship cut through)
-    bad = set(re.findall(r"slide \d+ \((\w+)\): (?:scrolls|spills|photo cropped to a strip)\b", audit_out or ""))
-    if not bad:
-        return {}
-    import compile_module as cm
-    import content_script as cs
-    try:
-        script = cs.load(cs.paths(course, module)["script"])
-        sheet = cs.load(cm.build_path(course, module)).get("screens") or {}
-    except (OSError, ValueError, KeyError):
-        return {}
-    by_id = {x["id"]: x for x in script.get("screens", [])}
-    out = {}
-    for tag in re.findall(r"<section [^>]*>", deck_html):
-        sid = re.search(r'\bdata-script="(\w+)"', tag)
-        if not sid or sid.group(1) not in bad or "data-varied=" in tag or 'data-template="content-in-parts' in tag:
-            continue
-        sc, b = by_id.get(sid.group(1)), sheet.get(sid.group(1)) or {}
-        if not sc or sc.get("kind") != "slide" or b.get("template") or not b.get("figure") or len(cs.lines_of(sc.get("text"))) < 2:
-            continue
-        # (merge with 2.72.x) the layout record's one key, fit_key - the layout solver and measure_out read it too
-        out[sid.group(1)] = cm.fit_key(sc, b)
-    return out
-
-
-def parts_out(path, own):
-    """each slide's words go in parts while its words key is the same (compile_module.wants_parts)"""
-    try:
-        avoid = json.load(io.open(path, encoding="utf-8"))
-    except (OSError, ValueError):
-        avoid = {}
-    for sid, words in own.items():
-        a = avoid.get(sid) or {}
-        if a.get("words") != words:
-            a = {"words": words, "avoid": []}
-        a["parts"] = True
-        avoid[sid] = a
-    io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(avoid, indent=1, sort_keys=True))
 
 
 def reviewed_dir(out_dir):
@@ -1271,6 +1219,8 @@ def main(argv=None):
     ap.add_argument("--no-course-pages", action="store_true", help="a module agent in a parallel build: no compile_course.py")
     ap.add_argument("--no-fix", action="store_true", help="the figure pre-check makes no fix of its own")
     ap.add_argument("--no-review", action="store_true", help="no review sheets after a pass")
+    ap.add_argument("--no-walk", action="store_true", help="2.116.0: no walk review gate (factory tests only) - a real build is not "
+                    "done without it (walk_review.py)")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--full", action="store_true", help="never stop after the figures - every stage, every run; the drawing "
@@ -1536,7 +1486,9 @@ def main(argv=None):
         # the deck walked with Next to every slide's last step (fit_gate.py, Playwright): the audits measure each slide as
         # it opens, and an answer or a last line that arrives later was never measured - one job a size, side by side
         for v in ["1280x800"] + sizes:
-            jobs["fit %s (every Next)" % v] = [PY, os.path.join(MEASURE, "fit_gate.py"), deck, "--viewport", v]
+            jobs["fit %s (every Next)" % v] = [PY, os.path.join(MEASURE, "fit_gate.py"), deck, "--viewport", v] + (
+                # 2.116.0 - the walk review's input: every stop at 1280x800 saved (walk_review.py)
+                ["--walk-dir", os.path.join(logdir, "walk", m)] if v == "1280x800" and not o.no_walk else [])
 
     if not o.no_course_pages:
         jobs["course pages (compile_course.py)"] = [PY, os.path.join(HERE, "compile_course.py"), course]
@@ -1618,14 +1570,10 @@ def main(argv=None):
     if ak in fails and not drawings_open and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):
         page_ = io.open(deck, encoding="utf-8").read()
         mis = early or moved_misfits(page_, results[ak][1])
-        own = {} if early else spilled_own(page_, results[ak][1], course, o.module)
-        if mis or own:
-            if mis:
-                measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
-            if own:
-                parts_out(os.path.join(logdir, "%s_layout_avoid.json" % m), own)
-                print("PARTS - %d slide(s) whose own layout spilled at the audit: %s - built again with their words in parts "
-                      "(content-in-parts; kept while their words are unchanged)" % (len(own), ", ".join(sorted(own))))
+        # 2.116.0: no automatic parts for a slide whose own layout spilled (spilled_own / parts_out are gone) - the factory never
+        # moves or pages the words; the writer shortens them (v_paged_slide) with the operator's approval
+        if mis:
+            measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
             log.write("\n===== this round's findings (the build runs again for the slides above)\n%s\n" % "\n".join(say))
             write_stages(log, stages, t0, timing)
             log.close()
@@ -1685,6 +1633,22 @@ def main(argv=None):
         print(x)
     for x in notes:
         print(x)
+    # 2.116.0 - THE WALK REVIEW GATE: a module whose checks all pass is still not done until an AI reviewer has looked at every
+    # stop of every slide as a trainee does (walk_review.py; compile/GUIDE.md says how the lead session runs it)
+    walk_open = ""
+    if passed and not slots_left and not o.no_walk and os.path.isfile(deck):
+        if MEASURE not in sys.path:
+            sys.path.insert(0, MEASURE)
+        import walk_review
+        w_ok, w_kind, w_msg = walk_review.verify(course, o.module)
+        if not w_ok:
+            walk_open, passed = "walk review %s - %s" % (w_kind, w_msg), False
+            fails.append("walk review")
+            try:
+                w_rc, w_lines = walk_review.prepare(course, o.module)
+                walk_open += "\n  " + "\n  ".join(w_lines)
+            except Exception as why:                    # noqa: BLE001 - the sheets are a help; the gate stands
+                walk_open += "\n  (the contact sheets could not be made: %s)" % why
     secs = time.time() - t0
     needs = ""
     if slots_left or os.path.isfile(os.path.join(workspace.claude_path(course, "visuals"), "%s_VISUAL_NEEDS.json" % m)):
@@ -1727,6 +1691,11 @@ def main(argv=None):
             print(gold)
         if review:
             print(review)
+    elif walk_open:
+        print("NOT DONE: %s (%.0f s)" % (walk_open, secs))
+        print("  Every other check passed. Run the reviewer on the brief (one Sonnet subagent per batch of 3-4 contact sheets, "
+              "returning reviewer JSON - compile/GUIDE.md 2h), then: walk_review.py sign <course> --module %s --review <reviewer.json>; "
+              "fix every fail, build again, walk and review again until verify passes" % o.module)
     else:
         print("FAIL %s - %s (%.0f s)" % (m, ", ".join(fails), secs))
         if review and fails == ["course package"]:

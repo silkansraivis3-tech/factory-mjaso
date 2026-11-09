@@ -230,11 +230,7 @@ def analyse(prog, arch, plan=None):
         elif m["th_min"] >= F["moving_or_3d_per_module_from_min"] and not any(
                 MEDIA["visual_kinds"].get(x.get("kind"), {}).get("family") in MOVING for x in md):
             suggestions.append(("p_no_motion", {"m": n, "min": "%g" % m["th_min"]}))
-        TD = MEDIA["three_d"]                                 # L67 - 60-80 % interactive 3D; the plan only suggests
-        three = [x for x in md if MEDIA["visual_kinds"].get(x.get("kind"), {}).get("family") in TD["families"]]
-        if len(md) >= TD["count_from"] and not TD["min_share"] * len(md) <= len(three) <= TD["max_share"] * len(md):
-            suggestions.append(("p_3d_many", {"m": n, "n": len(three), "tot": len(md), "pct": "%.0f" % (100.0 * len(three) / len(md)),
-                                              "min": "%.0f" % (100 * TD["min_share"]), "max": "%.0f" % (100 * TD["max_share"])}))
+        # 2.116.0: the 60-80 % 3D share suggestion (p_3d_many) is gone (operator, 2026-11-09)
         # L49 - how the class spends the minutes: plain theory against everything the trainees do (programme unchanged)
         al = [x for x in (am.get("active_learning") or []) if isinstance(x, dict)]
         tasks_min = sum(s["minutes"] for s in m["sc"]) + m["mc"].get("minutes", 0)

@@ -301,7 +301,9 @@ def main():
         thin = copy.deepcopy(SCRIPT)
         screen(thin, "s03")["text"] = "Type A, B, C and membrane."
         screen(thin, "s03")["notes"] = "Show the cutaway."
-        check("a slide too thin to teach from is found", "t_thin_slide" in rules_of(thin), rules_of(thin))
+        check("a slide too thin to teach from is found - as a NOTE at 30 words (2.116.0; was a must-fix at 50)",
+              "t_thin_slide" in rules_of(thin) and all(f["level"] == cs.NOTE for f in cs.theory_findings(thin)[0] if f["rule"] == "t_thin_slide"),
+              rules_of(thin))
         check("instructor notes too thin to explain from are found", "t_thin_notes" in rules_of(thin), rules_of(thin))
         long_ = copy.deepcopy(SCRIPT)
         screen(long_, "s03")["text"] = S03_TEXT + "\n" + S01_TEXT
@@ -369,7 +371,8 @@ def main():
         code, out = cs_run("approve", cb, "--module", "1", "--by", "Anna", "--despite-findings")
         rec = cs.load(cs.paths(cb, 1)["script"])
         check("the operator may approve despite them (L26) - and that is recorded",
-              code == 0 and {"t_thin_slide", "t_thin_notes"} <= {f["rule"] for f in rec.get("approved_despite_findings", [])}, out)
+              code == 0 and {"t_thin_notes"} <= {f["rule"] for f in rec.get("approved_despite_findings", [])}
+              and "t_thin_slide" not in {f["rule"] for f in rec.get("approved_despite_findings", [])}, out)     # 2.116.0: thin slide = note
 
         print("\n-- 2.18.0: every slide leaves room for a named picture, and the tasks are varied (L37, L38)")
         mrules = lambda sc: [f["rule"] for f in cs.media_findings(sc)]
@@ -404,7 +407,7 @@ def main():
             screen(many, x)["picture"] = {"kind": "photo" if x != "s03" else "figure", "aspect": "4:3"}   # 2.73.0: the slot follows
         f = [x for x in cs.media_findings(many) if x["rule"] == "v_few_kinds"]
         check("six slides with only two kinds of picture is suggested, not blocked", f and f[0]["level"] == cs.NOTE, f)
-        two_kinds = [x for x in cs.blocking(cs.media_findings(many)) if x["rule"] != "v_3d_share"]    # no 3D at all is L67's own must-fix
+        two_kinds = [x for x in cs.blocking(cs.media_findings(many))]    # 2.116.0: the L67 3D share is gone - nothing blocks here
         check("... so the kinds of picture alone never block approval", not two_kinds, two_kinds)
 
         print("\n-- 2.23.0: team tasks, planned with the words (classroom rulebook 4b)")
@@ -422,30 +425,62 @@ def main():
         check("caught: no team or member scope", any("\"scope\": \"team\"" in x for x in pb), pb)
         check("caught: the module check as a team task - each trainee answers it alone", any("t02" in x and "answered by each trainee alone" in x for x in pb), pb)
 
-        print("\n-- L67: 60-80 % of the teaching slides step through interactive 3D")
+        print("\n-- 2.116.0: the L67 3D share (60-80 %) is gone - 3D only where its why is spatial")
+        # L67 asserted that 60-80 % of the teaching slides step through 3D (a must-fix); the operator, 2026-11-09 (after the Project
+        # Management review): "draw the drawings 2d kit and 3d with a reason, dont just put it in just because" - the share removed
         share = lambda sc: [x for x in cs.media_findings(sc) if x["rule"] == "v_3d_share"]
-        check("the test module: two 3D slides of three (67 %) are fine", not share(SCRIPT), share(SCRIPT))
+        check("the test module: no share rule any more", not share(SCRIPT), share(SCRIPT))
         one = copy.deepcopy(SCRIPT)
         screen(one, "s02")["visual_kind"] = "chart"
-        check("... one of three is too few - must be fixed", share(one) and share(one)[0]["level"] == cs.FAIL, share(one))
+        check("... one 3D slide of three is fine (was 'too few - must be fixed')", not share(one) and not cs.blocking(
+            [x for x in cs.media_findings(one) if x["rule"] in ("v_3d_share", "v_3d_flat")]), share(one))
         d3 = copy.deepcopy(SCRIPT)
         for x in ("s01", "s02", "s03"):
             screen(d3, x)["visual_kind"] = "model_3d"
         screen(d3, "s02")["visual"] = "A 3D vapour-pressure chart of the three cargoes"
         f3 = {x["rule"]: x for x in cs.media_findings(d3)}
-        check("three slides of three in 3D is over 80 % - must be fixed", f3.get("v_3d_share", {}).get("level") == cs.FAIL
-              and "3 of the 3" in cs.T(dict(d3, operator_language="en"), "v_3d_share", n=3, tot=3, pct="100", min="60", max="80"), f3.get("v_3d_share"))
-        check("... three in a row is not flagged: 60-80 % makes runs normal", "v_3d_in_a_row" not in f3, f3.get("v_3d_in_a_row"))
-        check("... a 3D model of a chart is a suggestion: it is flat", f3.get("v_3d_flat", {}).get("level") == cs.NOTE and f3["v_3d_flat"]["screen"] == "s02", f3.get("v_3d_flat"))
-        two = copy.deepcopy(one)
-        screen(two, "s01")["visual_kind"] = "model_3d_scan"
-        check("two of three in 3D (a scan counts too) is 67 % - fine", not share(two), share(two))
-        five = copy.deepcopy(two)
-        five["screens"][1:1] = [dict(screen(SCRIPT, "s02"), id="s0%d" % i, visual_kind="photo") for i in (4, 5)]
-        check("... two of five is 40 % - too few", share(five) and share(five)[0]["level"] == cs.FAIL, share(five))
+        check("... three slides of three in 3D is fine as a share (was 'over 80 % - must be fixed')", "v_3d_share" not in f3, f3.get("v_3d_share"))
+        check("... three in a row is not flagged", "v_3d_in_a_row" not in f3, f3.get("v_3d_in_a_row"))
+        check("... a 3D model of a chart is now a MUST-FIX (was a suggestion): it is flat", f3.get("v_3d_flat", {}).get("level") == cs.FAIL
+              and f3["v_3d_flat"]["screen"] == "s02", f3.get("v_3d_flat"))
+        import figure_why as fw
+        check("v_why (script level): a declared why that is not one of the seven is refused; \"spatial\" on a flat idea too",
+              [x for x in cs.media_findings(dict(copy.deepcopy(SCRIPT), screens=[dict(x, why="because") if x["id"] == "s01" else x
+                                                                                 for x in SCRIPT["screens"]])) if x["rule"] == "v_why"
+               and x["level"] == cs.FAIL and x["screen"] == "s01"]
+              and [x for x in cs.media_findings(d3 if screen(d3, "s02").update(why="spatial") is None else d3)
+                   if x["rule"] == "v_why" and x["screen"] == "s02"], None)
         short = copy.deepcopy(SCRIPT)
         short["screens"] = [x for x in short["screens"] if x.get("id") not in ("s02", "s03")]
         check("a module under 3 teaching slides is not counted", not share(short), share(short))
+        print("\n-- 2.116.0: figure_why - every figure has a teaching reason")
+        good = {"why": "sequence", "why_text": "The trainee sees the valve close, then the pump stop.",
+                "steps": [{"title": "a", "set": {"v": 0}, "line": 1}, {"title": "b", "set": {"p": 0}, "line": 2}]}
+        ck = lambda spec, kind="kit2d", flat="": fw.check(spec.get("why"), spec.get("why_text"), spec.get("steps"), kind, spec.get("state"), flat)
+        check("a sequence with two steps tied to lit lines is fine", ck(good) == [], ck(good))
+        check("no why is refused, naming the seven", "no \"why\"" in " ".join(ck({"steps": good["steps"]})) and "quantity-change" in " ".join(ck({})))
+        check("an unknown why is refused", "not one of" in " ".join(ck(dict(good, why="decoration"))))
+        check("a why with no why_text is refused", "no \"why_text\"" in " ".join(ck(dict(good, why_text=" "))))
+        check("sequence / mechanism with one step, or steps tied to no line, are refused",
+              ck(dict(good, steps=good["steps"][:1])) and ck(dict(good, why="mechanism", steps=[{"set": {"a": 1}}, {"set": {"a": 0}}])))
+        check("... a reveal step counts as tied", ck(dict(good, steps=[{"set": {"a": 1}, "line": 1}, {"set": {"a": 0}, "reveal": True}])) == [])
+        q = {"why": "quantity-change", "why_text": "The bar grows as the pressure rises.", "state": {"p": 0},
+             "steps": [{"set": {"p": 0}}, {"set": {"p": 0}}]}
+        check("quantity-change needs a value that differs between stops", ck(q) and ck(dict(q, steps=[{"set": {"p": 5}}])) == [], ck(q))
+        c1 = {"why": "comparison", "why_text": "The trainee sees safe against faulty.", "steps": []}
+        check("comparison needs two states (a step that changes the figure, or a second picture)",
+              ck(c1) and ck(dict(c1, steps=[{"set": {"x": 1}}])) == [] and not fw.check("comparison", "x", [], "kit2d", None, "", True))
+        check("still needs no steps", ck({"why": "still", "why_text": "The trainee sees the real valve."}) == [])
+        check("spatial / a 3D model on a flat idea is refused",
+              ck({"why": "spatial", "why_text": "x"}, "kit3d", "chart") and "flat idea" in " ".join(ck({"why": "still", "why_text": "x"}, "kit3d", "chart")))
+        check("... and not on a real space", ck({"why": "spatial", "why_text": "The trainee turns the tank."}, "kit3d", "") == [])
+        ct = '<div><script type="application/json" data-custom-steps>[{"line": 2}, {"line": 3, "reveal": true}]</script></div>'
+        check("a custom figure declares its steps and works offline",
+              fw.custom_steps(ct) == [{"line": 2}, {"line": 3, "reveal": True}] and fw.custom_problems(ct, "s09") == [])
+        check("... one that loads from the network, pulls a script by src, or declares no steps and no hook is refused",
+              fw.custom_problems(ct + '<img src="https://x.org/a.png">', "s09")
+              and fw.custom_problems(ct + '<script src="a.js"></script>', "s09") and fw.custom_problems("<svg></svg>", "s09")
+              and fw.custom_problems('<svg xmlns="http://www.w3.org/2000/svg"></svg><script>GB_HOOKS.s09={}</script>', "s09") == [])
 
         print("\n-- 2.49.0: 3D and AI pictures proposed unasked, slide by slide - kept or struck")
         prop = lambda sc, r: [x for x in cs.media_findings(sc) if x["rule"] == r]
@@ -1114,7 +1149,8 @@ def main():
         check("approve: the picture-only change re-approves cleanly - the new rules stay suggestions, said so",
               code == 0 and "stay suggestions" in out and rec["status"] == "approved" and "since_approval" not in rec
               and "ilo_map" not in (rec.get("approved_checks") or []), out)
-        io.open(pc, "w", encoding="utf-8").write(json.dumps([{"field": "s02.visual", "new": "A different chart of the three cargoes"}]))
+        # (2.116.0: "chart" on a 3D slide is a must-fix now - the edit keeps to a picture that is not a flat idea)
+        io.open(pc, "w", encoding="utf-8").write(json.dumps([{"field": "s02.visual", "new": "A different view of the three cargoes' tanks"}]))
         cs_run("propose", po, "--module", "1", "--changes", pc)
         code, out = cs_run("apply", po, "--module", "1", "--confirmed")
         fbt = io.open(os.path.join(po, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()

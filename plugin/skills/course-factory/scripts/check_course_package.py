@@ -425,11 +425,8 @@ def check(folder):
             # L67 - 60-80 % of the teaching slides step through interactive 3D
             vis = [s.get("data-visual", "").strip() for s in pg.slides if s.get("data-visual", "").strip() not in ("", "none")]
             teach = [s for s in pg.slides if s.get("data-kind", "") in ("", "Theory")]
+            # 2.116.0: no 3D share any more (operator, 2026-11-09) - a 3D slide needs its own "why": spatial
             three = [s for s in teach if MEDIA["visual_kinds"].get(s.get("data-visual", "").strip(), {}).get("family") in TD["families"]]
-            if len(teach) >= TD["count_from"] and not TD["min_share"] * len(teach) <= len(three) <= TD["max_share"] * len(teach):
-                probs.append("%s: %d of the %d teaching slides are interactive 3D (%.0f %%) - between %.0f and %.0f %%; the rest a "
-                             "static 3D render or a photograph, never a flat drawing (L67)"
-                             % (mod, len(three), len(teach), 100.0 * len(three) / len(teach), 100 * TD["min_share"], 100 * TD["max_share"]))
             # L51 - the module closes with the recap, straight before its module check, in the one shared design
             checks = [i for i, s in enumerate(pg.slides) if s.get("data-kind", "") == "Check"
                       and os.path.basename(s.get("data-task-href", "")).lower() == "check.html"]

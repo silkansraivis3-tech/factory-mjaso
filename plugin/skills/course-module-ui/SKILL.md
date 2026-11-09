@@ -115,7 +115,8 @@ The owner approved a new body for every L61 template, and six new ones, in the t
 (top line, the logo 48 px from the top and the right, title, bottom line, Raleway). What is new:
 
 - **Pictures.** Live 3D (`gb_scene.js`, a course's scenes registered on `LTStage.scenes`), a static 3D render of the
-  same scenes, or a photograph. **Never the flat line drawing as the illustration** - not in a template, not in a demo.
+  same scenes, a 2D-kit or custom figure, or a photograph - **each drawn with a reason** (its `why`, 2.116.0: the old
+  "never the flat line drawing as the illustration" is gone; a 3D model of a flat idea is what is refused).
 - **Colours.** Blue is the one accent; dark slides and photographs on Navy `#0A2463`, never Pitch Black; the NA pattern
   only behind opening, task, check and summary slides and the start screen (`gb_layouts.css`, its last block).
 - **Motion.** Every upgraded slide has stops that Next walks (`gb_steps.js`); parts rise in reading order on entry;

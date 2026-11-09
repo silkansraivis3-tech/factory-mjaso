@@ -117,28 +117,28 @@ L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with i
 | **L47** | **A generated picture only within the budget the operator said yes to** — one yes per course at Stage 2 (`intake.json` `picture_budget`) |
 | **L48** | **Bloom measured, and lifted by the tablet** — one level a course toward the outcome (`bloom/GUIDE.md`, `bloom_map.py`) |
 | **L49** | **20 / 80 in class, every theory slide kept** — theory-as-activity proposed per sub-topic at Stage 2 (`active/GUIDE.md`) |
-| **L50** | **A fix is not a build** — find every place, one list, one yes, change, one check (`fix/GUIDE.md`, `fix.py`) |
+| **L50** | **A fix is not a build** — find every place, one list, one yes, change, one check (`fix/GUIDE.md`, `fix.py`); **after any fix the walk review runs on every touched slide** (`fix.py check --kind walk`, 2.116.0) |
 | **L51** | **Every picture opens full screen; every module closes with the same recap** before its module check |
 | **L52** | **As many real photographs as possible**; a source-book figure only once a named person cleared it (`check_assets.py clear`) |
-| **L53** | **No empty space, good padding** — decks pass the layout audits before they are shown |
+| **L53** | **Good padding; free space is a note** — decks pass the overflow / collide audits and the figure's own EMPTY check; the 45 % "ink" floor is a note only (2.116.0) |
 | **L54** | **Every drawing whole and clean** (`audit_drawing.js`) |
-| **L55** | **Diagrams come from the figure kit** (`course-visuals/kit/SPEC.md`), never a one-off SVG; a missing part is made into the kit |
+| **L55** | **Kit first, custom allowed - and every figure has a teaching reason** (2.116.0): diagrams come from the figure kits (`course-visuals/kit/SPEC.md`, `kit2d`, `kit3d`); when no kit part shows the idea well, a custom figure (`"custom_figure"`, a self-contained offline file whose steps Next drives) is allowed; every kit figure, 3D model and custom figure carries `"why"` + `"why_text"` its steps serve (`figure_why.py`, `v_why`, `check_kit.py`); a good custom figure is offered to the kit afterwards |
 | **L56** | **A photograph carries what it shows and its credit into the full-screen view** — no credit on the slide |
-| **L57** | **A drawing of real things carries their real photographs**, unasked |
-| **L58** | **Every photograph once in the whole course** |
+| **L57** | **A drawing of real things carries their real photographs** when the build sheet lists them (`"photo_row"`) or the figure's why is real-thing-recognition - never unasked under every drawing (2.116.0) |
+| **L58** | **Every photograph once in the whole course** - a repeat is allowed when its slide says why (`"reuse_why"`, 2.116.0) |
 | **L59** | **No module before its map** — ILO map approved and the knowledge-base decision recorded (`course_gate.py`) |
-| **L60** | **A 3D scene in every module whose subject allows** — declined only with the operator's reason |
-| **L61** | **Every slide is one of the layout templates** (`course-module-ui/knowledge/layout-templates.json`), chosen by the compiler; a picture beside words gets the box its names need (40-65 %, `layout_fit.py`) or is made another kind - never squeezed |
-| **L62** | **Never the same look twice in a row; at least 80 % of slides on the light ground** — the compiler does it |
+| **L60** | **No 3D scene is picked unasked** (2.116.0): the factory no longer proposes a scene in every module - 3D only where the slide's why is spatial; `declined_3d` stays an optional note. (Was: a 3D scene in every module whose subject allows — declined only with the operator's reason.) |
+| **L61** | **Every slide is one of the layout templates** (`course-module-ui/knowledge/layout-templates.json`), chosen by the compiler; a figure gets the share it needs (40 % up to the whole slide, `layout_fit.py`) or is made another kind - never squeezed. **The factory never cuts, moves or pages the words** (2.116.0): no automatic content-in-parts or points; `v_paged_slide` is the writer's must-fix; no picture quota - a slide may have no picture when its words read on their own (dense text, "two in a row" are gone) |
+| **L62** | **Repeats of a look, the dark share and the 80 % light ground are notes** (2.116.0) — the compiler never flips a slide's layout to avoid a repeat |
 | **L63** | **Equipment drawn as it looks on board** (`course-visuals/kit/PARTS.md`) |
 | **L64** | **A module in 30-40 min, its fixes in 20** — the pre-check first (`precheck.py`); a rebuild is a fix (`fix.py rebuild`) |
 | **L65** | **A drawing that moves stays smooth** (`audit_motion.js`) |
 | **L66** | **Every item a simulator can train is trained on one** (`coverage/SIMULATORS.md`, `sim_coverage.py check`) |
-| **L67** | **A slide's picture is 3D or a photograph, never a flat line drawing; every slide moves on Next** — 60-80 % of a module's teaching slides are interactive 3D, the rest a static 3D render or a photograph (`content_script.py` and `check_course_package.py` stop outside it; `gb_upgrade.css`, `gb_steps.js`) |
+| **L67** | **Every slide moves on Next where its picture has something to show; 3D and 2D are drawn with a reason** (2.116.0: the 60-80 % 3D share and "never a flat line drawing" are gone - the figure's kind follows its `why`; a 3D model of a flat idea is a must-fix; `gb_upgrade.css`, `gb_steps.js`) |
 | **L68** | **The Instructor-Led Course Development Guideline** — active means every trainee commits to an output; a passive run at most 15 min and 20 % of theory, or a one-line reason (`instructor-led/GUIDE.md`, `instructor_led.py check`) |
 | **L69** | **The experts get the pedagogy first** — Bloom now, Bloom proposed and the activities, before any script (`pedagogy_review.py`, `bloom/GUIDE.md` §5) |
 | **L70** | **Built after the expert's Ready** — the office PC builds unattended; see *Auto build* |
-| **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done |
+| **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done - and (2.116.0) not done without the **walk review**: an AI reviewer looks at the contact sheet of every slide's stops as a trainee does (`walk_review.py`, `compile/GUIDE.md` 2i) |
 
 ## The course remembers — L32
 

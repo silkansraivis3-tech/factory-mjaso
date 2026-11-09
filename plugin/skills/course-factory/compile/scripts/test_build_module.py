@@ -304,6 +304,10 @@ def precheck_part():
     import test_compile_module as tcm
     import content_script as cs
     tmp = tempfile.mkdtemp(prefix="bm_pre_")
+    # 2.116.0 (operator, 2026-11-09): a real build never flips a slide's layout (L62's "never the same look twice" is a note) - this
+    # part tests the old L62 solver machinery, so it switches it on the way the factory's tests do: CF_LAYOUT_FLIP=1
+    import compile_module as cm_flip
+    os.environ["CF_LAYOUT_FLIP"], was_flip, cm_flip.LAYOUT_FLIP = "1", cm_flip.LAYOUT_FLIP, True
     try:
         words = "The tank connection space holds every valve and flange of the fuel tank, so a leak stays inside it.\n" \
                 "• Its ventilation runs all the time.\n• Detectors raise the alarm at 20 % LEL."
@@ -368,7 +372,16 @@ def precheck_part():
         check("build_module.py runs it first (round 0), as a stage of its own, CF_LAYOUT_PRECHECK=off turns it off",
               'timed("layout pre-check (L62)", t0)' in src and "CF_LAYOUT_PRECHECK" in src
               and src.index("layout_precheck(course") < src.index("figure_fit.run_all("), "")
+        cm_flip.LAYOUT_FLIP = was_flip
+        os.environ.pop("CF_LAYOUT_FLIP", None)
+        # and in a real build (no switch) the pre-check never changes a slide's layout for an L62 repeat
+        calls.clear()
+        lines3, out3 = b.layout_precheck(c, 1, md, logdir, "M01", [(1280, 800), (1024, 768)], audit)
+        check("2.116.0: with the flip switched off an L62 repeat is no work for the pre-check - nothing audited, nothing measured out",
+              out3 == {} and not any("L62" in x for x in lines3), (calls, lines3))
     finally:
+        cm_flip.LAYOUT_FLIP = was_flip
+        os.environ.pop("CF_LAYOUT_FLIP", None)
         shutil.rmtree(tmp, ignore_errors=True)
 
 
@@ -384,6 +397,7 @@ def solver_part():
     import compile_module as cm
     print("-- 2.72.7 the layout solver and the slide check")
     tmp = tempfile.mkdtemp(prefix="bm_solve_")
+    os.environ["CF_LAYOUT_FLIP"], was_flip, cm.LAYOUT_FLIP = "1", cm.LAYOUT_FLIP, True      # 2.116.0: the old L62 machinery, switched on
     try:
         words = "The tank connection space holds every valve and flange of the fuel tank.\n" \
                 "• Its ventilation runs all the time.\n• Detectors raise the alarm at 20 % LEL.\n• The doors close by themselves."
@@ -415,11 +429,12 @@ def solver_part():
         rule["d3"] = lambda x: 'data-template="content-in-parts.' in x   # fits only in parts
         lines, _ = b.layout_precheck(c, 1, md, logdir, "M01", sizes, audit, extra={"d2", "d3"})
         av = json.load(io.open(os.path.join(logdir, "M01_layout_avoid.json"), encoding="utf-8"))
-        check("words that do not fit, found last build: the pre-check measures them first and settles them - d2 with the "
-              "words' column at 60 %, d3 in parts after the wider column did not do it",
+        check("words that do not fit, found last build: the pre-check measures them first and settles d2 with the words' column at "
+              "60 %; d3, which fits only in parts, is NOT paged by the factory (2.116.0: the words are never moved - the writer "
+              "shortens them, v_paged_slide)",
               any(x.startswith("settled: d2 - its words did not fit; the words' column at 60 %") for x in lines)
-              and any(x.startswith("settled: d3 - its words did not fit; its words in parts") for x in lines)
-              and av.get("d2", {}).get("set") == {"split": 0.6} and av.get("d3", {}).get("set") == {"template": "content-in-parts"}
+              and not any(x.startswith("settled: d3") for x in lines) and any(x.startswith("d3: no way found that fits") for x in lines)
+              and av.get("d2", {}).get("set") == {"split": 0.6} and not av.get("d3", {}).get("set")
               and any("60 %" in t for t in av.get("d3", {}).get("tried", [])), (lines, av))
         check("... each try audited only the slides it changed, at both sizes at once",
               all(calls[k][1] == calls[k + 1][1] and calls[k][0] != calls[k + 1][0] for k in range(0, len(calls), 2))
@@ -428,7 +443,7 @@ def solver_part():
         page = cm.compile_deck(script, cm.cs.load(sheet), md, os.path.join(c, "working_claude", "figures", "M01"), "x", True,
                                cm.load_layout_avoid(os.path.join(c, "working_claude"), "M01"))[0]
         check("... the compile builds what settled (kept in M01_layout_avoid.json \"set\"); the build sheet is not touched",
-              "--lt-text:60" in tcm.section(page, "d2") and 'data-template="content-in-parts.' in tcm.section(page, "d3")
+              "--lt-text:60" in tcm.section(page, "d2") and 'data-template="content-in-parts.' not in tcm.section(page, "d3")
               and io.open(sheet, encoding="utf-8").read() == sheet0, tcm.section(page, "d3")[:300])
         rule["d3"] = lambda x: False                                     # the words changed: nothing fits any more
         calls.clear()
@@ -506,6 +521,8 @@ def solver_part():
               "extra=last_misses(logdir, m)" in src and '"%s_fit_misses.json" % m' in src and "check_slides(course, o.module" in src
               and "if slides:" in src, "")
     finally:
+        cm.LAYOUT_FLIP = was_flip
+        os.environ.pop("CF_LAYOUT_FLIP", None)
         shutil.rmtree(tmp, ignore_errors=True)
 
 

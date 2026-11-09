@@ -119,7 +119,7 @@ def check(course, module, rebuild=False):
                 forced = (want, [sid]) if want else None
         # every picture the slide names is there
         has_pic = False
-        for key in ("figure", "figure_b", "aside"):
+        for key in ("figure", "figure_b", "aside", "custom_figure"):          # 2.116.0: a custom figure's file is there too
             rel = (b.get(key) or "").replace("\\", "/")
             if not rel:
                 continue
@@ -130,7 +130,7 @@ def check(course, module, rebuild=False):
             if err:
                 must.append("%s: its %s %s %s" % (where, key, rel, err))
                 continue
-            has_pic = has_pic or key == "figure"
+            has_pic = has_pic or key in ("figure", "custom_figure")
             if rel.lower().endswith(PHOTO_EXT):
                 photos.setdefault(rel, []).append(sid)
             poster = bool(re.search(r"\bdata-(?:3d|model3d|model)\b", body or ""))   # a 3D scene's still: not judged
@@ -155,16 +155,12 @@ def check(course, module, rebuild=False):
                 must.append("%s: its inset photograph %s is not in the module folder" % (where, rel))
             else:
                 photos.setdefault(rel, []).append(sid)
-        # L61 - dense words have a picture; never three teaching slides in a row without one
+        # 2.116.0 (operator, 2026-11-09): no picture quota - a slide may have no picture when its words read on their own.
+        # Dense words with no picture are a note only; the "three in a row" rule is gone.
         if s.get("kind") == "slide" and not s.get("recap"):
             if not has_pic and words > cm.DENSE_WORDS:
-                must.append("%s: %d words and no picture beside them - dense text always has a drawing, a photograph, an "
-                            "animation or a 3D model beside it (L61); add one in the build sheet, or shorten it in the script"
-                            % (where, words))
-            run_plain = run_plain + [sid] if not has_pic else []
-            if len(run_plain) == cm.NO_VISUAL_RUN + 1:
-                must.append("%s: three teaching slides in a row without a picture (%s) - give one of them a picture (L61)"
-                            % (where, ", ".join(run_plain)))
+                notes.append("%s: %d words and no picture beside them - fine when the words read on their own; a picture only "
+                             "when it teaches something (note, L61 is no requirement any more)" % (where, words))
     if forced and len(forced[1]) >= FORCED_RUN:
         runs.append(forced)
     for tid, ids in runs:

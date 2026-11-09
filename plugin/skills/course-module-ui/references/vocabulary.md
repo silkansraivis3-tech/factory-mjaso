@@ -46,8 +46,10 @@ the margin; a light panel stays white with dark words on a dark slide.
 ## 0b · The upgraded templates (owner, 2026-11-03, 2.88.0, `gb_upgrade.css` + `gb_steps.js` + `gb_scene.js`)
 
 The same frame as §0 - top line, logo, title, bottom line, type - with a better body. The reference is
-`design/slide-templates/` (28 live slides, open `presentation/index.html`). A picture is live 3D, a static 3D render or a
-photograph - **never a flat line drawing** (owner, 2026-11-03). Next walks a slide's stops with `gb_steps.js`: a stop is
+`design/slide-templates/` (28 live slides, open `presentation/index.html`). A picture is a figure drawn **with a reason**
+(2.116.0, operator 2026-11-09: 2D kit, 3D or a custom figure where its `why` says so - mechanism, sequence, comparison,
+quantity-change, spatial, real-thing-recognition, still), or a photograph; the old "never a flat line drawing" (owner,
+2026-11-03) and the 60-80 % 3D share are gone. Next walks a slide's stops with `gb_steps.js`: a stop is
 every `[data-stop]` in order, or the elements sharing `data-k` (`data-k="0 2"` = shown at both); the stop now gets `.cur`,
 the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` when the marks do not give the count.
 

@@ -58,7 +58,8 @@ EVERY SLIDE IS ONE OF THE OWNER'S LAYOUT TEMPLATES (L61, 2.52.0)
   reading-with-figure, content-in-parts) - and worked-example, true-false, scenario, name-parts, key-numbers, before-after, drill, built from the slide's own words
   (shaped_template). Each slide carries data-template="<id>.v1" and data-variant, chosen from the
   layout below - or asked for in the build sheet: "template": "reference-table", "variant": "figure-left",
-  "split": 0.55 (text share, 0.5-0.6), "box": "picture-wide" (the picture's box, layout_fit.py), "blocks": [[1, 3], [4, 6]] (compare-two, three-content-blocks), "parts":
+  "split": 0.55 (text share, 0.2-0.6 since 2.116.0), "custom_figure": "assets/figures/s09.html" + "why" / "why_text" (2.116.0), "photo_row": true,
+  "reuse_why": "...", "box": "picture-wide" (the picture's box, layout_fit.py), "blocks": [[1, 3], [4, 6]] (compare-two, three-content-blocks), "parts":
   [[1, 4], [5, 9]] (content-in-parts), "figure_b" (compare-two's second picture). An unknown or unsuitable template is
   a problem with the slide's id. gb_layouts.css gives every template the owner's look, in the brandbook's colours,
   with the official logo. The owner's rules are checked here: a dense slide (more than 60 words) always has a picture
@@ -149,7 +150,9 @@ TEMPLATES = LAYOUTS["templates"]
 DENSE_WORDS = LAYOUTS["dense"]["words"]
 PARTS_FROM, PART_WORDS = LAYOUTS["parts"]["auto_from_words"], LAYOUTS["parts"]["part_words"]
 SPLIT_LO, SPLIT_HI = LAYOUTS["split"]["text"]
-NO_VISUAL_RUN = LAYOUTS["sequence"]["max_without_visual_in_a_row"]
+# 2.116.0: the factory never flips a slide's layout to avoid a repeat (operator, 2026-11-09). CF_LAYOUT_FLIP=1 exists only so the
+# factory's own tests can still exercise the old choose_layout machinery; a real build never sets it.
+LAYOUT_FLIP = os.environ.get("CF_LAYOUT_FLIP") == "1"
 FRAMED_PHOTO_WORDS = LAYOUTS["variety"]["photo_framed_max_words"]
 # 2.63.0 - the words each layout holds, measured at 1024 x 768 with the real templates (layout-templates.json "budgets")
 BUDGETS = LAYOUTS["budgets"]
@@ -786,9 +789,44 @@ def tiles_figure(mdir, s, b, probs, where):
     return page, b.get("credit") or fragment_credit(page, credits), False
 
 
+def why_check(kind, text, s, b, probs, where):
+    """2.116.0 - every figure has a teaching reason (figure_why.py): refused before it is built when it has none, or its steps
+    do not serve the one it says, or a 3D / spatial reason is claimed for a flat idea"""
+    try:
+        spec = json.loads(text)
+    except (TypeError, ValueError):
+        return                                           # the figure's own reader reports a broken spec
+    for p in cs.why_problems(kind, spec if isinstance(spec, dict) else {}, b, s):
+        probs.append("%s: its %s figure %s (L55, 2.116.0)" % (where, kind, p))
+
+
+def custom_figure_html(mdir, figdir, s, b, rel, probs, where):
+    """2.116.0 - a CUSTOM figure (build sheet "custom_figure": "assets/figures/s09.html" or .svg): when no kit part shows the
+    idea well, a self-contained file drawn for this slide. Its source is read from working_claude\\figures\\MNN\\ (the same
+    place every figure source lives) and goes into the page as a fragment. The contract (compile/GUIDE.md "Custom figures"):
+    it declares its steps (<script type="application/json" data-custom-steps>) and hooks the deck's Next (GB_HOOKS.sNN),
+    works offline, and carries "why" + "why_text" in the build sheet; it passes the same checks as a kit figure - why,
+    changes on Next (fit_gate), fit / overflow, smooth motion (audit_motion), full-screen zoom (the .fig box)."""
+    import figure_why
+    body, err = read_figure(mdir, rel, figdir)
+    if err:
+        probs.append("%s: its custom figure %s %s" % (where, rel, err))
+        return ""
+    if not rel.lower().endswith((".html", ".htm", ".svg")):
+        probs.append("%s: its custom figure %s is not an .html or .svg file" % (where, rel))
+        return ""
+    steps = figure_why.custom_steps(body)
+    probs += ["%s: its custom figure %s" % (where, x) for x in figure_why.custom_problems(body, s["id"])]
+    probs += ["%s: its custom figure %s (L55, 2.116.0)" % (where, x) for x in cs.why_problems("custom", None, dict(b, _steps=steps), s)]
+    page = hint_ignored(body)
+    return '<div class="fill fig custom-fig" data-custom-fig data-script-ignore>%s</div>' % page
+
+
 def figure_html(mdir, figdir, s, b, probs, where):
     """the slide's picture, as it goes into the page, and its credit line"""
     rel = (b.get("figure") or "").replace("\\", "/")
+    if not rel and b.get("custom_figure"):
+        return custom_figure_html(mdir, figdir, s, b, str(b["custom_figure"]).replace("\\", "/"), probs, where), "", False
     if not rel and b.get("tiles"):
         return tiles_figure(mdir, s, b, probs, where)
     if not rel:
@@ -802,12 +840,15 @@ def figure_html(mdir, figdir, s, b, probs, where):
         probs.append("%s: its picture file %s %s" % (where, rel, err))
         return "", "", False
     if rel.lower().endswith(KIT3D_SPEC):               # a 3D kit scene is a 3D figure: no flat-3D finding
+        why_check("kit3d", body, s, b, probs, where)
         return kit3d_figure(body, s, probs, where, b), "", False
     if cs.flat_3d(s, b, body):                         # 2.49.7 (IGF M01 s05): a 3D slide is never quietly built in 2D
         probs.append(FLAT_3D % (where, s.get("visual_kind"), rel))
     if rel.lower().endswith(KIT2D_SPEC):
+        why_check("kit2d", body, s, b, probs, where)
         return kit2d_figure(body, s, probs, where), "", False
     if rel.lower().endswith(KIT_SPEC):
+        why_check("kit", body, s, b, probs, where)
         name = os.path.basename(rel)
         if name in OVERRIDE:                           # the studio trying a candidate on the real slide
             body = json.dumps(OVERRIDE[name], ensure_ascii=False)
@@ -2266,8 +2307,8 @@ def auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col):
         return "opening", "photo" if is_photo else "statement"
     if is_photo and comp == "photo":
         return "photo-explain", "split" if split_photo else "full"
-    if photo_col:                       # 2.63.0: past the column's measured budget, its words in parts beside the photo
-        return ("content-in-parts", "with-figure") if words > PARTS_FROM else ("photo-explain", "column")
+    if photo_col:                       # 2.116.0: the words stay beside the photo - never moved into parts by the factory
+        return "photo-explain", "column"
     if not has_fig:
         return ("procedure", "text-only") if is_steps(lines) else ("explain-figure", "text-only")
     if comp == "stage":
@@ -2276,9 +2317,7 @@ def auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col):
         return "reference-table", "with-figure"
     if is_steps(lines):
         return "procedure", "with-figure"
-    if words > PARTS_FROM:
-        return "content-in-parts", "with-figure"
-    if words > DENSE_WORDS:
+    if words > DENSE_WORDS:        # 2.116.0: no automatic content-in-parts - the words stay whole (v_paged_slide is the writer's finding)
         return ("long-explanation", "model") if is_3d(s) else ("reading-with-figure", side)
     return "explain-figure", side
 
@@ -2312,8 +2351,7 @@ def line_ranges(spec, n, howmany=None):
 def pick_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col, probs, where, in_parts=False):
     auto = auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col)
     want = (b.get("template") or "").split(".v")[0]
-    if not want and in_parts and has_fig and len(lines) >= 2:
-        want = "content-in-parts"                      # 2.67.0 - its own layout spilled at the build's audit (wants_parts)
+    # 2.116.0: `in_parts` (2.67.0, the layout's own spill) no longer makes content-in-parts - only a build sheet that asks does
     # 2.66.0 - "parts" asks for the words in parts: content-in-parts, without naming it too (the timed gas M02 build: s22's
     # "parts" did nothing beside a picture until "template" said it as well - two runs)
     if not want and b.get("parts") and auto[0] != "content-in-parts":
@@ -2445,8 +2483,7 @@ def layout_options(tid, variant, is_photo, words, b, comp, own_left, own_dark, d
         return opts
     if variant == "text-only":                                   # no picture: the other ground is all there is
         return opts + [dict(own, dark=not own_dark, key=("text", "light" if own_dark else "dark"))]
-    side = tid if tid in RIGHT else ("content-in-parts" if words > PARTS_FROM else "reading-with-figure" if words > DENSE_WORDS
-                                     else "explain-figure")
+    side = tid if tid in RIGHT else ("reading-with-figure" if words > DENSE_WORDS else "explain-figure")
     col = "wide-left" if is_photo else "two-col"
     # 2.62.1 - the ground is never a way to vary (owner, 2026-10-21: 80 / 20 - at least 80 % of a module's slides light;
     # the instructors: "a lot of dark slides"): a slide keeps its own ground and varies its shape. dark_ok is kept for
@@ -2980,7 +3017,8 @@ def active_mins(s):
 
 
 # build-sheet fields that never decide a slide's layout - an edit to them keeps what was measured and built (2.62.1)
-NOT_LAYOUT = ("alt", "labels", "unlabel", "areas", "link_hint", "not_things", "declined_3d", "photo_wanted", "photo_badges")
+NOT_LAYOUT = ("alt", "labels", "unlabel", "areas", "link_hint", "not_things", "declined_3d", "photo_wanted", "photo_badges",
+              "why", "why_text", "reuse_why")
 
 
 def words_key(s, b=None):
@@ -3042,15 +3080,6 @@ def measured_out(avoid, s, b=None):
     unchanged (2.72.7: fit_key - an edit of its own composition keeps them)"""
     a = (avoid or {}).get(s.get("id")) or {}
     return [tuple(k) for k in a.get("avoid") or []] if a.get("words") == fit_key(s, b) else []
-
-
-def wants_parts(avoid, s, b=None):
-    """2.67.0 - build_module.py found this slide's OWN layout (the compiler's choice - no "template" asked) scrolling or
-    spilling at the audit: built with its words in parts while its words and picture are unchanged (gas M01 on 2.65: six
-    slides scrolled at 1024 x 768, each one a builder's run). A template asked by name is never overruled"""
-    a = (avoid or {}).get(s.get("id")) or {}
-    # (merge with 2.72.x) the layout record's one key, fit_key: spilled_own writes it, the layout solver keeps its record by it
-    return bool(a.get("parts")) and a.get("words") == fit_key(s, b) and not (b or {}).get("template")
 
 
 def last_layout(last, s, b=None):
@@ -3207,12 +3236,13 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         elif fitc["action"] == "swap" and not want_t:
             probs.append("%s: %s - no box beside the words shows it readably; %s (L61, L71)"
                          % (where, fitc["why"], layout_fit.SWAP_ADVICE))
-    in_parts = wants_parts(avoid, s, b) or bool(fitc and fitc["parts"] > 1 and not want_t)
+    in_parts = False                       # 2.116.0: never automatic (wants_parts / the box's parts are gone)
     tid, variant = pick_template(s, b, comp, is_photo, bool(fig), lines, split_photo, photo_col, probs, where, in_parts)
     nwords_all = cs.wc(" ".join(lines))
     if kind == "slide" and not fig and nwords_all > DENSE_WORDS:
-        probs.append("%s: %d words and no picture beside them - dense text always has a drawing, a photograph, an animation or a "
-                     "3D model beside it (L61, more than %d words is dense)" % (where, nwords_all, DENSE_WORDS))
+        # 2.116.0: a note only - a slide may have no picture when its words read on their own (no picture quota)
+        note_once("Note: %s: %d words and no picture beside them - fine when the words read on their own; add a picture only "
+                  "when it teaches something (L61 no longer requires one above %d words)" % (where, nwords_all, DENSE_WORDS))
     split = b.get("split")
     if split is not None:
         try:
@@ -3237,7 +3267,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         comp = "photo"
     # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat
     varied, wkey = None, fit_key(s, b)                   # 2.72.7: the key build_module.py measures a way out by
-    if recent is not None and kind == "slide" and not s.get("recap") and not (ph_keys and comp == "photo"):   # a carousel keeps its photo layout
+    # 2.116.0 (operator, 2026-11-09): no automatic layout flipping - a repeat is reported as a note (compile_deck), the slide
+    # is built the way its template and build sheet say. LAYOUT_FLIP stays for the factory's own tests of choose_layout.
+    if LAYOUT_FLIP and recent is not None and kind == "slide" and not s.get("recap") and not (ph_keys and comp == "photo"):   # a carousel keeps its photo layout
         # a photograph, or a figure-kit drawing (made for the dark panel), may move to the dark ground; a drawing or a
         # widget made for a white page keeps the light one - its own controls would vanish (gas M01 s07, s15, s19, s26)
         dark_ok = is_photo or bool(re.search(r'data-kit="|class="kit-screen', fig or ""))
@@ -3319,9 +3351,12 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                       "\"budgets\"): expect the audit to find it spilling - %s" % (where, many, bud[1], bud[0],
                   "make the parts smaller (\"parts\")" if tid == "content-in-parts" else
                   "let the compiler choose the layout, or put the words in parts (\"template\": \"content-in-parts\")"))
-    # L57: a drawing of real things carries their real photographs, under the drawing - unasked
+    # L57: a drawing of real things carries their real photographs, under the drawing - 2.116.0: only when the build sheet asks
+    # ("photo_row": true) or the figure's why is real-thing-recognition (never unasked under every drawing)
     strip = ""
-    if fig and not is_photo and comp != "photo" and notes is not None and not strip_off(figdir, s, b):
+    wants_row = bool(b.get("photo_row")) or b.get("why") == "real-thing-recognition" \
+        or bool(re.search(r'"why"\s*:\s*"real-thing-recognition"', fig or ""))
+    if wants_row and fig and not is_photo and comp != "photo" and notes is not None and not strip_off(figdir, s, b):
         strip = part_photos(lines, fig, on_slide, mdir, pool or [], notes, sid, taken, b.get("no_photo") or [], b.get("not_things") or [])
         if strip and room_under:
             fig, strip = under_figure(fig, strip), ""
@@ -3576,6 +3611,25 @@ def kit3d_hit(text, last=False):
         return None
     _, kind, word = hits[-1] if last else hits[0]
     return kind, word
+
+
+def with_why(spec, s, kind):
+    """2.116.0 - a starter spec carries the teaching reason its steps already serve (figure_why.py), never one it cannot keep:
+    sequence, else quantity-change, else still (a 3D starter: spatial, unless the slide's visual is a flat idea). The builder
+    changes it when the figure's lesson is another"""
+    import figure_why
+    if not isinstance(spec, dict) or spec.get("why"):
+        return spec
+    text = first_sentence(s.get("visual")) or first_sentence(s.get("title")) or "what the slide teaches"
+    order = ("spatial", "still") if kind == "kit3d" else ("sequence", "quantity-change", "still")
+    for why in order:
+        flat = cs.flat_word(s) if (why == "spatial" or kind == "kit3d") else ""
+        if not figure_why.check(why, text, spec.get("steps"), kind, spec.get("state"), flat):
+            spec["why"], spec["why_text"] = why, text
+            break
+    else:
+        spec["why"], spec["why_text"] = "still", text
+    return spec
 
 
 def starter_kit3d(script, s):
@@ -4368,6 +4422,7 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
         spec = spec or starter_figure(script, s, pool, taken)
         if not spec:
             continue
+        with_why(spec, s, "kit2d" if spec.get("_k2") else "kit")          # 2.116.0: a starter says why it is drawn
         name = "%s%s" % (s["id"], KIT2D_SPEC if spec.get("_k2") else ".kit.json")
         entry = build_screens[s["id"]]
         note = spec.pop("_note", None)                 # 2.67.0 - what the starter was made from: the build sheet says it
@@ -4474,14 +4529,8 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None, specs3=
         elif s["kind"] in cs.TASKS and cs.mech(s) in STARTER_ON_PICTURE:
             screens[s["id"]] = json.loads(json.dumps(STARTER_ON_PICTURE[cs.mech(s)]))
     # L60 - at least one 3D scene in every module where the subject allows it: with none planned, the best slide gets one, unasked
-    best = None if any(cs.parse_kind(s.get("visual_kind", "")) == "model_3d" and s["id"] not in photo
-                       for s in script["screens"]) else cs.best_3d(script)
-    if best and best[0] in screens:
-        screens[best[0]].update(starter_scene(script, best[0], sheet["scripts"]))
-        screens[best[0]]["_3d"] = ("Proposed by the factory, unasked (L60): this module has no 3D scene and this slide's lesson has a "
-                                   "shape, an inside or a layout in space (%s). Strongly recommended, never required: to decline it, "
-                                   "give the slide its 2D figure and write the operator's reason "
-                                   "in the sheet's top-level \"declined_3d\" - it is not proposed again." % best[1])
+    # 2.116.0 (operator, 2026-11-09): the factory no longer picks a 3D scene unasked - 3D only where the slide's why is spatial
+    best = None
     linked = link_photos(mdir, script, screens) if mdir and os.path.isdir(mdir) else set()      # 2.67.0
     if figdir is not None:             # 2.50.0: a starter figure-kit spec for every drawing slide - not a photo; a 3D one's
         three_d = {s["id"] for s in script["screens"] if s["kind"] == "slide" and cs.parse_kind(s.get("visual_kind", "")) == "model_3d"}
@@ -4493,7 +4542,7 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None, specs3=
             for s in script["screens"]:
                 name = (screens.get(s["id"]) or {}).get("figure") or ""
                 if s["kind"] == "slide" and name.endswith(KIT3D_SPEC) and not os.path.isfile(os.path.join(figdir, name)):
-                    specs3[s["id"]] = starter_kit3d(script, s)
+                    specs3[s["id"]] = with_why(starter_kit3d(script, s), s, "kit3d")
     sheet["screens"] = screens
     return sheet
 
@@ -4704,14 +4753,16 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     # L58 - every photograph once in the whole course. First the photographs placed by hand (slide pictures, insets,
     # photos in drawings): one shown twice, or already shown by an EARLIER module, is a problem to fix. Then the L57
     # thumbnails take only what no deck of the course shows yet.
-    here, me, mine = {}, module_label(mdir), []
+    here, me, mine, reuse = {}, module_label(mdir), [], set()
     for s in screens:
         b = (build.get("screens") or {}).get(s["id"]) or {}
         page = slide_html(script, s, 0, total, b, mdir, figdir, foot, [])
+        if str(b.get("reuse_why") or "").strip():       # 2.116.0: a photograph may repeat when the slide says why ("reuse_why")
+            reuse.add("%s %s" % (me, s["id"]))
         for rel in IMG_SRC.findall(page):
             if rel.startswith("assets/img/") and not PLACEHOLDER_IMG.search(rel):     # 2.73.0: a placeholder is no photo
                 pid, at = photo_id(mdir, rel), "%s %s" % (me, s["id"])
-                if pid in here and here[pid] != at:
+                if pid in here and here[pid] != at and at not in reuse:
                     probs.append("%s (%s): the photograph %s is already shown on %s - a photograph is shown once in the "
                                  "course (L58): choose a different one, or none" % (cs.place(script, s["id"]), s["id"], rel, here[pid]))
                 elif pid not in here:
@@ -4721,12 +4772,14 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     elsewhere = shown_elsewhere(mdir, looks)
     for pid, at in sorted(here.items(), key=lambda x: x[1]):
         other, by_hand = elsewhere.get(pid, ("", False))
-        if by_hand and other.split()[0] < me:      # the earlier module keeps it; a thumbnail there gives way instead
+        if by_hand and other.split()[0] < me and at not in reuse:      # the earlier module keeps it; a thumbnail there gives way instead
             probs.append("%s: its photograph is already shown on %s - a photograph is shown once in the course (L58): "
                          "choose a different one, or none" % (at, other))
     # 2.62.1 - the same photograph under another name and another record: matched by its look
     for i, (lk, at, rel, pid) in enumerate(mine):
         twin = next((x for x in mine[:i] if x[1] != at and same_look(lk, x[0])), None)
+        if at in reuse:                              # 2.116.0: "reuse_why" - this slide shows a photograph again on purpose
+            continue
         if twin:
             probs.append("%s: the photograph %s looks the same as %s on %s - one photograph saved twice under two names "
                          "(L58: choose a different one, or none; and check both records - credit and rights)" % (at, rel, twin[2], twin[1]))
@@ -4751,30 +4804,20 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
             chosen[s["id"]] = {"words": words_key(s, b), "key": list(layout_key(slides[-1]))}
     for a_, b_, s in zip(slides, slides[1:], screens[1:]):
         if layout_key(a_) == layout_key(b_) and layout_key(b_)[0] not in ("task-launch", "recap", ""):
-            probs.append("%s: looks exactly like the slide before it (%s, %s ground) - two slides in a row never look the same "
-                         "(L62); give one of them a picture, or ask for another template" % ((cs.place(script, s["id"]),) + layout_key(b_)))
+            note_once("Note: %s: looks exactly like the slide before it (%s, %s ground) - a note only (2.116.0): the factory does not "
+                      "change a slide to avoid a repeat; ask for another template in the build sheet if you want one"
+                      % ((cs.place(script, s["id"]),) + layout_key(b_)))
     # 2.62.1 - 80 / 20 (owner, 2026-10-21): at least 80 % of the module's slides on the light ground. The rule is the
     # background's colour: a slide on the Navy ground ("dark") and a photograph framed on it count; a full-screen
     # photograph is its own background and does not
     dark = [s["id"] for s, x in zip(screens, slides)
             if re.search(r'<section class="[^"]*\b(dark|split)\b', x) and re.search(r'<section class="[^"]*\b(dark|photo)\b', x)]
     if len(dark) > DARK_SHARE * len(slides):
-        probs.append("%s: %d of its %d slides are on the dark ground (%s) - at most %d (80 / 20: at least 80 %% light, owner "
-                     "2026-10-21); give the others the light ground - take out \"dark\", or show a full-screen photograph in its "
-                     "own column (\"composition\": \"wide-left\")" % (m, len(dark), len(slides), ", ".join(dark),
-                                                                          int(DARK_SHARE * len(slides))))
+        note_once("Note: %s: %d of its %d slides are on the dark ground (%s) - more than the 80 / 20 guide (%d); a note only "
+                  "(2.116.0), never a block" % (m, len(dark), len(slides), ", ".join(dark), int(DARK_SHARE * len(slides))))
     enlarge_photos(mdir, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(mdir))), "working_claude", "photo_originals", m),
                    [r for x in slides for r in IMG_SRC.findall(x) if r.startswith("assets/img/")], notes)
-    # L61 - never three teaching slides in a row without a teaching picture (a task launch and the recap do not count)
-    run = []
-    for s, page in zip(screens, slides):
-        seen = has_teaching_visual(page)
-        if seen is None:
-            continue
-        run = [] if seen else run + [s["id"]]
-        if len(run) == NO_VISUAL_RUN + 1:
-            probs.append("%s: three teaching slides in a row without a teaching picture (%s) - at most %d; give one of them a drawing, "
-                         "a photograph, an animation or a 3D model (L61)" % (cs.place(script, s["id"]), ", ".join(run), NO_VISUAL_RUN))
+    # 2.116.0: the L61 "no more than two teaching slides in a row without a visual" is gone (operator, 2026-11-09)
     blind = sorted(n for n, m, d, _ in pool if os.path.abspath(d) == os.path.abspath(mdir) and not m.get("shows"))
     if blind:
         notes.append((None, None, "%d photograph(s) without \"shows\" in _photo_meta.json, so no drawing can use them (L57): %s"
@@ -5561,12 +5604,10 @@ def main(argv=None):
         probs += dprobs
     if not approved:
         probs.insert(0, "the script is not approved - what was built is a preview only, never handed over")
-    if o.only in ("all", "deck"):                      # L60 - a strong recommendation, said loud, never a block (2.18.1)
+    if o.only in ("all", "deck"):                      # 2.116.0: the L60 RECOMMENDED 3D block is gone (operator, 2026-11-09)
         for f in cs.build_findings(o.course, script):
-            if f["rule"] == "v_3d_none_built":
-                print("\n" + "=" * 78 + "\nRECOMMENDED (L60) - " + f["detail"] + "\n" + "=" * 78)
-            elif f["rule"] == "v_paged_slide":              # 2.109.0 F1 - the writer's finding; the build still pages, never cuts (L61)
-                print("MUST FIX (content in parts): %s - %s" % (f["where"], f["detail"]))
+            if f["rule"] == "v_paged_slide":                # 2.109.0 F1 - the writer's finding; the factory never pages or cuts the words (L61)
+                print("MUST FIX (too many words for the picture): %s - %s" % (f["where"], f["detail"]))
     parts = [x for x in notes if x[0]]
     if o.only in ("all", "deck"):
         listed = write_to_take(o.course, script, parts)

@@ -4,7 +4,7 @@
     "Title": "the screen's title or question - script title / question",
     "Text": "approved words that teach - script text and the template's own fields",
     "Info": "what the room reads at a glance - chips, numbers, a table, readings, a list to tick, the choices' marks",
-    "Picture": "a photograph or a static 3D render - build sheet figure; never a flat line drawing (L67)",
+    "Picture": "a figure with a reason (2.116.0): a photograph, a 2D-kit / 3D-kit / custom figure, or a static 3D render - build sheet figure; its kind follows its \"why\" (mechanism, sequence, comparison, quantity-change, spatial, real-thing-recognition, still); no picture at all when the words read on their own",
     "Animation": "something that moves by itself - a simulator screen, a clock, a meter, a flow",
     "3D": "a live 3D scene the room turns - build sheet figure (*.kit3d.json)"
   },

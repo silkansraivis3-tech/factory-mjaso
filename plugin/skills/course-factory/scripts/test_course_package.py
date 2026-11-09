@@ -367,10 +367,14 @@ def main():
         three = lambda b, kinds: w(os.path.join(b, "module01", "presentation", "index.html"), deck.replace(
             '<section class="slide active" id="s01"', "".join('<section class="slide" id="v%d" data-title="Tanks %d" data-kind="Theory" data-cue="- x"'
                                                              ' data-visual="%s"></section>' % (i, i, k) for i, k in enumerate(kinds)) + '<section class="slide active" id="s01"'))
-        broken("one of five teaching slides in 3D", lambda b: three(b, ["model_3d", "photo", "photo", "schematic"]),
-               "module01: 1 of the 5 teaching slides are interactive 3D (20 %) - between 60 and 80 %")
-        broken("five of six teaching slides in 3D", lambda b: three(b, ["model_3d", "model_3d_scan", "model_3d", "model_3d", "model_3d"]),
-               "module01: 5 of the 6 teaching slides are interactive 3D (83 %) - between 60 and 80 %")
+        # 2.116.0 (operator, 2026-11-09): the 60-80 % 3D share was the rule, not a bug - removed; neither extreme is a problem now
+        for tag, kinds in (("one of five", ["model_3d", "photo", "photo", "schematic"]),
+                           ("five of six", ["model_3d", "model_3d_scan", "model_3d", "model_3d", "model_3d"])):
+            b = os.path.join(tmp, "share_" + tag.replace(" ", "_"), "modules")
+            shutil.copytree(c, b)
+            three(b, kinds)
+            code, out = run(b, "--no-importer")
+            check("2.116.0: %s teaching slides in 3D is no problem (no 3D share)" % tag, code == 0 and "interactive 3D" not in out, out)
         b = os.path.join(tmp, "half", "modules")
         shutil.copytree(c, b)
         three(b, ["model_3d", "model_3d_scan", "model_3d", "photo"])
