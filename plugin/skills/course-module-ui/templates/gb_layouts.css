@@ -371,6 +371,14 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .lt-sep{display:none}
 .slide[data-template].dark .lt-table td{border-bottom-color:var(--lt-line-d);color:var(--lt-dim-d)}
 .slide[data-template].dark .lt-table tr td:first-child{color:var(--lt-white)}
+/* the module's one comparison table, as a slide's picture ("table" in the build sheet): on the white panel, the things
+   compared in Navy over a Blue rule, a row a fact, the words at reading size */
+.slide[data-template] .lt-ctable-fig{display:flex;align-items:center;justify-content:center;padding:min(2.4vmin,19px)}
+.slide[data-template] .lt-ctable{width:100%;border-collapse:collapse;font-size:var(--lt-fs);line-height:1.35;color:var(--lt-black)}
+.slide[data-template] .lt-ctable thead th{padding:min(1.4vmin,11px) min(1.6vmin,13px);border-bottom:3px solid var(--lt-blue);text-align:left;font-weight:800;color:var(--lt-navy)}
+.slide[data-template] .lt-ctable tbody th,.slide[data-template] .lt-ctable td{padding:min(1.6vmin,13px);border-bottom:1px solid var(--lt-line);text-align:left;vertical-align:top}
+.slide[data-template] .lt-ctable tbody th{width:30%;font-weight:700;color:var(--lt-steel)}
+.slide[data-template] .lt-ctable tbody tr:nth-child(even){background:var(--lt-paper)}
 
 /* ---------------------------------------------------------------- comparison */
 .slide[data-template] .slide-body.lt-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:min(3vmin,24px);align-items:stretch}

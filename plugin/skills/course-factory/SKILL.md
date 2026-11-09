@@ -129,7 +129,7 @@ L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with i
 | **L59** | **No module before its map** — ILO map approved and the knowledge-base decision recorded (`course_gate.py`) |
 | **L60** | **A 3D scene in every module whose subject allows** — declined only with the operator's reason |
 | **L61** | **Every slide is one of the layout templates** (`course-module-ui/knowledge/layout-templates.json`), chosen by the compiler; a picture beside words gets the box its names need (40-65 %, `layout_fit.py`) or is made another kind - never squeezed |
-| **L62** | **Never the same look twice in a row; at least 80 % of slides on the light ground** — the compiler does it |
+| **L62** | **Never the same look three times in a row (two is a note for the reviewer); at least 80 % of slides on the light ground** — the compiler does it |
 | **L63** | **Equipment drawn as it looks on board** (`course-visuals/kit/PARTS.md`) |
 | **L64** | **A module in 30-40 min, its fixes in 20** — the pre-check first (`precheck.py`); a rebuild is a fix (`fix.py rebuild`) |
 | **L65** | **A drawing that moves stays smooth** (`audit_motion.js`) |

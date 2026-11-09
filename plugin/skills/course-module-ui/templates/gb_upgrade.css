@@ -126,6 +126,9 @@
 /* the line that fills */
 .lt-steps .lt-track{position:relative;height:min(.8vmin,6px);border-radius:99px;background:var(--up-a25525525512);margin:0 calc(50% / var(--n,3))}
 .lt-steps .lt-track i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--lt-blue);width:var(--fill,0%);transition:width .6s cubic-bezier(.2,.7,.2,1)}
+/* a slide shown whole ("still" in the build sheet): no steps - every step box, and a table's conclusion, as they are */
+.slide[data-still] .lt-steps .lt-step,.slide[data-still][data-template^="reference-table."] .lt-concl{opacity:1;transform:none}
+.slide[data-still] .lt-steps .lt-track i{width:100%}
 @keyframes lt-draw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
 @keyframes lt-pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.lt-steps *{animation:none!important;transition:none!important}}

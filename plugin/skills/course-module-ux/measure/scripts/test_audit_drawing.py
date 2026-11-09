@@ -152,6 +152,15 @@ def main():
               "all three markers in (step 3 of 3), not the rest state (step 0) with them hidden",
               "bad-scale" in eby and "at its busiest step (step 3 of 3)" in eby["bad-scale"]["detail"], ef)
 
+        # a simple drawing (4 named parts or fewer) may be 60 % blank; the same drawing naming five parts holds to 50 %
+        es = page_out(exe, FIX / "drawing_empty_simple.html", prof) or {}
+        sf = {x["svg"]: x for x in es.get("findings", []) if x["check"] == "empty"}
+        check("a simple drawing of four named parts, about 57 % blank with no large blank piece, is not empty",
+              "good-simple" not in sf and es.get("findings") is not None, es)
+        check("... the same drawing naming five parts is (the 50 % limit), and the finding says to crop, enlarge or change "
+              "the box - never to add parts", "bad-busy" in sf and "never add parts the slide does not talk about" in sf["bad-busy"]["detail"]
+              and "limits: 50 % blank" in sf["bad-busy"]["detail"], sf)
+
         # 2.50.6 (M01 benchmark run 5, s03) - a drawing that moves is judged on every frame of its motion, not the one seen
         caught = {}
         for ph in ("0", "0.5", "0.9"):

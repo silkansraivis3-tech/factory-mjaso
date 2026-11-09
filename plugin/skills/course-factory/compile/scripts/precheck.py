@@ -148,6 +148,7 @@ def check(course, module, rebuild=False):
             else:
                 photos.setdefault(rel, []).append(sid)
                 has_pic = True
+        has_pic = has_pic or bool(b.get("table"))      # the module's comparison table is the slide's picture
         ins = b.get("inset") or {}
         if ins.get("photo"):
             rel = ins["photo"].replace("\\", "/")

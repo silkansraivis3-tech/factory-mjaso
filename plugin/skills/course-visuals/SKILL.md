@@ -244,7 +244,7 @@ come with it; never a hand-written three.js file per slide. **A 2D figure is a 2
 (`kit2d/SPEC.md`; see `kit2d/demos.html` and `kit2d/pm.html`): a graph, an object in motion (a cutaway with its flow) or
 a concept (cycle, timeline, matrix, process, trade-off) - depth, labels clear of each other, motion on Next and the
 trainee's controls come with it, and `fit_gate.py` runs its overlap check on every step. Each is composed for its
-slide from the slide's own words, never the same look within 5 slides (the compile checks). The figure kit (`kit/`) stays
+slide from the slide's own words, best not the same look within 5 slides (the compile lists a look-alike for the reviewer). The figure kit (`kit/`) stays
 for a control screen the trainee reads (an HMI) and for courses already built with it. Hand-written SVG/HTML only for what the kits cannot be
 (a photo annotation); Canvas only where SVG genuinely fails;
 a generated illustration only when a realistic scene is the right medium. **Never generated imagery
@@ -260,7 +260,8 @@ in place of a structured technical schematic.**
 >    <factory-mjaso clone>`; **ask the operator once**, then the same command with `--pr` makes the branch, the commit,
 >    the push and the pull request itself; the owner merges.
 >    A part is the thing, or the shape of an idea (the Concepts family, `kit/SPEC.md`) - never a table: an idea with no
->    kit part and no photo gets a new part, not a `grid_table`. In an orchestrated build module agents never touch the factory's `kit.js` - the
+>    kit part and no photo gets a new part, not a `grid_table`. The one exception: a module's ONE comparison table (2-4 things
+>    side by side with their facts or numbers) as a slide's picture - the build sheet's `"table"`, the compiler builds it. In an orchestrated build module agents never touch the factory's `kit.js` - the
 >    orchestrator promotes every module's parts together at assembly and merges duplicates.
 > 4. **Review surface:** `kit/GALLERY.html` shows every part moving; a promoted part shows there with its example.
 

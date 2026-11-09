@@ -1022,7 +1022,8 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
 
 # ------------------------------------------------------------------ the report
 HINT = {
-    "empty": "fill the frame: crop what the steps never show, spread the parts, or add the context the slide's lines name",
+    "empty": "fill the frame: crop what the steps never show, draw the parts larger, or give the slide a box of the drawing's "
+             "shape (\"box\", \"composition\") - never add parts the slide does not talk about",
     "text zone": "give the part room for its words (a larger w/h, or move it clear) - the label layout places words, not parts",
     "inside": "the part pokes out of the room it sits in: make the room larger or move the part in",
     "cut off": "something reaches past the drawing's frame or the slide: make it smaller or the frame larger",

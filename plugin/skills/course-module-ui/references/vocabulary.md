@@ -33,6 +33,7 @@ The few classes of its own, all written by the compiler:
 | `.lt-parts` · `.lt-part` · `.lt-part.on` · `.lt-tabs` · `.lt-tab` | content-in-parts: the parts of one slide, the one shown, its numbered tabs (`gb_deck.js` walks them with Next / Back) |
 | `.lt-tiles-fig` · `.lt-tiles` · `.lt-strips` · `.lt-tile` · `.lt-n` | 2.67.0 "tiles": several photographs on one slide, each opens full screen; "strips": cuts of one document, numbered (the compiler builds them - `tiles_figure`) |
 | `.lt-table` · `.lt-sep` | reference-table: one row a line; the hidden ` \| ` that keeps the row the approved line |
+| `.lt-ctable-fig` · `.lt-ctable` | the module's one comparison table as a slide's picture ("table" in the build sheet): 2-4 things side by side, a row a fact, on the white panel (the compiler builds it - `table_figure`) |
 | `.lt-block` | three-content-blocks: one numbered block of lines |
 | `.lt-compare` · `.lt-card` · `.lt-card-visual` · `.lt-card-copy` · `.lt-compare-note` | compare-two: two cards, each its picture and its lines |
 | `.lt-light` | a figure panel in Light Grey for a drawing made for a white page (`"panel": "light"`); the panel is Navy otherwise |
@@ -49,7 +50,9 @@ The same frame as §0 - top line, logo, title, bottom line, type - with a better
 `design/slide-templates/` (28 live slides, open `presentation/index.html`). A picture is live 3D, a static 3D render or a
 photograph - **never a flat line drawing** (owner, 2026-11-03). Next walks a slide's stops with `gb_steps.js`: a stop is
 every `[data-stop]` in order, or the elements sharing `data-k` (`data-k="0 2"` = shown at both); the stop now gets `.cur`,
-the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` when the marks do not give the count.
+the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` when the marks do not give the count. A slide
+the build sheet marks `"still"` has no stops and carries `data-still`: shown whole at once, its step boxes and a table's
+conclusion as they are.
 
 | Class | What it is |
 |---|---|

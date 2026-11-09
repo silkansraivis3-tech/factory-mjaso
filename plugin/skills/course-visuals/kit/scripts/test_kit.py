@@ -194,6 +194,11 @@ grid = ("/* kit-part: grid_table */\nKIT.define('grid_table', function (fig, par
         "  why: 'a table', value: 'rows shown', example: { size: [100, 50], parts: [] } });\n/* end kit-part */\n")
 probs = ck.check_part("grid_table", ck.blocks(grid)[0][1])
 check("a new part that draws only boxes and words (PM's grid_table) is refused", any("only boxes and words" in x for x in probs), probs)
+words = ck.check_spec(pm([{"id": "A", "type": "text", "x": 20, "y": 20, "text": "LNG"},
+                          {"id": "B", "type": "text", "x": 120, "y": 20, "text": "Methanol"}]), types, "s")
+check("... a table stays refused as a kit figure, and both refusals point to the module's one comparison table (the build "
+      "sheet's \"table\")", all("ONE comparison table" in x and '"table"' in x for x in probs + [x for x in words if "WORDS ONLY" in x])
+      and any("WORDS ONLY" in x for x in words), (probs, words))
 for t in ("tradeoff", "cycle", "timeline"):
     check("the Concepts family has %s" % t, t in types)
 idea = pm([{"id": "C", "type": "cycle", "x": 20, "y": 10, "r": 60, "name": "Routine work"}])
