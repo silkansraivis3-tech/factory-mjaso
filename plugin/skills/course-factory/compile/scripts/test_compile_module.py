@@ -1259,9 +1259,24 @@ def layouts_part(tmp):
              "text": "\n".join(LONG_LINES[:3])}
     scr = json.loads(json.dumps(SCREENS))
     scr.insert(4, dense)
+    import compile_module as cm
     c2, md2, code, out = fresh("dense", scr)
-    check("caught: a slide of more than 60 words with no picture beside it",
-          code == 1 and "words and no picture beside them - dense text always has" in out and "(s05)" in out, out)
+    check("72 words with no picture are within the word guideline: built, nothing said",
+          code == 0 and "no picture beside them" not in out, out)
+    dense["text"] = "\n".join(LONG_LINES[:4])
+    c2, md2, code, out = fresh("dense86", scr)
+    check("86 words with no picture: a note (over %d a picture or steps), never a problem - built as it is" % cm.PICTURE_FROM,
+          code == 0 and "(s05) - 86 words and no picture beside them" in out and "lt-parts" not in deck(md2).split('data-script="s05"')[1].split("</section>")[0], out)
+    c2, md2, code, out = fresh("dense86p", scr, {"s05": {"parts": [[1, 2], [3, 4]]}})
+    sec = deck(md2).split('data-script="s05"')[1].split("</section>")[0]
+    check("... with \"parts\" in its build sheet it is shown in those steps, beside no picture",
+          code == 0 and sec.count('data-part="') == 4 and 'data-parts="2"' in sec, out[-800:] + sec[:400])
+    dense["text"] = "\n".join(LONG_LINES[:5])
+    c2, md2, code, out = fresh("dense125", scr)
+    sec = deck(md2).split('data-script="s05"')[1].split("</section>")[0]
+    check("125 words with no picture: over %d the build shows it in steps by itself - every line kept, Next walks them"
+          % cm.STEPS_FROM, code == 0 and 'class="lt-parts"' in sec and sec.count('<div class="lt-part') >= 3
+          and all('data-i="%d"' % i in sec for i in range(1, 6)), out[-800:] + sec[:600])
 
     short = lambda i: {"id": "x%d" % i, "kind": "slide", "title": "Point %d" % i, "visual_kind": "none", "minutes": 1,
                        "text": "A short point, said plainly."}
@@ -1352,8 +1367,9 @@ def layouts_part(tmp):
           got[0] == "content-in-parts" and not pp, (got, pp))
     pp = []
     got = cm.pick_template({}, {"parts": [[1, 2], [3, 4]]}, "flow", False, False, words90[:4], False, False, pp, "s22")
-    check("... on a slide with no picture it is said, never silently ignored", got[0] != "content-in-parts"
-          and any('"parts" walks the words in parts beside a picture' in x for x in pp), (got, pp))
+    check("... on a slide with no picture it is not content-in-parts: the words alone are shown in its steps (text_steps)",
+          got[0] != "content-in-parts" and not pp and cm.text_steps({"kind": "slide"}, {"parts": [[1, 2], [3, 4]]}, words90[:4]),
+          (got, pp))
     code_b, out_b = run(COMPILE, c2, "--module", "1", "--force")
     sheet_b = cs.load(os.path.join(c2, "working_claude", "script", "M01.build.json"))
     sheet_b["screens"]["s05"] = {"figure": "assets/fig/scale.svg", "template": "reading-with-figure"}
@@ -3072,8 +3088,8 @@ def review_fixes_part(tmp):
           "notes": "- n", "minutes": 2}
     sc = script(screens=[sl])
     f = cs.paged_findings(sc)
-    check("F1: a slide with a picture and over 85 words is a must-fix: it would show in parts with number tabs",
-          len(f) == 1 and f[0]["level"] == cs.FAIL and f[0]["rule"] == "v_paged_slide" and "parts" in f[0]["detail"]
+    check("F1: a slide with a picture and over 85 words is a warning: it would show in parts with number tabs",
+          len(f) == 1 and f[0]["level"] == cs.NOTE and f[0]["rule"] == "v_paged_slide" and "parts" in f[0]["detail"]
           and "85" in f[0]["detail"], f)
     check("F1: ... not when the build sheet asks for parts (\"parts\" or a named template)",
           not cs.paged_findings(sc, {"screens": {"s60": {"parts": [[1, 3], [4, 6]]}}})

@@ -293,6 +293,6 @@
     "single_choice_max_share": 0.4,
     "hands_on_min_per_module": 1,
     "max_same_in_a_row": 2,
-    "_tasks": "A self-check uses at least 2 different mechanics and a module check at least 3; 'choose one answer' is at most 40 % of a module's questions; every module has at least one hands-on question - locate, operate or decide on something that looks like the real thing; never more than 2 questions of the same mechanic in a row. These stay rules (owner, 2026-09-30). The final assessment follows the programme's own format - none of them applies to it."
+    "_tasks": "A self-check uses at least 2 different mechanics and a module check at least 3; 'choose one answer' is at most 40 % of a module's questions; every module has at least one hands-on question - locate, operate or decide on something that looks like the real thing; never more than 2 questions of the same mechanic in a row. Each is a warning beside the question or task slide, never a stop: the expert decides. The final assessment follows the programme's own format - none of them applies to it."
   }
 }

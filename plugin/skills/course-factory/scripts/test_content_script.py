@@ -280,8 +280,8 @@ def main():
         # 2.109.0 (F1): the three long fixture slides (90-99 words beside a picture) would be paged with number tabs - the
         # review page says so, and nothing else is found
         paged = cs.paged_findings(SCRIPT)
-        check("... and the pictures-and-tasks check found only the slides that would be paged into number tabs (F1, 2.109.0)",
-              [f["screen"] for f in paged] == ["s01", "s02", "s03"] and all(f["level"] == cs.FAIL for f in paged)
+        check("... and the pictures-and-tasks check found only the slides that would be paged into number tabs (F1, 2.109.0) - a warning",
+              [f["screen"] for f in paged] == ["s01", "s02", "s03"] and all(f["level"] == cs.NOTE for f in paged)
               and not cs.media_findings(SCRIPT) and lv("s_media_clean") not in page)
         check("F1: the same slides with the build sheet's \"parts\" are not found",
               not cs.paged_findings(SCRIPT, {"screens": {x: {"parts": [[1, 2], [3, 9]]} for x in ("s01", "s02", "s03")}}))
@@ -303,13 +303,30 @@ def main():
         screen(thin, "s03")["notes"] = "Show the cutaway."
         check("a slide too thin to teach from is found", "t_thin_slide" in rules_of(thin), rules_of(thin))
         check("instructor notes too thin to explain from are found", "t_thin_notes" in rules_of(thin), rules_of(thin))
+        check("... both are warnings, never a stop", not [f for f in cs.theory_findings(thin)[0] if f["level"] == cs.FAIL],
+              cs.theory_findings(thin)[0])
+        w45 = copy.deepcopy(SCRIPT)
+        screen(w45, "s03")["text"] = " ".join(["word"] * 42)          # and the title's 3: 45 words, the old floor was 50
+        f = [x for x in cs.theory_findings(w45)[0] if x["rule"] == "t_thin_slide"]
+        check("a slide of 45 words is within the guideline (at least %d) - no fail, and not even a warning" % cs.RULES["slide"]["min_words"],
+              not f and not [x for x in cs.blocking(cs.theory_findings(w45)[0]) if x["screen"] == "s03"], f)
+        screen(w45, "s03")["text"] = " ".join(["word"] * 34)
+        f = [x for x in cs.theory_findings(w45)[0] if x["rule"] == "t_thin_slide"]
+        check("... a slide of 37 words is a warning, never a fail", f and f[0]["level"] == cs.NOTE and not cs.blocking(f), f)
+        dense = copy.deepcopy(SCRIPT)
+        screen(dense, "s03").update(text=" ".join(["word"] * 90), visual_kind="none", picture={"kind": "none"})
+        f = [x for x in cs.theory_findings(dense)[0] if x["rule"] == "t_dense_slide"]
+        check("90 words and no picture: over %d a picture or steps - a warning" % cs.RULES["slide"]["picture_from"],
+              f and f[0]["level"] == cs.NOTE, rules_of(dense))
         long_ = copy.deepcopy(SCRIPT)
         screen(long_, "s03")["text"] = S03_TEXT + "\n" + S01_TEXT
         f = [x for x in cs.theory_findings(long_)[0] if x["rule"] == "t_long_slide"]
-        check("a slide the room cannot read from the screen is a note, not a must-fix", f and f[0]["level"] == cs.NOTE, f)
+        check("a slide over %d words is a warning that the build shows it in steps, not a must-fix" % cs.RULES["slide"]["steps_from"],
+              f and f[0]["level"] == cs.NOTE and "steps" in cs.LABELS["en"]["t_long_slide"], f)
         slow = copy.deepcopy(SCRIPT)
         screen(slow, "s03")["minutes"] = 25
-        check("a module whose words do not fill its minutes is found", "t_density" in rules_of(slow), rules_of(slow))
+        check("a module whose words do not fill its minutes is found - a warning",
+              [f["level"] for f in cs.theory_findings(slow)[0] if f["rule"] == "t_density"] == [cs.NOTE], rules_of(slow))
         early = copy.deepcopy(SCRIPT)
         order = ["s01", "t01", "q01", "q02", "q03", "s02", "s03", "t02", "m01", "m02", "m03", "m04", "m05"]
         early["screens"] = [copy.deepcopy(screen(SCRIPT, x)) for x in order]
@@ -318,6 +335,9 @@ def main():
         screen(early, "s02")["minutes"] = 7       # the module's minutes still add up
         rs = rules_of(early)
         check("a self-check after too little theory (3 min) is found", "t_before_sc" in rs, rs)
+        must = {f["rule"] for f in cs.blocking(cs.theory_findings(early)[0])}
+        check("... enough theory before a task and every answer taught first still block approval",
+              {"t_before_sc", "t_not_taught"} <= must, must)
         nt = [x["screen"] for x in cs.theory_findings(early)[0] if x["rule"] == "t_not_taught"]
         check("... and the question whose answer only comes later is found - the ones already taught are not", nt == ["q03"], nt)
         untaught = copy.deepcopy(SCRIPT)
@@ -343,6 +363,8 @@ def main():
         small["screens"] = [s for s in small["screens"] if s["id"] not in ("q03", "m05")]
         rs = rules_of(small)
         check("a self-check or module check with too few questions is found", "t_sc_small" in rs and "t_mc_small" in rs, rs)
+        check("... a warning, never a stop", not [f for f in cs.theory_findings(small)[0] if f["rule"] in ("t_sc_small", "t_mc_small")
+                                                   and f["level"] == cs.FAIL])
         check("the example self-check, two basic and one rich, meets the mix", "t_sc_mix" not in rules_of(SCRIPT), rules_of(SCRIPT))
         plain = copy.deepcopy(SCRIPT)
         screen(plain, "q03").update(mechanic="single_choice", options=["About -104 °C", "About -42 °C"], correct="A")
@@ -354,11 +376,17 @@ def main():
         check("... of five, two basic and two rich and a critique must be fixed - three rich", "t_sc_mix" in rules_of(five), rules_of(five))
         screen(five, "q06")["mechanic"] = "read_instrument"
         check("... two basic and three rich is the owner's mix", "t_sc_mix" not in rules_of(five), rules_of(five))
+        ca = new_course(tmp, "thin-only", thin)
+        code, out = cs_run("approve", ca, "--module", "1", "--by", "Anna")
+        check("a thin slide and thin notes alone do not stop approval - they are warnings", code == 0, out)
+        thin = copy.deepcopy(thin)
+        screen(thin, "q01")["options"][0] = "About -273 °C in a vacuum flask"
         cb = new_course(tmp, "thin", thin)
         code, out = cs_run("render", cb, "--module", "1")
         tpage = io.open(cs.paths(cb, 1)["review"], encoding="utf-8").read()
         check("the findings are at the top of the review page, before the slides",
-              0 < tpage.find(lv("s_theory_title")) < tpage.find(lv("s_part1")) and lv("s_textcheck_must") in tpage)
+              0 < tpage.find(lv("s_theory_title")) < tpage.find(lv("s_part1")) and lv("s_textcheck_must") in tpage
+              and html.escape(cs.LABELS["en"]["s_finding_warn"]) in tpage)
         check("render reports them, naming the slide", "The theory check found" in out and "[must fix] Slide 4" not in out and LV["s_slide_n"].format(n=4) in out, out)
         tdoc = zipfile.ZipFile(cs.paths(cb, 1)["docx"]).read("word/document.xml").decode("utf-8")
         check("... and they are in the Word file too", html.escape(LV["s_theory_title"], quote=False) in tdoc)
@@ -369,7 +397,7 @@ def main():
         code, out = cs_run("approve", cb, "--module", "1", "--by", "Anna", "--despite-findings")
         rec = cs.load(cs.paths(cb, 1)["script"])
         check("the operator may approve despite them (L26) - and that is recorded",
-              code == 0 and {"t_thin_slide", "t_thin_notes"} <= {f["rule"] for f in rec.get("approved_despite_findings", [])}, out)
+              code == 0 and {f["rule"] for f in rec.get("approved_despite_findings", [])} == {"t_not_taught"}, out)
 
         print("\n-- 2.18.0: every slide leaves room for a named picture, and the tasks are varied (L37, L38)")
         mrules = lambda sc: [f["rule"] for f in cs.media_findings(sc)]
@@ -592,7 +620,7 @@ def main():
         longn = copy.deepcopy(SCRIPT)
         screen(longn, "s02")["notes"] = S01_TEXT
         f = [x for x in cs.theory_findings(longn)[0] if x["rule"] == "t_long_notes"]
-        check("notes that are a speech, not points, must be shortened", f and f[0]["level"] == cs.FAIL and f[0]["screen"] == "s02", f)
+        check("notes that are a speech, not points, are a warning", f and f[0]["level"] == cs.NOTE and f[0]["screen"] == "s02", f)
         shortn = copy.deepcopy(SCRIPT)
         screen(shortn, "s02")["notes"] = "- Draw it."
         check("notes with nothing to go on are found too", "t_thin_notes" in rules_of(shortn), rules_of(shortn))
@@ -612,6 +640,9 @@ def main():
         rs = mrules(boring)
         check("a module of nothing but 'choose one answer' is found - too much choosing, one way per task, nothing hands-on",
               {"m_too_much_choice", "m_mix", "m_no_hands_on"} <= set(rs) and "m_same_in_a_row" in rs, rs)
+        must = {f["rule"] for f in cs.blocking(cs.theory_findings(boring)[0] + cs.media_findings(boring))}
+        check("... the counts are warnings; of them only three rich + two basic in a self-check still blocks approval",
+              "t_sc_mix" in must and not must & {"m_too_much_choice", "m_mix", "m_no_hands_on", "m_same_in_a_row", "t_long_answer"}, must)
         bad_ans = copy.deepcopy(SCRIPT)
         screen(bad_ans, "m03")["answer"] = "Type A full\nType B = partial"
         screen(bad_ans, "m05")["answer"] = "LNG\nPropane"

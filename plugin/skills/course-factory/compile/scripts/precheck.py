@@ -15,9 +15,10 @@ MUST (the build stops before its figures; build_module.py runs this first):
   * a picture the build sheet names that is not there (figure, figure_b, inset, aside, a photograph inside a drawing)
   * a photograph under 800 px on its long side - enlarging cannot make it sharp: find a larger original (1600 px or
     more), or record in its _photo_meta.json entry why this one stays: "low_resolution_ok": "<reason>"
-  * a teaching slide with more than 60 words and no picture (L61: dense text has a picture beside it)
   * three teaching slides in a row with no picture (L61)
 NOTE (said, never stops it):
+  * a teaching slide with more than the word guideline's picture_from words and no picture (theory-rules.json "slide"):
+    a picture goes beside the words, or the slide is shown in steps - past steps_from the build does that by itself
   * a photograph of 800-1599 px - the compile enlarges it (L62), a larger original would be sharper
   * the same template forced on three slides in a row or more - the compiler chooses and varies the look (L62); a
     forced template only takes that away
@@ -157,10 +158,10 @@ def check(course, module, rebuild=False):
                 photos.setdefault(rel, []).append(sid)
         # L61 - dense words have a picture; never three teaching slides in a row without one
         if s.get("kind") == "slide" and not s.get("recap"):
-            if not has_pic and words > cm.DENSE_WORDS:
-                must.append("%s: %d words and no picture beside them - dense text always has a drawing, a photograph, an "
-                            "animation or a 3D model beside it (L61); add one in the build sheet, or shorten it in the script"
-                            % (where, words))
+            if not has_pic and words > cm.PICTURE_FROM:
+                notes.append("%s: %d words and no picture beside them - over %d words a picture goes beside the words, or the "
+                             "slide is shown in steps (\"parts\" in the build sheet); past %d words the build shows it in steps "
+                             "by itself (theory-rules.json \"slide\")" % (where, words, cm.PICTURE_FROM, cm.STEPS_FROM))
             run_plain = run_plain + [sid] if not has_pic else []
             if len(run_plain) == cm.NO_VISUAL_RUN + 1:
                 must.append("%s: three teaching slides in a row without a picture (%s) - give one of them a picture (L61)"

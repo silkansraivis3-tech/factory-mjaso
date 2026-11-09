@@ -198,6 +198,7 @@ Over budget is a defect, the same as a broken link.
 |---|---|
 | A runner step card | ≤ 45 words total, one primary button, `they` ≤ 20 words, `done` ≤ 15 |
 | A working screen the instructor holds mid-session | ≤ ~70 visible words |
+| A slide of a compiled deck | its template's budget (`course-module-ui/knowledge/layout-templates.json` `budgets`) and the word guideline (`course-factory/knowledge/theory-rules.json` `slide`) - not this table |
 | Any paragraph on a page opened during a session | ≤ 45 words |
 | A pre-flight item | ≤ 25 words |
 | Provenance and sourcing | footer only, never in the body |

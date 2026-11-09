@@ -101,7 +101,10 @@ revealed on the instructor's own key. Anything borderline goes there rather than
 visible body. It is why the audience rule costs nothing — the material is not lost, it is
 routed.
 
-**3 · Compact or it does not ship.** Every surface has a word budget and it is small. Long
+**3 · Compact or it does not ship.** Every surface has a word budget and it is small. A compiled
+deck's slide has one: what its template holds (`layout-templates.json` `budgets`) and the word
+guideline in `course-factory/knowledge/theory-rules.json` `slide` - more words split the slide or
+show it in steps, never cram it. Long
 prose is the defect this system exists to remove, and it returns on every module unless
 actively cut. But **visible must be sufficient, not merely short** — a 60-word screen that
 cannot be acted on without opening a `<details>` is worse than the 300-word screen it replaced,

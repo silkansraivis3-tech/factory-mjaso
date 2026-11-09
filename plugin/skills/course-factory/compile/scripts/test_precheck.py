@@ -134,7 +134,8 @@ def main():
         scr.insert(4, dense)
         c, md = course(tmp, "dense", screens=scr)
         code, out = run(PRE, c, "--module", "1")
-        check("more than 60 words with no picture beside them (L61)", code == 1 and "(s05): 96 words and no picture" in out, out)
+        check("96 words with no picture beside them is a note (the word guideline), never a stop",
+              code == 0 and "(s05): 96 words and no picture" in out and "past 120 words the build shows it in steps" in out, out)
         short = lambda i: {"id": "x%d" % i, "kind": "slide", "title": "Point %d" % i, "visual_kind": "none", "minutes": 1,
                            "text": "A short point."}
         scr = json.loads(json.dumps(tc.SCREENS))

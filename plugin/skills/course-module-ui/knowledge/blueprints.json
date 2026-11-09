@@ -23,7 +23,7 @@
   "slides": [
     {"id": "explain-figure.figure-right", "for": "a picture and a short explanation", "grid": ["x p"], "cols": "45fr 55fr", "fill": {"x": ["Text", "text, up to 60 words"], "p": ["3D", "figure: a 3D model, or a photo"]}, "ref": "slides#p4"},
     {"id": "explain-figure.figure-left", "mirror": "explain-figure.figure-right", "fill_note": "build sheet figure_first"},
-    {"id": "explain-figure.text-only", "for": "a short slide with no picture (at most two in a row)", "grid": ["x"], "fill": {"x": ["Text", "text, up to 60 words"]}},
+    {"id": "explain-figure.text-only", "for": "a short slide with no picture (at most two in a row)", "grid": ["x"], "fill": {"x": ["Text", "text, up to 80 words; past 120 in steps (theory-rules.json slide)"]}},
     {"id": "figure-stage.figure", "for": "a large picture with few words", "grid": ["p", "x"], "rows": "3fr 1fr", "fill": {"p": ["3D", "figure"], "x": ["Text", "text, up to 45 words"]}, "ref": "slides#p3"},
     {"id": "figure-stage.two", "for": "two pictures to compare, each with its words", "grid": ["p q", "x y"], "rows": "3fr 2fr", "fill": {"p": ["Picture", "figure"], "q": ["Picture", "figure_b"], "x": ["Text", "blocks[0] lines"], "y": ["Text", "blocks[1] lines"]}, "ref": "slides#p6"},
     {"id": "figure-stage.figure-top", "for": "a photograph across the slide, the words under it", "grid": ["p p", "x y"], "rows": "3fr 2fr", "fill": {"p": ["Picture", "figure (a photograph)"], "x": ["Text", "text, first half"], "y": ["Text", "text, second half"]}},
