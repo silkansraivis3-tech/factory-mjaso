@@ -641,7 +641,18 @@ their stops. The approved words never change - only what is round them.
 
 | a full or split photograph, a carousel (2.109.0) | every photo stacked in the frame; Next walks the lines and the line's photo fades in (opacity only, L65); each opens full screen with its own record (L51, L56), credits in `_photo_meta.json`, never on the slide | `"photos": {"1": "assets/img/a.jpg", "2": "assets/img/b.jpg"}` |
 | a predict- / explain-then-reveal slide (2.109.0) | the intro line is a lead, not step 1; the items are numbered, or lettered A, B, C when the task is to find the order | `"letters": true` / `false` (default: lettered when the question, title or lead says order / sequence / arrange / rank / sort), `"lead": false` (every line an item) |
+| a worked example, or a slide with an `"ask"` and `"reveal"` (predict / explain-then-reveal, `points`), beside a kit figure (2.115.0) | each Next lights line k and plays the figure step whose `"line"` is k (and the steps before it); tapping a lit line replays its step. A step marked `"reveal": true`, or whose `"line"` is past the visible lines, plays on the answer's stop, so the answer shows ON the drawing. Each line is lit once; the question is one stop and the answer one stop, then Next leaves the slide. The answer opens under the question in the text column, never over a kit figure (a photograph keeps "the answer over the picture") | the figure spec's `"line"` / `"reveal"` |
 | a room activity with no `"opens"` (2.109.0) | no code on the slide (never the screen id); a text of three lines or more is a lead statement and bullets | - |
+
+**Three checks keep a drawing honest (2.115.0).** Each is a must-fix that names the slide:
+1. *Dead figure* - `its drawing never moves` (compile: no step of the figure changes any part from where it starts, e.g. a bar
+   left at value 0 on every step) and, in the browser walk (`fit_gate.py`), `the drawing on sNN does not change on any Next`.
+   A figure with no steps (a still picture) is exempt.
+2. *The drawing agrees with the answer* - on a slide with a `"reveal"`, every labelled share (`composition_bar` segments) and
+   every number with its unit the kit figure prints must be in THAT slide's own text, question, answer or notes, with the same
+   value ("the drawing says 'Yard labour 20 %' but the answer says 'Yard labour 25 %'"). `20%` and `20 %` are the same. When the
+   drawing legitimately differs, the build sheet says why: `"numbers_differ": "<why>"`, or cites the number in `"facts"`.
+3. *Next walks the lines once* - `Next walks its lines twice` when a figure's steps name an earlier line after a later one.
 
 `"spots"` and `"zoom"` are in the photograph's own pixels and keyed by line number; a wrong one is reported. A slide
 without these fields is built as before.

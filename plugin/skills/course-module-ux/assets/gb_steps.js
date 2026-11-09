@@ -111,6 +111,34 @@
       ba.addEventListener('pointermove', function (e) { if (ba.classList.contains('drag')) { drag(e); } });
       ba.addEventListener('pointerup', function () { ba.classList.remove('drag'); });
       return function (k) { ba.style.setProperty('--x', (X[Math.min(k, X.length - 1)] || 50) + '%'); };
+    },
+    /* a kit figure beside a question and its answer (worked example, points with an ask, predict / explain then reveal): the
+       figure plays the steps whose "line" is a line now lit (line L = stop L - 1) and the ones before it; the steps that name
+       a line past the visible ones, or are marked "reveal": true, play on the last stop, when the answer shows. Tapping a lit
+       line (its stop) replays its step. Only a slide with a question (li.you): other stop slides keep kit.js's own step hook. Complete at the last stop,
+       so kit.js's own step hook (which would step the figure on after the stops and light line 1 again) has nothing left to do. */
+    function (s) {
+      var host = q('[data-kit]', s);
+      var ask = !!q('li.you', s);       /* the last two stops are the question and the answer */
+      if (!host || !ask) { return null; }
+      var at = -1, total = 0;
+      var want = function (k, n) {
+        var f = host.__kit, st = f && f.spec && f.spec.steps || [], seen = ask ? n - 2 : n, last = k >= n - 1, c = 0, i, top;
+        if (!f) { return -1; }
+        for (i = 0; i < st.length && !last; i++) {
+          top = st[i].line == null ? 0 : Math.max.apply(Math, [].concat(st[i].line).map(Number));
+          if (st[i].reveal || top > Math.min(k + 1, seen)) { break; }
+          c = i + 1;
+        }
+        return last ? st.length : c;
+      };
+      var run = function (k, n) {
+        var c = want(k, n);
+        at = k; total = n;
+        if (c >= 0) { host.__kit.go(c); }
+      };
+      s.__figSync = function () { if (at >= 0) { run(at, total); } };
+      return run;
     }
   ];
 
@@ -172,7 +200,7 @@
     each(marks, function (x) { x.addEventListener('click', function () { go(+x.getAttribute('data-k')); }); });
     var old = H[s.id] || {};
     H[s.id] = {
-      enter: function () { go(0); if (old.enter) { old.enter(); } },
+      enter: function () { go(0); if (old.enter) { old.enter(); } if (s.__figSync) { w.setTimeout(s.__figSync, 0); } },
       leave: function () { if (clk) { clk.stop(); } if (old.leave) { old.leave(); } },
       step: function (dir) { var k = i + dir; if (k < 0 || k >= n) { return false; } go(k); return true; }
     };

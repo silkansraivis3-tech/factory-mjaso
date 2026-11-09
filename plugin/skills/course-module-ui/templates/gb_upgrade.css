@@ -486,6 +486,15 @@
 .slide[data-last] .lt-ans-over{display:flex;animation:lt-rise .5s both}
 .slide[data-last] .lt-split:has(.lt-ans-over) .lt-work li.you .ask{display:block}
 .slide[data-last] .lt-split:has(.lt-ans-over) .lt-work li.you .ans{display:none}
+/* 2.115.0 - beside a drawing (a kit figure, 2D or 3D) the answer does not cover it: it opens in the text column, under the question,
+   and the drawing shows the answer's step */
+.lt-ans-under{display:none;flex:0 0 auto;padding:min(1.8vmin,14px) min(2.4vmin,19px);border-radius:min(1.6vmin,13px);
+  background:linear-gradient(var(--up-a7921416012),var(--up-a7921416012)),var(--lt-navy);border:2px solid var(--up-4fd6a0);color:var(--lt-white);
+  font-size:clamp(13px,calc(var(--lt-fs) * .8),24px);font-weight:600;line-height:1.3}
+.lt-ans-under p{margin:0}
+.slide[data-last] .lt-ans-under{display:block;animation:lt-rise .5s both}
+.slide[data-last] .lt-split:has(.lt-ans-under) .lt-work li.you .ask{display:block}
+.slide[data-last] .lt-split:has(.lt-ans-under) .lt-work li.you .ans{display:none}
 .lt-meter{display:flex;align-items:center;justify-content:center;min-height:0}
 .lt-meter .dev{width:100%;max-width:min(64vmin,520px);padding:min(3vmin,24px);border-radius:min(3vmin,24px);background:linear-gradient(160deg,#e9eef5,#b9c8d8);
   box-shadow:0 30px 60px -20px var(--up-a0006),inset 0 2px 0 var(--lt-white),inset 0 -3px 0 var(--up-a10369925)}
@@ -649,6 +658,9 @@
 .lt-scol > .lt-sit{flex:none}
 .slide.lt-drill .lt-alarm > img{object-position:0 0}
 .lt-sit{margin:0;font-size:var(--lt-fs-lead);line-height:1.35;color:var(--lt-dim-d);font-weight:600}
+/* a line a stepping figure selects must look selected (the audit's "selected line looks unselected", PM M02 s10) */
+.slide .lt-sit.cur{color:var(--lt-blue);font-weight:800}
+.slide:not(.dark):not(.photo) .lt-sit.cur{color:var(--lt-navy);font-weight:800}
 .lt-do{margin:0;font-size:clamp(22px,4.2vmin,44px);line-height:1.15;font-weight:900;color:var(--lt-white)}
 .slide.lt-drill .lt-alarm::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 0 var(--up-a25559480);pointer-events:none}
 .slide.lt-drill[data-running] .lt-alarm::after{animation:lt-red 1s ease-in-out infinite}

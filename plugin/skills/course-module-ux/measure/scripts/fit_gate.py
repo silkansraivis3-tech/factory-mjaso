@@ -57,9 +57,54 @@ KIT2D = """(id) => { const s = document.getElementById(id); if (!window.KIT2D ||
   return { idle: fs.every(f => f.idle()), found: [].concat.apply([], fs.map(f => KIT2D.audit(f))) }; }"""
 
 
+# 2.115.0 - a figure with steps that does not change on any Next is a dead drawing (PM M02 s12, s13: the chart stayed an empty
+# axis on every Next). Its state at a stop: a hash of what it drew.
+KITSTATE = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
+  const hs = [].slice.call(s.querySelectorAll('[data-kit], [data-kit2d]')); if (!hs.length) { return null; }
+  let steps = 0, sig = '';
+  hs.forEach(h => { const f = h.__kit || h.__k2; if (f && f !== 'bad') { steps += (f.spec && f.spec.steps || f.steps || []).length; }
+    const t = h.innerHTML; let x = 0; for (let i = 0; i < t.length; i++) { x = (x * 31 + t.charCodeAt(i)) | 0; } sig += ':' + t.length + ':' + x; });
+  return { steps: steps, sig: sig }; }"""
+
+
+# the lines lit now on the slide (.cur): one stop's signature; a signature that comes back after another one is a second pass
+CURSIG = """(id) => { const s = document.getElementById(id); if (!s) { return ''; }
+  const a = s.hasAttribute('data-stops') || s.querySelector('[data-k]') ? 'data-k' : 'data-i';    /* the slide's own stops, else its lines */
+  return [].slice.call(s.querySelectorAll('.cur')).filter(x => !x.hasAttribute('data-ks')).map(x => x.getAttribute(a) != null ? a + x.getAttribute(a) : '')
+    .filter(Boolean).sort().join(','); }"""
+
+
+def walked_twice(seqs):
+    """[(slide id, message)] for each slide where a line lit at one stop is lit again after the walk moved on"""
+    out = []
+    for sid, seq in seqs.items():
+        done, last = set(), None
+        for sig in seq:
+            if sig and sig != last:
+                again = sorted(set(sig.split(",")) & done)
+                if again:
+                    out.append((sid, "Next walks its lines twice on %s - %s lit again after the walk moved on; each line "
+                                     "should light once (then the question, then the answer)" % (sid, ", ".join(again))))
+                    break
+                done |= set(sig.split(","))
+            last = sig or last
+    return out
+
+
+def dead_figures(states):
+    """[(slide id, message)] for each slide whose figure has steps and drew the same at every stop of the walk"""
+    out = []
+    for sid, seen in states.items():
+        if seen["steps"] and len(seen["sigs"]) == 1 and seen["stops"] > 1:
+            out.append((sid, "the drawing on %s does not change on any Next (%d stops walked, its figure has %d step(s)) - "
+                             "point its steps' \"line\" at lines the slide lights, or mark the step \"reveal\": true "
+                             "to play it with the answer" % (sid, seen["stops"], seen["steps"])))
+    return out
+
+
 def walk(page, deck, min_shown):
     """[(slide id, step on that slide, kind, what)] for one deck at the page's size"""
-    found, at = [], {}
+    found, at, states, seqs = [], {}, {}, {}
     page.goto(deck.as_uri())
     page.wait_for_timeout(600)
     if page.locator("#startBtn").count():
@@ -76,6 +121,12 @@ def walk(page, deck, min_shown):
             r = page.evaluate("() => window.FitProbe()")
         if r:
             step = at[r["id"]] = at.get(r["id"], 0) + 1
+            seqs.setdefault(r["id"], []).append(page.evaluate(CURSIG, r["id"]))
+            ks = page.evaluate(KITSTATE, r["id"])
+            if ks:
+                seen = states.setdefault(r["id"], {"steps": ks["steps"], "sigs": set(), "stops": 0})
+                seen["sigs"].add(ks["sig"])
+                seen["stops"] += 1
             for k in ("cut", "spill"):
                 for f in r[k]:
                     found.append((r["id"], step, k, "%s px %s: \"%s\"%s" % (f["px"], f["el"], f["words"],
@@ -103,6 +154,10 @@ def walk(page, deck, min_shown):
         if not nxt.count() or nxt.is_disabled():
             break
         nxt.click()
+    for sid, what in dead_figures(states):
+        found.append((sid, 1, "dead", what))
+    for sid, what in walked_twice(seqs):
+        found.append((sid, 1, "twice", what))
     return found
 
 

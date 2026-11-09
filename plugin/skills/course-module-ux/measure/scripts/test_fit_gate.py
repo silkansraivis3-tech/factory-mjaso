@@ -41,6 +41,20 @@ def cli(*args):
     return code, buf.getvalue()
 
 
+@contextlib.contextmanager
+def browser_slot_page(deck):
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as pw:
+        b = pw.chromium.launch(executable_path=browser(), headless=True, args=["--allow-file-access-from-files"])
+        page = b.new_page(viewport={"width": 1280, "height": 800})
+        page.goto(deck.as_uri())
+        page.wait_for_timeout(500)
+        try:
+            yield page
+        finally:
+            b.close()
+
+
 def main():
     print("-- no deck")
     code, out = cli(str(HERE / "fixtures" / "no_such_deck.html"))
@@ -67,6 +81,32 @@ def main():
     check("a wide picture cropped into a square box fails (f3)", any("picture" in x and "wide.png shows" in x for x in f3), out)
     check("... the same picture as a backdrop (data-fit=\"cover\") is allowed", len([x for x in f3 if "wide.png shows" in x]) == 1, out)
     check("the deck is not changed", DECK.read_bytes() == before)
+    print("-- a drawing that never changes, and lines walked twice (2.115.0)")
+    check("dead_figures: a figure with steps that drew the same at every stop is named",
+          [x[0] for x in fit_gate.dead_figures({"a": {"steps": 3, "sigs": {"x"}, "stops": 5}})] == ["a"])
+    check("... one that changed is not, nor a figure with no steps (a still picture)",
+          not fit_gate.dead_figures({"a": {"steps": 3, "sigs": {"x", "y"}, "stops": 5}, "b": {"steps": 0, "sigs": {"x"}, "stops": 5}}))
+    check("walked_twice: a line lit again after the walk moved on is named",
+          [x[0] for x in fit_gate.walked_twice({"a": ["data-k0", "data-k1", "data-k0"]})] == ["a"])
+    check("... lit stops in order, or one stop repeated, are not",
+          not fit_gate.walked_twice({"a": ["data-k0", "data-k0", "data-k1", ""], "b": ["data-k0,data-k1", "data-k2"]}))
+    KDECK = HERE / "fixtures" / "deck_kit_steps.html"
+    code, out = cli(str(KDECK), "--viewport", "1280x800")
+    check("a worked example's figure that never changes is named (k2), the one that moves is not (k1)",
+          any(x.strip().startswith("k2 ") and "does not change on any Next" in x for x in out.splitlines())
+          and not any(x.strip().startswith("k1 ") for x in out.splitlines()), out)
+    from playwright.sync_api import sync_playwright
+    with browser_slot_page(KDECK) as page:
+        seen = []
+        page.click("#startBtn")
+        for _ in range(7):
+            page.wait_for_timeout(120)
+            seen.append((page.evaluate("() => document.querySelector('.slide.active').id"),
+                         page.evaluate("() => document.querySelector('.slide.active svg').getAttribute('data-n')")))
+            page.click("#btnNext")
+        k1 = [n for sid, n in seen if sid == "k1"]
+        check("the figure plays the step of each lit line (1, 2, 3), the question keeps it, the answer plays the reveal (4), "
+              "and Next then leaves the slide - no second pass", k1 == ["1", "2", "3", "3", "4"] and seen[5][0] == "k2", seen)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 

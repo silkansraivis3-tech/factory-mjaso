@@ -1836,6 +1836,161 @@ def unsupported_facts(script, build, figdir, mdir, course):
     return found
 
 
+# ------------------------------------------------------------------ 2.115.0: the drawing agrees with the answer
+# PM M02 s13: the approved answer said "Yard labour 25 %" and no crew line; the drawing said "Yard labour 20 %" and "Crew 5 %".
+# Every check passed: unsupported_facts() only asks that a number appear SOMEWHERE in the course's sources (20 % did). Here a
+# slide with an answer is held to its OWN words: its text, question, answer and notes.
+SLIDE_WORDS = ("title", "text", "ask", "reveal", "points", "claim", "why", "choices", "notes", "cue", "lines", "example")
+
+
+def _flat(x):
+    return " ".join(_flat(v) for v in x.values()) if isinstance(x, dict) else " ".join(_flat(v) for v in x) \
+        if isinstance(x, list) else x if isinstance(x, str) else ""
+
+
+def _norm_words(t):
+    t = (t or "").lower().replace("–", "-").replace("−", "-").replace(" ", " ")
+    t = re.sub(r"\s+%", "%", t)
+    t = re.sub(r"(\d)\s*(?:hours?|hrs?)\b", r"\1 h", t)          # "8 hours" is "8 h"; "10 percent" is "10%"
+    t = re.sub(r"(\d)\s*(?:percent|per cent)\b", r"\1%", t)
+    return re.sub(r"\s+", " ", t)
+
+
+def _label_re(label):
+    toks = [w for w in re.findall(r"[^\W_]+", _norm_words(label)) if w not in ("and", "the", "of")]
+    return re.compile(r"\b" + r"\W+(?:(?:and|the|of)\W+)?".join(re.escape(w) for w in toks) + r"\b") if toks else None
+
+
+def _num_text(v):
+    v = ("%g" % float(v)) if isinstance(v, (int, float)) else str(v)
+    return v
+
+
+def slide_words(s):
+    return _norm_words(" ".join(_flat(s.get(k)) for k in SLIDE_WORDS if k in s))
+
+
+def share_mismatches(spec, words):
+    """[(what the drawing says, what the words say)] for each labelled share a composition bar (or a pie, a ranked list of
+    {label, pct}) draws that the slide's own words do not give the same"""
+    out = []
+    for p in spec.get("parts") or []:
+        for seg in p.get("segments") or [] if isinstance(p, dict) else []:
+            if not isinstance(seg, dict) or seg.get("label") is None or seg.get("pct") is None:
+                continue
+            rx = _label_re(seg["label"])
+            if not rx:
+                continue
+            num = _num_text(seg["pct"])
+            drawn = "%s %s %%" % (seg["label"], num)
+            hits = [m for m in rx.finditer(words)]
+            if not hits:
+                out.append((drawn, "the answer does not name \"%s\" at all" % seg["label"]))
+                continue
+            near = [re.match(r"\W{0,8}(\d+(?:[.,]\d+)?)", words[m.end():]) for m in hits]
+            near = [x.group(1).replace(",", ".") for x in near if x]
+            if near and num not in [n.rstrip("0").rstrip(".") if "." in n else n for n in near]:
+                out.append((drawn, "the answer says \"%s %s %%\"" % (seg["label"], near[0])))
+    return out
+
+
+def figure_answer_mismatches(script, build, figdir, mdir):
+    """[(slide id, what the drawing says, what the answer says)] - the kit figure of a slide with an answer, held to that
+    slide's own words (not the course's sources): each number with its unit it prints, and each labelled share. A slide's build
+    sheet can say why the drawing differs: "numbers_differ": "<why>", or cite a number in "facts" """
+    found = []
+    for s in script.get("screens", []):
+        b = (build.get("screens") or {}).get(s["id"]) or {}
+        if not (s.get("reveal") and str(b.get("figure") or "").lower().endswith((".kit.json", ".kit2d.json"))) or b.get("numbers_differ"):
+            continue
+        raw, err = read_figure(mdir, b["figure"], figdir)
+        if err or not raw:
+            continue
+        try:
+            spec = json.loads(raw)
+        except ValueError:
+            continue
+        words = slide_words(s)
+        for drawn, said in share_mismatches(spec, words):
+            found.append((s["id"], drawn, said))
+        mine = {k for _, k in facts_in(words)}
+        cited = {re.sub(r"\s+", "", k.lower()) for k in (b.get("facts") or {})}
+        for text in figure_texts(raw):
+            for shown, key in facts_in(text):
+                if key not in mine and key != ("", "100", "%") and re.sub(r"\s+", "", shown.lower()) not in cited and not any(shown in x[1] for x in found if x[0] == s["id"]):
+                    found.append((s["id"], shown, "the slide's words (text, question, answer, notes) never state it"))
+    return found
+
+
+SECTION = re.compile(r'<section\b[^>]*\bid="([^"]+)"[^>]*>(.*?)</section>', re.S)
+
+
+def spec_moves(spec, reachable):
+    """True when the steps in `reachable` (a list of step dicts) leave any part of the figure somewhere other than where it
+    starts: a part's value is its "value" (0 when it has none), a step moves it with play [part, to, ...] or set {part: v}"""
+    start = {p.get("id"): p.get("value", 0) for p in spec.get("parts") or [] if isinstance(p, dict)}
+    now = dict(start)
+    for st in reachable:
+        for a in st.get("play") or []:
+            if isinstance(a, list) and len(a) >= 2:
+                now[a[0]] = a[1]
+        for k, v in (st.get("set") or {}).items():
+            now[k] = v
+    return any(now.get(k, 0) != start.get(k, 0) for k in now)
+
+
+def dead_figure_problems(page, script=None):
+    """[(slide id, message)] 2.115.0 - a kit figure that cannot change as the deck is walked. On a slide with a question the
+    steps play with the lines (a step's "line" is a line the slide lights), and the ones that name a line past the visible
+    ones, or say "reveal": true, with the answer; so every step fires - but a figure whose steps all leave every part where it
+    started (a bar at value 0 on every step) is a drawing that never moves. The browser walk (fit_gate.py) checks the same on the
+    page as it runs."""
+    out = []
+    for sid, body in SECTION.findall(page):
+        for m in JSON_DATA.finditer(body):
+            try:
+                spec = json.loads(m.group(1).replace("<\\/", "</"))
+            except ValueError:
+                continue
+            if not isinstance(spec, dict) or not isinstance(spec.get("steps"), list) or not spec["steps"] or not spec.get("parts") \
+                    or not isinstance(spec["parts"][0], dict) or 'data-kit="#' not in body:
+                continue
+            if not spec_moves(spec, spec["steps"]):
+                out.append((sid, "its drawing never moves - none of its %d step(s) changes any part from where it starts (a "
+                                 "bar or a line left at 0 on every step). Give a step the value the drawing is to show, and "
+                                 "mark the one that shows the answer \"reveal\": true" % len(spec["steps"])))
+    return out
+
+
+def lines_twice_problems(page):
+    """[(slide id, message)] 2.115.0 - Next must light each of a slide's lines once. On a slide whose Next walks the figure's
+    steps with the lines (gb_deck.js lockFor), a step that names an EARLIER line than the step before it sends the walk back to
+    that line: the room goes through the lines a second time (PM M03 s02: after the question, Next lit line 1 again). A
+    step may repeat the line it is on. The slides that walk their own stops (data-stops) light line k at stop k, once; the
+    browser walk (fit_gate.py) checks the real page"""
+    out = []
+    for sid, body in SECTION.findall(page):
+        if 'data-kit="#' not in body or " data-stops=" in body.split(">", 1)[0] + ">":
+            continue
+        for m in JSON_DATA.finditer(body):
+            try:
+                steps = json.loads(m.group(1).replace("<\\/", "</")).get("steps") or []
+            except (ValueError, AttributeError):
+                continue
+            at = 0
+            for k, st in enumerate(steps, 1):
+                ln = st.get("line") if isinstance(st, dict) else None
+                ln = [int(x) for x in ([ln] if not isinstance(ln, list) else ln) if str(x).isdigit()]
+                if not ln:
+                    continue
+                if min(ln) < at:
+                    out.append((sid, "Next walks its lines twice - step %d lights line %d after the walk reached line %d. Put the "
+                                     "figure's steps in the order of the lines (or mark the step \"reveal\": true)" % (k, min(ln), at)))
+                    break
+                at = max(at, max(ln))
+    return out
+
+
 # ------------------------------------------------------------------ 2.63.3: a figure shows what its slide says
 _NUM_STOP = set("""a an the of in on at to for from by with and or is are be it its this that as not no into over under up down
 out off per about approx approximately around some any all only than then when while each every one two three""".split())
@@ -2588,6 +2743,10 @@ def answer_over(side, s):
     added under them)"""
     if not side or not (s.get("ask") and s.get("reveal")):
         return side
+    if re.search(r'\bdata-kit(?:2d|3d)?[="]', side):      # 2.115.0 - the drawing shows the answer's step; the answer's words open
+        card = '<div class="lt-ans-under" data-script-ignore>%s</div>' % "".join(      # in a card under it, never over it
+            "<p>%s</p>" % e(x) for x in cs.lines_of(s.get("reveal")))
+        return '<div class="lt-scol">%s%s</div>' % (side, card)
     i = side.rfind("</")
     panel = '<div class="lt-ans-over" data-script-ignore>%s</div>' % "".join("<p>%s</p>" % e(x) for x in cs.lines_of(s.get("reveal")))
     return side[:i] + panel + side[i:]
@@ -5307,6 +5466,13 @@ def main(argv=None):
                          "retrieval packs, fact sheets, text extracts). Take it off the drawing, put it in the script "
                          "(content_script.py propose), or name where it is from in the build sheet: \"facts\": {\"%s\": "
                          "\"<source, page>\"}" % (where, rel, shown, shown))
+        # 2.115.0 - the drawing moves, agrees with the answer, and Next walks the lines once (PM M02 s12, s13, M03 s02)
+        for sid, drawn, said in figure_answer_mismatches(script, build, figdir, mdir):
+            probs.append("slide %s (%s): the drawing says \"%s\" but %s. Make the drawing say what the approved "
+                         "answer says (the figure's spec), or say why it differs in the build sheet: \"numbers_differ\": \"<why>\""
+                         % (sid, cs.place(script, sid), drawn, said))
+        for sid, msg in dead_figure_problems(page) + lines_twice_problems(page):
+            probs.append("slide %s (%s): %s" % (sid, cs.place(script, sid), msg))
         # 2.63.3 - a figure shows what its slide says, and a photo is not one its own record says it is not
         for sid, rel, k, line, said, shown in figure_number_mismatches(build, figdir, mdir):
             probs.append("%s: its figure %s, step %d (\"%s\") - the words say %s, the drawing's readout shows %s. Make the "
