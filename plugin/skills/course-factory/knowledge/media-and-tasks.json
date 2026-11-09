@@ -155,6 +155,7 @@
     "eur_per_image": 0.10,
     "video": "a clip costs much more than a picture - say so, and make and approve its still first",
     "flow": [
+      "in a course build: the picture budget is asked once per course at the start (intake.json picture_budget); within it there is no question before each picture - the prompts are drafted from the script (picture_briefs.py queue), the person may correct any line, and the budget yes goes in approved_by_user. The steps below are for a picture outside a course, or while the person gives no budget",
       "find the places first: every slide whose picture the generator makes (picture_briefs.py list), and any other place where a realistic picture would truly help - show the list, let the person strike any",
       "one place at a time, ask the questions below in plain words, each with a suggestion drawn from the slide, so the person only corrects",
       "write the prompt from the answers (nano-banana realistic-visuals 2) and show it with the size and the file; ask 'Generate this one picture (about EUR 0.10)?'",

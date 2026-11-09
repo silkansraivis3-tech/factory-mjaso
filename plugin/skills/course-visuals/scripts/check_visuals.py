@@ -62,6 +62,32 @@ def add(kind: str, path: str, msg: str, hint: str = "") -> None:
 
 def fail(p, m, h=""): add("FAIL", p, m, h)
 def warn(p, m, h=""): add("WARN", p, m, h)
+def note(p, m, h=""): add("NOTE", p, m, h)
+
+
+CHOSEN: dict = {}
+
+
+def motion_choice(path: str):
+    """The person's recorded choice against the motion rule (course-factory design_choices.py, L26) for the course this
+    file belongs to, as its label, or None. An animation they asked for is theirs: reported as their choice, never as a
+    problem."""
+    d = os.path.dirname(os.path.abspath(path))
+    if d not in CHOSEN:
+        try:
+            sys.path.insert(0, os.path.join(os.path.dirname(SKILL), "course-factory", "scripts"))
+            import design_choices
+        except ImportError:
+            CHOSEN[d] = None
+            return None
+        found, up = None, d
+        for _ in range(8):
+            found = design_choices.load(up).get("motion")
+            if found or os.path.dirname(up) == up:
+                break
+            up = os.path.dirname(up)
+        CHOSEN[d] = design_choices.label(found) if found else None
+    return CHOSEN[d]
 
 
 def strip_comments(text: str) -> str:
@@ -98,7 +124,10 @@ def check_motion(path: str, raw: str) -> None:
     for name in sorted(kf & used):
         low = name.lower()
         if any(d in low for d in DECOR):
-            if not declared:
+            chosen = motion_choice(path)
+            if chosen:
+                note(path, f'animation "{name}" uses decorative vocabulary - {chosen}: kept as they asked')
+            elif not declared:
                 warn(path,
                      f'animation "{name}" uses decorative vocabulary and the file '
                      f'declares no data-motion category',

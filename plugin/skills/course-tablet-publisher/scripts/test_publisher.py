@@ -160,6 +160,24 @@ def main() -> int:
         check("... one a page shows, a real photo and one left in a _ folder (the classroom skips it) are not",
               "shown_ai.webp - an AI" not in out5 and "real.jpg - an AI" not in out5 and "old_ai.webp" not in out5, out5[-600:])
 
+        # ---- 2c · a picture whose rights are still unclear is not published ----
+        rr = make_repo(os.path.join(tmp, "rights"))
+        img = os.path.join(rr, "app", "src", "main", "assets", "training_terminal", "courses", "t-course", "assets", "img")
+        os.makedirs(img, exist_ok=True)
+        io.open(os.path.join(img, "_photo_meta.json"), "w", encoding="utf-8").write(json.dumps(
+            {"book_fig.jpg": {"source": "a textbook, p. 10", "rights_state": "RIGHTS_REVIEW_REQUIRED"},
+             "real.jpg": {"source": "Wikimedia Commons", "licence": "CC BY 4.0", "rights_state": "ATTRIBUTION_REQUIRED"}}))
+        for n in ("book_fig.jpg", "real.jpg"):
+            io.open(os.path.join(img, n), "wb").write(b"x")
+        tt = os.path.dirname(os.path.dirname(img))
+        io.open(os.path.join(tt, "tasks", "T2.html"), "w", encoding="utf-8").write(
+            (PAGE_OK % "T2").replace("<p>ok</p>", '<img src="../assets/img/book_fig.jpg" alt="x"><img src="../assets/img/real.jpg" alt="y">'))
+        rc6, out6 = run([os.path.join(HERE, "gates.py"), "--repo", rr, "--course-id", "t-course"])
+        check("a picture whose rights are not cleared is refused - publishing stops while any is unclear",
+              rc6 == 1 and "book_fig.jpg" in out6 and "rights not cleared" in out6, out6[-600:])
+        check("... a cleared one beside it is not", "real.jpg" not in out6.split("rights not cleared")[0].splitlines()[-1]
+              and out6.count("rights not cleared") == 1, out6[-600:])
+
         # the platform shell may reach the backend; a course may not
         shell = os.path.join(bad, "app", "src", "instructor", "assets",
                              "instructor_terminal", "live")

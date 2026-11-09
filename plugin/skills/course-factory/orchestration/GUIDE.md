@@ -177,9 +177,10 @@ the operator states during review goes into `working_claude\STANDARDS.md`, and b
 
 **The visual agent is how a missing picture gets made without stopping the build.** When a module
 reaches an image it cannot produce, it carries on. A real picture is searched for by `visual-sourcer`
-without asking. A **generated** one is never made automatically (L47 - every picture costs about
-€0.10): the person describes it and says yes to the prompt first (`scripts/picture_briefs.py`), and
-only then is it spawned on `nano-banana:image-director`, which makes it once. `course-visuals/scripts/write_visual_handoff.py` writes the same request to a file as the
+without asking. A **generated** one is made only within the course's picture budget (L47 - every
+picture costs about €0.10), said yes to once at the start (`intake.json` `picture_budget`): no
+question before each picture - the prompt comes from `scripts/picture_briefs.py`, and it is spawned
+on `nano-banana:image-director`, which makes it once. `course-visuals/scripts/write_visual_handoff.py` writes the same request to a file as the
 fallback, for when the agent is unavailable or generation is blocked (no key, billing off). Build the module as far as it
 goes either way; never leave it unfinished because one picture is missing.
 

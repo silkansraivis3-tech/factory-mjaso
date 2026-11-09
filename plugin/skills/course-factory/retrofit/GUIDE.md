@@ -142,7 +142,8 @@ needs a source the course does not carry — raise `GENERATED_ASSET_REQUIRED` or
 
 The animation law is unchanged (**L13**, owned by `course-visuals`): motion earns its place only
 when it explains movement, process, flow, mechanism, sequence, state change, cause/effect or
-before/after system behaviour. Decorative motion is still a defect.
+before/after system behaviour. Decorative motion is still a defect - unless the person asked for it: then it is
+their design choice (L26), said once with its risk, made, and recorded (`design_choices.py`, rule `motion`).
 
 What changes in retrofit is that **you go looking.** Do not wait for "add an animation here". A
 static cross-section shows the parts; only a stepped reveal shows the causation. If a dynamic

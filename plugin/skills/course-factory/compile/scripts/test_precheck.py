@@ -92,26 +92,42 @@ def main():
               code == 0 and "1 picture(s) under 800 px" in out and "reused and enlarged" in out, out)
         c, md = course(tmp, "mid", sheet={"s01": {"figure": "assets/img/mid.png"}}, photos={"mid.png": (1200, 800)})
         code, out = run(PRE, c, "--module", "1")
-        check("a 1200 px photograph is a note - the compile enlarges it - never a stop",
-              code == 0 and "1 photograph(s) found under 1600 px" in out and "mid.png 1200x800" in out, out)
+        check("a 1200 px photograph is accepted without a note - 1024 px or more is enough",
+              code == 0 and "mid.png" not in out and "found under" not in out, out)
         code, out = run(tc.COMPILE, c, "--module", "1", "--no-drawing-check")
         keep = os.path.join(c, "working_claude", "photo_originals", "M01", "mid.png")
         check("built: the photograph is enlarged to 1600 px, its original kept",
               pixel_size(os.path.join(md, "assets", "img", "mid.png")) == (1600, 1067) and pixel_size(keep) == (1200, 800))
         code, out = run(PRE, c, "--module", "1")
         check("... and the pre-check still judges the photograph as it was found (1200 px), not its enlargement",
-              "mid.png 1200x800" in out, out)
+              code == 0 and "mid.png" not in out, out)
+        c3, md3 = course(tmp, "mid1000", sheet={"s01": {"figure": "assets/img/mid.png"}}, photos={"mid.png": (1000, 700)})
+        code, out = run(PRE, c3, "--module", "1")
+        check("a 1000 px photograph is a note - under 1024 px a larger original would be sharper - never a stop",
+              code == 0 and "1 photograph(s) found under 1024 px" in out and "mid.png 1000x700" in out, out)
+        c3, md3 = course(tmp, "mid700", sheet={"s01": {"figure": "assets/img/mid.png"}}, photos={"mid.png": (700, 500)})
+        code, out = run(PRE, c3, "--module", "1")
+        check("a 700 px photograph still stops the build", code == 1 and "mid.png (on s01) is only 700 x 500 px" in out, out)
+        c3, md3 = course(tmp, "unclear", sheet={"s01": {"figure": "assets/img/book.png"}}, photos={"book.png": (1800, 1200)})
+        meta = tc.cs.load(os.path.join(md3, "assets", "img", "_photo_meta.json"))
+        meta["book.png"]["rights_state"] = "RIGHTS_REVIEW_REQUIRED"
+        tc.cs.save(os.path.join(md3, "assets", "img", "_photo_meta.json"), meta)
+        code, out = run(PRE, c3, "--module", "1")
+        check("a picture whose rights are not cleared does not stop the build - it is in the module's notes, publishing refused",
+              code == 0 and "book.png" not in out.split("PRE-CHECK notes")[0] and "rights not cleared" in out
+              and "book.png (on s01)" in out and "publishing to the tablets is refused" in out, out)
         io.open(os.path.join(md, "assets", "img", "mid.png"), "wb").write(tc.png(2400, 1600))
         check("a new, larger picture put in its place is judged as itself - the old kept original no longer counts",
               found_size(os.path.join(md, "assets", "img", "mid.png"), keep) == (2400, 1600))
         code, out = run(ASSETS, os.path.join(md, "assets", "img"))
         check("the asset check (photo-finding time) has no size warning for the 2400 px one",
               "under 1600 px" not in out and "no enlargement makes it sharp" not in out, out)
-        c2, md2 = course(tmp, "assets", photos={"a.png": (500, 400), "b.png": (1000, 700)})
+        c2, md2 = course(tmp, "assets", photos={"a.png": (500, 400), "b.png": (1000, 700), "c.png": (1200, 800)})
         code, out = run(ASSETS, os.path.join(md2, "assets", "img"))
         check("the asset check warns on a photograph under 800 px - no enlargement makes it sharp",
               "only 500 x 400 px - no enlargement makes it sharp" in out, out)
-        check("... and on one under 1600 px - the original would be sharper", "1000 x 700 px - under 1600 px" in out, out)
+        check("... and on one under 1024 px - the original would be sharper", "1000 x 700 px - under 1024 px" in out, out)
+        check("... and has no size warning for a 1200 px one", "1200 x 800 px" not in out, out)
 
         print("\n-- the pre-check finds what would fail the build (point 1)")
         c, md = course(tmp, "missing", sheet={"s02": {"figure": "assets/fig/none.svg"}})

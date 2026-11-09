@@ -304,6 +304,24 @@ def main():
         check("... and once every tile is in, the slide holds no stand-in", code == 0 and "placeholder" not in b["screens"]["s05"]
               and not any("_placeholder_" in t for t in b["screens"]["s05"]["tiles"]), (out, b["screens"]["s05"]))
 
+        print("\n-- in a course build the picture budget is asked once; no question before each picture")
+        nb = os.path.join(tmp, "Budget")
+        os.makedirs(os.path.join(nb, "source_files"))
+        os.makedirs(os.path.join(nb, "course", "working_claude", "script"))
+        io.open(os.path.join(nb, "course", "working_claude", "script", "M01.json"), "w", encoding="utf-8").write(json.dumps(SCRIPT))
+        code, out = run("list", nb, "--module", "1")
+        check("no budget recorded: the list says to ask it once", code == 0 and "No picture budget recorded" in out
+              and "ask it once" in out, out)
+        io.open(os.path.join(nb, "course", "working_claude", "intake.json"), "w", encoding="utf-8").write(
+            json.dumps({"picture_budget": "about 6 pictures, about EUR 0.60 - yes"}))
+        code, out = run("list", nb, "--module", "1")
+        check("with the budget recorded: made within it, no question before each picture",
+              code == 0 and "about 6 pictures, about EUR 0.60 - yes" in out and "no question before each picture" in out
+              and out.count("to make - prompt drafted from the script") == 2, out)
+        check("... and neither the eight questions nor a per-picture yes are asked",
+              cs.MEDIA["generation_brief"]["questions"][0]["en"] not in out and "ask the person, one place at a time" not in out
+              and "ask for a yes" not in out and "Nothing is generated until" not in out, out)
+
         print("\n-- the questions are there for every operator language")
         qs = cs.MEDIA["generation_brief"]["questions"]
         check("eight questions, each in English, Latvian and Russian", len(qs) == 8 and all(q.get(k) for q in qs for k in ("en", "lv", "ru")), qs)

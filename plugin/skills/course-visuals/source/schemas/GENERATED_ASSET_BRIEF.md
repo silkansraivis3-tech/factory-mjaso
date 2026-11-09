@@ -9,10 +9,11 @@ is the checklist every result is opened and checked against. Without it, the bri
 immediately — a human can take it to any generator, or commission a photograph or an illustrator
 from it.
 
-**Every generated picture costs money** (about €0.10, a clip much more - L47, 2.24.0). Before one is made,
-the person who runs the factory describes it - the eight questions in
+**Every generated picture costs money** (about €0.10, a clip much more - L47, 2.24.0). In a course build it
+is made within the course's picture budget, said yes to once at the start - no question before each
+picture. Outside a course, the person who asked for it describes it - the eight questions in
 `course-factory/knowledge/media-and-tasks.json` → `generation_brief`, each offered with a suggestion
-from this brief - sees the prompt, and says yes. Their answers go into §2-§7 here.
+from this brief - sees the prompt, and says yes; their answers go into §2-§7 here.
 
 **A brief missing any field is not a brief.** The two that get left empty are *forbidden
 inaccuracies* and *what must be visible*, and they are the two that stop a generated image teaching

@@ -4,7 +4,8 @@ description: >
   Make REAL realistic, 3D, photo-like or cinematic pictures and short realistic/3D animation clips
   with Google Nano Banana (images) and Veo (video) through this plugin's MCP tools, and manage the
   whole job - every picture costs money, so first find the places a picture fits and ask the person
-  to describe each one, show the prompt, generate only after their yes, open and check, package
+  to describe each one, show the prompt, generate only after their yes (in a Course Factory course build:
+  one budget yes per course, no question per picture), open and check, package
   locally, place on the slide or screen, record provenance. Use whenever a presentation, deck, pptx, HTML slide,
   handout, poster or course screen asks for "3D", "realistic", "photorealistic", "render",
   "3D realistic animation", "cinematic", "like a photo", "product shot", "cutaway render", "hero
@@ -36,9 +37,22 @@ Tools (MCP server `nano-banana`):
 
 ## 0 · Ask first - every picture costs money (owner, 2026-10-14)
 
+**Which applies when:**
+
+- **In a Course Factory course build** the person is asked **once per course**, at the start: the picture budget
+  ("about N pictures, about €X. Yes?", recorded in the course's `working_claude/intake.json` → `picture_budget`). After
+  that there is **no question before each picture**: the places and prompts come from the approved script
+  (`picture_briefs.py list` / `queue`), each picture is made once within the budget, and the budget yes - its words as
+  recorded - goes in `approved_by_user`. The person may still correct any line, and the spending cap still holds. No
+  budget recorded: ask for it once; only if the person gives none are the steps below used per picture. An unattended build (nobody to answer) makes no paid pictures
+  at all and never stops to wait (`course-factory` SKILL.md, *Auto build*).
+- **Anywhere else** - a single deck, a poster, a picture asked for in chat - the steps below apply: one place at a
+  time, described, the prompt shown, generated only after a yes for that picture.
+
 Every generation is billed to the NOVIKONTAS Google account: **about €0.10 a picture**, and a video clip
 costs much more. Four colleagues redoing pictures 10-15 times each use the budget up fast, and most redos
-come from a vague first description. So **nothing is generated automatically.** The order is always:
+come from a vague first description. So **nothing is generated automatically.** Outside a course build the order is
+always:
 
 1. **Find the places first.** Go through the deck or module and list every place where a generated picture
    really helps: a realistic scene that no real photograph shows, and that is not a schematic (§1). For each
@@ -64,7 +78,7 @@ come from a vague first description. So **nothing is generated automatically.** 
    is saved to. Ask: *"Generate this one picture (about €0.10)?"*
 4. **Generate only after a clear yes, and only once.** Pass their own words in `approved_by_user`; the tool
    refuses to run without them. Never write that field yourself, and never reuse an earlier yes for another
-   picture or a redo. (1.3.1) Where the client offers a confirmation dialog (MCP elicitation) the person
+   picture or a redo - in a course build the course's budget yes is the one yes, used only within that budget. (1.3.1) Where the client offers a confirmation dialog (MCP elicitation) the person
    confirms there too; a decline is final - do not retry. A **spending cap** (EUR 5 a day, EUR 50 a month on
    this computer by default) refuses with how to raise it: tell the person, never raise it yourself. A video
    whose status check fails comes back `running` with its `operation` - collect it with `get_video`; the
@@ -151,7 +165,9 @@ pipeline, and its laws still apply:
 - the `GENERATED_ASSET_BRIEF.md` brief in `course-visuals` **is** the prompt source: turn its
   sections into the prompt below, and check the result against its §7 *forbidden inaccuracies*;
 - animation must teach (`course-visuals` L13): what changes, why, what to notice, what is
-  understood afterwards. A clip that only looks nice is decoration and is rejected.
+  understood afterwards. A clip that only looks nice is decoration: say so once, with the risk. If the
+  person still wants it, make it - in a course, record it as their choice (`course-factory`
+  `design_choices.py add <course> --rule motion`), and it is never questioned again.
 
 Outside a course (a sales deck, a conference talk, a poster) the user's request rules: if they
 asked for 3D or realistic, generate it.

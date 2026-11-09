@@ -89,7 +89,7 @@
     "PUBLIC_DOMAIN": "verified public domain or CC0",
     "ATTRIBUTION_REQUIRED": "usable, and the credit line must appear wherever the asset appears",
     "OWNER_CLEARED": "in the course's knowledge base or old course - the owner declared all of these usable (2026-10-01). Credited where the source is known, listed in factory-notes.md; no licence question for the factory. A source-book figure (2.63.2): also needs `cleared_by` (\"<name>, <date> - <reason>\") and `source_work`, set by check_assets.py clear - a named person's recorded decision; without it it stays blocked.",
-    "RIGHTS_REVIEW_REQUIRED": "usage rights unclear or restricted on something downloaded from the internet. Since 2.19.0 it does NOT stop the build: it goes on the owner's licence list (factory-notes.md) with the page and what is known, for the owner to decide before publishing. Never resolved by assumption.",
+    "RIGHTS_REVIEW_REQUIRED": "usage rights unclear or restricted on something downloaded from the internet. It does NOT stop the build - the picture is marked rights not cleared in the module's findings, and publishing to the tablets is refused while any is left (course-tablet-publisher gates.py rights): it goes on the owner's licence list (factory-notes.md) with the page and what is known, for the owner to decide before publishing. Never resolved by assumption.",
     "REJECTED": "found and deliberately not used - record why, so the next search does not repeat it"
   },
   "rights_law": [
@@ -123,8 +123,9 @@
     "naming": "lower snake_case, subject first, no module number, no spaces",
     "photographs": "JPEG, quality ~82, max 2200 px on the long edge",
     "photographs_min_long_px": 1600,
+    "photographs_accept_long_px": 1024,
     "photographs_floor_px": 800,
-    "_photograph_size": "2.65.0 (owner, 2026-10-26: 'images upscaled, not this pixel stuff'): a photograph is found at 1600 px or more on its long edge - the original file, never a web preview or thumbnail (Wikimedia: the Original file, not /thumb/). 800-1599 px only when nothing larger exists: the compile enlarges it (L62) and says so. Under 800 px no enlargement makes it sharp: find a larger original or a photograph to take, or record why it stays (\"low_resolution_ok\": \"<reason>\" in its _photo_meta.json entry) - the module pre-check (compile/scripts/precheck.py) stops a build on it.",
+    "_photograph_size": "2.65.0 (owner, 2026-10-26: 'images upscaled, not this pixel stuff'): a photograph is looked for at 1600 px or more on its long edge - the original file, never a web preview or thumbnail (Wikimedia: the Original file, not /thumb/) - and is accepted from 1024 px without a warning. 800-1023 px only when nothing larger exists: the compile enlarges it (L62) and says so. Under 800 px no enlargement makes it sharp: find a larger original or a photograph to take, or record why it stays (\"low_resolution_ok\": \"<reason>\" in its _photo_meta.json entry) - the module pre-check (compile/scripts/precheck.py) stops a build on it.",
     "line_art_and_flat_colour": "PNG, or better, inline SVG",
     "diagrams": "inline SVG wherever the diagram is authored",
     "allowed_extensions": ["jpg", "jpeg", "png", "svg", "webp", "gif", "mp4", "webm"],

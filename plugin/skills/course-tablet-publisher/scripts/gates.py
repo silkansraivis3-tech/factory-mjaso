@@ -18,9 +18,11 @@ different building, a `.bak` file by nobody at all - it just ships.
                  that ships
     junk         no .bak / .orig / editor state inside an asset tree
     assets       every local file a published page points at exists
-    rights       figures whose own metadata says "not cleared for
-                 publication" are named, so a human decides; an
-                 AI-generated picture no page shows is refused (2.52.0)
+    rights       a picture whose rights are still unclear
+                 (RIGHTS_REVIEW_REQUIRED) is refused; figures whose own
+                 metadata says "not cleared for publication" are named, so
+                 a human decides; an AI-generated picture no page shows is
+                 refused (2.52.0)
 
 Verdict: PASS, WARN (publishable, with things a human should read) or FAIL
 (publication stops). Writes a JSON report that gitpub.py refuses to commit
@@ -487,6 +489,14 @@ def check_rights(repo: str, plat: dict, sets: dict, out: list) -> None:
             if not isinstance(meta, dict):
                 continue
             for key, val in meta.items():
+                # a picture whose rights are still unclear: the build carried on with it, publishing does not
+                if isinstance(val, dict) and str(val.get("rights_state") or "").upper() == "RIGHTS_REVIEW_REQUIRED" \
+                        and os.path.isfile(os.path.join(os.path.dirname(f), key)) and not UNDER_FOLDER.search(rel(repo, f)):
+                    out.append(Finding("rights", FAIL, rel(repo, os.path.join(os.path.dirname(f), key)), 0,
+                                       "rights not cleared (RIGHTS_REVIEW_REQUIRED) - nothing is published while a "
+                                       "picture's rights are unclear. The owner clears it by name (course-visuals "
+                                       "check_assets.py clear), or the picture is replaced and the module built again"))
+                    continue
                 blob = json.dumps(val) if not isinstance(val, str) else val
                 if any(d.search(blob) for d in deny):
                     out.append(Finding("rights", WARN, rel(repo, f), 0,

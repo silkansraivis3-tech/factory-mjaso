@@ -24,8 +24,8 @@ This file is the fallback, not the plan. Where the environment has the agents, t
 factory spawns the work instead of writing a note:
 
     Agent(subagent_type="course-factory:visual-sourcer", ...)   finding a real one
-    Agent(subagent_type="nano-banana:image-director", ...)      generating one - only a picture the person
-                                                                described and said yes to (L47: it costs money)
+    Agent(subagent_type="nano-banana:image-director", ...)      generating one - only within the course's picture
+                                                                budget, said yes to once (L47: it costs money)
 
 and the run continues. (Until 2.10.1 this said Agent(model="fable") - a text model,
 which cannot make a picture. Generation is the nano-banana plugin's job.) Write the file anyway - it is the record of what was asked,

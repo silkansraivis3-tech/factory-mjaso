@@ -374,7 +374,7 @@
     "no reuse",
     "all rights reserved"
    ],
-   "_note": "_figure_meta.json carries a RIGHTS field per figure, and some ICS figures are marked 'NOT cleared for issue or publication'. Pushing those to a shared repository is a distribution decision. The gate names them and lets a human decide; it does not block, because the repository is private and the figures are already in the APK."
+   "_note": "_figure_meta.json carries a RIGHTS field per figure, and some ICS figures are marked 'NOT cleared for issue or publication'. Pushing those to a shared repository is a distribution decision. The gate names them and lets a human decide; it does not block, because the repository is private and the figures are already in the APK. A picture whose record says rights_state RIGHTS_REVIEW_REQUIRED (rights not cleared) is different: its rights are still unclear, and publishing is refused while any is left."
   }
  },
  "validation": {

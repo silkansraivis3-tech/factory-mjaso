@@ -105,7 +105,8 @@ Pictures: KB → old course → source files → internet → authored → gener
 ## L47
 **Built out in:** now (2.24.0)
 
-**A generated picture only after the person described it and said yes** (owner, 2026-10-14: about €0.10 a picture, four developers redoing them use the budget up). Places first (`scripts/picture_briefs.py list`); one place at a time, eight plain questions with a suggestion each (`knowledge/media-and-tasks.json` → `generation_brief`); the prompt shown; generated once on a yes - the nano-banana tools refuse without the person's words; a redo needs a new yes; the count and cost said every time
+**A generated picture only after the person described it and said yes** (owner, 2026-10-14: about €0.10 a picture, four developers redoing them use the budget up). Places first (`scripts/picture_briefs.py list`); one place at a time, eight plain questions with a suggestion each (`knowledge/media-and-tasks.json` → `generation_brief`); the prompt shown; generated once on a yes - the nano-banana tools refuse without the person's words; a redo needs a new yes; the count and cost said every time. In a course build the yes is the course's picture budget,
+asked once at the start (`intake.json` `picture_budget`) - no question before each picture after it
 
 ## L48
 **Built out in:** now (2.25.0)
@@ -199,9 +200,9 @@ a second, from the files alone - runs first in every `build_module.py` and `fix.
 names that is not there, a template or variant the factory does not have, a photograph under 800 px on its long side (no
 enlargement makes it sharp - unless its `_photo_meta.json` record says why in `"low_resolution_ok"`), more than 60 words
 with no picture, three teaching slides in a row without one: nothing is built until it is fixed. A photograph of
-800-1599 px and the same template forced on three slides in a row are notes. (2) **Photographs are found at 1600 px or
-larger** on their long side (`visual-sourcer`: the original file - Wikimedia's "Original file", never a /thumb/; Flickr's
-largest; a maker's press kit; its `"px"` recorded); `check_assets.py` warns under 1600 and under 800 at finding time,
+800-1023 px and the same template forced on three slides in a row are notes. (2) **Photographs are looked for at 1600 px
+or larger** on their long side, and accepted from 1024 px without a warning (`visual-sourcer`: the original file - Wikimedia's "Original file", never a /thumb/; Flickr's
+largest; a maker's press kit; its `"px"` recorded); `check_assets.py` warns under 1024 and under 800 at finding time,
 judging the size it was found at (the kept original, not L62's enlargement). (3) **A rebuild of a built module is a
 fix** - `fix.py rebuild <course> --modules N`: the pre-check, the design files, the compile from the approved words, ONE
 check; only what fix.py names goes to `build_module.py`; one named change in one built module is a fix too (routing.json

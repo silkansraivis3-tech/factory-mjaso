@@ -79,7 +79,7 @@ L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with i
 | **L9** | **Edit; do not regenerate** a stable artefact |
 | **L10** | **Visible must be sufficient**: a line that refers to something names it on the same line; this outranks any word budget |
 | **L11** | **A generated file is never hand-edited** — change its input or its generator and regenerate |
-| **L12** | **Every asset has provenance, a licence and a look** (open every image); unclear rights are `RIGHTS_REVIEW_REQUIRED` and never ship |
+| **L12** | **Every asset has provenance, a licence and a look** (open every image); unclear rights are `RIGHTS_REVIEW_REQUIRED`: marked *rights not cleared*, the build carries on, publishing is refused |
 | **L13** | **A visual explains** a mechanism, state change, relationship, flow, sequence or cause and effect — never decoration |
 | **L14** | **Read only:** the reference course, `source_files`, the knowledge base and the Android app (the L40 hook refuses writes) |
 | **L15** | **A green exit is not proof** — read the output and the line for what you changed; report failures as plainly as passes |

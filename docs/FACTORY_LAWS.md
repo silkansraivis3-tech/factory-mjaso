@@ -68,11 +68,15 @@ regenerated after any change to its input. Overrides live inside the generator.
 
 **L12 · Every asset carries provenance, a licence and a visual verification**, in a metadata file
 beside the file. Open and look at every image before using it. Unclear rights are
-`RIGHTS_REVIEW_REQUIRED` and block shipping. → `course-visuals`
+`RIGHTS_REVIEW_REQUIRED`: the picture is marked *rights not cleared* in the module's findings and the build carries
+on; publishing to the tablets is refused while any picture is still unclear. → `course-visuals`,
+`course-tablet-publisher`
 
 **L13 · A visualisation must explain a mechanism, state change, relationship, flow, sequence or
 cause/effect.** Decorative movement is not sufficient, and the first question is always what the
-learner must understand — never what visual goes here. → `course-visuals`
+learner must understand — never what visual goes here. An animation the person asks for that these rules see as
+decoration is a design choice (L26): the risk is said once in plain words, then it is made, and recorded as their
+choice (`design_choices.py`, rule `motion`) that later builds and fixes keep without asking again. → `course-visuals`
 
 **L14 · The reference course, `source_files/`, the knowledge base and the Android application are
 read-only to the factory.** → `course-tablet-publisher`
@@ -378,8 +382,11 @@ never from a lesser look; 30 frames a second with the CPU slowed 4x. → `course
 **L47 · A generated picture only after the person described it and said yes.** About €0.10 a picture (owner,
 2026-10-14): the places are listed first, the person describes each in eight plain questions, sees the prompt, and
 only their yes generates it - once; the nano-banana tools refuse without their words; the count and cost are said every
-time. → `course-factory` (`scripts/picture_briefs.py`, `knowledge/media-and-tasks.json` generation_brief) and
-`nano-banana` 1.2.0 (`approved_by_user`, the usage log)
+time. In a course build the yes is given once per course, at the start - the picture budget (`intake.json`
+`picture_budget`); after it there is no question before each picture, and an unattended build never stops to wait for
+one. Outside a course, each picture is still described and said yes to on its own. → `course-factory`
+(`scripts/picture_briefs.py`, `knowledge/media-and-tasks.json` generation_brief) and `nano-banana` 1.2.0
+(`approved_by_user`, the usage log)
 
 **L48 · The Bloom level is measured, and the tablet lifts it.** Owner, 2026-10-15: on paper and in Google Classroom
 almost every task was Remember; the tablet lets a trainee operate, find and decide. Every ILO's level is read from its
@@ -435,13 +442,15 @@ cleared by a named person: `course-visuals/scripts/check_assets.py clear <assets
 "..." --source-work "<book, edition, page / figure>"` writes `rights_state: OWNER_CLEARED`, `cleared_by` (`"<name>,
 <date> - <reason>"`) and `source_work` into the picture's record - a person's decision, never automatic, and the
 command refuses without all three. `check_assets.py` accepts it; L57 may place it as a thumbnail; the credits page
-lists it with its source. Without a whole `cleared_by` it stays blocked (`RIGHTS_REVIEW_REQUIRED` blocks; an
+lists it with its source. Without a whole `cleared_by` it is never published (`RIGHTS_REVIEW_REQUIRED` is marked
+rights not cleared - the build carries on, publishing is refused; an
 `OWNER_CLEARED` book figure without it fails, and is never used). → `course-factory` (`knowledge/media-and-tasks.json` floors `real_photo_*`, `scripts/content_script.py`
 suggestion `v_few_photos`, `compile/` inset and credit line, 2.25.1) and `course-visuals`
 
 **L53 · No empty space, good padding.** Owner, 2026-10-15. A picture takes the room the words leave - never a small
 drawing in a large column; words are at reading size (the shared `.copy`), never a small cluster in an empty box; the
-screen keeps its padding and the chrome's safe area, and nothing spills. A deck is built from the shared layouts only
+screen keeps its padding and the chrome's safe area, and nothing spills. A photograph is never shown smaller than
+about 200 px on screen: where there is no room for that, it gets its own step, or a tap opens it full screen. A deck is built from the shared layouts only
 (`compile/`), and passes the browser audits before it is shown: `audit_compose.js` (every screen composed, none
 weak), `audit_deck.js` (no spill, no overfill), `audit_collide.js`. → `course-factory` (`compile/`) and
 `course-module-ui` (`gb_compose.css` §13b, 2.25.1)
@@ -595,9 +604,9 @@ built the same days on its own branch)
 large, and a rebuild is a fix.** The owner, 2026-10-26: *"How can we optimise the time of a build - cut some time and usage off, with the quality the same or even better? ... Build points 1 and 2"*, then *"when I want to rebuild or fix something, it does not go through the same thing, it goes through the fix process"* and *"we want to aim for 30-40 minutes per module + 20 minutes for possible fixes, that is our gold standard"*. (1) Every build and every
 rebuild starts with the pre-check - a second, from the files alone: a missing picture, an unknown template or variant, a
 photograph under 800 px (unless its record says why it stays), dense text with no picture, three teaching slides in a row
-without one. Nothing is built until it is fixed; a photograph under 1600 px and a template forced on three slides in a
-row are notes. (2) Photographs are found at 1600 px or larger - the original file, not a thumbnail - and the asset check
-says so at finding time, judging the size the photograph was found at. (3) A rebuild of a module already built, or one
+without one. Nothing is built until it is fixed; a photograph under 1024 px and a template forced on three slides in a
+row are notes. (2) Photographs are looked for at 1600 px or larger - the original file, not a thumbnail - and accepted
+from 1024 px without a warning; the asset check says so at finding time, judging the size the photograph was found at. (3) A rebuild of a module already built, or one
 named change in it, is a fix (`fix.py rebuild`: the pre-check, the design files, the compile, one check), never the
 build's whole process. (4) The gold standard is measured, not hoped for: a module's minutes from its starter build sheet
 to its first PASS against 30-40, a fix's against 20, and the whole-course workflow lists every module's minutes and the

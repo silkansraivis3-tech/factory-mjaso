@@ -3,6 +3,8 @@
   "_written": "2026-09-10",
   "_owner_note": "course-visuals is the owning skill for L12 (asset provenance) and L13 (animation must explain a mechanism). Before this file they had no owner and depended on a plugin-root CLAUDE.md that Claude Code does not load.",
 
+  "_requested": "An animation the person asks for that these rules see as decoration is a design choice (L26, course-factory knowledge/design-rules.json motion): the risk is said once in plain words, then it is made and recorded with course-factory/scripts/design_choices.py add <course> --rule motion. check_visuals.py then reports it as the person's choice, and no later build or fix removes it or asks again.",
+
   "categories": {
     "_rule": "Every animation in a course declares exactly one category. An animation that cannot be categorised is not built.",
     "teaching": {

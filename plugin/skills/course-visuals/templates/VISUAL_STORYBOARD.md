@@ -75,7 +75,7 @@ that already failed:
 |---|---|
 | | |
 
-**`RIGHTS_REVIEW_REQUIRED`** items, listed separately because they block shipping:
+**`RIGHTS_REVIEW_REQUIRED`** items (rights not cleared), listed separately because publishing is refused while any is left:
 
 | Asset | Why unclear | What would clear it |
 |---|---|---|

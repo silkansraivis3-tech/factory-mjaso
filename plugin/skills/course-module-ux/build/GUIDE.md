@@ -351,8 +351,9 @@ titles, step labels, task names, section headings.
 
 ### Never squeeze a photograph
 
-If a screen cannot afford a picture, **the picture gets its own screen**. Do not shrink it, and do
-not put it on a screen about something else.
+A photograph is never shown smaller than about 200 px on screen. If a screen cannot afford that,
+**the picture gets its own screen or its own step**, or a tap opens it full screen. Do not shrink
+it, and do not put it on a screen about something else.
 
 A stylesheet here once admitted the compromise in its own comment — "the one screen where the
 photographs had to be paid for" — and documented buying back 34px by dropping a photo strip to

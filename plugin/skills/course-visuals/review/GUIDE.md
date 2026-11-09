@@ -52,7 +52,9 @@ first is the one that matters most.
    in a sentence instead of shown?
 4. **Visual that should be text** — does the figure restate the sentence beside it without adding
    location, relationship or change?
-5. **Decorative animation** — remove the motion. Is anything lost?
+5. **Decorative animation** — remove the motion. Is anything lost? (An animation the person asked
+   for and recorded as their choice - `design_choices.py`, rule `motion` - is theirs: report it as
+   their choice, never remove it.)
 6. **Weak hierarchy** — what does the eye land on first? Is that the thing that matters?
 7. **Misleading relationships** — does the drawing imply a connection, direction or order the real
    system does not have?
@@ -117,7 +119,7 @@ Beyond the fourteen:
 | **PASS** | teaches something nameable, technically unambiguous, readable on the tablet, motion declared and earned |
 | **REWORK** | the learning need is right, the representation or execution is not — say which, and name the representation to try instead |
 | **REJECT** | the visual should not exist — plain text serves the need better, or the right asset does not exist yet |
-| **BLOCKED** | `RIGHTS_REVIEW_REQUIRED`, or the asset is missing — not a quality verdict, and not the author's to clear |
+| **BLOCKED** | `RIGHTS_REVIEW_REQUIRED` (*rights not cleared* - the build carries on, publishing is refused), or the asset is missing — not a quality verdict, and not the author's to clear |
 
 A `REWORK` that does not name the replacement representation is not a review, it is a complaint.
 
