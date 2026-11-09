@@ -25,7 +25,7 @@ WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
   every file: no space in its name, at most 15 MB, nothing from the internet, every src/href/url() inside the module
     folder (or _course_shell) and present; no trainee page links to an instructor-only file
   the whole course: at most 6000 files and 300 MB of distinct files
-  3D (L46): at most half of a presentation's teaching slides are 3D (each .slide says its kind in data-visual); and
+  3D (L67): 60-80 % of a presentation's teaching slides are interactive 3D (each .slide says its kind in data-visual); and
     notes from the module's own scripts where a 3D scene would lag on the tablet (knowledge/media-and-tasks.json three_d)
   team tasks (rulebook 4b): a slide with data-mode="team" and its page with task-mode / task-scope metas, both or
     neither; the page listens for gb-team; scope team hands in with scope: 'team'; a sensible data-team-size
@@ -430,12 +430,11 @@ def check(folder):
                         probs.append("%s sends the room to work but says neither where (data-task-href) nor how (data-link-hint)" % where)
                 elif kind in ("", "Theory") and not s.get("data-cue", "").strip():
                     notes.append("%s has no instructor notes (data-cue) - the instructor's panel shows them" % where)
-            # L67 - 60-80 % of the teaching slides step through interactive 3D
+            # L67, the picture rule - 60-80 % of the teaching slides interactive 3D
             vis = [s.get("data-visual", "").strip() for s in pg.slides if s.get("data-visual", "").strip() not in ("", "none")]
             three, teach = three_d_share(pg.slides)
             if len(teach) >= TD["count_from"] and not TD["min_share"] * len(teach) <= len(three) <= TD["max_share"] * len(teach):
-                probs.append("%s: %d of the %d teaching slides are interactive 3D (%.0f %%) - between %.0f and %.0f %%; the rest a "
-                             "static 3D render or a photograph, never a flat drawing (L67)"
+                probs.append("%s: %d of the %d teaching slides are interactive 3D (%.0f %%) - the picture rule (L67) asks %.0f-%.0f %%"
                              % (mod, len(three), len(teach), 100.0 * len(three) / len(teach), 100 * TD["min_share"], 100 * TD["max_share"]))
             # L51 - the module closes with the recap, straight before its module check, in the one shared design
             checks = [i for i, s in enumerate(pg.slides) if s.get("data-kind", "") == "Check"

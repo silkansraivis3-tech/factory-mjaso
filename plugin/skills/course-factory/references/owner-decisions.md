@@ -100,7 +100,7 @@ Pictures: KB → old course → source files → internet → authored → gener
 ## L46
 **Built out in:** now (2.22.0); built in step 9
 
-**3D where it makes sense - at full quality, and smooth on the tablet** *(Its share is L67's since 2.110.0: 60-80 % interactive 3D; the cap of half is gone.)* (owner, 2026-10-07: *"don't make it in all slides ... but also don't cut quality, and put it only on slides where it makes sense, not only because you can"*). 3D for equipment and structures whose shape, inside or layout in space is taught - not charts, symbols, documents or ideas. The cap is on how many, never how good. Speed from how scenes run, never a lesser look: one shared renderer, scenes built when their slide comes and freed after, no frame while nothing moves, soft shadows worked out once while still, pixel ratio min(device, 2); 30 frames a second with the CPU slowed 4x. `knowledge/media-and-tasks.json` → `three_d`; `content_script.py`, `check_course_package.py` (each `.slide` carries `data-visual`)
+**3D where it makes sense - at full quality, and smooth on the tablet** *(Its share is L67's since 2.110.0: 60-80 % interactive 3D; the cap of half is gone.)* (owner, 2026-10-07: *"don't make it in all slides ... but also don't cut quality, and put it only on slides where it makes sense, not only because you can"*). 3D for equipment and structures whose shape, inside or layout in space is taught - not charts, symbols, documents or ideas. Speed from how scenes run, never a lesser look: one shared renderer, scenes built when their slide comes and freed after, no frame while nothing moves, soft shadows worked out once while still, pixel ratio min(device, 2); 30 frames a second with the CPU slowed 4x. `knowledge/media-and-tasks.json` → `three_d`; `content_script.py`, `check_course_package.py` (each `.slide` carries `data-visual`)
 
 ## L47
 **Built out in:** now (2.24.0)
@@ -256,7 +256,7 @@ Advanced - 332 items of MC 7.14, 69 COVERED, 43 PARTLY, 18 GAP (fire the biggest
 ## L67
 **Built out in:** styles and engines (2.88.0); the compiler writes the summary, task slide, step boxes, compare boxes, two-column figure, photo spots and zoom (2.89.0, compile/GUIDE.md §2h); the content script's new words next
 
-**A picture is 3D or a photograph, never a flat line drawing; every slide moves on Next** - the illustration on a slide or task is live 3D, a static 3D render or a photograph, never the figure kit's line drawing; 60-80 % of slides step through 3D, the rest may be static 3D; Navy, never Pitch Black. The upgraded templates: `design/slide-templates/`, `course-module-ui/templates/gb_upgrade.css`, `gb_steps.js`, `gb_scene.js`
+**Each slide gets the picture that shows what it teaches; every slide moves on Next** - interactive 3D, a photograph or a 2D-kit figure by the picture rule (`course-visuals` SKILL.md), never the figure kit's flat line drawing; Navy, never Pitch Black. The upgraded templates: `design/slide-templates/`, `course-module-ui/templates/gb_upgrade.css`, `gb_steps.js`, `gb_scene.js`
 
 ## L68
 **Built out in:** now (2.97.0)

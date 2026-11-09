@@ -1457,7 +1457,7 @@ def media_check(script):
                 or any(w in (s.get("visual") or "").lower() for w in F["real_photo_words"])]
         if teach and len(real) < F["real_photo_min_share"] * len(teach):
             add(None, "visual_kind", NOTE, "v_few_photos", n=len(real), tot=len(teach))
-        # L67: 60-80 % of the teaching slides step through interactive 3D, the rest a static render or a photograph
+        # L67, the picture rule: 60-80 % of the teaching slides interactive 3D, and never more than 3 in a row
         TD = MEDIA["three_d"]
         is3d = lambda s: MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in TD["families"]
         three = [s for s in slides if is3d(s)]
@@ -1465,6 +1465,11 @@ def media_check(script):
         if len(teach) >= TD["count_from"] and not TD["min_share"] * len(teach) <= len(three) <= TD["max_share"] * len(teach):
             add(None, "visual_kind", FAIL, "v_3d_share", n=len(three), tot=len(teach), pct="%.0f" % (100.0 * len(three) / len(teach)),
                 min="%.0f" % (100 * TD["min_share"]), max="%.0f" % (100 * TD["max_share"]))
+        run = []
+        for s in [x for x in script.get("screens", []) if x.get("kind") in ("slide", "task-slide")]:
+            run = run + [s] if s.get("kind") == "slide" and is3d(s) else []
+            if len(run) == TD["max_in_a_row"] + 1:
+                add(s["id"], "visual_kind", FAIL, "v_3d_in_a_row", n=len(run), ids=", ".join(x["id"] for x in run), max=TD["max_in_a_row"])
         for s in three:
             said = " %s %s " % (s.get("visual", ""), s.get("title", ""))
             word = next((x for x in TD["flat_words"] if re.search(r"(?i)\b%s\b" % re.escape(x), said)), None)

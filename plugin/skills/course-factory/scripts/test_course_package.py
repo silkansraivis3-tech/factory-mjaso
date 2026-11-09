@@ -369,9 +369,18 @@ def main():
             '<section class="slide active" id="s01"', "".join('<section class="slide" id="v%d" data-title="Tanks %d" data-kind="Theory" data-cue="- x"'
                                                              ' data-visual="%s"></section>' % (i, i, k) for i, k in enumerate(kinds)) + '<section class="slide active" id="s01"'))
         broken("one of five teaching slides in 3D", lambda b: three(b, ["model_3d", "photo", "photo", "schematic"]),
-               "module01: 1 of the 5 teaching slides are interactive 3D (20 %) - between 60 and 80 %")
+               "module01: 1 of the 5 teaching slides are interactive 3D (20 %) - the picture rule (L67) asks 60-80 %")
+        broken("two of four teaching slides in 3D (50 %)", lambda b: three(b, ["model_3d", "model_3d", "photo"]),
+               "module01: 2 of the 4 teaching slides are interactive 3D (50 %) - the picture rule (L67) asks 60-80 %")
         broken("five of six teaching slides in 3D", lambda b: three(b, ["model_3d", "model_3d_scan", "model_3d", "model_3d", "model_3d"]),
-               "module01: 5 of the 6 teaching slides are interactive 3D (83 %) - between 60 and 80 %")
+               "module01: 5 of the 6 teaching slides are interactive 3D (83 %) - the picture rule (L67) asks 60-80 %")
+        broken("nine of ten teaching slides in 3D (90 %)", lambda b: three(b, ["model_3d"] * 9),
+               "module01: 9 of the 10 teaching slides are interactive 3D (90 %)")
+        b = os.path.join(tmp, "share70", "modules")
+        shutil.copytree(c, b)
+        three(b, ["model_3d", "model_3d", "photo", "model_3d", "model_3d", "model_3d", "model_3d", "model_3d", "photo"])
+        code, out = run(b, "--no-importer")
+        check("seven of ten teaching slides in 3D (70 %) is clean", code == 0 and "teaching slides are interactive 3D" not in out, out)
         b = os.path.join(tmp, "half", "modules")
         shutil.copytree(c, b)
         three(b, ["model_3d", "model_3d_scan", "model_3d", "photo"])

@@ -115,12 +115,13 @@ The owner approved a new body for every L61 template, and six new ones, in the t
 (top line, the logo 48 px from the top and the right, title, bottom line, Raleway). What is new:
 
 - **Pictures.** Live 3D (`gb_scene.js`, a course's scenes registered on `LTStage.scenes`), a static 3D render of the
-  same scenes, or a photograph. **Never the flat line drawing as the illustration** - not in a template, not in a demo.
+  same scenes, a photograph or a 2D-kit figure, by the picture rule (`course-visuals` SKILL.md, L67). **Never the old
+  flat line drawing as the illustration** - not in a template, not in a demo.
 - **Colours.** Blue is the one accent; dark slides and photographs on Navy `#0A2463`, never Pitch Black; the NA pattern
   only behind opening, task, check and summary slides and the start screen (`gb_layouts.css`, its last block).
 - **Motion.** Every upgraded slide has stops that Next walks (`gb_steps.js`); parts rise in reading order on entry;
   everything settles for reduced motion.
-- **The mix.** 60-80 % of a module's slides step through 3D; the rest may be static 3D. Neighbouring slides change
+- **The mix.** The picture rule's 3D share; neighbouring slides change
   ground (light / Navy) and kind of activity.
 - **Room activity.** The summary asks each card as a question first (the instructor notes say to ask the room); a
   "before the self-check" list; quick drills (say it, quick fire, find it - 20 to 60 s, the answer shows itself when the

@@ -204,12 +204,12 @@
     }
   },
   "three_d": {
-    "_authority": "Owner, 2026-10-07 (L46, 2.22.0): 'now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it makes sense; and it lags a little in these 3D models, maybe optimisation can be considered - but mainly I love these 3D models.' Second message, same day: 'I also don't need you to cut the quality of 3D models - don't make it in all slides, about 50% of the presentation is the max that can be 3D models, but also don't cut quality, and put it only on slides where it makes sense, not only because you can.'",
     "families": ["3d"],
     "min_share": 0.6,
     "max_share": 0.8,
+    "max_in_a_row": 3,
     "count_from": 3,
-    "_share": "L67 (owner, 2.88.0) replaces L46's cap of half: 60-80 % of a presentation's teaching slides step through interactive 3D (model_3d, model_3d_scan, model_3d_licensed); the rest are a static 3D render or a photograph, never the figure kit's flat line drawing. Counted once a module has 3 teaching slides or more. A must-fix in the content script and in the built deck (each .slide carries data-visual); the architecture page counts the plan and only suggests. The operator may keep a different share as a recorded design choice (design_choices.py, three-d-share). Every 3D model is made at full quality.",
+    "_share": "The picture rule (L67, course-visuals SKILL.md): each slide gets the picture that shows what it teaches; the target is 60-80 % of a presentation's teaching slides as interactive 3D (model_3d, model_3d_scan, model_3d_licensed), the rest static 3D, photographs and 2D-kit figures. Counted once a module has 3 teaching slides or more. Under min_share or over max_share is a must-fix in the content script and in the built deck (each .slide carries data-visual); more than max_in_a_row interactive 3D slides in a row is a must-fix in the content script - photographs, static 3D and 2D-kit figures go between them. The architecture page counts the plan and only suggests. The operator may keep a different share as a recorded design choice (design_choices.py, three-d-share). Every 3D model is made at full quality.",
     "fits": [
       "equipment and structures whose shape, inside or arrangement in space is what is taught - cargo tanks and containment systems, hull sections and spaces, pumps, compressors, valves, manifolds, piping runs, the reliquefaction plant, an enclosed space and its access",
       "something the trainee must later recognise or operate on board, seen from every side",
@@ -267,7 +267,7 @@
   },
   "floors": {
     "every_slide_has_a_visual": true,
-    "_every_slide": "Owner, 2026-09-30 (2.18.1): no quota. As many pictures as the theory and the experience call for - wherever a picture, an animation or a realistic 3D illustration reflects what is being taught at that point, put it in; animation and 3D especially. A slide with none gets a suggestion, never a block. A picture that is named must say what it shows (must fix), and an unknown kind is a mistake to correct. 3D is the exception (owner, 2026-10-07, L46): at most half of a module's pictures, and only where it makes sense - see three_d.",
+    "_every_slide": "Owner, 2026-09-30 (2.18.1): no quota. As many pictures as the theory and the experience call for - wherever a picture, an animation or a realistic 3D illustration reflects what is being taught at that point, put it in; animation and 3D especially. A slide with none gets a suggestion, never a block. A picture that is named must say what it shows (must fix), and an unknown kind is a mistake to correct. Which picture a slide gets is the picture rule (L67) - see three_d.",
     "moving_or_3d_per_module_from_min": 40,
     "_moving": "A suggestion, not a rule (2.18.1): a module with this many minutes of theory and nothing that moves, turns or can be explored is pointed out, because where something moves, changes state or has an inside, a still picture teaches it worse (course-visuals, learning-needs.json).",
     "ai_scene_words": ["crew", "people", "person", "team", "operator", "seafarer", "ship at", "at sea", "in port", "port", "harbour",
@@ -278,7 +278,7 @@
     "real_photo_kinds": ["photo", "annotated_photo", "photo_to_take", "video_real", "model_3d_scan"],
     "real_photo_words": ["real photo", "real photograph", "photograph", "photo of"],
     "real_photo_min_share": 0.5,
-    "_real_photos": "L52 (owner, 2026-10-15: 'add as many real photos as possible'). A teaching slide counts when its picture is a real photograph, a real film or a 3D scan - or its planned picture says a real photograph goes beside the drawing (the build sheet's inset). Fewer than half is pointed out as a suggestion: wherever a camera can show it, a real photograph goes in - as the slide's picture or beside the drawing. Never an AI picture of equipment a trainee must recognise (L33).",
+    "_real_photos": "L52 (owner, 2026-10-15: 'add as many real photos as possible'). A teaching slide counts when its picture is a real photograph, a real film or a 3D scan - or its planned picture says a real photograph goes beside the drawing (the build sheet's inset). Fewer than half is pointed out as a suggestion, never a block: a photograph goes where the trainee must recognise the real thing (the picture rule, L67) - as the slide's picture or beside the drawing. Never an AI picture of equipment a trainee must recognise (L33).",
     "photo_things": ["tank", "space", "room", "hold", "mast", "station", "valve", "pipe", "pipework", "line", "hose", "coupling",
                      "manifold", "pump", "compressor", "vaporizer", "vaporiser", "heater", "exchanger", "engine", "boiler", "detector",
                      "sensor", "gauge", "panel", "button", "duct", "vent", "outlet", "trunk", "vessel", "truck", "tanker", "container",

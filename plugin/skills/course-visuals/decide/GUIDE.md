@@ -107,18 +107,21 @@ record the marker, and design the screen so the figure can drop in later without
 
 ## 4 · Choose the technology honestly
 
+Which picture a slide gets - interactive 3D, a photograph or a 2D-kit figure - is the picture rule
+(`SKILL.md`, L67). This table is the technology inside it.
+
 | Need | Reach for |
 |---|---|
-| topology, labels, state, anything a reviewer must check | **inline SVG** |
+| the shape, the inside or the layout of a thing | **interactive 3D**, a 3D-kit spec (`kit3d/`) |
+| topology, labels, state, flow - a pipe and valve system, a process, anything a reviewer must check | **2D-kit figure** (`kit2d/`) |
 | discrete states the learner drives | **HTML/CSS/JS** |
 | a real object the learner must recognise | **photograph**, annotated with a live overlay |
-| what no camera can see | **cutaway or authored drawing**, declared as a drawing on its face |
-| a relationship between two quantities | **sourced chart**, interpolation marked |
+| a relationship between two quantities | **sourced chart** in the 2D kit, interpolation marked |
 | element count or per-frame maths that genuinely defeats SVG | **canvas**, and accept the cost |
 
-**Inline SVG is the default for authored figures** because it is themeable, annotatable,
-translatable, diffable and visible to every check in this factory. A PNG of a diagram is none of
-those.
+**The 2D kit is the default for authored 2D figures**: it draws inline SVG, which is themeable,
+annotatable, translatable, diffable and visible to every check in this factory. A PNG of a diagram
+is none of those. Never the old flat SVG illustration.
 
 **Canvas is a signal to re-read the need.** The reference course, eight modules of technical
 teaching material, uses canvas in **zero** teaching visuals. If you are reaching for it, check you

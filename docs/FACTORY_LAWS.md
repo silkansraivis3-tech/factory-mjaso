@@ -372,9 +372,9 @@ classroom: COURSE.html, `_course_shell\course_map.js`, `module01\` ... with `pre
 pages report `gb-task-done`; module checks PASSED / NOT PASSED for understanding, not an official grade. Proved by the
 classroom's own importer. → `course-factory` (`knowledge/classroom-system.json`, `scripts/check_course_package.py`, 2.21.0)
 
-**L46 · 3D where it makes sense - at most half of the presentation - at full quality, and smooth on the tablet.** *(Its share is L67's since 2.110.0: 60-80 % interactive 3D; the cap of half is gone.)*
+**L46 · 3D where it makes sense - at full quality, and smooth on the tablet.** *(Its share is L67's: the picture rule.)*
 Owner, 2026-10-07: not on every slide, never at a lower quality, only where it makes sense. 3D for what has a shape, an
-inside or a layout in space; at most half of a presentation's teaching slides; speed from how scenes run - one shared
+inside or a layout in space; speed from how scenes run - one shared
 renderer, scenes built and freed with their slide, no frame while nothing moves, shadows worked out once while still -
 never from a lesser look; 30 frames a second with the CPU slowed 4x. → `course-factory` (`knowledge/media-and-tasks.json` three_d,
 `scripts/content_script.py`, `scripts/check_course_package.py`, 2.22.0)
@@ -552,8 +552,8 @@ gets one where a slide's lesson is a shape, an inside or a layout in space: `--i
 `m03_station3d.js`. A module built with no 3D scene is said loud in the build and in its own card on the review page -
 the best candidate and why. A recommendation, never a block (2.18.1): the operator may decline it with their reason
 (`"declined_3d"` at the top of the build sheet), and a declined scene is not proposed again. A slide the script plans as
-3D that is given a 2D figure stays a must-fix until its own `"declined_3d"` holds a reason. L46 is unchanged - at most
-half the teaching slides, never instead of a real photograph, the speed and tap rules of the compile GUIDE 2b.
+3D that is given a 2D figure stays a must-fix until its own `"declined_3d"` holds a reason. L46 is unchanged - never
+instead of a real photograph, the speed and tap rules of the compile GUIDE 2b.
 **A photograph wanted is never turned 3D** (Aleksis, 2026-10-22, after IGF M02 s07 became a scene on the slide where
 the instructors asked for a photo): a slide with `"photo_wanted": "<who asked, why>"` (build sheet, script screen, or
 the script's top-level `"photo_wanted"`) is never the pick and never the recommendation's candidate (2.63.2).
@@ -645,11 +645,14 @@ is asked, never assumed. → `course-factory` (`coverage/SIMULATORS.md`, `covera
 `coverage/knowledge/sim_coverage.schema.json`, `coverage/scripts/sim_coverage.py` - `check` fails an incomplete map;
 `scripts/course_gate.py` says it on every module start, never a stop), 2.82.0
 
-**L67 · A picture is 3D or a photograph, never a flat line drawing; every slide moves on Next.** The owner, 2026-11-03,
-reviewing the template gallery ("svg SUCKS"; "I don't want to risk that sometimes you will think it's standard"): the
-picture on a slide or a task screen is live 3D, a static 3D render of a 3D scene, a real photograph or a proper raster
-image - never the figure kit's flat line drawing as the illustration (small icons are not pictures). *(One exception: one comparison table a module - 2-4 things side by side with their facts or numbers - may be a slide's picture, built by the compiler in the course's look from the build sheet's `"table"`; a second is refused.)* Of a module's
-slides, 60-80 % carry 3D that the room steps through; the rest may be static 3D. The upgraded templates are the frame of
+**L67 · Each slide gets the picture that shows what it teaches; every slide moves on Next.** The owner, 2026-11-03,
+reviewing the template gallery ("svg SUCKS"; "I don't want to risk that sometimes you will think it's standard"): never
+the figure kit's flat line drawing as the illustration (small icons are not pictures). *(One exception: one comparison
+table a module - 2-4 things side by side with their facts or numbers - may be a slide's picture, built by the compiler in
+the course's look from the build sheet's `"table"`; a second is refused.)* Which picture - interactive 3D, a
+photograph or a 2D-kit figure - and the 3D share are the picture rule, written once in `course-visuals` SKILL.md ("The
+picture rule"), checked by `course-factory` (`scripts/content_script.py`, `scripts/check_course_package.py`, the numbers
+in `knowledge/media-and-tasks.json` three_d). The upgraded templates are the frame of
 L61 with a better body (`design/slide-templates/`, 28 live slides): two-column large figure, step boxes, live 3D picture
 boxes, short points with the full words in the instructor notes, photo spots and zoom, the question that opens, the
 summary that asks before it opens, six learning layouts (worked example, true or false, what would you do, name the
