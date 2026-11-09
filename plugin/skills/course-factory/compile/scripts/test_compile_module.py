@@ -2322,7 +2322,9 @@ def kit2d_part(tmp):
     """the 2D kit (course-visuals/kit2d): a *.kit2d.json figure - its markup, and kit2d.js / kit2d.css shipped with the module"""
     print("\n-- the 2D kit: sNN.kit2d.json figures")
     sys.path.insert(0, HERE)
+    sys.path.insert(0, os.path.join(SKILLS, "course-module-ui", "scripts"))
     import compile_module as cm
+    import design_system
     s4 = {"id": "s04", "title": "Fuel and speed", "visual": "The fuel curve. More."}
     probs = []
     h = cm.kit2d_figure(json.dumps(KIT2D_SPEC), s4, probs, "s04")
@@ -2415,7 +2417,7 @@ def kit2d_part(tmp):
           "the slide's words make; five slides apart they are not",
           len(near) == 1 and "s01" in near[0] and "a cycle" in near[0] and "also make" in near[0] and not far, (near, far))
     check("... the module holds the factory's kit2d.js and kit2d.css, byte for byte (design_system.py ships them)",
-          same(os.path.join(md, "assets", "kit2d.js"), os.path.join(kit2d_dir, "kit2d.js"))
+          same(os.path.join(md, "assets", "kit2d.js"), design_system.shipped_src(os.path.join(kit2d_dir, "kit2d.js")))
           and same(os.path.join(md, "assets", "kit2d.css"), os.path.join(kit2d_dir, "kit2d.css")), out)
 
 

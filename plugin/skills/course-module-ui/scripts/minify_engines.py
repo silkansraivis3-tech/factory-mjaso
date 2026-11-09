@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""minify_engines.py - the small copies of the two big engines a module ships: kit.js and kit3d.js (2.70.0).
+"""minify_engines.py - the small copies of the big engines a module ships: kit.js, kit3d.js and kit2d.js (2.70.0).
 
-    python minify_engines.py            make (or refresh) min/kit.js and min/kit3d.js beside their sources
+    python minify_engines.py            make (or refresh) min/kit.js, min/kit3d.js and min/kit2d.js beside their sources
     python minify_engines.py --check    exit 1 when a copy is missing or older than its source
 
 WHY (owner, 2026-10-27: "optimize ... so it does better work in smaller usage and less time"): every module carries its
@@ -25,7 +25,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILLS = os.path.dirname(os.path.dirname(HERE))
-ENGINES = [os.path.join(SKILLS, "course-visuals", "kit", "kit.js"), os.path.join(SKILLS, "course-visuals", "kit3d", "kit3d.js")]
+ENGINES = [os.path.join(SKILLS, "course-visuals", "kit", "kit.js"), os.path.join(SKILLS, "course-visuals", "kit3d", "kit3d.js"),
+           os.path.join(SKILLS, "course-visuals", "kit2d", "kit2d.js")]
 HEAD = "/*! %s sha256:%s - the minified copy a module ships (course-module-ui/scripts/minify_engines.py); edit the source */\n"
 
 

@@ -43,12 +43,13 @@ def main():
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     stale = [os.path.relpath(s, me.SKILLS) for s in me.ENGINES if not me.fresh(s)]
-    check("the factory's minified kit.js and kit3d.js are current (else: python course-module-ui\\scripts\\minify_engines.py)",
+    check("the factory's minified kit.js, kit3d.js and kit2d.js are current (else: python course-module-ui\\scripts\\minify_engines.py)",
           not stale, stale)
     spec = design_system.load_list()
     ships = {i["name"]: i["src"] for i in spec["files"]}
     check("design_system ships the minified copies", ships["kit.js"].replace("\\", "/").endswith("kit/min/kit.js")
-          and ships["kit3d.js"].replace("\\", "/").endswith("kit3d/min/kit3d.js"), ships)
+          and ships["kit3d.js"].replace("\\", "/").endswith("kit3d/min/kit3d.js")
+          and ships["kit2d.js"].replace("\\", "/").endswith("kit2d/min/kit2d.js"), ships)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 

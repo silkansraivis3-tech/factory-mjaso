@@ -7,7 +7,7 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
-## 2.117.0 · The classroom files the tablet app imports (2026-11-09)
+## 2.119.0 · The classroom files the tablet app imports (2026-11-09)
 
 - `scripts/classroom_files.py` writes `modules\classroom\prepare.json` and `modules\classroom\forms\<CODE>.json` from the
   course's own data; `compile/scripts/additional_materials.py` `plan()` adds them to its output (kind `json`, so a build,
@@ -15,7 +15,13 @@ this up cold, including one with no memory of why any of it is the way it is.
   app's limits and form rules. Instructor-only: the app never copies `classroom/` to the trainees.
 - Form codes are global on the server (one template per code), so they lead with the course name and are cut to 40.
 - The app's Prepare tab reads `prepare.json` (release manifest); the course page's own "To get ready" box is `courses.prep_items`,
-  typed in admin, and is not filled from the package - see the report of this change.
+  typed in admin, and is not filled from the package.
+
+## 2.116.0 · The 2D kit ships minified (2026-11-09)
+
+- `course-module-ui/scripts/minify_engines.py` makes `course-visuals/kit2d/min/kit2d.js` beside kit.js and kit3d.js;
+  `design_system.shipped_src` ships it while current. `test_compile_module.py` compares the module's kit2d.js with the
+  shipped copy, as it does for kit3d.js.
 
 ## 2.115.0 · Each 2D figure composed for its slide (2026-11-09)
 

@@ -137,6 +137,9 @@ events, compare, person, tank, pump) and `kit2d/scripts/test_kit2d.py`, which wa
 2.115.0: four detailed scene parts (tanker section, radar, kanban, motherboard), pipes joined to pumps and tanks by
 ports, and the composer in `compile_module.py`: each 2D starter is chosen from its slide's own words, never the same
 look within 5 slides (the compile fails it), with a `_brief` the builder reads before changing the kind.
+2.116.0: words that change with the story (`{pick, of}`), readouts in words, time lines whose words take a free side or
+lane, `trace` and `region` on charts, and the minified copy modules ship (`min/kit2d.js`; run `minify_engines.py` after
+changing the kit - `test_minify_engines.py` fails a stale copy).
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
 ## Known limits
