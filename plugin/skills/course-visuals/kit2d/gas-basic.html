@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2D kit - Gas Basic</title>
+<link rel="stylesheet" href="../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="kit2d.css">
+<style>
+@font-face{font-family:"Raleway";src:url("../../course-module-ui/templates/fonts/raleway-variable.ttf") format("truetype");font-weight:100 900;font-display:block}
+:root{--cat-1:#2EB6F8;--cat-2:#3CC8B4;--cat-3:#A596F5;--cat-4:#EE93B6;--cat-5:#A8BBD0}
+body{margin:0;background:var(--deep);color:var(--txt-d);font-family:var(--font)}
+.course{padding:30px 28px 6px;font-size:15px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);border-top:3px solid var(--blue)}
+section{padding:14px 28px 30px;border-bottom:1px solid var(--line-d)}
+.kind{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--faint-d)}
+h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);font-size:17px;max-width:900px}
+.host{height:600px}
+.demo-note{font-size:13px;color:var(--faint-d);margin-top:10px}
+</style></head><body>
+
+<div class="course">Basic training for liquefied gas tanker cargo operations</div>
+
+<!-- ============ 1 · GRAPH ============ -->
+<section id="g-vp">
+  <div class="kind">Graph · two curves · programme topic 2.2</div>
+  <h2>Warmer cargo, higher pressure</h2>
+  <p class="lead">A liquefied gas boils until its vapour reaches the pressure for its temperature. Propane at 20 °C needs a tank that holds about 8 bar; cooled to -42 °C it is held at atmospheric pressure.</p>
+  <div class="host" data-kit2d="#spec-vp"></div>
+  <div class="demo-note">Values from standard vapour-pressure tables (absolute pressure), not yet checked against the course's sources.</div>
+</section>
+<script type="application/json" id="spec-vp">
+{ "label": "Vapour pressure against temperature for propane and butane: both rise steeply as the liquid warms; propane boils at atmospheric pressure at -42 °C, butane at about 0 °C.",
+  "size": [960, 540], "glow": {"x": 480, "y": 260},
+  "state": {"d1": 0, "d2": 0, "atm": 0, "t": -42, "pt": 0, "pb": 0}, "rates": {"d1": 3, "d2": 3, "atm": 4, "t": 2.4},
+  "parts": [
+    {"id": "C", "type": "chart", "x": 120, "y": 60, "w": 740, "h": 390,
+     "xaxis": {"min": -40, "max": 50, "step": 10, "label": "Liquid temperature", "unit": "°C"},
+     "yaxis": {"min": 0, "max": 18, "step": 3, "label": "Vapour pressure", "unit": "bar"}},
+    {"id": "ATM", "type": "curve", "on": "C", "pts": [[-40, 1], [50, 1]], "cat": 5, "area": false, "draw": "@atm", "label": "Atmosphere 1 bar"},
+    {"id": "PR", "type": "curve", "on": "C", "cat": 1, "draw": "@d1", "label": "Propane",
+     "pts": [[-40, 1.11], [-30, 1.67], [-20, 2.44], [-10, 3.45], [0, 4.74], [10, 6.36], [20, 8.36], [30, 10.8], [40, 13.7], [50, 17.1]]},
+    {"id": "BU", "type": "curve", "on": "C", "cat": 2, "draw": "@d2", "label": "Butane",
+     "pts": [[-40, 0.18], [-30, 0.29], [-20, 0.45], [-10, 0.68], [0, 1.03], [10, 1.48], [20, 2.08], [30, 2.83], [40, 3.78], [50, 4.96]]},
+    {"id": "P", "type": "point", "on": "C", "curve": "PR", "x": "@t", "show": "@pt", "tagx": "{x} °C", "tagy": "{y} bar", "dx": 0, "dy": 1,
+     "drag": "t", "snap": 1, "min": -40, "max": 50, "dragLabel": "temperature"},
+    {"id": "B", "type": "point", "on": "C", "curve": "BU", "x": "@t", "show": "@pb", "tagx": false, "tagy": "{y} bar", "dy": 1}
+  ],
+  "steps": [
+    {"title": "Propane: the pressure rises steeply as it warms", "set": {"d1": 1}},
+    {"title": "Cooled to -42 °C: atmospheric pressure, fully refrigerated", "set": {"atm": 1, "pt": 1, "t": -40}},
+    {"title": "At 20 °C about 8 bar: a pressurised tank", "set": {"t": 20}},
+    {"title": "Butane needs far less pressure at the same temperature", "set": {"d2": 1, "pb": 1}}
+  ],
+  "controls": [{"type": "slider", "state": "t", "min": -40, "max": 50, "step": 1, "label": "Temperature", "unit": "°C"}],
+  "readouts": [{"label": "Propane", "value": "P.y", "unit": "bar", "decimals": 1}, {"label": "Butane", "value": "B.y", "unit": "bar", "decimals": 1}]
+}
+</script>
+
+<!-- ============ 2 · CYCLE ============ -->
+<section id="c-cargo">
+  <div class="kind">Cycle · eight stages · programme topics 4.3 and 4.5</div>
+  <h2>The cargo cycle</h2>
+  <p class="lead">From dry dock back to dry dock, the tank's atmosphere is changed step by step, so air and cargo never meet as a flammable mixture.</p>
+  <div class="host" data-kit2d="#spec-cycle"></div>
+  <div class="demo-note">Stage names from the standard cargo-operations sequence, not yet checked against the course's sources.</div>
+</section>
+<script type="application/json" id="spec-cycle">
+{ "label": "The cargo cycle of a liquefied gas tanker: drying, inerting, gassing up, cooling down, loading, the loaded voyage, discharging, and gas-freeing for dry dock - round again.",
+  "size": [1000, 600], "glow": {"x": 500, "y": 300, "rx": 360, "ry": 290},
+  "state": {"stage": 0}, "rates": {"stage": 3.4},
+  "parts": [
+    {"id": "C", "type": "cycle", "x": 500, "y": 300, "r": 190, "band": 50, "at": "@stage",
+     "center": {"text": "Cargo cycle", "sub": "dry dock to dry dock"},
+     "stages": [{"name": "Drying", "sub": "no ice or hydrates", "cat": 5}, {"name": "Inerting", "sub": "oxygen out", "cat": 3},
+                {"name": "Gassing up", "sub": "inert gas out, vapour in", "cat": 3}, {"name": "Cooling down", "sub": "slowly, no stress", "cat": 1},
+                {"name": "Loading", "sub": "liquid in", "cat": 1}, {"name": "Loaded voyage", "sub": "boil-off handled", "cat": 1},
+                {"name": "Discharging", "sub": "a heel kept cold", "cat": 2}, {"name": "Gas-freeing", "sub": "warm, inert, air", "cat": 5}]}
+  ],
+  "steps": [
+    {"title": "Drying: moist air out, so no ice or hydrates form", "set": {"stage": 1}},
+    {"title": "Inerting: oxygen out, so no mixture can burn", "set": {"stage": 2}},
+    {"title": "Gassing up: cargo vapour replaces the inert gas", "set": {"stage": 3}},
+    {"title": "Cooling down: slowly, to spare the tank thermal stress", "set": {"stage": 4}},
+    {"title": "Loading", "set": {"stage": 5}},
+    {"title": "Loaded voyage: the boil-off is handled", "set": {"stage": 6}},
+    {"title": "Discharging: a heel stays to keep the tank cold", "set": {"stage": 7}},
+    {"title": "Gas-freeing for dry dock: warm up, inert, then air", "set": {"stage": 8}}
+  ]
+}
+</script>
+
+<!-- ============ 3 · SCENE ============ -->
+<section id="s-esd">
+  <div class="kind">Object · pump, pipe, tank · programme topics 4.4 and 19</div>
+  <h2>The high-level trip</h2>
+  <p class="lead">Loading slows to top off. If the level still climbs, the high-level alarm sounds - and the independent high-high level sensor trips the ESD, which stops the loading.</p>
+  <div class="host" data-kit2d="#spec-esd"></div>
+  <div class="demo-note">Demo levels, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-esd">
+{ "label": "Loading a cargo tank: full rate, then topping off; the level climbs past the high-level alarm, the high-high level sensor trips the emergency shutdown and the shore pump stops.",
+  "size": [1000, 600], "state": {"s": 0, "lv": 0.1, "hi": 0, "esd": 0}, "rates": {"s": 3, "lv": 1.0},
+  "parts": [
+    {"id": "U", "type": "pump", "x": 230, "y": 380, "r": 82, "speed": "@s", "label": "Shore pump", "sub": "pushes the cargo"},
+    {"id": "T", "type": "tank", "x": 700, "y": 110, "w": 190, "h": 400, "inlet": 200, "level": "@lv", "label": "Cargo tank 2"},
+    {"id": "L", "type": "pipe", "from": "U", "to": "T", "pts": [[600, 0], [600, 0]], "flow": "U.flow", "speed": 160},
+    {"type": "callout", "at": [700, 140], "text": "High-level alarm", "sub": "the watch is warned", "side": "left", "show": "@hi"},
+    {"type": "callout", "at": [890, 125], "text": "ESD trip", "sub": "high-high level", "side": "right", "show": "@esd"}
+  ],
+  "steps": [
+    {"title": "Loading at full rate", "set": {"s": 1, "lv": 0.7}, "after": {"lv": 400}},
+    {"title": "Topping off: the rate comes down", "set": {"s": 0.35, "lv": 0.9}},
+    {"title": "The level climbs on: high-level alarm", "set": {"lv": 0.95, "hi": 1}},
+    {"title": "High-high level: the ESD stops the loading", "set": {"lv": 0.97, "esd": 1, "s": 0}}
+  ],
+  "controls": [{"type": "slider", "state": "s", "min": 0, "max": 1, "step": 0.01, "scale": 100, "label": "Loading rate", "unit": "%"}],
+  "readouts": [{"label": "Level", "value": "T.level", "scale": 100, "unit": "%"}, {"label": "Rate", "value": "U.flow", "scale": 100, "unit": "%"}]
+}
+</script>
+
+<!-- ============ 4 · DIAGRAM ============ -->
+<section id="d-flam">
+  <div class="kind">Diagram · zone and routes · programme topics 5.5, 6.1 and 4.5</div>
+  <h2>Why a tank is inerted before air goes in</h2>
+  <p class="lead">Methane burns only in a narrow zone of mixtures. Air blown straight into a tank of methane passes through it; inert gas first leaves so little methane that the air never reaches it. Drag how much methane is left when the air goes in.</p>
+  <div class="host" data-kit2d="#spec-flam"></div>
+  <div class="demo-note">Methane's limits in air (5 - 15 %) are standard; the zone's lower tip (about 12 % oxygen) is drawn approximately, not yet checked against the course's sources.</div>
+</section>
+<script type="application/json" id="spec-flam">
+{ "label": "The flammability diagram for methane: oxygen against methane in the mixture; air blown straight into methane crosses the flammable zone, inerting first and then air passes beside it.",
+  "size": [960, 540], "glow": {"x": 480, "y": 260},
+  "state": {"air": 0, "z": 0, "bad": 0, "in": 0, "ae": 0, "left": 2}, "rates": {"air": 3, "bad": 2.2, "in": 2.6, "ae": 2.6, "left": 6},
+  "parts": [
+    {"id": "C", "type": "chart", "x": 120, "y": 60, "w": 740, "h": 390,
+     "xaxis": {"min": 0, "max": 100, "step": 20, "label": "Methane in the tank", "unit": "%"},
+     "yaxis": {"min": 0, "max": 21, "step": 3, "label": "Oxygen", "unit": "%"}},
+    {"id": "AIR", "type": "trace", "on": "C", "pts": [[0, 21], [100, 0]], "cat": 5, "draw": "@air", "label": "Methane and air", "labelAt": 0.6, "side": "upright"},
+    {"id": "BAD", "type": "trace", "on": "C", "pts": [[100, 0], [0, 21]], "cat": 4, "draw": "@bad", "label": "Air straight in", "labelAt": 0.3, "side": "upright"},
+    {"id": "IN", "type": "trace", "on": "C", "pts": [[100, 1], ["@left", 1]], "cat": 3, "draw": "@in", "label": "1 · Inert gas in", "labelAt": 0.45, "side": "upright"},
+    {"id": "AE", "type": "trace", "on": "C", "pts": [["@left", 1], [0, 21]], "cat": 2, "draw": "@ae", "label": "2 · Then air", "labelAt": 0.1, "side": "upright"},
+    {"id": "Z", "type": "region", "on": "C", "pts": [[5, 19.95], [15, 17.85], [6, 12]], "cat": 4, "show": "@z",
+     "label": "Flammable", "sub": "5 - 15 % methane in air", "labelPt": [15, 17.85], "side": "upright", "hit": ["BAD", "AE"]},
+    {"type": "callout", "at": [180, 168], "text": "It can burn here", "sub": "the route crosses the zone", "side": "downright", "dist": 140, "show": "Z.hit"}
+  ],
+  "steps": [
+    {"title": "Every mixture of methane and air lies on this line", "set": {"air": 1}},
+    {"title": "It burns only in this zone: 5 to 15 % methane in air", "set": {"z": 1}},
+    {"title": "Air straight into a tank of methane crosses the zone", "set": {"bad": 1}},
+    {"title": "Inert gas first: it pushes the methane out", "set": {"bad": 0, "in": 1}},
+    {"title": "Then air: the route passes beside the zone", "set": {"ae": 1}, "after": {"ae": 500}}
+  ],
+  "controls": [{"type": "slider", "state": "left", "min": 1, "max": 30, "step": 1, "label": "Methane left when air goes in", "unit": "%"}],
+  "readouts": [{"label": "Methane left", "value": "@left", "unit": "%", "decimals": 0}, {"label": "Can it burn?", "value": "Z.hit", "words": ["No", "Yes"]}]
+}
+</script>
+
+<!-- ============ 5 · SCENARIO ============ -->
+<section id="e-leak">
+  <div class="kind">Scenario · time line and crew · programme topics 19 and 5.9</div>
+  <h2>A leak at the manifold</h2>
+  <p class="lead">Discharging at night, a gas detector alarms at the manifold. Minute by minute: the ESD stops the cargo, water spray knocks the gas cloud down, the crew musters upwind.</p>
+  <div class="host" data-kit2d="#spec-leak"></div>
+  <div class="demo-note">A demo scenario, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-leak">
+{ "label": "A leak at the manifold during discharge, on a clock: the gas alarm, the ESD, the water spray, the crew mustered, the leak isolated; the duty officer and the chief officer say what they do.",
+  "size": [1000, 600], "state": {"t": 125, "k": 0, "a": 0, "b": 0}, "rates": {"t": 2.4},
+  "parts": [
+    {"id": "E", "type": "events", "x": 90, "y": 190, "w": 820, "start": 125, "end": 150, "step": 5, "clock": true, "cursor": "@t", "stem": 70,
+     "events": [{"at": 130, "label": "Gas alarm", "sub": "at the manifold", "cat": 4}, {"at": 131, "label": "ESD", "sub": "pumps stop, valves shut", "cat": 4},
+                {"at": 133, "label": "Water spray", "sub": "knocks the gas down", "cat": 1}, {"at": 136, "label": "Crew mustered", "sub": "upwind, doors shut", "cat": 3},
+                {"at": 148, "label": "Leak isolated", "sub": "the area gas-tested", "cat": 2}]},
+    {"type": "person", "x": 220, "y": 530, "scale": 0.9, "name": "Duty officer", "role": "on the cargo watch", "cat": 1, "sayShow": "@a", "side": "right", "bubbleW": 320, "bubbleH": 74,
+     "say": {"pick": "@k", "of": ["Gas alarm at the manifold - ESD now!", "Gas alarm at the manifold - ESD now!", "ESD done: pumps stopped, valves shut.", "ESD done: pumps stopped, valves shut.", "Everyone is at the muster station.", "Everyone is at the muster station."]}},
+    {"type": "person", "x": 790, "y": 530, "scale": 0.9, "name": "Chief officer", "role": "in charge of the cargo", "cat": 2, "sayShow": "@b", "side": "left", "bubbleW": 320, "bubbleH": 74,
+     "say": {"pick": "@k", "of": ["Water spray on. Everyone to muster, upwind.", "Water spray on. Everyone to muster, upwind.", "Water spray on. Everyone to muster, upwind.", "Water spray on. Everyone to muster, upwind.", "Water spray on. Everyone to muster, upwind.", "Leak isolated. Test the area before anyone goes back."]}}
+  ],
+  "steps": [
+    {"title": "02:10 · The gas detector alarms at the manifold", "set": {"t": 130, "k": 1, "a": 1}},
+    {"title": "02:11 · ESD: the cargo pumps stop, the valves shut", "set": {"t": 131, "k": 2}},
+    {"title": "02:13 · Water spray on: it knocks the gas cloud down", "set": {"t": 133, "k": 3, "a": 0, "b": 1}},
+    {"title": "02:16 · The crew mustered upwind, the accommodation shut", "set": {"t": 136, "k": 4, "a": 1, "b": 0}},
+    {"title": "02:28 · The leak isolated, the area to be gas-tested", "set": {"t": 148, "k": 5, "a": 0, "b": 1}}
+  ]
+}
+</script>
+
+<script src="kit2d.js"></script>
+</body></html>

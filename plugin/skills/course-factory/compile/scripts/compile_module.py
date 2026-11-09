@@ -4340,9 +4340,30 @@ def starter_track(script, s, lines, variant="v"):
 # molecule / curve starter fits keep the figure kit's starter until they become 3D (L67).
 KIT2D_STARTER_KINDS = ("chart", "comparison", "step_animation", "flow_animation", "process_animation", "interactive_diagram")
 KIT2D_SIZE = (960, int(round(960 * STARTER_PANEL[1] / STARTER_PANEL[0])))
+KIT2D_APART = 5                     # two 2D figures that look alike are at least this many slides apart
 KIT2D_CYCLE = re.compile(r"(?i)\b(cycles?|round again|loop|repeats?|pdca|plan[- ]do)\b")
 KIT2D_TIME = re.compile(r"(?i)\b(schedule|timeline|time line|gantt|critical path|milestones?)\b")
 KIT2D_GRID = re.compile(r"(?i)\b(matrix|likelihood|quadrants?|grid)\b")
+KIT2D_LEVELS = re.compile(r"(?i)\b(hierarch\w*|pyramid|levels?|tiers?|layers? of|chain of command|most effective|least effective|priorit\w+)\b")
+KIT2D_VERSUS = re.compile(r"(?i)^(.{2,40}?)\s+(?:vs\.?|versus|or|compared with|against)\s+(.{2,40}?)[.?!]?$")
+KIT2D_SPLIT = re.compile(r"\s+(?:/|vs\.?|versus|\|)\s+")
+KIT2D_SAY = re.compile(r"^([^:\"“]{2,40}):\s*[\"“](.+?)[\"”]\s*$")
+KIT2D_NUM = re.compile(r"(?<![\w.])(\d+(?:[.,]\d+)?)\s*(%|[a-zA-Z°/][\w°/]*)?")
+KIT2D_CLOCK = re.compile(r"^\s*(\d{1,2})[:.](\d{2})\b")
+KIT2D_WHEN = re.compile(r"(?i)^\s*(?:(day|week|month|year|hour)\s+(\d+)|(?:t\s*\+\s*)?(\d+(?:\.\d+)?)\s*(min|minutes?|h|hours?|days?|weeks?|months?|years?)\b)")
+KIT2D_HEROES = (                    # words that say one of the kit's detailed scenes may tell this slide's story
+    (re.compile(r"(?i)\b(double[- ]hull|ballast tanks?|tanker|draught|midship)\b"), "tanker_section"),
+    (re.compile(r"(?i)\b(radar|arpa|cpa|tcpa|ppi|echo(es)?)\b"), "radar_ppi"),
+    (re.compile(r"(?i)\b(kanban|wip|backlog|sprint board)\b"), "kanban"),
+    (re.compile(r"(?i)\b(motherboard|cpu|ram|pcie|chipset|gpu)\b"), "motherboard"),
+    (re.compile(r"(?i)\b(pump|pumps|pipeline|tank level)\b"), "pump, pipe and tank"),
+)
+KIT2D_KIND_WORDS = {"bars": "bars of the slide's own numbers", "events": "a time line of its times", "cycle": "a cycle",
+                    "pyramid": "a pyramid, top first", "compare": "two columns compared row by row", "person": "people speaking",
+                    "gantt": "a schedule", "matrix": "a grid", "chart": "a graph", "process:row": "a process across",
+                    "process:rows": "a process in two rows", "process:column": "a process down the page",
+                    "process:stair": "a process stepping down", "process:free": "boxes and arrows"}
+KIT2D_DETAIL = ("node", "arrow", "token", "callout", "curve", "point", "span")
 
 
 def kit2d_items(lines):
@@ -4354,77 +4375,253 @@ def kit2d_items(lines):
     return out
 
 
-def starter_kit2d(script, s):
-    """the starter 2D-kit spec of a drawing slide, from its own words: a cycle, a timeline, a grid, a graph or - most often -
-    the steps of a process, one box per line, each step bringing its box in and lighting it. Nothing is invented: where the
-    slide's words cannot give the values (a graph's points, a task's weeks, a grid's rows) the spec says so in "_todo",
-    which the compile reports until it is gone. None when the slide has no lines."""
-    lines = cs.lines_of(s.get("text"))
-    if not lines:
-        return None
-    W, H = KIT2D_SIZE
-    kind = cs.parse_kind(s.get("visual_kind", ""))
-    words = " ".join([s.get("title") or "", s.get("visual") or ""] + lines)
-    items = kit2d_items(lines)
-    label = first_sentence(s.get("visual")) or s.get("title") or ""
-    spec = {"label": label, "size": [W, H], "_k2": True}
-    if kind == "chart":
-        spec.update({"state": {"draw": 0}, "rates": {"draw": 3.6},
-                     "parts": [{"id": "C", "type": "chart", "x": 110, "y": 60, "w": W - 200, "h": H - 150,
-                                "xaxis": {"min": 0, "max": 10, "step": 2, "label": "", "unit": ""},
-                                "yaxis": {"min": 0, "max": 10, "step": 2, "label": "", "unit": ""}},
-                               {"id": "F", "type": "curve", "on": "C", "pts": [[0, 0], [10, 10]], "draw": "@draw", "label": items[0][0]}],
-                     "steps": [{"title": lines[0], "set": {"draw": 1}, "line": 1}],
-                     "_todo": "the axes and the curve's points from the course's sources (SPEC.md: chart, curve, point, span)"})
-        return spec
-    if KIT2D_CYCLE.search(words) and 3 <= len(items) <= 6:
-        spec.update({"state": {"stage": 0}, "rates": {"stage": 3.4},
-                     "parts": [{"id": "C", "type": "cycle", "x": W / 2, "y": H / 2, "r": min(W, H) * 0.3, "band": 48, "at": "@stage",
-                                "stages": [{"name": t, "sub": ""} for t, _ in items]}],
-                     "steps": [{"title": lines[i], "set": {"stage": i + 1}, "line": i + 1} for i in range(len(items))]})
-        return spec
-    if KIT2D_TIME.search(words):
-        tasks = [{"id": "T%d" % (i + 1), "name": t, "d": 1, "after": ["T%d" % i] if i else [], "cat": i % 5 + 1} for i, (t, _) in enumerate(items[:8])]
-        spec.update({"state": {"draw": 0}, "rates": {"draw": 3},
-                     "parts": [{"id": "G", "type": "gantt", "x": 20, "y": 10, "w": W - 40, "h": H - 20, "start": 0, "end": len(tasks) + 2,
-                                "tick": "{v}", "draw": "@draw", "tasks": tasks}],
-                     "steps": [{"title": lines[0], "set": {"draw": 1}, "line": 1}],
-                     "_todo": "each task's length and what it waits for, from the course's sources (SPEC.md: gantt)"})
-        return spec
-    if KIT2D_GRID.search(words):
-        spec.update({"state": {"show": 0},
-                     "parts": [{"id": "M", "type": "matrix", "x": 220, "y": 40, "w": W - 320, "h": H - 130, "rows": ["", "", ""], "cols": ["", "", ""],
-                                "items": [{"name": t, "r": 1, "c": 1, "show": "@show", "dy": (i - len(items) / 2.0) * 30} for i, (t, _) in enumerate(items[:5])]}],
-                     "steps": [{"title": lines[0], "set": {"show": 1}, "line": 1}],
-                     "_todo": "the rows, the columns and where each item stands, from the course's sources (SPEC.md: matrix)"})
-        return spec
-    # the steps of a process: up to four boxes a row, a second row running back, one arrow between each and the next
+def kit2d_look(spec):
+    """what a 2D figure looks like at a glance: its main part, and for boxes and arrows how they are laid out"""
+    parts = (spec or {}).get("parts") or []
+    main = next((p.get("type") for p in parts if p.get("type") not in KIT2D_DETAIL), None)
+    if main:
+        return main
+    nodes = [p for p in parts if p.get("type") == "node"]
+    if not nodes:
+        return "free"
+    ys = set(int(round(float(p.get("y", 0)) / 12.0)) for p in nodes)
+    xs = set(int(round(float(p.get("x", 0)) / 12.0)) for p in nodes)
+    if len(ys) == 1:
+        return "process:row"
+    if len(xs) == 1:
+        return "process:column"
+    if len(ys) == 2:
+        return "process:rows"
+    if len(ys) == len(xs) == len(nodes):
+        return "process:stair"
+    return "process:free"
+
+
+def kit2d_numbers(items):
+    """the items' own numbers, when every line has exactly one and they share a unit: [(name, value)], the unit"""
+    out, units = [], set()
+    for name, rest in items:
+        found = KIT2D_NUM.findall(rest or name)
+        if len(found) != 1:
+            return None, None
+        out.append((name, float(found[0][0].replace(",", "."))))
+        units.add((found[0][1] or "").strip())
+    return (out, units.pop()) if len(out) >= 3 and len(units) == 1 else (None, None)
+
+
+def kit2d_times(lines):
+    """the time each line starts with, all in one unit (a clock time, day 3, 5 min): [(value, rest)], the unit"""
+    out, units = [], set()
+    for line in lines:
+        c, w = KIT2D_CLOCK.match(line), KIT2D_WHEN.match(line)
+        if c:
+            out.append((int(c.group(1)) * 60 + int(c.group(2)), line[c.end():].strip(" -:,."), c.group(0).strip()))
+            units.add("clock")
+        elif w:
+            unit = (w.group(1) or w.group(4) or "").lower().rstrip("s")
+            out.append((float(w.group(2) or w.group(3)), line[w.end():].strip(" -:,."), w.group(0).strip()))
+            units.add(unit)
+        else:
+            return None, None
+    return (out, units.pop()) if len(out) >= 3 and len(units) == 1 else (None, None)
+
+
+def kit2d_process(items, lines, W, H, how):
+    """the steps of a process laid out four ways - across, in two rows, down the page, stepping down - one box per line,
+    an arrow to the next, each step bringing its box in and lighting it"""
     its = items[:8]
     n = len(its)
-    per = n if n <= 4 else (n + 1) // 2
-    gap = (W - 40) / float(per)
-    bw = min(220, gap - 50)
-    rows = 1 if n <= 4 else 2
-    ys = [H / 2.0] if rows == 1 else [H * 0.3, H * 0.72]
+    pos, bw, bh = [], 0, 74
+    if how == "row":
+        gap = (W - 40) / float(n)
+        bw = min(220, gap - 50)
+        pos = [(20 + gap * (i + 0.5), H / 2.0) for i in range(n)]
+    elif how == "rows":
+        per = (n + 1) // 2
+        gap = (W - 40) / float(per)
+        bw = min(220, gap - 50)
+        for i in range(n):
+            r, c = divmod(i, per)
+            pos.append((20 + gap * ((c if r == 0 else per - 1 - c) + 0.5), H * 0.3 if r == 0 else H * 0.72))
+    elif how == "column":
+        bw, bh = 380, 62
+        step = (H - 60) / float(n)
+        pos = [(W / 2.0, 30 + step * (i + 0.5)) for i in range(n)]
+    else:                                          # stair: left to right, top to bottom
+        gap = (W - 40) / float(n)
+        bw = min(210, gap * 1.4)
+        pos = [(20 + gap * (i + 0.5), 70 + (H - 140) * i / float(n - 1)) for i in range(n)]
     parts, state, steps = [], {}, []
     for i, (t, rest) in enumerate(its):
-        r, c = divmod(i, per)
-        col = c if r == 0 else per - 1 - c
-        nid = "N%d" % (i + 1)
-        state["n%d" % (i + 1)] = 0
-        state["l%d" % (i + 1)] = 0
-        parts.append({"id": nid, "type": "node", "x": round(20 + gap * (col + 0.5)), "y": round(ys[r]), "w": round(bw), "h": 74,
+        state["n%d" % (i + 1)] = state["l%d" % (i + 1)] = 0
+        parts.append({"id": "N%d" % (i + 1), "type": "node", "x": round(pos[i][0]), "y": round(pos[i][1]), "w": round(bw), "h": bh,
                       "text": t, "show": "@n%d" % (i + 1), "lit": "@l%d" % (i + 1), "cat": i % 5 + 1})
     for i in range(1, n):
         state["a%d" % i] = 0
-        parts.append({"id": "A%d" % i, "type": "arrow", "from": "N%d" % i, "to": "N%d" % (i + 1), "draw": "@a%d" % i})
+        arrow = {"id": "A%d" % i, "type": "arrow", "from": "N%d" % i, "to": "N%d" % (i + 1), "draw": "@a%d" % i}
+        if how == "stair":
+            arrow["via"] = "h"
+        parts.append(arrow)
     for i in range(n):
         st = {"n%d" % (i + 1): 1, "l%d" % (i + 1): 1}
         if i:
             st.update({"a%d" % i: 1, "l%d" % i: 0})
         steps.append({"title": lines[i], "set": st, "line": i + 1, "after": {"n%d" % (i + 1): 300} if i else {}})
-    spec.update({"state": state, "rates": {"a%d" % i: 4 for i in range(1, n)}, "parts": parts, "steps": steps})
+    return {"state": state, "rates": {"a%d" % i: 4 for i in range(1, n)}, "parts": parts, "steps": steps}
+
+
+def kit2d_candidates(script, s):
+    """every 2D figure the slide's own words can make, best fit first: [(fit, look, why, make)] - make() gives the spec's
+    body. Nothing is invented: a value the words cannot give is left to "_todo"."""
+    lines = cs.lines_of(s.get("text")) or []
+    W, H = KIT2D_SIZE
+    kind = cs.parse_kind(s.get("visual_kind", ""))
+    head = " ".join([s.get("title") or "", s.get("visual") or ""])
+    words = " ".join([head] + lines)
+    items = kit2d_items(lines)
+    n, out = len(items), []
+    if not lines:
+        return out
+    if kind == "chart":
+        out.append((100, "chart", "the slide is a graph", lambda: {
+            "state": {"draw": 0}, "rates": {"draw": 3.6},
+            "parts": [{"id": "C", "type": "chart", "x": 110, "y": 60, "w": W - 200, "h": H - 150,
+                       "xaxis": {"min": 0, "max": 10, "step": 2, "label": "", "unit": ""},
+                       "yaxis": {"min": 0, "max": 10, "step": 2, "label": "", "unit": ""}},
+                      {"id": "F", "type": "curve", "on": "C", "pts": [[0, 0], [10, 10]], "draw": "@draw", "label": items[0][0]}],
+            "steps": [{"title": lines[0], "set": {"draw": 1}, "line": 1}],
+            "_todo": "the axes and the curve's points from the course's sources (SPEC.md: chart, curve, point, span)"}))
+    nums, unit = kit2d_numbers(items[:8])
+    if nums:
+        top = max(v for _, v in nums)
+        out.append((90, "bars", "each line gives one number in %s" % (unit or "the same unit"), lambda: {
+            "state": {"grow": 0, "pick": 0}, "rates": {"grow": 2.4},
+            "parts": [{"id": "B", "type": "bars", "x": 120, "y": 60, "w": W - 200, "h": H - 170, "unit": unit, "grow": "@grow", "pick": "@pick",
+                       "max": top * 1.15, "decimals": 0 if all(v == int(v) for _, v in nums) else 1,
+                       "items": [{"label": t, "value": v, "cat": i % 5 + 1} for i, (t, v) in enumerate(nums)]}],
+            "steps": [{"title": lines[0], "set": {"grow": 1}, "line": 1}] +
+                     [{"title": lines[i], "set": {"pick": i + 1}, "line": i + 1} for i in range(1, len(nums))]}))
+    times, tu = kit2d_times(lines[:8])
+    if times:
+        a, b = min(t[0] for t in times), max(t[0] for t in times)
+        tick = next(k for k in (1, 2, 5, 10, 15, 30, 60, 120, 240, 1e9) if (b - a) / k <= 5)
+        t0 = math.floor(a / tick) * tick - (tick if a - math.floor(a / tick) * tick < tick * 0.3 else 0)
+        t1 = math.ceil(b / tick) * tick + (tick if math.ceil(b / tick) * tick - b < tick * 0.3 else 0)
+        out.append((85, "events", "each line starts with its time", lambda: {
+            "state": {"t": t0}, "rates": {"t": 2.6},
+            "parts": [{"id": "E", "type": "events", "x": 80, "y": H / 2.0, "w": W - 160, "start": t0, "end": t1, "step": tick,
+                       "tick": "{v}" if tu == "clock" else "{v} %s" % tu, "clock": tu == "clock", "cursor": "@t",
+                       "events": [{"at": v, "label": (rest or lab)[:40], "sub": lab, "cat": i % 5 + 1} for i, (v, rest, lab) in enumerate(times)]}],
+            "steps": [{"title": lines[i], "set": {"t": times[i][0] + tick * 0.25}, "line": i + 1} for i in range(len(times))]}))
+    if KIT2D_CYCLE.search(words) and 3 <= n <= 6:
+        out.append((80, "cycle", "the words say it goes round", lambda: {
+            "state": {"stage": 0}, "rates": {"stage": 3.4},
+            "parts": [{"id": "C", "type": "cycle", "x": W / 2, "y": H / 2, "r": min(W, H) * 0.3, "band": 48, "at": "@stage",
+                       "stages": [{"name": t, "sub": ""} for t, _ in items]}],
+            "steps": [{"title": lines[i], "set": {"stage": i + 1}, "line": i + 1} for i in range(n)]}))
+    says = [KIT2D_SAY.match(x) for x in lines]
+    if 2 <= n <= 3 and all(says):
+        xs = [W * (i + 0.5) / n for i in range(n)]
+        out.append((80, "person", "each line is someone speaking", lambda: dict(
+            {"state": dict(("s%d" % (i + 1), 0) for i in range(n)),
+             "parts": [{"type": "person", "x": round(xs[i]), "y": H - 90, "scale": 1.1, "name": m.group(1).strip(), "cat": i + 1,
+                        "say": m.group(2).strip(), "sayShow": "@s%d" % (i + 1), "side": "up", "bubbleW": min(300, W / n - 40), "bubbleH": 70}
+                       for i, m in enumerate(says)],
+             "steps": [{"title": lines[i], "set": {"s%d" % (i + 1): 1}, "line": i + 1} for i in range(n)]})))
+    vs = KIT2D_VERSUS.match((s.get("title") or "").strip())
+    pairs = [KIT2D_SPLIT.split(t + (" - " + r if r else ""), 1) for t, r in items]
+    if vs and n >= 2 and all(len(p) == 2 for p in pairs):
+        out.append((78, "compare", "the title sets two things side by side and each line has both", lambda: {
+            "state": {"r": 0}, "rates": {"r": 5},
+            "parts": [{"id": "C", "type": "compare", "x": 40, "y": 30, "w": W - 80, "h": H - 60, "at": "@r",
+                       "cols": [{"title": vs.group(1).strip(), "cat": 1}, {"title": vs.group(2).strip(), "cat": 3}],
+                       "rows": [{"cells": [p[0].strip(), p[1].strip()], "marks": [None, None]} for p in pairs[:6]]}],
+            "steps": [{"title": lines[i], "set": {"r": i + 1}, "line": i + 1} for i in range(min(n, 6))]}))
+    if KIT2D_LEVELS.search(words) and 3 <= n <= 6:
+        out.append((75, "pyramid", "the words rank it in levels", lambda: {
+            "state": {"at": 0}, "rates": {"at": 4},
+            "parts": [{"id": "P", "type": "pyramid", "x": W * 0.1, "y": 24, "w": W * 0.8, "h": H - 48, "at": "@at",
+                       "levels": [{"name": t} for t, _ in items]}],
+            "steps": [{"title": lines[i], "set": {"at": i + 1}, "line": i + 1} for i in range(n)]}))
+    if KIT2D_TIME.search(words):
+        tasks = [{"id": "T%d" % (i + 1), "name": t, "d": 1, "after": ["T%d" % i] if i else [], "cat": i % 5 + 1} for i, (t, _) in enumerate(items[:8])]
+        out.append((60, "gantt", "the words name a schedule", lambda: {
+            "state": {"draw": 0}, "rates": {"draw": 3},
+            "parts": [{"id": "G", "type": "gantt", "x": 20, "y": 10, "w": W - 40, "h": H - 20, "start": 0, "end": len(tasks) + 2,
+                       "tick": "{v}", "draw": "@draw", "tasks": tasks}],
+            "steps": [{"title": lines[0], "set": {"draw": 1}, "line": 1}],
+            "_todo": "each task's length and what it waits for, from the course's sources (SPEC.md: gantt)"}))
+    if KIT2D_GRID.search(words):
+        out.append((60, "matrix", "the words name a grid", lambda: {
+            "state": {"show": 0},
+            "parts": [{"id": "M", "type": "matrix", "x": 220, "y": 40, "w": W - 320, "h": H - 130, "rows": ["", "", ""], "cols": ["", "", ""],
+                       "items": [{"name": t, "r": 1, "c": 1, "show": "@show", "dy": (i - len(items) / 2.0) * 30} for i, (t, _) in enumerate(items[:5])]}],
+            "steps": [{"title": lines[0], "set": {"show": 1}, "line": 1}],
+            "_todo": "the rows, the columns and where each item stands, from the course's sources (SPEC.md: matrix)"}))
+    m = min(n, 8)
+    for fit, how, ok in ((50, "row", m <= 4), (50, "rows", m >= 5), (47, "rows", m == 4), (45, "column", 2 <= m <= 5),
+                         (44, "stair", 3 <= m <= 5)):
+        if ok:
+            out.append((fit, "process:" + how, "one step a line", (lambda how=how: kit2d_process(items, lines, W, H, how))))
+    out.sort(key=lambda c: -c[0])
+    return out
+
+
+def starter_kit2d(script, s, recent=()):
+    """the starter 2D-kit spec of a drawing slide, composed from its own words: of every figure they can make (a graph,
+    bars of its numbers, a time line of its times, a cycle, people speaking, two things compared, a pyramid, a schedule,
+    a grid, a process laid out four ways) the best fit whose look is not in `recent` (the 2D figures of the slides just
+    before it) - so a module's figures never look alike. Nothing is invented: where the words cannot give the values the
+    spec says so in "_todo", which the compile reports until it is gone. "_brief" says what the figure shows and why this
+    one was chosen; "_look" is its look. None when the slide has no lines."""
+    cands = kit2d_candidates(script, s)
+    if not cands:
+        return None
+    pick = next((c for c in cands if c[1] not in recent), cands[0])
+    W, H = KIT2D_SIZE
+    label = first_sentence(s.get("visual")) or s.get("title") or ""
+    spec = {"label": label, "size": [W, H], "_k2": True}
+    spec.update(pick[3]())
+    spec["_look"] = pick[1]
+    lines = cs.lines_of(s.get("text")) or []
+    words = " ".join([s.get("title") or "", s.get("visual") or ""] + lines)
+    brief = ["Shows: %s" % (label.rstrip(".") or "the slide's lines") + ".",
+             "Composed as %s - %s." % (KIT2D_KIND_WORDS.get(pick[1], pick[1]), pick[2])]
+    other = [KIT2D_KIND_WORDS.get(c[1], c[1]) for c in cands if c[1] != pick[1] and c[1] not in recent]
+    if other:
+        brief.append("Also fits: %s." % ", ".join(dict.fromkeys(other)))
+    near = [KIT2D_KIND_WORDS.get(c[1], c[1]) for c in cands if c[1] in recent and c[0] > pick[0]]
+    if near:
+        brief.append("Not %s: a slide just before has one." % " or ".join(dict.fromkeys(near)))
+    heroes = [name for rx, name in KIT2D_HEROES if rx.search(words)]
+    if heroes:
+        brief.append("A detailed scene may tell it better: %s (SPEC.md, courses.html) - its values from the course's sources." % ", ".join(heroes))
+    spec["_brief"] = " ".join(brief)
     return spec
+
+
+K2_SPEC_IN = re.compile(r'<script type="application/json" id="k2-([\w-]+)">(.*?)</script>', re.S)
+
+
+def kit2d_variety(script, screens, slides, probs):
+    """2D figures that look alike (kit2d_look: the same main part, or boxes and arrows laid out the same way) are at least
+    KIT2D_APART slides apart, so a module's figures read as drawn for each slide, never one template after another. A
+    look-alike is a problem that names what else the slide's words can make."""
+    seen = []
+    for n, (s, page) in enumerate(zip(screens, slides)):
+        for _, body in K2_SPEC_IN.findall(page):
+            try:
+                look = kit2d_look(json.loads(body.replace("<\\/", "</")))
+            except ValueError:
+                continue
+            twin = next(((m, sid) for m, lk, sid in reversed(seen) if lk == look and n - m < KIT2D_APART), None)
+            if twin:
+                other = [KIT2D_KIND_WORDS.get(c[1], c[1]) for c in kit2d_candidates(script, s) if c[1] != look]
+                probs.append("%s: its 2D figure looks like the one on %s, %d slide(s) before (%s) - 2D figures that look alike are "
+                             "at least %d slides apart; compose this one differently%s (course-visuals\\kit2d\\SPEC.md)"
+                             % (cs.place(script, s["id"]), twin[1], n - twin[0], KIT2D_KIND_WORDS.get(look, look), KIT2D_APART,
+                                ": its words also make %s" % ", ".join(dict.fromkeys(other)) if other else ""))
+            seen.append((n, look, s["id"]))
 
 
 def kit2d_slide(script, s):
@@ -4444,13 +4641,21 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
     `fallback` (2.50.6): the slides a 3D scene is planned for - a model_3d slide, or the one proposed unasked (L60). Each
     gets its 2D starter too, written but not named in "figure" (the scene stays the plan): declining the 3D
     ("declined_3d") means editing that starter, never writing a spec from nothing (M01 benchmark run 5, s05)."""
-    for s in script["screens"]:
+    looks = []                                   # (screen number, look) of each 2D figure so far: the next one looks different
+    for at, s in enumerate(script["screens"]):
         if s["kind"] != "slide" or s.get("recap") or s["id"] not in build_screens:
             continue
+        have = (build_screens[s["id"]].get("figure") or "").replace("\\", "/")
+        if have.lower().endswith(KIT2D_SPEC):
+            try:
+                looks.append((at, kit2d_look(json.load(io.open(os.path.join(figdir, os.path.basename(have)), encoding="utf-8")))))
+            except (IOError, OSError, ValueError):
+                pass
         two_d = s["id"] in fallback
         if not two_d and (s["id"] in skip or cs.parse_kind(s.get("visual_kind", "")) not in STARTER_FIGURE_KINDS):
             continue
-        spec = starter_kit2d(script, s) if kit2d_slide(script, s) else None    # an idea, a sequence or numbers: the 2D kit
+        recent = [lk for n, lk in looks if at - n < KIT2D_APART]
+        spec = starter_kit2d(script, s, recent) if kit2d_slide(script, s) else None    # an idea, a sequence or numbers: the 2D kit
         spec = spec or starter_figure(script, s, pool, taken)
         if not spec:
             continue
@@ -4458,6 +4663,11 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
         name = "%s%s" % (s["id"], KIT2D_SPEC if spec.get("_k2") else ".kit.json")
         entry = build_screens[s["id"]]
         note = spec.pop("_note", None)                 # 2.67.0 - what the starter was made from: the build sheet says it
+        look, brief = spec.pop("_look", None), spec.pop("_brief", None)
+        if look and not two_d and not entry.get("figure"):
+            looks.append((at, look))
+        if brief:
+            entry["_brief"] = brief
         if two_d:
             if not os.path.isfile(os.path.join(figdir, name)):
                 entry["_2d"] = ("Keeping a 2D figure instead of the 3D scene? Its starter is written: working_claude\\figures\\%s\\%s - "
@@ -4472,8 +4682,9 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
             # 2.72.0: "replace the placeholder parts ... try it with studio.py before compiling" sent the first 2.72.0 proof
             # run's builders into redrawing every figure by hand before one build (50 min, nothing built). (merge) a starter
             # made from the slide's words or the figure library says what it was made from (2.67.0 "_note"), then the same rule
-            entry["_figure"] = (("starter written by --init-build with the 2D kit (course-visuals\\kit2d\\SPEC.md; demos.html, pm.html) "
-                                 "from the slide's lines%s. " % (" - its \"_todo\" first: " + spec["_todo"] if spec.get("_todo") else ""))
+            entry["_figure"] = (("starter composed by --init-build with the 2D kit (course-visuals\\kit2d\\SPEC.md; demos.html, pm.html, "
+                                 "courses.html) from the slide's lines - \"_brief\" says what it shows and why this kind; if another "
+                                 "kind tells the slide better, make that one instead%s. " % (" - its \"_todo\" first: " + spec["_todo"] if spec.get("_todo") else ""))
                                 if spec.get("_k2") else (note.rstrip(". ") + ". ") if note else
                                 ("starter = the %s pattern (a tested, physically correct figure): keep it - change only its words "
                                  "to the script's and its steps' lines. " % spec["_pattern"].split(" ")[0]) if spec.get("_pattern") else
@@ -4839,6 +5050,7 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
             note_once("Note: %s: looks exactly like the slide before it (%s, %s ground) - a note only (2.116.0): the factory does not "
                       "change a slide to avoid a repeat; ask for another template in the build sheet if you want one"
                       % ((cs.place(script, s["id"]),) + layout_key(b_)))
+    kit2d_variety(script, screens, slides, probs)
     # 2.62.1 - 80 / 20 (owner, 2026-10-21): at least 80 % of the module's slides on the light ground. The rule is the
     # background's colour: a slide on the Navy ground ("dark") and a photograph framed on it count; a full-screen
     # photograph is its own background and does not

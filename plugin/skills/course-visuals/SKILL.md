@@ -243,7 +243,8 @@ labels on the parts, steps the deck's Next walks - full screen, clickable labels
 come with it; never a hand-written three.js file per slide. **A 2D figure is a 2D-kit spec**, `sNN.kit2d.json`
 (`kit2d/SPEC.md`; see `kit2d/demos.html` and `kit2d/pm.html`): a graph, an object in motion (a cutaway with its flow) or
 a concept (cycle, timeline, matrix, process, trade-off) - depth, labels clear of each other, motion on Next and the
-trainee's controls come with it, and `fit_gate.py` runs its overlap check on every step. The figure kit (`kit/`) stays
+trainee's controls come with it, and `fit_gate.py` runs its overlap check on every step. Each is composed for its
+slide from the slide's own words, never the same look within 5 slides (the compile checks). The figure kit (`kit/`) stays
 for a control screen the trainee reads (an HMI) and for courses already built with it. **Kit first, custom allowed (2.116.0, operator
 Aleksis Vējs 2026-11-09):** when no kit part shows the idea well, a custom figure - a self-contained offline `.html` / `.svg`
 (`"custom_figure"` in the build sheet; steps Next drives; the same checks) - is allowed, and a good one is offered to the kit

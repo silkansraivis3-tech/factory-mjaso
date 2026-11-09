@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """test_kit2d.py - the 2D kit in a hidden browser: every figure of the three demo pages (demos.html, pm.html, more.html)
-walked step by step at 1280 x 800 and 1024 x 768, and KIT2D.audit clean at the end of each step - no words over words,
+(and courses.html, gas-basic.html) walked step by step at 1280 x 800 and 1024 x 768, and KIT2D.audit clean at the end of each step - no words over words,
 no words out of their box, nothing cut at the edge, no label on a line, no box on another. Then that the audit itself
 still finds each of those, that Next and Previous both move things (never a jump to the end), and that kit2d.css has no
 colour defined as itself.
@@ -24,7 +24,7 @@ SKILLS = KIT.parents[1]
 sys.path.insert(0, str(SKILLS / "course-module-ux" / "measure" / "scripts"))
 from test_audit_drawing import browser  # noqa: E402  - the one place that finds Chrome or Edge
 
-PAGES = ["demos.html", "pm.html", "more.html"]
+PAGES = ["demos.html", "pm.html", "more.html", "courses.html", "gas-basic.html"]
 SIZES = [(1280, 800), (1024, 768)]
 FAILS = []
 
@@ -98,6 +98,46 @@ def main():
           const back = c(); return [a, mid, end, back]; }""")
         check("the triangle's corner is part-way 120 ms after Next, and part-way back 120 ms after Previous",
               len(set(moved)) == 4, moved)
+        resized = pg.evaluate("""async () => {
+          const f = KIT2D.figures[2], c = () => f.svg.querySelector('.k2-node-ring').closest('g').getAttribute('transform');
+          f.goStep(0, true); await new Promise(r => setTimeout(r, 100)); f.next(); await new Promise(r => setTimeout(r, 60));
+          f.host.style.height = (f.host.offsetHeight - 40) + 'px'; f.resize(); const mid = c();
+          await new Promise(r => setTimeout(r, 1800)); const end = c(); f.host.style.height = ''; return [mid, end]; }""")
+        check("a resize mid-step (a step title wrapping) lets the step play on, never a jump to its end",
+              resized[0] != resized[1], resized)
+        pg.close()
+
+        pg = b.new_page(viewport={"width": 1280, "height": 800})
+        pg.goto((KIT / "more.html").as_uri())
+        pg.wait_for_timeout(900)
+        print("\n-- a pipe joined to a pump and a tank starts at the pump's flange and ends at the tank's wall")
+        ends = pg.evaluate("""() => { const f = KIT2D.figures.find(x => x.byId.U && x.byId.L && x.byId.T), u = f.byId.U.port, t = f.byId.T.port;
+          const d = f.svg.querySelector('.k2-l-back path[stroke-linejoin]').getAttribute('d').match(/-?[0-9.]+/g).map(Number);
+          return [Math.hypot(d[0] - u.x, d[1] - u.y), Math.hypot(d[d.length - 2] - t.x, d[d.length - 1] - t.y)]; }""")
+        check("the pipe meets the pump's nozzle and the tank's inlet, not a point in the casing or on a corner", max(ends) < 1, ends)
+        pg.close()
+
+        pg = b.new_page(viewport={"width": 1280, "height": 800})
+        pg.goto((KIT / "gas-basic.html").as_uri())
+        pg.wait_for_timeout(900)
+        print("\n-- words that change with the story, readouts in words, a zone a route crosses, a crowded time line")
+        said = pg.evaluate("""() => { const f = KIT2D.figures.find(x => x.svg.querySelector('.k2-bubble') && x.spec.parts.some(q => q.type === 'events'));
+          const t = () => Array.from(f.svg.querySelectorAll('text.k2-t-face')).map(n => n.textContent).join(' | ');
+          f.goStep(1, true); f.frame(true, 0); const a = t(); f.goStep(2, true); f.frame(true, 0); return [a, t()]; }""")
+        check("a person's {pick, of} line changes when the step does", said[0] != said[1] and "ESD done" in said[1], said)
+        burn = pg.evaluate("""() => { const f = KIT2D.figures.find(x => x.byId && x.spec.parts.some(q => q.type === 'region'));
+          f.goStep(5, true); const at = v => { f.setT('left', v, true); f.frame(true, 0); f.readouts();
+            return [f.out.Z.hit, f.reads[1].b.textContent, KIT2D.audit(f).length]; };
+          return [at(2), at(25)]; }""")
+        check("air after a little methane passes the zone (No), after a lot it crosses it (Yes), audit clean both ways",
+              burn[0][:2] == [0, "No"] and burn[1][:2] == [1, "Yes"] and burn[0][2] == 0 and burn[1][2] == 0, burn)
+        crowd = pg.evaluate("""() => { const h = document.createElement('div'); h.style.height = '600px'; document.body.prepend(h);
+          const f = KIT2D.mount(h, {size: [1000, 600], parts: [{type: 'events', x: 90, y: 300, w: 820, start: 0, end: 30, step: 5, tick: '{v} min',
+            events: [{at: 2, label: 'Gas alarm', sub: 'at the manifold'}, {at: 3, label: 'ESD', sub: 'pumps stop, valves shut'},
+                     {at: 4, label: 'Water spray', sub: 'knocks the gas down'}, {at: 5, label: 'Muster', sub: 'upwind, doors shut'},
+                     {at: 6, label: 'Head count', sub: 'everyone there'}]}]});
+          f.goStep(f.steps.length - 1, true); f.frame(true, 0); const out = KIT2D.audit(f); h.remove(); return out; }""")
+        check("five events a minute apart: each takes a free side or lane, no words on each other", crowd == [], crowd)
         pg.close()
         b.close()
     print("\n%d failed" % len(FAILS) if FAILS else "\nall passed")
