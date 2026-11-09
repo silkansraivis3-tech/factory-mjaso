@@ -584,7 +584,7 @@ def main(argv=None):
         print("Trial course made in %s (modules %s). Not started (--dry-run) - it would run:\n  %s\n  in %s"
               % (master, ", ".join(map(str, mods)), " ".join(cmd[:2]) + " <the trial prompt> " + " ".join(cmd[3:6]) + " ...", master))
         return 0
-    env = dict(os.environ, NOVIKONTAS_AUTO_BUILD="1", NOVIKONTAS_TRIAL="1")
+    env = course_portal.unattended_env(NOVIKONTAS_AUTO_BUILD="1", NOVIKONTAS_TRIAL="1")
     logf = os.path.join(run_dir, "build.log")
     print("Building the trial (modules %s) - this takes a while; the log: %s" % (", ".join(map(str, mods)), logf))
     with io.open(logf, "w", encoding="utf-8") as out:

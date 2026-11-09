@@ -435,6 +435,12 @@ DENIED = ["Bash(git push:*)", "PowerShell(git push:*)", "mcp__plugin_nano-banana
           "mcp__plugin_nano-banana_nano-banana__generate_video"]
 
 
+def unattended_env(**extra):
+    """The environment of an unattended run. A print-mode run stops helper agents still working 10 minutes after its own
+    last turn; an unattended build waits on its script writers and builders for hours, so it waits for them without limit."""
+    return dict(os.environ, CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS="0", **extra)
+
+
 def claude_command(prompt):
     """The unattended run: edits are taken without asking inside the course folder (files outside it are refused),
     shell commands run, paid pictures and git push are refused. NOVIKONTAS_CLAUDE_CMD replaces the program (tests)."""
@@ -572,7 +578,7 @@ def cmd_watch_once():
         os.makedirs(logdir, exist_ok=True)
         logf = os.path.join(logdir, datetime.now().strftime("%Y%m%d-%H%M") + ".log")
         prompt = AUTO_PROMPT.format(title=nxt.get("title") or cid, course_id=cid, expert=expert)
-        env = dict(os.environ, NOVIKONTAS_AUTO_BUILD="1")
+        env = unattended_env(NOVIKONTAS_AUTO_BUILD="1")
         with io.open(logf, "w", encoding="utf-8") as out:
             run = subprocess.run(claude_command(prompt), cwd=workspace.master_of(course), stdout=out, stderr=subprocess.STDOUT,
                                  text=True, encoding="utf-8", errors="replace", env=env, timeout=20 * 3600,
