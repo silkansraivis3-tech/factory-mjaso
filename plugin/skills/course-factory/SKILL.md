@@ -234,6 +234,9 @@ score. Begin from the module's ILO map rows (`ilo_map.py show`), the old course'
 knowledge base (`kb_tool.py search`). Before scripts are written in parallel, `STANDARDS.md` gets the course's
 `## Ship profile`.
 
+- **Taught before asked (L36, L71):** one `task-coverage-checker` agent per module, before the `fact-checker`, judges
+  every question against the slides before it (`task_cover.py`); approval is refused while one is unjudged, partly or
+  not covered.
 - **Proved (L4):** one `fact-checker` agent per module; approval is refused while a claim is unjudged or unproved.
 - **Checked:** the theory, slide-text, pictures-and-tasks and ILO-map checks head the review page; a must-fix blocks
   approval (`--despite-findings` only on the operator's word). Questions carry `"sub_ilo"`, and `"bloom"` + `"bloom_why"`
@@ -280,6 +283,8 @@ A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobod
   `--approve --by "<expert> (Ready in editor)"`, `content_script.py approve ... --by "<expert> (Ready in editor)"`; the
   build plan question takes its first option.
 - Never ask: a question goes to `working_claude/OPEN_EXPERT_QUESTIONS.md` with the choice made, and the build goes on.
+- Each script, before approval: the `task-coverage-checker`, then the `fact-checker`, each ending `fixes --apply`; a
+  question listed for the person goes to `OPEN_EXPERT_QUESTIONS.md`.
 - No paid pictures. Free sources first — Wikimedia Commons, DVIDS, USCG, NOAA, the old course, the knowledge base (the
   `visual-sourcer`; small ones enlarged) — then Nano Banana in the Gemini app if a signed-in browser is there
   (`gemini-browser`). `picture_briefs.py queue` / `place`. An unfilled space keeps its brief and does not stop the build.

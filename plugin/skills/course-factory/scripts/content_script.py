@@ -1890,6 +1890,43 @@ def proof_findings(course, script):
     return found
 
 
+def task_cover_findings(course, script):
+    """MUST, once the task-coverage-checker has started on a module (task_cover.py): every self-check and module-check
+    question judged against the slides before it, and none judged partly or not covered. The key-word check above stays
+    the cheap first filter; this one says whether the trainee could do the task from what was taught"""
+    if not course or str(script.get("module")).lower() == "final":
+        return []
+    import task_cover
+    st = task_cover.status(course, script.get("module"), script)
+    if not st["questions"]:
+        return []
+    if not st["started"]:
+        return [{"where": T(script, "s_the_module"), "screen": "", "field": "", "level": NOTE, "rule": "t_task_cover_not_run",
+                 "detail": T(script, "t_task_cover_not_run", m=script.get("module")), "fix": ""}]
+    found = [{"where": place(script, q), "screen": q, "field": "question", "level": FAIL, "rule": "t_task_not_covered",
+              "detail": T(script, "t_task_unjudged", m=script.get("module")), "fix": ""} for q in st["unjudged"]]
+    for q, verdict, missing in st["open"]:
+        found.append({"where": place(script, q), "screen": q, "field": "question", "level": FAIL, "rule": "t_task_not_covered",
+                      "detail": T(script, "t_task_not_covered", verdict=verdict.replace("_", " "), missing=missing[:160]), "fix": ""})
+    return found
+
+
+def task_cover_line(e, script, st, qid):
+    """the review page's line under a question: what the task-coverage check said about the theory before it"""
+    if not st or not st["started"] or not st["questions"]:
+        return ""
+    row = st["rows"].get(qid)
+    if not row:
+        return '<p class="note"><b>%s</b></p>' % e(T(script, "t_task_unjudged", m=script.get("module")))
+    if row["verdict"] == "covered":
+        return '<p class="note">%s</p>' % e(T(script, "s_task_covered", slides=", ".join(row.get("slides") or []),
+                                                quote=" / ".join(row.get("quote") or [])[:200]))
+    add = row.get("add") or {}
+    mend = "; ".join(x for x in (add and T(script, "s_task_add", slide=add["slide"], line=add["line"]), row.get("question", "")) if x)
+    return '<p class="note"><b>%s</b></p>' % e(T(script, "t_task_not_covered", verdict=row["verdict"].replace("_", " "),
+                                                  missing=row.get("missing", "")) + (" " + mend if mend else ""))
+
+
 def recap_findings(script):
     """L51 (owner, 2026-10-15) - every teaching module closes with ONE recap slide ("what to take away"),
     straight before the task slide that opens the module check: 3-6 points, one line each, read at a
@@ -2051,7 +2088,8 @@ def clauses(text):
 def all_findings(script, course=None):
     th, _ = theory_findings(script)
     return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script) \
-        + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script)
+        + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script) \
+        + task_cover_findings(course, script)
 
 
 def blocking(findings):
@@ -2437,6 +2475,8 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
     o.append('<div class="part"><h2>%s</h2><p class="note">%s</p></div>' % (e(T(script, "s_part2")), e(T(script, "s_part2_intro"))))
     if groups_of(script):
         o.append('<p class="note">%s</p>' % e(groups_line(script)))
+    import task_cover
+    cover = task_cover.status(course, script.get("module"), script) if course and str(script.get("module")).lower() != "final" else None
     for st in sets:
         opener = st["opened_by"]
         o.append('<h2>%s <span class="kind k-%s">%s</span></h2><p class="note">%s</p>' % (
@@ -2450,6 +2490,7 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
                 e(mech_label(mech(s), script.get("operator_language", "en"))),
                 ' <span class="grp">%s</span>' % e(T(script, "s_group", group=group_label(script, s))) if group_of(s) else "", e(s["id"])))
             o.append('<div class="tablet"><p><b>%s</b></p>%s</div>' % (V(s.get("question")), task_body(e, V, script, s)))
+            o.append(task_cover_line(e, script, cover, s["id"]))
             tn = taught_on.get(s["id"])
             o.append('<dl>%s<dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd>%s</dl></div>' % (
                 ("<dt>%s</dt><dd>%s</dd>" % (e(T(script, "s_correct")), e(s.get("correct", "")))) if uses(s, "options") else "",
