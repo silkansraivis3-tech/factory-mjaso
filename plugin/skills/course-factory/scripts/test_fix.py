@@ -20,6 +20,8 @@ each built from an approved content script so check_script_match passes before a
   * standard: numbered S1, S2 ... in working_claude\\STANDARDS.md, and listed;
   * sync-shared: a dry run changes nothing, --confirmed copies, a second run has nothing to do, shared.json
     sends a file elsewhere in the module, a .md beside the shared files is never copied;
+  * polish begin / check / end: a change that keeps the module passing is kept; one that makes the build fail, or
+    touches the approved words, is put back byte for byte; no round from a failed build, none past the time box;
   * measure_slides (only when Chrome or Edge is installed): a nearly empty slide has little ink, a 10 px
     slide's smallest text is under 16 px, an overflowing slide runs off the screen, at exactly 1280 x 800.
 """
@@ -433,6 +435,7 @@ def main():
             check("measure_slides finds a module's deck in presentation\\index.html",
                   ms.deck_of(os.path.dirname(d)) == os.path.abspath(os.path.join(d, "index.html")))
         regressions(os.path.join(tmp, "reg"))
+        polish(os.path.join(tmp, "polish"))
 
         print("\n-- a rebuild ends by putting the course into the training app's editor, unasked")
         import fix as fix_py
@@ -604,6 +607,102 @@ def regressions(tmp):
     check("every slide is reached by Next - the runner went in before the LAST </body>",
           not r.get("error") and not r.get("errors") and [s["id"] for s in sl] == ["empty", "tiny", "spill"]
           and all(s.get("steps", 0) >= 1 and not s.get("not_reached_by_next") for s in sl), r)
+
+
+# ---------------------------------------------------------------- the polish round after a PASS
+
+def polish(tmp):
+    import fix as fx
+    c = new_course(tmp)
+    wc = os.path.join(c, "working_claude")
+    logdir = os.path.join(wc, "_build")
+    os.makedirs(logdir)
+    spec = os.path.join(wc, "figures", "M01", "s01.kit.json")
+    os.makedirs(os.path.dirname(spec))
+    io.open(spec, "w", encoding="utf-8", newline="\n").write('{"labels": [{"text": "Tank", "dx": 0}]}\n')
+    sheet = os.path.join(wc, "script", "M01.build.json")
+    io.open(sheet, "w", encoding="utf-8", newline="\n").write('{"s01": {"figure": "s01.kit.json", "layout": "split"}}\n')
+    rec, ans = os.path.join(logdir, "M01_running.json"), os.path.join(logdir, "M01_answer.txt")
+
+    def answered(code, text):                       # what build_module.py leaves behind when it answers
+        io.open(rec, "w", encoding="utf-8").write(json.dumps({"exit": code, "args": [c, "--module", "1", "--no-course-pages", "--inner"]}))
+        io.open(ans, "w", encoding="utf-8").write(text)
+    answered(0, "PASS M01 - figures, compile + drawing check ...\n")
+    calls, answers = [], []
+
+    def fake_build(args):
+        calls.append(args)
+        code, text = answers.pop(0)
+        if code != 3:
+            answered(code, text)
+        return code, text
+    real = fx.polish_build
+    fx.polish_build = fake_build
+    script = cs.paths(c, 1)["script"]
+    try:
+        print("\n-- the polish round: a change is kept only while the module still passes")
+        touched = fx.polish_paths(c, "1")[-1]          # (also loads the compiler before stdout is captured below)
+        check("a polish change may touch the module folder, its build sheet, its figures and the approved script - all snapshotted",
+              {os.path.join(c, "modules", "module01"), sheet, os.path.dirname(spec), script, rec, ans} <= set(touched), touched)
+        code, out = fix("polish", "begin", c, "--module", "1", "--what", "label off the tank")
+        check("polish begin from a PASS takes the snapshot", code == 0 and "Snapshot of M01 taken" in out
+              and os.path.isdir(os.path.join(logdir, "M01_polish")), out)
+        io.open(spec, "w", encoding="utf-8", newline="\n").write('{"labels": [{"text": "Tank", "dx": 12}]}\n')
+        answers.append((0, "PASS M01 - figures ...\n"))
+        rc, out = quiet(fx.cmd_polish, c, "check", "1")
+        check("a good change is kept", rc == 0 and "KEPT" in out and '"dx": 12' in read(spec), out)
+        check("... checked by the same build command that passed, without its inner switches",
+              calls and calls[-1] == [c, "--module", "1", "--no-course-pages"], calls)
+        check("... and its snapshot is gone", not os.path.isdir(os.path.join(logdir, "M01_polish")))
+
+        before = {p: raw(p) for p in (spec, sheet, deck(c, 1), rec, ans)}
+        quiet(fx.cmd_polish, c, "begin", "1", "drawing too small")
+        io.open(spec, "w", encoding="utf-8", newline="\n").write('{"labels": [{"text": "Tank", "dx": 400}]}\n')
+        io.open(sheet, "w", encoding="utf-8", newline="\n").write('{"s01": {"figure": "s01.kit.json", "layout": "wide-left"}}\n')
+        io.open(deck(c, 1), "a", encoding="utf-8").write("<!-- rebuilt -->\n")
+        added = os.path.join(c, "modules", "module01", "assets", "new.png")
+        os.makedirs(os.path.dirname(added))
+        io.open(added, "w").write("x")
+        answers.append((1, "FAIL M01 - audits (12 s)\n  AUDITS s01 scrolls at 1024x768\n"))
+        rc, out = quiet(fx.cmd_polish, c, "check", "1")
+        check("a change that breaks a passing check is restored", rc == 1 and "RESTORED" in out and "FAIL M01 - audits" in out, out)
+        check("... the spec, the build sheet, the built deck and the build's PASS answer are byte-identical again",
+              all(raw(p) == b for p, b in before.items()), [p for p, b in before.items() if raw(p) != b])
+        check("... and a file the change added is gone", not os.path.exists(added))
+
+        quiet(fx.cmd_polish, c, "begin", "1", "tighter caption")
+        words = raw(script)
+        s = cs.load(script)
+        s["screens"][0]["title"] = "A better title"
+        cs.save(script, s)
+        n = len(calls)
+        rc, out = quiet(fx.cmd_polish, c, "check", "1")
+        check("a change to the approved words is restored without a build", rc == 1 and "approved words" in out
+              and len(calls) == n and raw(script) == words, out)
+
+        quiet(fx.cmd_polish, c, "begin", "1", "photo crop")
+        answers += [(3, "STILL BUILDING M01 ...\n"), (1, "FAIL M01 - course package (40 s)\nMODULE CLEAN - only the course package is left\n")]
+        rc, out = quiet(fx.cmd_polish, c, "check", "1")
+        check("a build still running: the check says so and keeps the snapshot", rc == 3 and "STILL BUILDING" in out
+              and os.path.isdir(os.path.join(logdir, "M01_polish")), out)
+        rc, out = quiet(fx.cmd_polish, c, "check", "1")
+        check("... the next check waits for it, and MODULE CLEAN counts as passing", rc == 0 and calls[-1][-1] == "--wait" and "KEPT" in out, out)
+
+        rnd = cs.load(os.path.join(logdir, "M01_polish.json"))
+        rnd["started"] -= (fx.POLISH_MINUTES + 1) * 60
+        cs.save(os.path.join(logdir, "M01_polish.json"), rnd)
+        rc, out = quiet(fx.cmd_polish, c, "begin", "1", "one more")
+        check("after the time box no new change starts", rc == 1 and "TIME BOX OVER" in out, out)
+        rc, out = quiet(fx.cmd_polish, c, "end", "1")
+        check("end sums up the round: kept and put back", rc == 0 and "2 change(s) kept, 2 put back" in out
+              and "kept: label off the tank" in out, out)
+
+        answered(1, "FAIL M01 - audits (12 s)\n")
+        rc, out = quiet(fx.cmd_polish, c, "begin", "1", "anything")
+        check("a module whose last build failed gets no polish round", rc == 2 and "did not answer PASS" in out
+              and not os.path.isdir(os.path.join(logdir, "M01_polish")), out)
+    finally:
+        fx.polish_build = real
 
 
 if __name__ == "__main__":

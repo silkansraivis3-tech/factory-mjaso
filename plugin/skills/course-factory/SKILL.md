@@ -283,9 +283,9 @@ A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobod
 - No paid pictures. Free sources first — Wikimedia Commons, DVIDS, USCG, NOAA, the old course, the knowledge base (the
   `visual-sourcer`; small ones enlarged) — then Nano Banana in the Gemini app if a signed-in browser is there
   (`gemini-browser`). `picture_briefs.py queue` / `place`. An unfilled space keeps its brief and does not stop the build.
-- Build every module, compile COURSE.html, run the checks, fix what they find - each helper agent on its model in
-  *Building* (a Sonnet builder per module, its judges and fixers on Opus). Never push to git; never write outside
-  the course folder.
+- Build every module, compile COURSE.html, run the checks, fix what they find, then each module's one polish round
+  (`compile/GUIDE.md` step 6) - each helper agent on its model in *Building* (a Sonnet builder per module, its judges,
+  fixers and polish on Opus). Never push to git; never write outside the course folder.
 - End with one line: `AUTO BUILD DONE`, `AUTO BUILD DONE - PICTURES PENDING: <n>` or `AUTO BUILD STOPPED: <why>`.
 
 **After an attended session** the course goes up unasked: `course_portal.py upload --course <course>` is the last step

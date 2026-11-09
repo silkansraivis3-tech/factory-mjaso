@@ -75,6 +75,9 @@ const agent = async (prompt, o) => {
   if ((args._scriptonly || []).indexOf(o.label.slice(3)) >= 0)  // only the operator can fix it (the approved script)
     return { module: o.label.slice(3), classification: 'A', blocking: true,
              findings: [{ severity: 'BROKEN', where: 'SCRIPT: s05', what: 'a Your turn activity counts 5 practice minutes' }] }
+  if ((args._polishonly || []).indexOf(o.label.slice(3)) >= 0)  // nothing BROKEN, one thing to polish
+    return { module: o.label.slice(3), classification: 'A', blocking: false,
+             findings: [{ severity: 'POLISH', where: 's02', what: 'the photograph is cut through the valve' }] }
   if (o.label.startsWith('qa:')) return { module: o.label.slice(3), classification: 'OK', blocking: false, findings: [] }
   if (o.label.startsWith('fix:')) return 'PASS - fixed'
   if (o.label.startsWith('read:')) return { modules: [] }
@@ -495,6 +498,34 @@ def main():
             card_lines = f.read().splitlines()
         check("... and the card stays a short read (the ~12,000 tokens of SKILL.md the builders no longer carry): under 110 "
               "lines", len(card_lines) < 110, len(card_lines))
+
+        # the polish round: after a PASS with nothing BROKEN left, one round on the best model, through fix.py polish
+        pp = six.get("prompts", {}).get("polish:1", "")
+        check("a module that passes with its BROKEN fixed gets ONE polish round after its QA, on opus at high effort",
+              l6.count("polish:1") == 1 and l6.index("polish:1") > l6.index("qa:1+fix")
+              and six.get("opts", {}).get("polish:1") == {"model": "opus", "effort": "high"}, l6)
+        check("... told its POLISH lines (never the BROKEN ones), most visible first, each change between fix.py polish begin "
+              "and check, ended with polish end",
+              "s05: a label could sit closer" in pp and "oxygen monitor" not in pp and "MOST VISIBLE FIRST" in pp
+              and "fix.py polish begin" in pp and "fix.py polish check" in pp and "fix.py polish end" in pp and "M01_POLISH.md" in pp, pp)
+        check("... the drawing ban is lifted only for the list's items; the approved words, outcomes and facts stay; no "
+              "build of its own",
+              "only for the items on this list, you may change a drawing the build did not name" in pp
+              and "never the approved\nscript" in pp and "never a learning outcome or a fact" in pp
+              and "Never run build_module.py yourself" in pp, pp)
+        check("... its report is kept with the module's result", ((six.get("r", {}).get("qa") or [None])[0] or {}).get("polish") == {},
+              six.get("r"))
+        check("a figure's POLISH line reaches the round once its BROKEN finding is fixed",
+              "FIGURE s03: a label could sit closer" in pf.get("polish:1", "") and "polish:2" not in lf, lf)
+        check("no polish round while a BROKEN finding is left (the operator's list), or with nothing to polish",
+              "polish:1" not in ls and not any(x.startswith("polish:") for x in labels + seven.get("labels", [])), ls)
+        po = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_polishonly": ["1"]})
+        check("a module that passed with only POLISH findings goes straight from QA to the polish round, no fix round",
+              po.get("labels", []).count("polish:1") == 1 and not any(x.startswith(("fix:", "fixbuild:")) for x in po.get("labels", []))
+              and "s02: the photograph is cut through the valve" in po.get("prompts", {}).get("polish:1", ""), po.get("labels"))
+        nopass = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_polishonly": ["1"], "_listed": ["1"]})
+        check("... and a module whose build never printed PASS gets none", "polish:1" not in nopass.get("labels", []),
+              nopass.get("labels"))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))

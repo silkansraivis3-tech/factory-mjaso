@@ -745,6 +745,45 @@ async function figures(m, only) {
   return { review: r }
 }
 
+/* ------------------------------------------------- THE POLISH ROUND (a module that passes, nothing BROKEN left) */
+/* the judges' POLISH lines, fixed on the best model in about ten minutes, most visible first, so fewer small flaws are left
+   for people to fix by hand; each change sits between fix.py polish begin (a snapshot) and check (the build again), and a
+   change that makes the module fail is put back by the script. What is left stays on the course office's list */
+const FIXPY = `${DIR || SCRIPTS}/scripts/fix.py`
+const polishOf = (fs, where) => (fs || []).filter((f) => f.severity === 'POLISH').map((f) => `${where(f)}: ${f.what}`)
+const polishList = (qs, fg, d3) => [...new Set([
+  ...qs.flatMap((q) => polishOf(q && q.findings, (f) => f.where)),
+  ...((fg && fg.review && fg.review.figures) || []).flatMap((x) => polishOf(x.findings, () => `FIGURE ${x.slide}`)),
+  ...polishOf(d3 && d3.review && d3.review.findings, (f) => `3D ${f.where}`)])]
+const polishRound = (m, items) => `THE POLISH ROUND of module ${m.id}. It passes and its BROKEN findings are fixed; make it look
+better in about ten minutes. ${CARD_AT} has the commands, the build sheet and the studio - its "do not polish" is the
+builder's rule, not yours.
+
+  Course folder:  ${A.course}
+  The list:       working_claude/review/M${two(m)}_POLISH.md and the judges' POLISH lines below
+
+Work down the list MOST VISIBLE FIRST - what a trainee sees on the classroom screen: a label off its part, a cramped
+caption, a drawing too small or lost in its panel, a badly cut photograph - ONE item at a time:
+
+    python ${FIXPY} polish begin "${A.course}" --module ${m.id} --what "<the item>"
+    make the change: the build sheet (layout, sizes, a photograph's crop), a figure spec (label positions, sizes, the crop,
+        placing - try it in the studio, at most six runs), a 3D scene's spec (camera, label anchors)
+    python ${FIXPY} polish check "${A.course}" --module ${m.id}
+        KEPT: the next item. RESTORED: the change made the module fail and was put back by the script - leave that item.
+        STILL BUILDING: the same check again. TIME BOX OVER (at begin): stop.
+
+Only here, and only for the items on this list, you may change a drawing the build did not name. Change only layout,
+sizing, placement, cropping and label positions - never a word the trainee or the instructor reads, never the approved
+script working_claude/script/M${two(m)}.json, never a learning outcome or a fact (polish check puts a changed script
+back). Never run build_module.py yourself: polish check runs it. Write only in the module folder, its build sheet and
+figures/M${two(m)}/. At the end: python ${FIXPY} polish end "${A.course}" --module ${m.id}, then take the KEPT items off
+M${two(m)}_POLISH.md - what is left stays there for the course office.
+
+POLISH lines:
+${items.map((x) => `  - ${x}`).join('\n')}
+
+Report: what polish end printed, word for word.${NOTES}`
+
 /* one module, start to finish: built (or its script written); then its judges AT THE SAME TIME - the 3D step, the figure
    step and QA judge the same built module and none changes it (2.72.5); ONE fix round for all their BROKEN findings; then
    only what was BROKEN is judged again, again at the same time. Never a second fix round (NOTHING LOOPS, 2.72.0): what is
@@ -824,6 +863,12 @@ async function oneModule(m) {
   if (out && fg) {                                   /* the figures' left-overs are the operator's list, not a module failure */
     const left = (fg.for_aleksis || []).map((f) => `FIGURE ${f.slide}: ${f.what}`)
     out = Object.assign({}, out, { figures: fg, for_aleksis: ((out.for_aleksis) || []).concat(left) })
+  }
+  const items = polishList([q, out], fga, d3a)
+  if (out && reachedPass && items.length && !fixable(out).length && !(out.for_aleksis || []).length
+      && !(d3 && (broken3d(d3).length || (d3.check && !d3.check.ok)))) {
+    const p = await place(() => agent(polishRound(m, items), { label: `polish:${m.id}`, phase: 'Build', ...JUDGEMENT }))
+    out = Object.assign({}, out, { polish: p })
   }
   return out && time ? Object.assign({}, out, { time }) : out
 }

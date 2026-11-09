@@ -61,6 +61,13 @@
       POLISH.md left inside it is moved there) for the operator - a fix to a drawing that already passes can break it again
       (IGF M02 s02: PASS, then four failed builds). Every BROKEN finding is fixed before hand-over, so the loop ends (M01
       benchmark: 6 open-ended review passes took 18 of 29 minutes).
+6  THE POLISH ROUND - once, after PASS (or MODULE CLEAN) with every BROKEN finding fixed, on the best model (opus), about
+      ten minutes: work down MNN_POLISH.md (and the figure and 3D reviews' POLISH lines) most visible first, one item at a
+      time - scripts/fix.py polish begin <course> --module 1 --what "<the item>", the change, then fix.py polish check
+      <course> --module 1: it builds again and, if the module no longer passes, puts the snapshot back by itself. Only
+      layout, sizing, placement, cropping and label positions; never the approved words, an outcome or a fact. Here, and
+      only for the items on the list, a drawing the build did not name may be changed. polish begin refuses after the time
+      box; then fix.py polish end <course> --module 1, the kept items off MNN_POLISH.md - the rest stays for the office.
    A FIGURE problem (from the build or the review): fix it in the studio, not in build after build -
       course-visuals\kit\scripts\studio.py <spec> --step all judges one figure at every step in seconds, on its real
       slide or task page (2.52.1). The build lists each finding's spec part ("[part TK1]") and those parts' numbers
