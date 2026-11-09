@@ -2596,9 +2596,16 @@ def words_of(script):
 
 
 def set_questions(script, code):
-    """how many questions the set a task slide opens holds"""
-    return len([q for q in script.get("screens", []) if q.get("kind") in cs.TASKS and
-                ((q.get("set") or "").strip() or {"self-check": "SC1", "module-check": "MC", "final": "FA"}.get(q["kind"], "")) == code])
+    """how many questions one trainee answers in the set a task slide opens: the questions for everyone plus their group's
+    (2.116.1, PM FINAL: 13 shared + 12 per group said "Questions: 37" beside "25 questions")"""
+    qs = [q for q in script.get("screens", []) if q.get("kind") in cs.TASKS and
+          ((q.get("set") or "").strip() or {"self-check": "SC1", "module-check": "MC", "final": "FA"}.get(q["kind"], "")) == code]
+    per = {}
+    for q in qs:
+        g = (q.get("group") or "").strip()
+        if g:
+            per[g] = per.get(g, 0) + 1
+    return len([q for q in qs if not (q.get("group") or "").strip()]) + max(per.values() or [0])
 
 
 def steps_body(lines):

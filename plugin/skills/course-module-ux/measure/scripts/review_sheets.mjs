@@ -320,6 +320,22 @@ window.__rv = (function(){
       for (i=0; i<want && plus; i++) plus.click();
       did = true;
     });
+    /* 2.116.1 (PM M01 q11T) - fill the table (fill_matrix): hold a palette value (.mxv), tap the cell (.mxc); a cell is right
+       when key(id, its data-at, its value) is its data-key. Wrong: the first cell gets another value */
+    var mxc = $$('.mxc', el), mxv = $$('.mxv', el);
+    if (mxc.length && mxv.length) {
+      var names = mxv.map(txt);
+      mxc.forEach(function(c, ci){
+        var at = c.getAttribute('data-at'), right = names.filter(function(n){ return key(id, at, n) === k(c); })[0];
+        var want = right;
+        if (!good && ci === 0) want = names.filter(function(n){ return n !== right; })[0] || right;
+        if (!want) return;
+        var b = mxv[names.indexOf(want)];
+        if (!b.classList.contains('sel')) b.click();
+        if ((c.getAttribute('data-v') || '') !== want) c.click();
+      });
+      did = true;
+    }
     return did;
   }
   /* 2.74.1 - the ten interactive types (gb_interact.js, .lab[data-lab]): each answered right or wrong from its own keys, as
