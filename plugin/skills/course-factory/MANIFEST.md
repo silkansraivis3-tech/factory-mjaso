@@ -7,6 +7,16 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.117.0 · The classroom files the tablet app imports (2026-11-09)
+
+- `scripts/classroom_files.py` writes `modules\classroom\prepare.json` and `modules\classroom\forms\<CODE>.json` from the
+  course's own data; `compile/scripts/additional_materials.py` `plan()` adds them to its output (kind `json`, so a build,
+  `--check` and the move-aside rule treat them like the HTML pages). `scripts/check_course_package.py` checks them with the
+  app's limits and form rules. Instructor-only: the app never copies `classroom/` to the trainees.
+- Form codes are global on the server (one template per code), so they lead with the course name and are cut to 40.
+- The app's Prepare tab reads `prepare.json` (release manifest); the course page's own "To get ready" box is `courses.prep_items`,
+  typed in admin, and is not filled from the package - see the report of this change.
+
 ## 2.115.0 · Each 2D figure composed for its slide (2026-11-09)
 
 - `compile/scripts/compile_module.py`: `kit2d_candidates` scores what a 2D slide's own lines can make (bars, time line,

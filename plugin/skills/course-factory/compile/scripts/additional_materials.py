@@ -914,6 +914,10 @@ def plan(course, infos, title, probs):
                 out.append((os.path.join(dd, t["stem"] + "_TRAINEE.docx"), "docx", card))
                 out.append((os.path.join(dd, t["stem"] + "_INSTRUCTOR.pdf"), "pdf", to_html("%s %s - %s" % (m["mid"], t["code"], t["title"]), doc)))
     out += kit(course, title, mods, days, root, probs)
+    # the instructor-only classroom files the tablet app reads on publish (classroom_files.py): the Prepare lists and the
+    # recorded runs' assessment forms - in the modules folder, beside _course_shell, never in additional-materials
+    import classroom_files as cf                      # here, not at the top: it reads this file's helpers only through the build
+    out += cf.files(course, title, infos, mods, il.load(course), il)
     if mods:
         out.append((os.path.join(root, "INDEX.html"), "html", to_html(W["index"], index_blocks(title, root, out, mods))))
     return out, mods, days
@@ -969,7 +973,7 @@ def build(course, infos, title, pdf=True, check=False, quiet=False):
     written, to_print, missing = [], [], []
     for path, kind, payload in out:
         k = key(path)
-        if kind == "html":
+        if kind in ("html", "json"):
             text = payload
             same = os.path.isfile(path) and read(path) == text
             if check:
