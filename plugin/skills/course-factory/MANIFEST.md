@@ -7,6 +7,12 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.116.0 · The 2D kit ships minified (2026-11-09)
+
+- `course-module-ui/scripts/minify_engines.py` makes `course-visuals/kit2d/min/kit2d.js` beside kit.js and kit3d.js;
+  `design_system.shipped_src` ships it while current. `test_compile_module.py` compares the module's kit2d.js with the
+  shipped copy, as it does for kit3d.js.
+
 ## 2.115.0 · Each 2D figure composed for its slide (2026-11-09)
 
 - `compile/scripts/compile_module.py`: `kit2d_candidates` scores what a 2D slide's own lines can make (bars, time line,

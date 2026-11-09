@@ -37,6 +37,11 @@
       return vals[k] == null ? '' : (typeof vals[k] === 'number' ? num(vals[k], dec) : vals[k]);
     });
   }
+  /* words that change with the story: a plain text, or {"pick": "@k", "of": [texts]} - the k-th (from 0) as the state is */
+  function pick(f, v) {
+    if (!v || typeof v !== 'object' || !v.of) { return v == null ? '' : String(v); }
+    return String(v.of[clamp(Math.round(f.target(v.pick, 0)), 0, v.of.length - 1)] || '');
+  }
   function pt(p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }
   function poly(ps, close) { return ps.map(function (p, i) { return (i ? 'L' : 'M') + pt(p); }).join(' ') + (close ? ' Z' : ''); }
   function Spring(x) { this.x = x; this.v = 0; }
@@ -394,7 +399,7 @@
           var box = d.createElement('div'); box.className = 'k2-read'; grid.appendChild(box);
           var s = d.createElement('span'); s.textContent = o.label; box.appendChild(s);
           var b = d.createElement('b'); box.appendChild(b);
-          var u = d.createElement('i'); u.textContent = o.unit || ''; box.appendChild(u);
+          var u = d.createElement('i'); u.textContent = o.words ? '' : o.unit || ''; box.appendChild(u);
           return { o: o, b: b };
         });
       }
@@ -402,7 +407,10 @@
     syncControls: function () { (this.ctl || []).forEach(function (c) { c.sync(); }); },
     readouts: function () {
       var f = this;
-      (f.reads || []).forEach(function (r) { r.b.textContent = num(f.get(r.o.value, 0) * (r.o.scale || 1), r.o.decimals); });
+      (f.reads || []).forEach(function (r) {
+        var v = f.get(r.o.value, 0), W = r.o.words;                /* words: ["Closed", "Open"] - the value picks one */
+        r.b.textContent = W ? W[clamp(Math.round(v), 0, W.length - 1)] : num(v * (r.o.scale || 1), r.o.decimals);
+      });
     },
 
     /* ---- its own step bar, outside a deck */
@@ -532,7 +540,7 @@
   });
 
   /* point - a dot on a curve at x, its drop lines and its values on both axes; drag: the state it writes.
-     {on: chart, curve, x: "@speed", tagx: "{x} kn", tagy: "{y} t/day", drag: "speed", show, ghost: {x, show, label}} */
+     {on: chart, curve, x: "@speed", tagx: "{x} kn" (false: none), tagy: "{y} t/day", drag: "speed", show, ghost: {x, show, label}} */
   define('point', function (f, p) {
     var C = f.charts[p.on], F = f.fns[p.curve].fn, cat = p.cat || 1, g = el('g', {}, f.L.front), gg = el('g', {}, f.L.front);
     var X = C.xaxis;
@@ -551,6 +559,7 @@
       ghost = { drop: el('path', { 'class': 'k2-drop' }, gg), dot: el('circle', { r: 9, 'class': 'k2-pt-ghost' }, gg), ty: tag(gg) };
     }
     var drop = el('path', { 'class': 'k2-drop' }, g), tx = tag(g), ty = tag(g);
+    if (p.tagx === false) { tx.g.style.display = 'none'; }        /* a second point at the same x: one x tag is enough */
     var dot = el('circle', { r: 10, 'class': 'k2-pt k2-c-' + cat }, g);
     var lastX = f.target(p.x, X.min), lastShow = f.target(p.show, 1), lastGhost = p.ghost ? f.target(p.ghost.show, 1) : 0;
     var self = {
@@ -565,10 +574,11 @@
         var x = f.get(p.x, X.min), y = F(x), px = C.X(x), py = C.Y(y), b = C.box;
         drop.setAttribute('d', 'M' + pt([b.x, py]) + ' H' + px.toFixed(1) + ' V' + (b.y + b.h).toFixed(1));
         dot.setAttribute('cx', px.toFixed(1)); dot.setAttribute('cy', py.toFixed(1));
-        tx.set(tpl(p.tagx || '{x}', { x: x }, p.dx == null ? 0 : p.dx), px, b.y + b.h + 24, 'middle');
+        if (p.tagx !== false) { tx.set(tpl(p.tagx || '{x}', { x: x }, p.dx == null ? 0 : p.dx), px, b.y + b.h + 24, 'middle'); }
         ty.set(tpl(p.tagy || '{y}', { y: y }, p.dy == null ? 0 : p.dy), b.x - 8, py, 'end');
         var shw = f.get(p.show, 1);
-        C.cover.push(['x', px, tx.w / 2 + 6, shw], ['y', py, ty.h / 2 + 10, shw]);
+        if (p.tagx !== false) { C.cover.push(['x', px, tx.w / 2 + 6, shw]); }
+        C.cover.push(['y', py, ty.h / 2 + 10, shw]);
         setOp(g, f.get(p.show, 1));
         if (ghost) {
           var gx = f.get(p.ghost.x), gy = F(gx), gpx = C.X(gx), gpy = C.Y(gy);
@@ -622,6 +632,78 @@
         var op = f.get(p.show, 1) * (Math.abs(pa - pb) > 4 ? 1 : 0);
         setOp(g, op); setOp(gf, op);
       }
+    };
+  });
+
+  /* trace - a route on a chart from point to point (a mixture changing, a state moving), drawn on with a bright tip;
+     a coordinate may be a state ("@left"), so a slider moves the route. Publishes x, y (the tip, in the chart's units).
+     {on: chart, pts: [[x, y], ...], cat, draw: "@d" (0..1), label, sub, side, labelAt (0..1 along the route, 1 if not given)} */
+  define('trace', function (f, p) {
+    var C = f.charts[p.on], cat = p.cat || 1, ps = [], dv = [], cum = [0];
+    var line = el('path', { 'class': 'k2-curve k2-c-' + cat, pathLength: 1, 'stroke-dasharray': '0 1' }, f.L.hero);
+    var tipGlow = el('circle', { r: 16, 'class': 'k2-tip-glow k2-f-' + cat }, f.L.hero), tip = el('circle', { r: 6.5, 'class': 'k2-tip' }, f.L.hero);
+    function geo() {
+      var i; dv = p.pts.map(function (q) { return [f.get(q[0], 0), f.get(q[1], 0)]; });
+      ps = dv.map(function (q) { return [C.X(q[0]), C.Y(q[1])]; }); cum = [0];
+      for (i = 1; i < ps.length; i++) { cum.push(cum[i - 1] + Math.hypot(ps[i][0] - ps[i - 1][0], ps[i][1] - ps[i - 1][1])); }
+    }
+    function along(k) {                                       /* the point and the value a fraction k of the way along */
+      var N = ps.length - 1, L0 = k * cum[N], j = 1; while (j < N && cum[j] < L0) { j++; }
+      var t = clamp((L0 - cum[j - 1]) / Math.max(1e-6, cum[j] - cum[j - 1]), 0, 1);
+      return { px: [lerp(ps[j - 1][0], ps[j][0], t), lerp(ps[j - 1][1], ps[j][1], t)], v: [lerp(dv[j - 1][0], dv[j][0], t), lerp(dv[j - 1][1], dv[j][1], t)] };
+    }
+    geo();
+    f.line(function () {                                     /* short pieces, so a slanting route keeps words off itself only */
+      var q = [ps[0]], i, j, n; for (i = 1; i < ps.length; i++) { n = Math.max(1, Math.ceil((cum[i] - cum[i - 1]) / 28));
+        for (j = 1; j <= n; j++) { q.push([lerp(ps[i - 1][0], ps[i][0], j / n), lerp(ps[i - 1][1], ps[i][1], j / n)]); } }
+      return f.get(p.draw, 1) > 0.05 ? q : [];
+    });
+    var L = p.label ? f.label({ text: p.label, sub: p.sub, at: function () { return along(p.labelAt == null ? 1 : p.labelAt).px; }, side: p.side || 'upleft',
+      show: function () { return f.get(p.draw, 1) > 0.9 ? 1 : 0; } }) : null;
+    return {
+      calc: function () {
+        geo(); var k = clamp(f.get(p.draw, 1), 0, 1), a = along(k);
+        f.publish(p.id, 'x', a.v[0]); f.publish(p.id, 'y', a.v[1]);
+        f.publish(p.id, 'path', k > 0.02 ? ps.slice(0, 1).concat(sample(k)) : []);
+      },
+      draw: function () {
+        var k = clamp(f.get(p.draw, 1), 0, 1), a = along(k).px, on = k > 0.005 && k < 0.995 ? 1 : 0;
+        line.setAttribute('d', poly(ps)); line.setAttribute('stroke-dasharray', k.toFixed(4) + ' 1'); setOp(line, k > 0.003 ? 1 : 0);
+        tip.setAttribute('cx', a[0].toFixed(1)); tip.setAttribute('cy', a[1].toFixed(1)); setOp(tip, on);
+        tipGlow.setAttribute('cx', a[0].toFixed(1)); tipGlow.setAttribute('cy', a[1].toFixed(1)); setOp(tipGlow, on * 0.35);
+      }
+    };
+    function sample(k) { var q = [], j; for (j = 1; j <= 40; j++) { q.push(along(k * j / 40).px); } return q; }
+  });
+
+  /* region - an area on a chart (a flammable zone, a safe envelope), its edge dashed; it lights when a drawn route
+     crosses it and publishes hit (1 or 0), so a callout can say what that means.
+     {on: chart, pts: [[x, y], ...], cat, label, sub, labelPt: [x, y] (where the words point; the top corner if not given), show, hit: [trace ids]} */
+  define('region', function (f, p) {
+    var C = f.charts[p.on], cat = p.cat || 4, g = el('g', {}, f.L.back), ps = p.pts.map(function (q) { return [C.X(q[0]), C.Y(q[1])]; });
+    var d = poly(ps) + ' Z', hit = 0, glow = 0;
+    var fill = el('path', { d: d, fill: f.url('solid-cat-' + cat), opacity: 0.35 }, g);
+    el('path', { d: d, 'class': 'k2-c-' + cat, fill: 'none', 'stroke-width': 3, 'stroke-dasharray': '9 7', 'stroke-linejoin': 'round' }, g);
+    var top = p.labelPt ? [C.X(p.labelPt[0]), C.Y(p.labelPt[1])] : ps.reduce(function (a, b) { return b[1] < a[1] ? b : a; });
+    if (p.label) { f.label({ text: p.label, sub: p.sub, at: function () { return top; }, side: p.side || 'upright', show: function () { return f.get(p.show, 1) > 0.5 ? 1 : 0; } }); }
+    function inside(q) {
+      var c = false, i, j;
+      for (i = 0, j = ps.length - 1; i < ps.length; j = i++) {
+        if ((ps[i][1] > q[1]) !== (ps[j][1] > q[1]) && q[0] < (ps[j][0] - ps[i][0]) * (q[1] - ps[i][1]) / (ps[j][1] - ps[i][1]) + ps[i][0]) { c = !c; }
+      }
+      return c;
+    }
+    return {
+      calc: function () {
+        hit = (p.hit || []).some(function (id) { return ((f.out[id] || {}).path || []).some(inside); }) ? 1 : 0;
+        f.publish(p.id, 'hit', hit);
+      },
+      draw: function (dt, snap) {
+        glow = snap ? hit : glow + (hit - glow) * Math.min(1, (dt || 0) * 8);
+        fill.setAttribute('opacity', (0.3 + 0.45 * glow).toFixed(3));
+        setOp(g, f.get(p.show, 1));
+      },
+      live: function () { return Math.abs(hit - glow) > 0.01; }
     };
   });
 
@@ -783,11 +865,21 @@
   });
 
   /* ===== WORDS =============================================================================================== */
-  /* callout - words for a place, beside it with a leader when they must go further. {at: [x, y], text, sub, side, show} */
+  /* callout - words for a place, beside it with a leader when they must go further. {at: [x, y], text, sub, side, show}
+     - text and sub may change with the story: {"pick": "@k", "of": [...]} */
   define('callout', function (f, p) {
-    f.label({ text: p.text, sub: p.sub, at: function () { return p.at; }, side: p.side, dist: p.dist, lead: p.lead,
+    var t0 = pick(f, p.text), s0 = pick(f, p.sub);
+    var L = f.label({ text: t0, sub: p.sub ? s0 : null, at: function () { return p.at; }, side: p.side, dist: p.dist, lead: p.lead,
       show: p.show != null ? function () { return f.get(p.show, 1); } : null });
-    return {};
+    if (!(p.text && p.text.of) && !(p.sub && p.sub.of)) { return {}; }
+    return {
+      draw: function () {
+        var t = pick(f, p.text), sb = pick(f, p.sub), n = L.t.childNodes;
+        if (t === t0 && sb === s0) { return; }
+        t0 = t; s0 = sb; n[0].textContent = t; if (n[1]) { n[1].textContent = sb; }
+        f.relayout = true;
+      }
+    };
   });
 
   /* ===== CONCEPTS ============================================================================================ */
@@ -1371,8 +1463,9 @@
   });
 
   /* events - things that happened along a time line: each comes in as the cursor reaches it, above and below the
-     line in turn. {x, y, w, start, end, step, tick: "{v}", clock (the times are minutes after midnight, shown as 02:10),
-     events: [{at, label, sub, cat}], cursor: "@t", cursorTag: "{v}"} */
+     line in turn; words that would touch the last ones on their side go a lane further out. {x, y, w, start, end, step,
+     tick: "{v}", clock (the times are minutes after midnight, shown as 02:10), events: [{at, label, sub, cat}], cursor:
+     "@t", cursorTag: "{v}", stem, lane (px between lanes, 58)} */
   define('events', function (f, p) {
     function clock(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return (m < 600 ? '0' : '') + Math.floor(m / 60) + ':' + (m % 60 < 10 ? '0' : '') + m % 60; }
     var x0 = p.x, y0 = p.y, W = p.w, t0 = p.start, t1 = p.end, E = p.events || [], g = el('g', {}, f.L.back), t, ticks = [];
@@ -1390,11 +1483,32 @@
       el('path', { d: 'M' + ex + ' ' + y0 + ' V' + (y0 + (up ? -len : len)), 'class': 'k2-stem' }, eg);
       el('circle', { cx: ex, cy: y0, r: 11, 'class': 'k2-outline' }, eg);
       el('circle', { cx: ex, cy: y0, r: 8, fill: f.url('solid-cat-' + cat) }, eg);
-      var tg = el('g', { 'text-anchor': 'middle' }, eg), ty = y0 + (up ? -len - 12 : len + 24);
-      el('text', { x: ex, y: ty - (up && e.sub ? 22 : 0), 'class': 'k2-t-lbl k2-halo' }, tg, e.label || '');
-      if (e.sub) { el('text', { x: ex, y: ty + (up ? 0 : 22), 'class': 'k2-t-sub k2-halo' }, tg, e.sub); }
-      return { e: e, g: eg, x: ex, y: ty };
+      var stem = eg.firstChild, tg = el('g', { 'text-anchor': 'middle' }, eg), ty = y0 + (up ? -len - 12 : len + 24);
+      var tl = el('text', { x: ex, y: ty - (up && e.sub ? 22 : 0), 'class': 'k2-t-lbl k2-halo' }, tg, e.label || '');
+      var ts = e.sub ? el('text', { x: ex, y: ty + (up ? 0 : 22), 'class': 'k2-t-sub k2-halo' }, tg, e.sub) : null;
+      return { e: e, g: eg, x: ex, y: ty, up: up, stem: stem, tl: tl, ts: ts, tg: tg };
     });
+    /* lanes: each event takes the nearest free place - its own side, else the other side, else a lane further out -
+       so words close in time never sit on each other */
+    function lanes() {
+      var base = p.stem || 92, gap = p.lane || 58, last = { true: [], false: [] };
+      evs.forEach(function (o, i) {
+        var b = o.tg.getBBox(), half = b.width / 2 + 10, pref = i % 2 === 0, lane, side, k;
+        for (k = 0; k < 2 * evs.length; k++) {
+          lane = k >> 1; side = k % 2 ? !pref : pref;
+          if (last[side][lane] == null || last[side][lane] <= o.x - half) { break; }
+        }
+        if (side !== o.up) {                                   /* the words change side: they hang below or stand above */
+          o.up = side; o.tg.setAttribute('text-anchor', 'middle');
+        }
+        last[side][lane] = o.x + half;
+        var len = base + lane * gap, ty = y0 + (o.up ? -len - 12 : len + 24);
+        o.stem.setAttribute('d', 'M' + o.x + ' ' + y0 + ' V' + (y0 + (o.up ? -len : len)));
+        o.tl.setAttribute('y', ty - (o.up && o.ts ? 22 : 0)); if (o.ts) { o.ts.setAttribute('y', ty + (o.up ? 0 : 22)); }
+        o.y = ty;
+      });
+    }
+    lanes(); (f.fits = f.fits || []).push(lanes);
     var cur = el('g', {}, f.L.front), cg = el('circle', { r: 22, 'class': 'k2-marker-glow' }, cur), cm = el('circle', { r: 10, 'class': 'k2-marker' }, cur);
     var ctag = p.cursorTag ? el('text', { 'text-anchor': 'middle', 'class': 'k2-t-note k2-halo' }, cur) : null;
     f.solid(function () { return { x: x0, y: y0 - 8, x2: x0 + W, y2: y0 + 40 }; });
@@ -1408,7 +1522,7 @@
         if (ctag) { ctag.textContent = tpl(p.cursorTag, { v: tc }, 0); ctag.setAttribute('x', cx2.toFixed(1)); ctag.setAttribute('y', y0 + 60); }
         evs.forEach(function (o, i) {
           var k = clamp((tc - o.e.at) / ((t1 - t0) * 0.03) + 1, 0, 1);
-          setOp(o.g, k); o.g.setAttribute('transform', 'translate(0 ' + ((1 - k) * (i % 2 ? 14 : -14)).toFixed(1) + ')');
+          setOp(o.g, k); o.g.setAttribute('transform', 'translate(0 ' + ((1 - k) * (o.up ? -14 : 14)).toFixed(1) + ')');
           if (k > 0.5 && !seen[i]) { seen[i] = 1; f.pulse(o.x, y0, { r: 34 }); } else if (k < 0.1) { seen[i] = 0; }
         });
       }
@@ -1455,7 +1569,8 @@
   });
 
   /* person - someone in the story (a role at work: master, officer, sponsor), drawn simply with depth, a name under
-     them, and what they say in a bubble that a step brings in. {x, y (feet), scale, name, role, cat, say, sayShow,
+     them, and what they say in a bubble that a step brings in. {x, y (feet), scale, name, role, cat, say (or {"pick":
+     "@k", "of": [lines]} - a new line each step), sayShow,
      side: "right" | "left" (where the bubble goes), show, lit} */
   define('person', function (f, p) {
     var x = p.x, y = p.y, k = p.scale || 1, cat = p.cat || 1, g = el('g', {}, f.L.hero), inner = el('g', {}, g);
@@ -1484,7 +1599,8 @@
       el('path', { d: bd, 'class': 'k2-bubble' }, bub);
       var bt = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-face' }, bub);
       holds(bub, bo);
-      (f.fits = f.fits || []).push(function () { wrapText(bt, p.say, bx + bw / 2, by + bh / 2, bw - 30); });
+      var said = pick(f, p.say), sayNow = function () { wrapText(bt, said, bx + bw / 2, by + bh / 2, bw - 30); };
+      (f.fits = f.fits || []).push(sayNow);
       f.solid(function () { return { x: bx, y: by, x2: bx + bw, y2: by + bh + 26 }; });
       bub.__o = [bx + bw / 2, by + bh];
     }
@@ -1494,6 +1610,8 @@
       draw: function (dt, snap) {
         setOp(g, f.get(p.show, 1)); setOp(nm, f.get(p.show, 1)); setOp(lit, clamp(f.get(p.lit, 0), 0, 1));
         if (bub) {
+          var nowSaid = pick(f, p.say);                          /* a new line: the bubble pops with it */
+          if (nowSaid !== said) { said = nowSaid; sayNow(); if (!snap) { sp.x = 0.3; } }
           moving = sp.go(f.target(p.sayShow, 1), dt, snap);
           var s2 = clamp(f.get(p.sayShow, 1), 0, 1), sc = 0.6 + 0.4 * Math.max(0, sp.x), o = bub.__o;
           bub.setAttribute('transform', 'translate(' + o[0] + ' ' + o[1] + ') scale(' + sc.toFixed(3) + ') translate(' + (-o[0]) + ' ' + (-o[1]) + ')'); setOp(bub, s2);
