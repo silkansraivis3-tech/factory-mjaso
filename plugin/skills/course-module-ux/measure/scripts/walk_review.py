@@ -129,6 +129,12 @@ def figure_why(course, module):
                 if isinstance(e, dict) and (e.get("why") or e.get("why_text")):
                     out[sid] = (e.get("why", ""), e.get("why_text", ""))
             break
+    # 2.116.1 - the reason may live in the figure's own spec (figures/MNN/sNN.kit.json, .kit2d.json, .kit3d.json)
+    for spec in sorted(glob.glob(os.path.join(_work(course), "working_claude", "figures", mid(module), "*.kit*.json"))):
+        sid = os.path.basename(spec).split(".")[0]
+        s = load_json(spec) or {}
+        if sid not in out and isinstance(s, dict) and (s.get("why") or s.get("why_text")):
+            out[sid] = (s.get("why", ""), s.get("why_text", ""))
     return out
 
 

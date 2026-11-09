@@ -47,6 +47,8 @@ def _moves(step):
 
 def _differs(initial, steps):
     """some state value differs between stops (the spec's own state, then each step's "set"/"state")"""
+    if any(isinstance(st, dict) and st.get("play") for st in steps):
+        return True            # 2.116.1 - a kit step that plays changes the drawn values itself (no redundant "set" needed)
     now = dict(initial or {})
     seen = {k: {repr(v)} for k, v in now.items()}
     for st in steps:

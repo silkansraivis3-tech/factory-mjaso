@@ -57,6 +57,13 @@ KIT2D = """(id) => { const s = document.getElementById(id); if (!window.KIT2D ||
   return { idle: fs.every(f => f.idle()), found: [].concat.apply([], fs.map(f => KIT2D.audit(f))) }; }"""
 
 
+# 2.116.1 - a figure on the slide in front still drawing a step (kit: a frame loop or a line being laid; 2D kit: not idle)
+BUSY = """(id) => { const s = document.getElementById(id); if (!s) { return false; }
+  const kit = [].slice.call(s.querySelectorAll('[data-kit]')).some(h => { const f = h.__kit; return f && f !== 'bad' && (f.raf || f.laying); });
+  const k2 = !!(window.KIT2D && KIT2D.figures.some(f => s.contains(f.host) && !f.idle()));
+  return kit || k2; }"""
+
+
 # 2.115.0 - a figure with steps that does not change on any Next is a dead drawing (PM M02 s12, s13: the chart stayed an empty
 # axis on every Next). Its state at a stop: a hash of what it drew.
 KITSTATE = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
@@ -155,6 +162,12 @@ def walk(page, deck, min_shown, shots=None, record=None):
             step = at[r["id"]] = at.get(r["id"], 0) + 1
             seqs.setdefault(r["id"], []).append(page.evaluate(CURSIG, r["id"]))
             if shots is not None:
+                # 2.116.1 - the walk shot waits for the figure to stop moving (PM M02 s07-s12 were shot half-drawn)
+                for _ in range(20):
+                    if not page.evaluate(BUSY, r["id"]):
+                        break
+                    page.wait_for_timeout(250)
+                page.evaluate(SETTLE)
                 try:
                     name = "%s_k%d.png" % (r["id"], step)
                     save_shot(page, r["id"], Path(shots) / name)
