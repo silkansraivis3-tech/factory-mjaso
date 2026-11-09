@@ -7,8 +7,9 @@ Agreed with the owner on 2026-11-06. Short on purpose: what a slide picture may 
 1. **Interactive 3D - 60-80 % of the teaching slides (L67).** Equipment from the 3D kit (`kit3d`). Ideas from new
    **3D concept scenes**: blocks, stacks, rings, scales, a pyramid, a triangle, a timeline track, people figures -
    turned and tapped like any scene, changed on Next.
-2. **The other 20-40 %:** a static 3D render, a photograph, an AI picture, or a designed 2D concept figure.
-3. **Designed 2D concept figure** - allowed for ideas, and universal: trade-off triangle, cycle, matrix, pyramid,
+2. **The other 20-40 %:** a static 3D render, a photograph, an AI picture, or a 2D-kit figure. Which picture a slide
+   gets is the picture rule (`course-visuals` SKILL.md, L67).
+3. **2D-kit figure** - for pipe and valve systems, flows, processes, charts and ideas, and universal: trade-off triangle, cycle, matrix, pyramid,
    timeline, compare, flow, cause and effect, hierarchy, bars. One hero shape that fills the box, depth from
    gradient, light and one shadow, thick strokes, words beside the shape never on it, and the shape itself changes
    on Next.

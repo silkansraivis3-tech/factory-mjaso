@@ -4,13 +4,13 @@
     "Title": "the screen's title or question - script title / question",
     "Text": "approved words that teach - script text and the template's own fields",
     "Info": "what the room reads at a glance - chips, numbers, a table, readings, a list to tick, the choices' marks",
-    "Picture": "a photograph or a static 3D render - build sheet figure; never a flat line drawing (L67)",
+    "Picture": "a photograph, a static 3D render or a 2D-kit figure - build sheet figure; never the old flat line drawing (L67)",
     "Animation": "something that moves by itself - a simulator screen, a clock, a meter, a flow",
     "3D": "a live 3D scene the room turns - build sheet figure (*.kit3d.json)"
   },
   "rules": [
     "pick by the information: the first blueprint whose 'for' matches it (script/GUIDE.md section 1 says how to write its fields)",
-    "never the same look twice in a row (L62); 60-80 % of a module's slides with interactive 3D; no flat drawings (L67)",
+    "never the same look twice in a row (L62); each picture by the picture rule (L67, course-visuals SKILL.md)",
     "a task screen: the factory picks the Navy or the white theme so neighbouring screens do not repeat",
     "a self-check of five: three of the richest tasks (3D, animation, a control panel), two basic (match, order, choose)",
     "a picture beside words comes in four boxes - text-wide 40 %, even 45 %, picture-wide 58 %, picture-large 65 % of the width (layout-templates.json \"boxes\"): the compiler gives the picture the box its names need and the words what is left, in parts when they do not fit; a picture no box beside its words can show goes on the stage alone or is made another kind of picture (in steps, a 3D model with names on tap) - never squeezed. A build sheet may name one: \"box\""

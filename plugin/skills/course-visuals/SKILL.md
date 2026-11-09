@@ -106,6 +106,29 @@ missing, and a missing image is never closed by inventing a schematic.
 
 ---
 
+## The picture rule - L67
+
+This is the one place the rule is written; the law, the script guide and the templates point here.
+
+> **For each slide, pick the picture that shows what the slide teaches.**
+> - **Interactive 3D** (`kit3d/`) where the shape, the inside or the layout of a thing matters - tanks, pumps,
+>   compressors, cutaways, a deck layout.
+> - **A real photograph** where the trainee must recognise the real thing (L52).
+> - **A 2D-kit figure** (`kit2d/`, the universal 2D) for pipe and valve systems, flows, processes, charts and other
+>   diagrams.
+> - **Never the old flat SVG illustration** - the figure kit's line drawing (`kit/`) is kept only for a control screen
+>   the trainee reads (an HMI).
+>
+> 60-80 % of a module's teaching slides are interactive 3D; the rest static 3D, photographs and 2D-kit figures, mixed
+> in so that never more than 3 interactive 3D slides come in a row. Under 60 % or over 80 % is a must-fix
+> (`content_script.py`, `check_course_package.py`), and so is a fourth 3D slide in a row (`content_script.py`); the
+> numbers are `course-factory/knowledge/media-and-tasks.json` → `three_d`. The share is reached by finding the slides
+> whose lesson is a thing's shape, inside or layout - never by turning a procedure, a flow or a chart into 3D; a module
+> whose subject cannot reach it keeps another share only as the operator's recorded design choice (`three-d-share`).
+> Fewer than half the teaching slides with a real photograph is a suggestion, never a block.
+
+---
+
 ## Pick the mode, then read one lane
 
 | Mode — what the task actually is | Read |
@@ -235,9 +258,9 @@ original manual → recognised technical body → other credible source. **Not**
 scraped image sites or blogs. Record source, origin, rights, relevance, intended use, whether
 modification is permitted, whether attribution is required. **Legally usable assets are downloaded
 and packaged locally** — the tablet has no network and the app 403s every external host.
-**4 CREATE** — **from the figure kit first (L55).** Anything with topology, labels, state, flow or
-sequence is a kit spec, `NAME.kit.json` in `working_claude/figures/MNN/` (`kit/SPEC.md`), never a
-one-off SVG; a part the kit lacks is made into the kit (below). **A 3D model is a 3D-kit spec**,
+**4 CREATE** — **from the kits first (L55).** Anything with topology, labels, state, flow or
+sequence is a kit spec in `working_claude/figures/MNN/`, never a one-off SVG; which kit is the picture
+rule's (above); a part a kit lacks is made into the kit (below). **A 3D model is a 3D-kit spec**,
 `sNN.kit3d.json` (`kit3d/SPEC.md`, `kit3d/PARTS.md`; made from the nine hand-made IGF scenes): parts in metres,
 labels on the parts, steps the deck's Next walks - full screen, clickable labels, the build-ahead and the poster
 come with it; never a hand-written three.js file per slide. **A 2D figure is a 2D-kit spec**, `sNN.kit2d.json`
@@ -321,10 +344,9 @@ blue glow, the camera frames it, its name shows; a second tap or a tap beside pu
 the ones the labels name. A scene that only turns is not finished (`media-and-tasks.json` → `three_d.interaction`;
 reference: IGF M03 `m03_station3d.js`).
 
-**3D: on fewer slides, never at a lower quality, and smooth (L46, owner 2026-10-07).** At most half of a
-presentation's teaching slides are 3D, and only where a shape, an inside or a layout in space is the lesson - never a
-chart, a symbol, a document, an idea, or 3D only because it can be. The cap is on how many, never how good: each 3D
-scene that stays is made at full quality and built to `course-factory/knowledge/media-and-tasks.json` →
+**3D: never at a lower quality, and smooth (L46, owner 2026-10-07).** 3D only where a shape, an inside or a layout in
+space is the lesson - never a chart, a symbol, a document, an idea, or 3D only because it can be; how many is the
+picture rule's (above). Each 3D scene is made at full quality and built to `course-factory/knowledge/media-and-tasks.json` →
 `three_d.performance`, where the speed comes from how the scene runs: one shared renderer for the deck; the scene
 built when its slide comes up and disposed two slides later (two alive at most); no frame drawn while nothing moves or
 is touched; soft shadows kept, and worked out once while the model is still (`shadowMap.autoUpdate = false`); the

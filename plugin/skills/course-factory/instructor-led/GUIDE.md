@@ -104,6 +104,6 @@ Any change afterwards makes it unapproved again (`status` says so), and the prac
 
 - The final test on the trainees' phones, and the assessment form filled on the instructor's tablet: the training app's.
 - A must-pass question failing a candidate: the final's marking is the app's.
-- "No decorative photos": against L52 (as many real photographs as possible) and L67 (3D or a photograph on every slide) -
+- "No decorative photos": against L52 (as many real photographs as possible) and L67 (the picture rule) -
   a decision for the owner, until then a by-hand item.
 - Counting a tablet task as a practical hour (R7): the factory never moves the programme's hours (L1, L49).

@@ -153,7 +153,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   Each template's slots and what fills them, in one line: `course-module-ui/knowledge/blueprints.json`.
   A picture and a short explanation, two pictures, numbered steps and three parts of one system keep the templates
   they had (`compile/GUIDE.md` §2, §2h). Never the same look twice in a row (L62) - two claims or two scenarios side
-  by side are a problem; 60-80 % of the slides with interactive 3D; no flat drawings (L67). A drill comes after the
+  by side are a problem; each picture by the picture rule (L67, `course-visuals` SKILL.md). A drill comes after the
   module's last teaching slide; minutes are the module's as before (L1). `content_script.py` checks each shape
   (`shape_problems`). Beside a picture a scenario's situation holds 60 words and its question, choices and whys 85;
   a worked example's lines and question 85 (`theory-rules.json` `beside_picture`, `t_overfull`) - an active slide's
@@ -161,9 +161,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 - **3D and AI pictures - planned unasked (2.49.0, operator 2026-10-16: "make it so they add 3D + AI generated photos
   when needed").** Before the review page is shown, plan them yourself - the operator never has to ask:
   - **3D:** where a slide's lesson is a shape, an inside or a layout in space (a tank and its barriers, a space and
-    what is around it, a pipe between its valves), set its `visual_kind` to `model_3d` and describe the scene in
-    `visual`. 60-80 % of the teaching slides are interactive 3D (L67) - a procedure becomes the place it is done in, an
-    idea becomes a scene that shows it; the rest a static 3D render or a photograph; never a real photo replaced, full quality.
+    what is around it, a pump or a compressor), set its `visual_kind` to `model_3d` and describe the scene in
+    `visual`. How many and which is the picture rule (L67, `course-visuals` SKILL.md): a procedure, a flow or a chart is
+    never turned 3D to reach the share; never a real photo replaced, full quality.
   - **AI picture:** where a slide sets a scene or a situation that no real photograph shows (people at work, an
     operation, an incident) - `ai_illustration`; (2.73.2) equipment too, first generated, then fixed. Planning it is
     free; the pictures are made within the course's one approved budget (nano-banana, L47).
@@ -247,10 +247,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 - **No quota** (2.18.1): wherever a picture, an animation or a realistic 3D illustration can show what the slide
   teaches, put it in. A slide with none, a long module where nothing moves, few kinds of picture - these come
   back as suggestions, never blocks; nothing is added only for variety (L13).
-- **3D: 60-80 % of the teaching slides, at full quality** (L67 replaces L46's cap of half). Between 60 and 80 % of the
-  presentation's teaching slides are `model_3d`, `model_3d_scan` or `model_3d_licensed` (must fix once a module has 3
-  teaching slides; the operator may keep another share as a design choice). The rest are a static 3D render or a
-  photograph, never the figure kit's flat drawing. Each 3D model is a main picture: true proportions, real materials,
+- **3D by the picture rule, at full quality** (L67, `course-visuals` SKILL.md). Its share counts `model_3d`,
+  `model_3d_scan` and `model_3d_licensed` once a module has 3 teaching slides; the operator may keep another share as
+  a design choice. Each 3D model is a main picture: true proportions, real materials,
   labels, a cut-open view where the inside is taught. The built slide carries the kind as `data-visual="model_3d"`, so the finished deck is counted too.
 
 On every **task question**, `"mechanic"` is how the trainee answers. `single_choice`, `multi_select`

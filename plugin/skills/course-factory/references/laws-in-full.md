@@ -253,7 +253,7 @@ as a Sub-ILO under it"* — not a refusal, and not an essay.
 
 **The design** — how the course looks and behaves on the screen: the brand's colours, typeface and logo use, the
 shell and its components, layouts and slide modes, animation, the recap slide and the picture viewer (L51), text
-size and free space (L50), the 3D share (L46). The list, each with the risk to say, is `knowledge/design-rules.json`.
+size and free space (L50), the 3D share (L67). The list, each with the risk to say, is `knowledge/design-rules.json`.
 Here the person decides:
 
 1. Nothing conflicts → do it. No question.
@@ -561,7 +561,7 @@ picture, an animation or a realistic 3D illustration has to show what is being t
 picture, a long module where nothing moves, few kinds of picture - these are **suggestions** on the review pages, never
 blocks. A picture that is named must still say what it shows, and nothing is added only for variety (L13). The task
 rules of L38 stay rules; the final assessment follows the programme's own format and none of them applies to it.
-*(Owner, 2026-10-07, 2.22.0: 3D is now capped at half of a module's pictures, and only where it makes sense - L46.)*
+Which picture a slide gets, and the 3D share, is the picture rule (L67, `course-visuals` SKILL.md).
 
 **L39 · Who tests where: colleagues in a browser, the owner on the tablet, at the end.**
 *"The real tablet test will be at the end, because only I can do that for now; my colleagues will not be able to.
@@ -737,24 +737,14 @@ slide, and every result reaches the instructor and the admin panel."*
   no back button and the classroom shows the answers in the debrief; a task moves only between its own steps and
   never sends the frame to another file or opens a window. `check_course_package.py` refuses both.
 
-**L46 · 3D where it makes sense - at most half of a module's pictures - and smooth on the tablet.** *(Its share is L67's since 2.110.0: 60-80 % interactive 3D; the cap of half is gone.)*
-*"Now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it
-makes sense. And it lags a little in these 3D models, maybe optimisation can be considered - but mainly I love these 3D
-models, just cut it a little."* - the owner, 2026-10-07, after the pilot's first modules (in Module 2, nineteen of twenty
-figures were 3D). And the same day: *"I also don't need you to cut the quality of 3D models - don't make it in all slides,
-about 50% of the presentation is the max that can be 3D models, but also don't cut quality, and put it only on slides
-where it makes sense, not only because you can."*
+**L46 · 3D where it makes sense - at full quality, and smooth on the tablet.** *(Its share is L67's: the picture rule, `course-visuals` SKILL.md.)*
 
-- **At most half.** At most half of the presentation's teaching slides are 3D - a factory model, a scan or a licensed
-  model. Counted once a module has two 3D slides or more. A must-fix in the content script (`v_3d_share`) and in the built
-  deck, where every `.slide` carries `data-visual` with its approved kind; the architecture page counts the plan
-  (`p_3d_many`). More than two 3D slides in a row is a suggestion.
 - **Only where it makes sense.** 3D is for equipment and structures whose shape, inside or arrangement in space is what is
   taught - tanks and containment, hull sections and spaces, pumps, compressors, valves, manifolds, piping, the
   reliquefaction plant, an enclosed space - and for what the trainee must later recognise or operate on board. Not for
   charts, curves, tables and matrices, symbols and documents, ideas such as Swiss cheese or the steps of a risk
   assessment, or decoration. A 3D slide whose description sounds flat gets a suggestion (`v_3d_flat`).
-- **The cap is on how many, never on how good.** Every 3D model that stays is made at full quality, with the care of a
+- **Never a lesser look.** Every 3D model that stays is made at full quality, with the care of a
   main picture: true proportions, real materials, soft light and shadows, clear labels, a cut-open view where the
   inside is taught, a starting view that already shows the point.
 - **Smooth on the tablet - without a lesser look.** The speed comes from how the scenes run, not from fewer details:

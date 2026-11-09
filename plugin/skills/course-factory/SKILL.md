@@ -134,7 +134,7 @@ L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with i
 | **L64** | **A module in 30-40 min, its fixes in 20** — the pre-check first (`precheck.py`); a rebuild is a fix (`fix.py rebuild`) |
 | **L65** | **A drawing that moves stays smooth** (`audit_motion.js`) |
 | **L66** | **Every item a simulator can train is trained on one** (`coverage/SIMULATORS.md`, `sim_coverage.py check`) |
-| **L67** | **A slide's picture is 3D or a photograph, never a flat line drawing; every slide moves on Next** — 60-80 % of a module's teaching slides are interactive 3D, the rest a static 3D render or a photograph (`content_script.py` and `check_course_package.py` stop outside it; `gb_upgrade.css`, `gb_steps.js`) |
+| **L67** | **Each slide gets the picture that shows what it teaches - the picture rule (`course-visuals` SKILL.md); every slide moves on Next** — interactive 3D, a photograph or a 2D-kit figure, never the old flat SVG illustration; 60-80 % of the teaching slides interactive 3D, never more than 3 in a row (`content_script.py` and `check_course_package.py` stop outside it; `gb_upgrade.css`, `gb_steps.js`) |
 | **L68** | **The Instructor-Led Course Development Guideline** — active means every trainee commits to an output; a passive run at most 15 min and 20 % of theory, or a one-line reason (`instructor-led/GUIDE.md`, `instructor_led.py check`) |
 | **L69** | **The experts get the pedagogy first** — Bloom now, Bloom proposed and the activities, before any script (`pedagogy_review.py`, `bloom/GUIDE.md` §5) |
 | **L70** | **Built after the expert's Ready** — the office PC builds unattended; see *Auto build* |

@@ -422,12 +422,33 @@ def main():
         check("caught: no team or member scope", any("\"scope\": \"team\"" in x for x in pb), pb)
         check("caught: the module check as a team task - each trainee answers it alone", any("t02" in x and "answered by each trainee alone" in x for x in pb), pb)
 
-        print("\n-- L67: 60-80 % of the teaching slides step through interactive 3D")
+        print("\n-- L67, the picture rule: 60-80 % of the teaching slides interactive 3D, never more than 3 in a row")
         share = lambda sc: [x for x in cs.media_findings(sc) if x["rule"] == "v_3d_share"]
+        row = lambda sc: [x for x in cs.media_findings(sc) if x["rule"] == "v_3d_in_a_row"]
         check("the test module: two 3D slides of three (67 %) are fine", not share(SCRIPT), share(SCRIPT))
         one = copy.deepcopy(SCRIPT)
         screen(one, "s02")["visual_kind"] = "chart"
         check("... one of three is too few - must be fixed", share(one) and share(one)[0]["level"] == cs.FAIL, share(one))
+
+        def slides_of(kinds):
+            """the test module with its teaching slides replaced by these, in order ("3" interactive 3D, "p" a photograph)"""
+            sc = copy.deepcopy(SCRIPT)
+            sc["screens"] = [x for x in sc["screens"] if x.get("kind") != "slide" or x.get("recap")]
+            sc["screens"][0:0] = [dict(screen(SCRIPT, "s02"), id="s%02d" % (10 + i), visual_kind="model_3d" if k == "3" else "photo")
+                                  for i, k in enumerate(kinds)]
+            return sc
+        half, seventy, ninety, four = slides_of("3p3p3p3p3p"), slides_of("33p333p33p"), slides_of("333p333333"), slides_of("3333p333pp")
+        check("five of ten in 3D (50 %) - must be fixed", share(half) and share(half)[0]["level"] == cs.FAIL
+              and "asks 60-80 %" in share(half)[0]["detail"], share(half))
+        check("seven of ten in 3D (70 %), never more than 3 in a row - clean", not share(seventy) and not row(seventy),
+              share(seventy) + row(seventy))
+        check("nine of ten in 3D (90 %) - must be fixed", share(ninety) and share(ninety)[0]["level"] == cs.FAIL, share(ninety))
+        check("seven of ten in 3D (70 %) with four in a row - must be fixed, on the fourth",
+              not share(four) and len(row(four)) == 1 and row(four)[0]["level"] == cs.FAIL and row(four)[0]["screen"] == "s13"
+              and "s10, s11, s12, s13" in row(four)[0]["detail"], row(four))
+        tsk = slides_of("3333p333pp")
+        tsk["screens"][3:3] = [dict(screen(SCRIPT, "t01"), id="t09")]
+        check("... a task slide between 3D slides breaks the run", not row(tsk), row(tsk))
         d3 = copy.deepcopy(SCRIPT)
         for x in ("s01", "s02", "s03"):
             screen(d3, x)["visual_kind"] = "model_3d"
@@ -435,7 +456,7 @@ def main():
         f3 = {x["rule"]: x for x in cs.media_findings(d3)}
         check("three slides of three in 3D is over 80 % - must be fixed", f3.get("v_3d_share", {}).get("level") == cs.FAIL
               and "3 of the 3" in cs.T(dict(d3, operator_language="en"), "v_3d_share", n=3, tot=3, pct="100", min="60", max="80"), f3.get("v_3d_share"))
-        check("... three in a row is not flagged: 60-80 % makes runs normal", "v_3d_in_a_row" not in f3, f3.get("v_3d_in_a_row"))
+        check("... three in a row is not flagged: at most 3 in a row", "v_3d_in_a_row" not in f3, f3.get("v_3d_in_a_row"))
         check("... a 3D model of a chart is a suggestion: it is flat", f3.get("v_3d_flat", {}).get("level") == cs.NOTE and f3["v_3d_flat"]["screen"] == "s02", f3.get("v_3d_flat"))
         two = copy.deepcopy(one)
         screen(two, "s01")["visual_kind"] = "model_3d_scan"
