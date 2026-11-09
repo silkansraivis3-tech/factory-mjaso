@@ -20,7 +20,7 @@ Checks, runnable individually with --only:
   deadmarkup  SKILL.md §13 — ids nothing reads, CSS classes no markup uses.
   numbers     SKILL.md §10 — totals computed and never painted (heuristic).
   floor       SKILL.md §11 — type / tap sizes that RESOLVE below the floor at
-              --viewport (default 800x1280). Resolves all three clamp() dials;
+              --viewport (default 1280x800). Resolves all three clamp() dials;
               see §11.1. SVG font-size and em/%/calc/var are deferred to the
               probe rather than guessed.
   kbd         SKILL.md §5  — a page with text fields loads the escape engine.
@@ -50,7 +50,7 @@ import tempfile
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 FLOOR_TEXT_PX = 12.5
-FLOOR_TAP_PX = 44.0
+FLOOR_TAP_PX = 56.0
 
 CHECKS = ("syntax", "deadmarkup", "numbers", "floor", "kbd", "states")
 
@@ -707,9 +707,8 @@ def main(argv=None):
     ap.add_argument("--only", action="append", default=[], choices=CHECKS)
     ap.add_argument("--viewport", default="1280x800", metavar="WxH",
                     help="target viewport for resolving vw/vh/clamp in the floor "
-                         "check (default 1280x800, the classroom's landscape WebView since 2.21.0 - L45; "
-                         "the old app's 800x1280 portrait tablet is the one this standard "
-                         "was ruled for). A different device re-measures its floor — "
+                         "check (default 1280x800, the classroom's landscape WebView - L45). "
+                         "A different device re-measures its floor — "
                          "SKILL.md, 'the delivery target is a parameter'.")
     ap.add_argument("--quiet", action="store_true",
                     help="print findings only, no per-check headings")
@@ -734,7 +733,7 @@ def main(argv=None):
     js = sorted(set(js) | set(collect(args.js, {".js"})))
     vp = re.match(r"^(\d{2,5})\s*[xX×]\s*(\d{2,5})$", args.viewport.strip())
     if not vp:
-        print("error: --viewport must look like 800x1280, got %r" % args.viewport,
+        print("error: --viewport must look like 1280x800, got %r" % args.viewport,
               file=sys.stderr)
         return 2
     roots = [os.path.abspath(p) for p in args.paths + args.css + args.js]

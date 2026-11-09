@@ -86,7 +86,7 @@
   "accessibility_and_tablet": {
     "reduced_motion": "any screen with an infinite animation must honour prefers-reduced-motion: reduce by stopping ambient motion. Teaching animation may remain, because it is content - but it must not autoplay under reduced motion.",
     "offscreen": "animation pauses when its screen is not visible. A loop running behind a slide the class is not on burns battery and desynchronises a replay.",
-    "controls": "play/pause/step/replay are touch targets >= 44 px",
+    "controls": "play/pause/step/replay are touch targets >= 56 px",
     "no_hover": "no animation may be triggered only by hover"
   }
 }

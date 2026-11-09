@@ -216,7 +216,7 @@ Fixtures for the last two are in `scripts/fixtures/`. Run them if you change the
 | Hours, ILOs, build order | `course-factory` |
 
 `novikontas-brandbook` owns the company's identity — Raleway, the logo, the corporate palette.
-This skill owns what that becomes on a projected 1366×768 screen and an 800×1280 tablet. Where
+This skill owns what that becomes on a projected 1366×768 screen and a 1280×800 tablet. Where
 they overlap, the brandbook wins on brand colour and typeface; this skill wins on everything
 the brandbook has no opinion about, which is most of a deck.
 

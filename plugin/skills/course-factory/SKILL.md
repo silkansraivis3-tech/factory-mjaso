@@ -73,7 +73,7 @@ L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with i
 | **L3** | **Official hours never changed to fit a schedule**; no attendance, contact time or compliance record is ever made up |
 | **L4** | **No source, no maritime claim.** Never fill a gap from memory; a stated gap is a good answer. Every claim proved in the course's knowledge base by the `fact-checker` before approval (`fact_check.py`) |
 | **L5** | **Theory delivered as active learning** — aim for 80 % learner-active minutes (Track B, `data-active`); the programme's theory/practice split (Track A, `data-track`, `check_balance.py`) never changes; theory is never removed; never reach the target by renaming screens |
-| **L6** | **Tablet-first, touch-first, offline** — targets ≥ 44 px, no hover-only control, nothing at class time needs a network |
+| **L6** | **Tablet-first, touch-first, offline** — targets ≥ 56 px, no hover-only control, nothing at class time needs a network |
 | **L7** | **Nothing is useless until you have grepped** its id, class, label and filename across both terminals, the course and every generated script |
 | **L8** | **Explain and relocate; do not delete** on a complaint. When the operator tells you to remove something, remove it (after L7) |
 | **L9** | **Edit; do not regenerate** a stable artefact |
@@ -164,7 +164,7 @@ L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with i
 | **edit** | make the content or structure change the operator named — **do it** (L26) | `retrofit/knowledge/routing.json` § edit_triggers; once built, check it as a fix |
 | **fix** | correct **built** modules — one, some or all; also a rebuild of one (`fix.py rebuild`) (L50) | `fix/GUIDE.md` and nothing else |
 | **restyle** | one **narrow** cosmetic change and nothing else | `retrofit/knowledge/routing.json` § restyle |
-| **ship** | put an **approved** course onto the terminals | `tablet/GUIDE.md`; `course-tablet-publisher` does it |
+| **ship** | put a built course into the training app | `scripts/course_portal.py upload` - a draft release in the staging editor, which the office publishes (L70); `tablet/GUIDE.md` |
 | **audit** | check a course against the programme and the terminals | `coverage/GUIDE.md`, then the lanes' verify sections |
 | **orchestrate** | build a WHOLE course, one agent per module | `orchestration/GUIDE.md` |
 

@@ -41,7 +41,7 @@
 .gi-stage{position:relative;overflow:hidden;border-radius:var(--r-l);background:radial-gradient(ellipse at 50% 30%,var(--gi-navy-3) 0%,var(--gi-night-2) 75%);
   min-height:420px;height:calc(100vh - 330px);max-height:560px}
 .gi-bar{position:absolute;left:12px;bottom:12px;z-index:3;display:flex;gap:6px}
-.gi-bar button{width:54px;height:54px;border-radius:14px;border:1px solid var(--gi-edge-l);background:var(--gi-scrim-2);color:var(--txt-d);
+.gi-bar button{width:56px;height:56px;border-radius:14px;border:1px solid var(--gi-edge-l);background:var(--gi-scrim-2);color:var(--txt-d);
   font-size:22px;font-weight:700}
 
 /* the sheet that slides up over a lab */
@@ -278,7 +278,7 @@
 .at-e1{fill:var(--gi-white);stroke:var(--blue);stroke-width:5}
 .at-dl{fill:var(--txt-d);font:700 17px var(--mono)}
 .at-lv{position:absolute;right:12px;top:150px;display:flex;flex-direction:column;gap:8px}
-.at-lv button{min-width:130px;min-height:54px;border-radius:12px;border:1px solid var(--gi-edge-l);background:var(--gi-scrim-3);color:var(--txt-d);font:inherit;font-weight:700;font-size:15px}
+.at-lv button{min-width:130px;min-height:56px;border-radius:12px;border:1px solid var(--gi-edge-l);background:var(--gi-scrim-3);color:var(--txt-d);font:inherit;font-weight:700;font-size:15px}
 .at-side{display:flex;flex-direction:column;gap:10px;min-width:0}
 .at-meter{padding:12px;border-radius:24px;background:linear-gradient(var(--gi-gold),var(--gi-gold-d));box-shadow:0 14px 30px var(--gi-shade)}
 .at-scr{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 10px;padding:10px 12px;border-radius:14px;background:var(--gi-lcd-bg);color:var(--gi-lcd);font-family:var(--mono)}

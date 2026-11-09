@@ -8,6 +8,7 @@ course-task-ux/assets/gb_answer.js. Judged on inline JS alone the page was "trap
   * a task page that loads gb_answer.js is not trapped (the engine is read from the page's own assets folder);
   * the same page with the engine file missing from disk is still not trapped (a known shared engine, by name);
   * a page with no script and no link out is still trapped; so is one loading an unknown script with no way out.
+  * a navigation control under 56 px is below the tap floor; one of 56 px is not.
 """
 from __future__ import annotations
 
@@ -65,6 +66,14 @@ def main():
         open(other, "w", encoding="utf-8").write(PAGE % '<script src="../assets/other.js"></script>')
         code, out = run(other)
         check("an unknown script that offers no way out does not rescue it", code == 1 and "trapped" in out, out)
+
+        for px, bad in ((52, True), (56, False)):
+            sized = os.path.join(tmp, "tasks", "t4_%d.html" % px)
+            open(sized, "w", encoding="utf-8").write((PAGE % '<script src="../assets/gb_answer.js"></script>\n').replace(
+                "</head>", "<style>.cbtn{min-height:%dpx}</style></head>" % px))
+            code, out = run(sized)
+            check("a navigation control of %d px is %s the 56 px tap floor" % (px, "under" if bad else "on"),
+                  ("below the 56px floor" in out) == bad, out)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

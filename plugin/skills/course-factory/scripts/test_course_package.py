@@ -128,8 +128,9 @@ def docs_part():
     note = (re.search(r'"_default_branch_note":\s*("(?:[^"\\]|\\.)*")', raw) or re.search("()", "")).group(1)
     note = json.loads(note) if note else ""
     pub = text(SKILLS, "course-tablet-publisher", "SKILL.md")
-    check("the publisher says a course reaches the tablets through the admin '+' and the assets\\ pull request is legacy",
-          "LEGACY" in note and "'+' upload" in note and "LEGACY for courses" in pub and "**+** upload" in pub, note)
+    check("the publisher says a course reaches the tablets through course_portal.py upload and the assets\\ pull request is legacy",
+          "LEGACY" in note and "course_portal.py upload" in note and "LEGACY for courses" in pub
+          and "course_portal.py upload" in pub and "**+** upload" not in pub, note)
 
 
 def main():

@@ -43,7 +43,7 @@ activity — self-check, explain-then-reveal (no typing), predict-then-reveal, w
 attempt (owner, 2026-09-30). Active means every trainee commits to an output before anyone speaks (L68, R4). → `course-factory`
 
 **L6 · Tablet-first, touch-first, offline.**
-An 800×1280 portrait finger target first, then landscape, then the projector. Targets ≥ 44 px, no
+A 1280×800 landscape finger target first, then the projector. Targets ≥ 56 px, no
 hover-only affordance, ES5 in shared engines, nothing at class time depends on a network.
 → `course-module-ux`, `course-task-ux`
 
@@ -418,8 +418,8 @@ numbered standard and is never repaired again. The full sign-off stays for build
 → `course-factory` (`fix/GUIDE.md`, `knowledge/fix-rules.json`, `scripts/fix.py`, `scripts/measure_slides.py`, 2.29.0)
 
 **L51 · Every picture opens full screen, and every module closes with the same recap.** Owner, 2026-10-15: every
-picture, illustration and explanatory image can be tapped to full screen and closed again; each module ends in its
-module check, and before it a beautiful summary - animated boxes, the main points to take away - with the same closing
+picture, illustration and explanatory image can be tapped to full screen and closed again; each module's module check
+is second to last (the hand-off screen is last), and before it a beautiful summary - animated boxes, the main points to take away - with the same closing
 design in every module. One shared viewer, `gb_zoom.js` / `gb_zoom.css`, on every page that shows a picture (tap opens;
 X, tap outside, Esc, swipe down, Back or the next slide closes; pinch, double-tap or + / − zoom; a ⤢ corner button
 where the trainee answers on the picture). Full screen shows a photograph's own record under it - the part of a

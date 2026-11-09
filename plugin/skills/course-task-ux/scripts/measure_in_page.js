@@ -22,8 +22,8 @@
    display:none, zero-size nodes are skipped, and a genuinely collapsed control
    can hide inside that exemption.
 
-   WHAT A NEW COURSE CHANGES: FLOOR below, if its device is not an 800 x 1280
-   portrait tablet. Re-measure the floor; do not inherit it.
+   WHAT A NEW COURSE CHANGES: FLOOR below, if its device is not a 1280 x 800
+   landscape tablet. Re-measure the floor; do not inherit it.
 
    Plain ES5, no dependencies.
    ========================================================================== */
@@ -32,7 +32,7 @@
 
   var FLOOR = {
     text: 12.5,          /* px, anything a trainee reads */
-    tap: 44,             /* px, both dimensions */
+    tap: 56,             /* px, both dimensions */
     contrast: 4.5,       /* :1 normal text */
     contrastLarge: 3.0,  /* :1 >=24px, or >=18.66px bold */
     minViewport: 320     /* below this, refuse — the pane is not laid out */

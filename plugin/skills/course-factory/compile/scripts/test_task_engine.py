@@ -1892,6 +1892,9 @@ def framed_part(exe, tmp):
           and 'src="../assets/gb_lab.js"' in fr and os.path.isfile(os.path.join(md, "assets", "gb_lab.js")), fr[:600])
     check("... its words are the course's: the places, the faults, the choices - none of the template's own sample",
           "The gangway" in fr and "Rig a safety net under it" in fr and "acetylene" not in fr and "{{" not in fr)
+    lab = io.open(os.path.join(md, "assets", "gb_lab.js"), encoding="utf-8").read() if os.path.isfile(frame) else ""
+    check("... answered once: its result offers no Start again, in the classroom's frame or out of it",
+          lab and "Start again" not in lab and "location.reload" not in lab)
     data = json.loads(re.search(r'id="task-data">(.*?)</script>', fr, re.S).group(1).replace("<\\/", "</")) if fr else {}
     check("... and no right answer is readable in the page: no mark on a choice, only its key", data and "*" not in json.dumps(data)
           and all(len(f["key"]) == 8 for f in data.get("faults", [])), data)

@@ -214,7 +214,7 @@ Load order: `gb_tokens.css` → `gb_page.css` → `gb_task.css`. Behaviour is `c
 |---|---|
 | `.state` → `.part`, `.got`, `.bar` (with `i`) | the sticky state bar: which part, how many right, progress |
 | `.q` (`.num`, `.stem`), `.stem` | the question and its number |
-| `.opts` of `.opt` | the answer buttons, ≥ 52 px |
+| `.opts` of `.opt` | the answer buttons, ≥ 56 px |
 | `.opt` states `sel`, `right`/`ok`, `wrong`/`no`, `dim` | **set by the engine** — selected, correct, wrong, greyed out |
 | `.why` (+ `good` / `bad`, engine adds `on`) | the explanation of why it was right or wrong — the feedback that teaches |
 | `.sub` | the full-width 56 px confirm button (not a subtitle) |

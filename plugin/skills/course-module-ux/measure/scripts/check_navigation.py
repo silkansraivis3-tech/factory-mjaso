@@ -17,7 +17,7 @@ Checks
                         `.gbn-back` and no hrefless `#gb-home` declaring it
                         deliberately has none (Android hardware Back exits the
                         app when none is present)
-  5  tap-size           a navigation control below the 44 px floor
+  5  tap-size           a navigation control below the 56 px floor
 
   python check_navigation.py <file-or-dir> [...] [--strict] [--json]
 
@@ -33,7 +33,7 @@ import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-MIN_TAP = 44
+MIN_TAP = 56
 
 # ids the engines conventionally drive, and what each one is for
 NAV_IDS = {

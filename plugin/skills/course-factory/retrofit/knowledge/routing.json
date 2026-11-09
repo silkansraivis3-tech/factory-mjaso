@@ -6,7 +6,7 @@
     "retrofit": "the course content exists as a built module. Keep the content; rebuild the delivery.",
     "restyle": "the operator has named a NARROW cosmetic change and nothing else. Do that and stop.",
     "edit": "the operator names a content, structure or emphasis change - add, remove, split, merge, move, reword, keep, more or fewer of something. Do it as asked (L26). It is not a restyle (it is not only cosmetic) and not a retrofit (the rest of the module stays as it is). On a module that is already built, the same change is done in the fix lane (2.65.0, fix_triggers._built).",
-    "ship": "a built course goes onto the two terminals.",
+    "ship": "a built course goes into the training app: course_portal.py upload imports it into the staging editor as a draft release, and the office publishes it there (L70).",
     "audit": "check an existing course against the programme and the terminals; change nothing.",
     "fix": "the modules are already built and the operator wants something corrected in several or all of them - 'the last slide in every module', 'find the same free space in the others', 'text bigger everywhere'. Find every place at once, one list, one yes, change, one check (L50, fix/GUIDE.md). Not a retrofit (the modules stay as they are) and not one edit at a time. Since 2.65.0 also ONE module that is already built: a rebuild of it (fix.py rebuild - a newer factory, a changed build sheet) or one named change in it - the owner: 'when I want to rebuild or fix something, it does not go through the same thing, it goes through the fix process'."
   },
