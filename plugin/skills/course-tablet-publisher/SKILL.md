@@ -11,8 +11,9 @@ description: >
   PROACTIVELY when a course-building session has produced trainee tasks, decks, handouts
   or assessments and the next step is getting them onto the tablets. It sorts every file
   into trainee / instructor / shared / internal, refuses to publish if instructor-only
-  material, a credential, a developer address or a missing asset would ship, registers
-  the course, and publishes on a branch for review. Course-agnostic; GAS BASIC is only
+  material, a credential, a developer address or a missing asset would ship, and hands the
+  course to the training app's staging editor as a draft release that the office publishes
+  (course_portal.py upload). Course-agnostic; GAS BASIC is only
   the reference. NOT a course designer - never rewrites ILOs, content, answers or
   maritime facts (course-factory, novikontas-*), never redesigns screens
   (course-module-ux, course-task-ux).
@@ -23,14 +24,14 @@ description: >
 > **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
 > in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
 
-> **The classroom system (L45, owner 2026-10-05) - how a course reaches the tablets now.** The online classroom takes
-> a whole course folder through its admin panel's **+** upload; that is the way a course goes onto the tablets. Its
-> rules are `course-factory/knowledge/classroom-system.json`, and its importer is copied here unchanged:
-> `vendor/package-core.mjs` (from `tablet-system-win/admin/package-core.mjs`), run by `vendor/import_check.mjs`.
-> `course-factory/scripts/check_course_package.py` runs it before a course is handed over.
-> **The flow below - a branch and a pull request into the Android app's `assets\` - is LEGACY for courses** (2.60.0):
-> it is kept for the app's own files and for the sorting and leak gates, which still apply; never send a course that
-> way unless the owner asks for it.
+> **How a course reaches the tablets (L45, L70).** `course-factory/scripts/check_course_package.py` checks the whole
+> course folder against the classroom's rules (`course-factory/knowledge/classroom-system.json`) and its importer,
+> copied here unchanged: `vendor/package-core.mjs`, run by `vendor/import_check.mjs`. Then
+> `course-factory/scripts/course_portal.py upload --course <course>` imports it into the staging training app's editor
+> as a draft release (`course_import.mjs` - the same upload as the admin panel's Import page); the office publishes it
+> there. **The flow below - a branch and a pull request into the Android app's `assets\` - is LEGACY for courses**
+> (2.60.0): it is kept for the app's own files and for the sorting and leak gates, which still apply; never send a
+> course that way unless the owner asks for it.
 
 **v1 (2026-09-08) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
@@ -44,9 +45,12 @@ maritime facts, no "improving" an answer key, no redesigning an approved screen.
 is wrong, say so and stop — do not fix it under the heading of publishing it.
 
 ```
-working course → PREVIEW → (a person approves) → validate → package/register
-    → git branch → pull request → shared default branch → owner builds the APK
+built course → check_course_package.py → course_portal.py upload → draft release in the staging editor
+    → the office publishes it
 ```
+
+The legacy flow, only when the owner asks for it: PREVIEW → (a person approves) → validate → package/register → git
+branch → pull request → shared default branch → owner builds the APK.
 
 **Three states, and only one of them may write to the Android project.** A course is in
 PREVIEW by default and stays there until a human says, in their own words, that it is ready.
@@ -85,10 +89,10 @@ name. When the platform changes, that file changes — not the scripts, and not 
 |---|---|
 | "let me see it", "how does it look", "review this course", "open it in the browser" | **PREVIEW** — `scripts/preview.py --course <folder> --open`. Never touches the Android project. |
 | "make this module better", "fix the tasks", "redesign module 1" | **course work, not publishing.** The Android project stays READ ONLY. Route to `course-factory`. |
-| "Approved. Publish this course", "send it to the training app" | the **publish flow** below, with `--approved-by` |
-| "publish / sync / package this course", "ready for tablets" | the **publish flow** below |
-| "add a NEW course to the platform" | `references/course-package.md` first, then the publish flow |
-| "will this pass?", "check it without publishing" | the publish flow, dry run only — stop after step 3 |
+| "Approved. Publish this course", "send it to the training app", "publish / sync / package this course", "ready for tablets" | `course-factory/scripts/course_portal.py upload --course <course>` - a draft release in the staging editor; the office publishes it there |
+| "add a NEW course to the platform" | `course-factory/scripts/course_portal.py create --course <course>` first, then `upload` after its build |
+| "will this pass?", "check it without publishing" | `course-factory/scripts/check_course_package.py` |
+| the owner asks for the legacy branch flow, or the app's own files change | the **publish flow** below (`--approved-by`; a dry run stops after step 3) |
 | "why isn't the platform generic yet?" | `course_identity_surface` in `knowledge/platform.json` |
 | how a course must be BUILT (hours, ILOs, decks, screen craft) | **not here.** `course-factory`, `course-module-ux`, `course-task-ux` |
 

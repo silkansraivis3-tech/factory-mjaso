@@ -191,7 +191,7 @@ on the machine, in which case the browser console is the only syntax check you h
 
 Open the module page, press Start, and press Next to the end. It is one page, so this is a
 minute's work and it is the acceptance criterion. Every screen must be actionable without
-opening anything, and the last one must be the module check.
+opening anything; the module check must be second to last, with the hand-off screen last.
 
 ---
 

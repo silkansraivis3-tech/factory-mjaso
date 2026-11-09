@@ -48,7 +48,7 @@ answered by the caption alone with the motion removed, ship the caption and a st
 | **Why does it change?** | |
 | **What should the learner notice?** | |
 | **What should they understand afterwards, that they did not before?** | |
-| Controls | play / pause / step / replay, all ≥ 44 px |
+| Controls | play / pause / step / replay, all ≥ 56 px |
 | Resting state readable? | |
 | Misconception it corrects (if any) | |
 
@@ -99,7 +99,7 @@ table.
 
 ## 6 · Tablet risks flagged at storyboard time
 
-Anything expected to be tight on 800×1280: dense schematics, long labels, wide charts, figures with
+Anything expected to be tight on 1280×800: dense schematics, long labels, wide charts, figures with
 many tap targets. Naming them now is cheaper than discovering them at measurement.
 
 | # | Risk | Mitigation |

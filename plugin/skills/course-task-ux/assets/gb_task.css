@@ -46,9 +46,9 @@
 .stem{font-weight:500;color:var(--ink)}
 
 /* ---- the answer control -------------------------------------------------
-   52 px, not 44: a task option is pressed under time pressure with a thumb. */
+   56 px: a task option is pressed under time pressure with a thumb. */
 .opts{display:grid;gap:8px;margin:0 0 12px}
-.opt{min-height:52px;display:flex;align-items:center;gap:10px;
+.opt{min-height:56px;display:flex;align-items:center;gap:10px;
   padding:10px 14px;border:1px solid var(--line-l);border-radius:var(--r-m);
   background:var(--white);font-size:clamp(15px,1.95vmin,16.5px);line-height:1.4;
   color:var(--ink);cursor:pointer;text-align:left;font-family:var(--font)}

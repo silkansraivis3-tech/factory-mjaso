@@ -71,7 +71,7 @@ Three buckets, no fourth. Anything that cannot be placed here is a loss.
 | Served on port | (fresh, previously unused) |
 | Settle used before measuring | ms — must be ≥ 520 |
 | `innerWidth` at measurement | px — the abort guard did not fire |
-| Viewports measured | 1366×768 · 1024×768 · 800×1280 · 360×740 |
+| Viewports measured | 1280×800 · 1366×768 · 1024×768 · 360×740 |
 | Fill probe **and** collision probe both run | yes / no |
 | Whole document measured, not only `.slide` | yes / no |
 | Console read after the last scripted JS edit | yes / no |
@@ -84,7 +84,7 @@ Three buckets, no fourth. Anything that cannot be placed here is a loss.
 | every runner step has `mins:` | |
 | text ≥ 12.5 px everywhere | |
 | contrast WCAG AA | |
-| controls ≥ 44×44 | |
+| controls ≥ 56×56 | |
 | no spill, no document h-scroll | |
 | console errors | |
 | fill 85–100 % (openers/summary/check sparer) | |

@@ -49,8 +49,8 @@ Details that were learned by getting them wrong:
 - **Textareas are exempt from route 2 and from `enterkeyhint`.** Enter is a newline there.
 - **The pill's resting state is `display:none`, never opacity.** `SKILL.md` §9 — a control
   animated into visibility can stay invisible in a stalled WebView.
-- **Measured on the reference build: 97 × 48 CSS px at 14.53 : 1 contrast.** Both clear the
-  floor in §11 with room. Do not shrink it below 44 × 44.
+- **At least 96 × 56 CSS px, at 14.53 : 1 contrast** (`assets/kbd_escape.css`). Do not shrink
+  it below the 56 × 56 floor in §11.
 
 ## Field types
 

@@ -14,8 +14,8 @@
     "note": "Measure after the settle, not before — see traps.json#transition-settle."
   },
   "controls": {
-    "min_width_px": 44,
-    "min_height_px": 44,
+    "min_width_px": 56,
+    "min_height_px": 56,
     "exemptions": [
       "an inline link inside a sentence of prose",
       "a visually hidden input behind a label that is itself above the minimum",
@@ -40,9 +40,9 @@
     "note": "Read the console on every page after any scripted edit to inline JavaScript. See traps.json#console-after-scripted-edit."
   },
   "viewports": [
+    { "w": 1280, "h": 800, "why": "the primary device: the classroom's Android tablet WebView, landscape (L45)" },
     { "w": 1366, "h": 768, "why": "the classroom projector and the common laptop" },
     { "w": 1024, "h": 768, "why": "an older projector" },
-    { "w": 800,  "h": 1280, "why": "the primary device: an Android tablet in portrait" },
     { "w": 360,  "h": 740, "why": "a phone — not a delivery device, but the geometry floor" }
   ],
   "structural": {

@@ -84,7 +84,7 @@ Beyond the fourteen:
   motion removed, ship the caption and a static figure.
 - **Is the category declared?** `data-motion="teaching" | "affordance" | "ambient"`. Undeclared
   non-chrome motion is a finding.
-- **Is it controllable?** Play, pause, step, replay — all ≥ 44 px. A teaching animation the
+- **Is it controllable?** Play, pause, step, replay — all ≥ 56 px. A teaching animation the
   instructor cannot pause is unusable in a room.
 - **Is the resting state readable?** Stop it. Can the screen still be taught from?
 - **Does it stop off-screen?** A loop running behind a slide the class is not on wastes battery and

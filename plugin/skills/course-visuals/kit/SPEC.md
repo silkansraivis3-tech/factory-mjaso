@@ -292,7 +292,7 @@ triangle that stretches inside a frame that does not; routine work is a loop; a 
 **Task mode (2.43.0, built).** The same spec drawn on a trainee task page, so a slide and the task built from it
 ("the GA from slide 4, no labels") can never drift apart: `<svg data-kit="#spec" data-kit-step="3">` is drawn still at
 the end of step 3 (`"final"` or empty = the last), without step buttons, and - being still - opens full screen like a
-picture. The compiler (`compile/task_pages.py`) writes it from a build-sheet figure `*.kit.json`; the sheet's
+picture. The compiler (`course-factory/compile/scripts/task_pages.py`) writes it from a build-sheet figure `*.kit.json`; the sheet's
 `"kit_step"` picks the step, `"unlabel"` takes the words off the parts (`label`, `caption`, `title`, `tag` ...; a `text`
 part goes) - for `"answers"` or a list by the spec's `"ghost": [part ids]` (2.50.4): those parts' labels (a `text` part
 whole) are laid out like any other and hidden after every layout, so the words left stand where the deck has them - and the tappable areas are the parts' own ids - `gb_answer.js` lays each one on the drawn part's box. A

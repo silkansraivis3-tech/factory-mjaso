@@ -34,7 +34,7 @@
 #kbd-done{
   display:none;                       /* resting state — see note above */
   position:fixed; top:8px; right:12px; z-index:1200;
-  min-height:48px; min-width:96px;    /* measured 97 x 48 on the reference build */
+  min-height:56px; min-width:96px;
   padding:0 20px; border-radius:12px;
   border:1.5px solid var(--task-accent); background:var(--task-surface);
   color:var(--task-accent);

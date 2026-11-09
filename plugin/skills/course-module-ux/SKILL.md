@@ -124,8 +124,8 @@ them.** A factual reference to a source document that is itself printed stays: t
 the source, not the workflow.
 
 **6 · The tablet is the primary device, the projector is the second.** A finger on an
-800×1280 portrait screen first, then check it survives landscape and a projector — never the
-other way round. Touch targets **≥ 44 px**, no hover-only affordance, ES5 in shared engines, a
+1280×800 landscape screen first, then check it survives a projector — never the other way
+round. Touch targets **≥ 56 px**, no hover-only affordance, ES5 in shared engines, a
 sticky action bar with `env(safe-area-inset-bottom)`, and `:has()` mirrored with a class
 because old Android WebViews lack it.
 
@@ -146,7 +146,7 @@ architecture or word count, not colour. Diff the design tokens before touching t
 And when the look genuinely *is* the question — a new deck's palette, a screen that does not
 match Module 1, "which radius", "why do these two modules look different" — that is
 `course-module-ui`'s, not this skill's. This skill owns the **floor**: contrast ≥ 4.5, text
-≥ 12.5 px, targets ≥ 44 px, fill, overflow. A floor is a minimum, not an identity — two people
+≥ 12.5 px, targets ≥ 56 px, fill, overflow. A floor is a minimum, not an identity — two people
 can pass every check in `measure/knowledge/floor.json` and ship modules that look unrelated.
 Load `course-module-ui` before writing the first stylesheet of a new module; it is step 8 of
 `course-factory`'s build order and it is required, not optional.

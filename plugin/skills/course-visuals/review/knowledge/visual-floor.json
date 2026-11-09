@@ -1,12 +1,12 @@
 {
   "_authority": "The measurable floor for a visual on a NOVIKONTAS tablet, and the named failure modes a human review must look for. scripts/check_visuals.py enforces the measurable half; review/GUIDE.md runs the half that needs eyes.",
   "_written": "2026-09-10",
-  "_boundary": "course-module-ux owns the SCREEN floor (contrast >= 4.5, text >= 12.5 px, targets >= 44 px, fill, overflow). This file adds only what is specific to a VISUAL and is not already measured there. Where they overlap, course-module-ux wins and this file must not restate it.",
+  "_boundary": "course-module-ux owns the SCREEN floor (contrast >= 4.5, text >= 12.5 px, targets >= 56 px, fill, overflow). This file adds only what is specific to a VISUAL and is not already measured there. Where they overlap, course-module-ux wins and this file must not restate it.",
 
   "measurable": {
     "svg_label_min_px": {
       "value": 12.5,
-      "measured_at": "the rendered size on 800x1280 portrait, not the viewBox units",
+      "measured_at": "the rendered size on 1280x800 landscape, not the viewBox units",
       "why": "an SVG label authored at font-size 10 in a 1000-unit viewBox scaled into a 380 px column is 3.8 px on the tablet",
       "how": "rendered_px = font_size_in_viewBox_units * (rendered_width / viewBox_width)"
     },
@@ -15,7 +15,7 @@
       "why": "below this a photograph is visibly soft full-bleed on a tablet",
       "note": "max 2200 on the long edge is the storage rule in asset-pipeline.json; this is the floor"
     },
-    "interactive_target_min_px": 44,
+    "interactive_target_min_px": 56,
     "remote_assets_allowed": false,
     "allowed_extensions": ["jpg", "jpeg", "png", "svg", "webp", "gif", "mp4", "webm"],
     "requires_alt_or_arialabel": true,

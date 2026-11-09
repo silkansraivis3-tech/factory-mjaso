@@ -24,9 +24,10 @@ Look at every screen against this list:
 2. **Clean credits and captions.** No file path, drive letter or internal folder name anywhere on screen.
 3. **On target.** Every tap area (pink box) covers the WHOLE thing the question names - not just a corner or a cap of
    it - and no tap area sits on empty space. Every drawn label and leader line points at what it labels and does not
-   run through other words. After "answered WRONG", the right answer is marked on the right thing.
-4. **Says which.** After "answered RIGHT" the screen says it was right; after "answered WRONG" it says it was not and
-   shows the right answer.
+   run through other words. After "answered WRONG", what was wrong is marked on the thing the trainee chose.
+4. **Says which.** After "answered RIGHT" the screen says it was right; after "answered WRONG" it says it was not, with
+   a short reason. The right answer is not shown on the tablet - the debrief shows it - unless the page was built with
+   `"feedback": "now"`.
 5. **Nothing cut off or covered.** No word cut at a screen edge, no part of a drawing under the button bar at the
    bottom, nothing overlapping the slide's title or footer.
 6. **The picture shows what the words name** (2.63.2). Read the question, the slide's title and its caption, then look
@@ -52,7 +53,7 @@ of polish on a re-review.
 IGF M02 s02 went PASS, then four failed builds, for polish):
 - `BROKEN` - a trainee or an instructor would misread it, miss it or be unable to do it: a word or a part cut off,
   covered or unreadable; a tap area on the wrong thing or on empty space; a label or leader pointing at the wrong
-  thing; the wrong verdict or no right answer shown; a file path on screen; a picture of a different instrument, part
+  thing; the wrong verdict; a file path on screen; a picture of a different instrument, part
   or place than the words name (item 6); ANY failure of item 7 - a wrong physical arrangement, a part missing that the
   slide or a label names, something unconnected or floating, an incomplete figure. BROKEN is fixed before hand-over.
 - `POLISH` - right and readable, but could look better: spacing a little tight, a label close to a line but clear,

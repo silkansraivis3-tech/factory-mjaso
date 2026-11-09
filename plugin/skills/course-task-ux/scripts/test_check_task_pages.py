@@ -101,8 +101,31 @@ def states_tests():
     check("... but the same name set by a page's own script is still judged", code == 1 and "gbz-answer" in out, out)
 
 
+def floor(style):
+    """the `floor` check, at its default viewport, on a page whose answer button has `style`"""
+    tmp = tempfile.mkdtemp(prefix="ctp_")
+    try:
+        p = os.path.join(tmp, "page.html")
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(STATE_PAGE % ("<style>button.opt{%s}</style>" % style, ""))
+        r = subprocess.run([sys.executable, CHECK, p, "--only", "floor"], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace")
+        return r.returncode, r.stdout + r.stderr
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def floor_tests():
+    code, out = floor("min-height:56px")
+    check("the floor is resolved at 1280x800 unless --viewport says otherwise", "resolved at 1280x800" in out, out)
+    check("an answer button of 56 px passes the tap floor", code == 0, out)
+    code, out = floor("min-height:52px")
+    check("... one of 52 px is under it: the tap floor is 56 px (L42)", code == 1 and "56px tap floor" in out, out)
+
+
 def main():
     states_tests()
+    floor_tests()
     code, out = sweep("")
     check("a figure-kit spec named by data-kit=\"#id\" is read", "kit-q10-1" not in out, out)
     check("the ids of a drawing placed by the compiler (svg.taskfig) are not judged on the task page",

@@ -40,13 +40,13 @@ hours, sources, the approved words) keeps its own rules: `course-factory` SKILL.
 
 Everything measurable below was ruled for:
 
-> **Android tablet, 800 × 1280 portrait, offline, in a WebView, operated by a trainee's
+> **Android tablet, 1280 × 800 landscape, offline, in a WebView, operated by a trainee's
 > finger. Plain HTML/CSS/ES5. No build step, no frameworks, no network.**
 >
-> **2.21.0 (L45):** the classroom system now opens a task inside a frame - an Android WebView in **landscape, about
-> 1280 × 800**, touch only. New task pages are built and measured for that. Each page reports its result once with
-> `gb-task-done` (code, title, ok, total, items, head), listens for the classroom's `gb-timer`, offers no retry inside
-> the classroom, and never shows the answers in its source - `course-factory/knowledge/classroom-system.json` →
+> **2.21.0 (L45):** the classroom system opens a task inside a frame - an Android WebView in **landscape, about
+> 1280 × 800**, touch only. Task pages are built and measured for that. Each page reports its result once with
+> `gb-task-done` (code, title, ok, total, items, head), listens for the classroom's `gb-timer`, offers no retry,
+> and never shows the answers in its source - `course-factory/knowledge/classroom-system.json` →
 > `task_page`.
 
 A different programme on a different device **re-measures the floor** (§11) rather than
@@ -89,7 +89,7 @@ This bundle is empty of course material by design. A new programme brings:
 2. **Its answer keys** — which option is right and *why*, because the reasoning is rendered
    on the task screen (§2) rather than on a deck slide.
 3. **A manifest of its tasks** — one row per task, which is also the approval gate below.
-4. **Its own measured floor** if the device is not an 800 × 1280 portrait tablet.
+4. **Its own measured floor** if the device is not a 1280 × 800 landscape tablet.
 
 ## The gate — before writing any HTML
 
@@ -139,10 +139,10 @@ halves count - a task that is clear but dull fails, and so does one that is impr
    text at least **16 px**, the Next / Check button big and in the same place on every screen (bottom, full width).
    One question per screen (L35), plenty of space, nothing small to aim at.
 5. **Alive, instant feedback.** Every touch answers within a tenth of a second: a press state, a soft snap when a
-   dragged item lands, a calm shake and a hint on a wrong try, a check mark and the reason on a right one. The last
-   screen shows the trainee's own score as an animated ring - rewarding and professional, never childish.
-   A tick means *you did this, and it is right*: when several answers are right and one was missed, the missed one is
-   outlined in green and says **"Also right"** - never ticked as if it had been chosen (2.46.0, `gb_answer.js`).
+   dragged item lands; at Check, a calm shake and **Not right.** with its short reason on a wrong answer (the debrief
+   rule, §2b), a check mark and the reason on a right one. The last screen shows the trainee's own score as an animated
+   ring - rewarding and professional, never childish. A tick means *you did this, and it is right* - nothing the
+   trainee did not choose is ever ticked.
 6. **Modern and real.** Real equipment on the screen - 3D models that turn, real photographs, panels and gauges that
    look and behave like the ones on board; smooth motion between steps; the module's own look (`course-module-ui`).
    Nothing may look or feel like an old web form.
@@ -202,9 +202,9 @@ reason from a set — both must be right).
 **Free typing is allowed in exactly one place:** a simulator or field reporting task. If it is
 allowed, §5 becomes mandatory.
 
-**One Submit per part.** Correct items lock and grey out with an explanation of *why*; wrong items
-get a hint and another attempt. The reasoning lives in the task, which is why the deck needs no
-answers slide.
+**One Check per part, and the part locks at it.** A right answer shows *why*; a wrong one says
+**Not right.** with its short reason, and the debrief shows the right answer (§2b). There is no
+second try. The reasoning lives in the task, which is why the deck needs no answers slide.
 
 ### 2a · Five more, for the higher Bloom levels (owner, 2026-10-15 - L49 step 4, 2.28.0)
 
@@ -215,11 +215,11 @@ the items `content_script.answer_items` lists, and the right ones carry their `d
 
 | Task | On the trainee tablet | Done when |
 |---|---|---|
-| **Find the fault** | The symptoms on top (`!` lines), over the drawing or panel. Each part is a big card: **tap it to check it** - it turns over and shows what you see (the reading, the sound, the temperature). Checking is free and never wrong. Then **This is the fault** on one card. | the faulty part is named; a wrong one shows why it is fine and the trainee goes on checking |
+| **Find the fault** | The symptoms on top (`!` lines), over the drawing or panel. Each part is a big card: **tap it to check it** - it turns over and shows what you see (the reading, the sound, the temperature). Checking is free and never wrong. Then **This is the fault** on one card. | the faulty part is named; a wrong one is marked wrong, with its short reason (§2b) |
 | **Spot the errors** | The filled-in document as it looks on board - a permit, a log page, a checklist, a loading plan - one line per row, large type. **Tap a line to flag it**, tap again to unflag; **Check** at the bottom. | every wrong line flagged and nothing else; each wrong line then shows its *why* |
 | **Build the plan** | A bank of shuffled cards below, an empty plan with numbered slots above. Drag (or tap a card, then a slot) to build the plan; cards that do not belong stay in the bank. | the right cards in the right order; a card that does not belong, when placed, says why |
-| **Rebuild the incident** | Shuffled event cards; first put them in order (as *order*); once the order is right, the cards stay and the question changes: **tap where it should have been stopped**. | the order, then the stop point - two parts, each with its own Check |
-| **Fill the table** (`fill_matrix`, 2.109.0 - a RACI matrix, a duty roster, a responsibility chart) | A table: row names down the left, column names on top, every cell empty. A palette of big value chips (the script's `"values"`: R, A, C, I, –) above it. **Tap a value, then tap cells** to fill them; tap a filled cell with the same value to clear it, or tap a cell again with no value held to step through the values. Cells are 56 px or more (6 rows x 5 columns fit 1024 x 768). **Check** is enabled when every cell is filled. | every cell holds its right value; wrong cells are marked (the wrong style, never the right value) and can be changed - another try; the right ones lock. Scored as one question. The cells' keys are `gbKey(id, "row \| column", value)`, so the grid's answers are not in the page. |
+| **Rebuild the incident** | Shuffled event cards; first put them in order (as *order*) and Check; then the cards stay and the question changes: **tap where it should have been stopped**. | the order, then the stop point - two parts, each with its own Check |
+| **Fill the table** (`fill_matrix`, 2.109.0 - a RACI matrix, a duty roster, a responsibility chart) | A table: row names down the left, column names on top, every cell empty. A palette of big value chips (the script's `"values"`: R, A, C, I, –) above it. **Tap a value, then tap cells** to fill them; tap a filled cell with the same value to clear it, or tap a cell again with no value held to step through the values. Cells are 56 px or more (6 rows x 5 columns fit 1024 x 768). **Check** is enabled when every cell is filled. | every cell holds its right value; wrong cells are marked (the wrong style, never the right value); the table locks at Check. Scored as one question. The cells' keys are `gbKey(id, "row \| column", value)`, so the grid's answers are not in the page. |
 | **Compare** | The options side by side as columns - one row per figure, the figures large and aligned; each column's name on top is its big **Choose** button, and a tap on any figure of the column chooses it too. | the right option chosen; the feedback names the figures that decide it |
 
 **All nineteen are compiled** (course-factory 2.38.0): `compile/scripts/task_pages.py` builds each from the approved
@@ -227,7 +227,7 @@ script and the one shared engine, `assets/gb_answer.js` + `gb_answer.css`, grade
 each with its own Check (a scenario's steps; the incident's order, then its stop point). No task page is made by hand.
 
 None of them hides information the trainee needs to answer: the readings in *find the fault* are one tap away and
-stay turned over; nothing is timed; a wrong answer is never an error message - it is a hint and another try (§1, L42).
+stay turned over; nothing is timed; a wrong answer is never an error message - it is *Not right.* and a short reason (§2b).
 
 ### 2b · Part A and Part B, and ten interactive types (owner, 2026-10-28 - 2.74.0)
 
@@ -322,7 +322,7 @@ is allowed; text as the *only* mechanism is not.
 
 Wherever §2 permits a text field, the soft keyboard is dismissible **from the screen**, by three
 routes: `enterkeyhint="done"` on every single-line input · **Enter blurs a single-line input**
-(textareas exempt) · a **"Done ✓" pill**, shown only while a field has focus, at least 44 × 44,
+(textareas exempt) · a **"Done ✓" pill**, shown only while a field has focus, at least 56 × 56,
 never covering the field — the one route that must never be dropped. Engine-level, not per-page:
 load `assets/kbd_escape.js` + `assets/kbd_escape.css`; the wiring is in `references/typed-input.md`.
 
@@ -342,7 +342,7 @@ All three — and the task engines `kbd_escape.*` and `task_complete.*` — are 
 `assets/`: `course-module-ui/scripts/design_system.py install` copies them. Do not open them to use
 them; the class names are in `course-module-ui/references/vocabulary.md` §7.
 
-`gb_task.css` owns the state bar, the question stem, the 52 px option, the why panel and the
+`gb_task.css` owns the state bar, the question stem, the 56 px option, the why panel and the
 in-task figure. It owns **nothing else** — a task page is a document page with a task on it.
 
 Every task page also carries `<a class="gbt-topback" href="…">`, which is what the Android
@@ -377,7 +377,7 @@ only what the photograph evidences · **every picture opens full screen and clos
 
 1. **First tap opens the card and nothing else** — including a tap on the picture.
 2. **Only an open card lets its picture go full screen** (the shared viewer, `gb_zoom.js`, does this by itself).
-3. **Always a close button**, at least 48 × 48, on the opened card and the full-screen view.
+3. **Always a close button**, at least 56 × 56, on the opened card and the full-screen view.
 4. **The tap hint never sits on top of content** — "tap to open" in normal flow beneath a closed
    card's picture; a badge over the picture only on an opened card.
 
@@ -403,8 +403,10 @@ task's own finish handler.
   out the key of what the trainee did; `check_script_match.py` checks the keys against the approved script. The
   function, the same in the page and in the factory, is in `task_page.answer_keys`.
 - **When the time is up** (`gb-timer` with `remaining` 0), mark what was done and report it with `timeout: true`.
-- **One opening, one result.** No "Try again" while the page is inside the classroom's frame; outside it
-  (`window.parent === window`, revision at home) a retry is fine.
+- **One opening, one result.** No "Try again", "Start again" or restart, and no per-question retry: every part locks
+  at its Check, and a set under the debrief rule (the default) or a blind final is answered once wherever it is
+  opened. Only a course whose build sheet says `"feedback": "now"` keeps Start again, and only outside the classroom's
+  frame (`window.parent === window`, revision at home).
 - **The result screen is the last screen** (rulebook of 2026-10-19). After reporting, the page shows the score and
   nothing else to press: no "Answers", "Review", "Show solution", "Next task", "Menu" or "Home", and no link. The
   tablet has no back button and no address bar - any page a trainee reaches is a dead end. The classroom shows the
@@ -435,12 +437,11 @@ the page. `scripts/check_task_pages.py` flags candidates; the record sheet is th
 
 ## 11 · Measurable floor — verify, do not assume
 
-At the target viewport (**1280 × 800 landscape** for the classroom since 2.21.0; 800 × 1280 portrait for the old app's
-reference build), on every task screen:
+At the target viewport (**1280 × 800 landscape**, the classroom's WebView), on every task screen:
 
 | | Requirement |
 |---|---|
-| Tap targets | **≥ 44 × 44 CSS px**, no exceptions - and **≥ 56 × 56** for every answer control on the trainee tablet (§0, L42) |
+| Tap targets | **≥ 56 × 56 CSS px**, no exceptions (§0, L42) |
 | Question / answer text | **≥ 18 px / ≥ 16 px** on the trainee tablet (§0, L42) |
 | Text size | **≥ 12.5 px** for anything a trainee reads |
 | Contrast | **≥ 4.5 : 1** (3 : 1 for large text) against the *resolved* background |
@@ -456,7 +457,7 @@ any measurement.
 
 **11.1 · `clamp(MIN, COEFFICIENT, CEILING)` resolves to exactly one of the three.** Compute all three
 at the target viewport, take whichever binds, and judge only that. `scripts/check_task_pages.py
---only floor` does this and names the binding dial; `--viewport WxH` defaults to `1280x800` (2.21.0; it was `800x1280`).
+--only floor` does this and names the binding dial; `--viewport WxH` defaults to `1280x800`.
 
 ---
 

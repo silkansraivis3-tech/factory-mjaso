@@ -17,10 +17,14 @@ thing that actually enforces that — a copied terminal drifts the first time on
 fixed. One APK per course also means a shared fix has to be applied N times, and one will be
 missed.
 
-**On GitHub:** the repo holds the terminals and every course pack. Add a course on the build
-machine, commit, push, build the APKs, install. The repo is the backup and the history; the APK
-is the delivery. Do **not** make the tablets pull at runtime — a classroom may have no network,
-and these terminals are deliberately offline-capable.
+**How a course reaches the tablets.** `course\modules\` (COURSE.html and a folder per module) is
+the course. After the build, `scripts/course_portal.py upload --course <course>` imports it into
+the staging training app's editor as a draft release (`scripts/course_import.mjs` - the same upload
+as the admin panel's Import page, checked by the training app's own `package-core.mjs`); the office
+publishes it there (L70). The Android app's `assets\` and the branch-and-pull-request flow of
+`course-tablet-publisher` §1 are legacy for courses, used only when the owner asks. Do **not** make
+the tablets pull at runtime — a classroom may have no network, and these terminals are
+deliberately offline-capable.
 
 ---
 

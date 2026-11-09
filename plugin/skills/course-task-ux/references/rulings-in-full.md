@@ -55,9 +55,10 @@ Allowed answer mechanics:
 reporting what you did or saw is the point of the exercise. Nowhere else. If it is allowed,
 §5 becomes mandatory.
 
-**One Submit per part.** A part is submitted on its own. Correct items lock and grey out with
-an explanation of *why* they are correct; wrong items get a hint and another attempt. The
-reasoning lives in the task, which is why the deck needs no answers slide.
+**One Check per part.** A part is checked on its own and locks at its Check. A right answer
+shows *why* it is right; a wrong one says *Not right.* with its short reason, and the debrief
+shows the right answer (SKILL.md §2b). There is no second try. The reasoning lives in the task,
+which is why the deck needs no answers slide.
 
 ---
 
@@ -133,7 +134,7 @@ fields and was unusable.
    Done rather than a next-field arrow;
 2. **Enter blurs a single-line input** — textareas are exempt, because Enter is a newline
    there and that is the point of a textarea;
-3. a **"Done ✓" pill**, shown only while a field has focus, at least 44 × 44, positioned so
+3. a **"Done ✓" pill**, shown only while a field has focus, at least 56 × 56, positioned so
    it never covers the field it dismisses. This is the only one of the three that cannot be
    defeated by a WebView quirk, so it is the one that must never be dropped.
 
@@ -153,7 +154,7 @@ Load, in this order:
 <link rel="stylesheet" href="../assets/gb_task.css">     <!-- here: the task controls -->
 ```
 
-`gb_task.css` owns the state bar, the question stem, the 52 px option, the why panel and the
+`gb_task.css` owns the state bar, the question stem, the 56 px option, the why panel and the
 in-task figure. It owns **nothing else** — a task page is a document page with a task on it.
 
 Every task page also carries `<a class="gbt-topback" href="…">`, which is what the Android
@@ -205,7 +206,7 @@ Where a card opens and its picture can also enlarge:
 
 1. **First tap opens the card and nothing else** — including a tap on the picture.
 2. **Only an open card lets its picture go full screen.**
-3. **Always a close button**, at least 48 × 48, on both the opened card and the full-screen
+3. **Always a close button**, at least 56 × 56, on both the opened card and the full-screen
    view.
 4. **The tap hint never sits on top of content.** A closed card says "tap to open" in normal
    flow beneath the picture; a badge over the picture is acceptable only on the opened card,
@@ -257,12 +258,12 @@ heuristic; the record sheet is the authority.
 
 ## 11 · Measurable floor — verify, do not assume
 
-At the target viewport (**800 × 1280 portrait** for the reference build), on every task
+At the target viewport (**1280 × 800 landscape**, the classroom's WebView), on every task
 screen:
 
 | | Requirement |
 |---|---|
-| Tap targets | **≥ 44 × 44 CSS px**, no exceptions |
+| Tap targets | **≥ 56 × 56 CSS px**, no exceptions |
 | Text size | **≥ 12.5 px** for anything a trainee reads |
 | Contrast | **≥ 4.5 : 1** (3 : 1 for large text) against the *resolved* background |
 | Horizontal scroll | **none** — wide tables and drawings scroll inside their own container |
@@ -301,7 +302,7 @@ and misleading everywhere else. Believing it produced **12 false findings on one
 stylesheet, every one of which measured fine in the browser.**
 
 `scripts/check_task_pages.py --only floor` does this resolution and names the binding dial in
-every finding. `--viewport WxH` defaults to `800x1280`; a different device passes its own,
+every finding. `--viewport WxH` defaults to `1280x800`; a different device passes its own,
 because the floor is re-measured, not inherited. Anything the resolver cannot evaluate
 statically — `em`, `%`, `calc()`, `var()` — it reports **not at all** rather than guessing,
 which is the right trade when the browser is the authority.

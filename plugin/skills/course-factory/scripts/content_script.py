@@ -793,7 +793,7 @@ def validate(script):
         else:
             first = kinds.index("module-check")
             if any(k in ("slide", "activity") for k in kinds[first:]):
-                probs.append("a slide comes after the module check starts - the module check is the end of the module")
+                probs.append("a slide comes after the module check starts - nothing is taught after the module check (only the hand-off screen follows it)")
     probs += shape_problems(script)
     probs += group_problems(script)
     alloc = script.get("minutes_allocated")

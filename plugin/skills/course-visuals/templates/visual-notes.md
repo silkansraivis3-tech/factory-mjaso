@@ -61,7 +61,7 @@ Blocks shipping. The owner decides, not the factory.
 |---|---|---|---|---|---|
 | | teaching / affordance / ambient | | | | |
 
-- Controls present and ≥ 44 px: <yes / list exceptions>
+- Controls present and ≥ 56 px: <yes / list exceptions>
 - Resting state readable with motion stopped: <yes / list exceptions>
 - Pauses off-screen: <yes / list exceptions>
 - `prefers-reduced-motion` honoured: <yes / list exceptions>

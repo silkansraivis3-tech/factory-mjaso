@@ -28,7 +28,8 @@
    THE CLASSROOM CONTRACT (course-factory/knowledge/classroom-system.json):
    one gb-task-done per opening, items capped at 40 (t 90, a/c 120, w 400
    characters), head '' on a self-check and PASSED / NOT PASSED on a module
-   check, no "start again" inside the classroom frame, no countdown of our own.
+   check, no "start again" - a task is answered once, wherever it is opened -
+   and no countdown of our own.
 
    Plain ES5, no dependencies, nothing fetched. Safe on an old Android WebView.
    ========================================================================== */
@@ -42,7 +43,6 @@
   function el(tag, cls, html) { var e = D.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   function cut(s, n) { s = String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-  function inClassroom() { try { return W.parent !== W; } catch (e) { return true; } }
 
   /* ---- answer keys: gbKey, byte for byte as the classroom rulebook ---------- */
   function key(id, text, value) {
@@ -173,9 +173,7 @@
     });
     if (items.length) node.appendChild(ul);
 
-    var buttons = [{ label: 'Done', primary: true }];
-    if (!inClassroom()) buttons.push({ label: 'Start again', primary: false, fn: function () { location.reload(); } });
-    show({ title: mode === 'check' ? 'Module check' : 'Your result', node: node, buttons: buttons });
+    show({ title: mode === 'check' ? 'Module check' : 'Your result', node: node, buttons: [{ label: 'Done', primary: true }] });
     sfx(frac >= 0.8 ? 'win' : 'good');
     [].forEach.call(D.querySelectorAll('.tl-items li'), function (li, n) { li.style.animationDelay = (0.5 + n * 0.08) + 's'; });
     setTimeout(function () { var fg = $('.tl-ring .fg'); if (fg) fg.setAttribute('stroke-dashoffset', String(C * (1 - frac))); }, 60);
