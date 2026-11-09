@@ -53,6 +53,9 @@ FLAT_FILLS = ("--deep-3", "--steel", "--dim-d", "--faint-d", "--grey", "--navy")
 # a figure is a drawing: parts that are only words or a number in a box (a table, a board of readouts) are what the slide's
 # own layouts show; and a file read in the wrong encoding prints "Â·" for "·" (PM M03 s09)
 WORDS_ONLY = ("text", "readout", "grid_table")
+# the one table a module may show as a slide's picture is not drawn by the kit: the compiler builds it in the course's look
+ONE_TABLE = ("Things set side by side with their facts or numbers? A module may show ONE comparison table as a slide's "
+             "picture - the build sheet's \"table\" (compile/GUIDE.md), never a figure")
 MOJIBAKE = re.compile("Â|Ã|â€")
 BOX_TAGS = {"g", "rect", "text", "tspan"}
 MATERIAL = re.compile(r"\bh\.(?:body|flange)\(|KIT\.h\.(?:body|flange)\(|['\" ]kit-ms?-[a-z]")
@@ -148,7 +151,7 @@ def check_part(name, block):
             and meta_field(block, "status") == "new"):
         probs.append("%s: draws only boxes and words - that is a table or a card, which the slide's layouts show at reading size; "
                      "a part draws the thing itself, or the shape of the idea (a loop, a line to an end, a triangle that "
-                     "stretches - the Concepts family)" % name)
+                     "stretches - the Concepts family). %s" % (name, ONE_TABLE))
     look = meta_field(block, "look")
     if look not in LOOKS:
         probs.append("%s: say what it is drawn as - look: 'equipment' (a physical thing: in its material, PARTS.md), "
@@ -363,8 +366,8 @@ def what_it_is(spec, parts):
     if ps and not drawn:
         out.append("WORDS ONLY - every part is words or a number in a box (%s): that is a table or a list, which the slide's "
                    "own layouts show at reading size. Draw what the words describe - a kit part (SPEC.md; an idea has the "
-                   "Concepts family: tradeoff, cycle, timeline), a new part (PARTS.md) or a real photo"
-                   % ", ".join(sorted({p.get("type") or "?" for p in ps})))
+                   "Concepts family: tradeoff, cycle, timeline), a new part (PARTS.md) or a real photo. %s"
+                   % (", ".join(sorted({p.get("type") or "?" for p in ps})), ONE_TABLE))
     steps = spec.get("steps") or []
     moved = [[(a[0] if isinstance(a, list) and a else "") for a in (s.get("play") or [])] + list((s.get("set") or {}).keys())
              for s in steps if isinstance(s, dict)]

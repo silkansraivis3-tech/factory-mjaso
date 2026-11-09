@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>audit_drawing EMPTY fixture (a simple drawing)</title>
+<!-- test_audit_drawing.py opens this in headless Chrome. The same four boxes and two lines, about 57 % of the frame blank
+     and no blank piece over a fifth:
+       good-simple   four named parts (one word in each box): a simple drawing may be 60 % blank - silent
+       bad-busy      the same drawing with five named parts (two words in one box): the 50 % limit holds - EMPTY -->
+<style>
+  body{margin:0;padding:20px;font-family:sans-serif;background:#fff}
+  svg{display:block;width:480px;height:auto;margin:0 0 24px}
+  text{font:600 4px sans-serif}
+</style>
+</head>
+<body>
+<svg id="good-simple" viewBox="0 0 100 60">
+  <path d="M25 30 H75" fill="none" stroke="#0A2463" stroke-width="0.6"/>
+  <path d="M50 15 V45" fill="none" stroke="#0A2463" stroke-width="0.6"/>
+  <rect x="14" y="8" width="22" height="14" fill="#eef" stroke="#0A2463" stroke-width="0.6"/>
+  <rect x="64" y="8" width="22" height="14" fill="#eef" stroke="#0A2463" stroke-width="0.6"/>
+  <rect x="14" y="38" width="22" height="14" fill="#eef" stroke="#0A2463" stroke-width="0.6"/>
+  <rect x="64" y="38" width="22" height="14" fill="#eef" stroke="#0A2463" stroke-width="0.6"/>
+  <text x="25" y="16.5" text-anchor="middle">tank</text>
+  <text x="75" y="16.5" text-anchor="middle">pump</text>
+  <text x="25" y="46.5" text-anchor="middle">valve</text>
+  <text x="75" y="46.5" text-anchor="middle">vent</text>
+</svg>
+
+<svg id="bad-busy" viewBox="0 0 100 60">
+  <path d="M25 30 H75" fill="none" stroke="#0A2463" stroke-width="0.6"/>
+  <path d="M50 15 V45" fill="none" stroke="#0A2463" stroke-width="0.6"/>
+  <rect x="14" y="8" width="22" height="14" fill="#eef" stroke="#0A2463" stroke-width="0.6"/>
+  <rect x="64" y="8" width="22" height="14" fill="#eef" stroke="#0A2463" stroke-width="0.6"/>
+  <rect x="14" y="38" width="22" height="14" fill="#eef" stroke="#0A2463" stroke-width="0.6"/>
+  <rect x="64" y="38" width="22" height="14" fill="#eef" stroke="#0A2463" stroke-width="0.6"/>
+  <text x="25" y="14" text-anchor="middle">tank</text>
+  <text x="25" y="19" text-anchor="middle">drain</text>
+  <text x="75" y="16.5" text-anchor="middle">pump</text>
+  <text x="25" y="46.5" text-anchor="middle">valve</text>
+  <text x="75" y="46.5" text-anchor="middle">vent</text>
+</svg>
+
+<pre id="out"></pre>
+<script src="../scripts/audit_drawing.js"></script>
+<script>
+  console.log = function () {};
+  var res = AuditDrawing.page();
+  document.getElementById("out").textContent = JSON.stringify({
+    verdict: res.verdict,
+    findings: res.findings.map(function (f) {
+      var el = f.els && f.els[0], svg = el && (el.ownerSVGElement || el);
+      return { check: f.check, svg: svg && svg.id, part: el && el.id, detail: f.detail };
+    })
+  });
+</script>
+</body>
+</html>

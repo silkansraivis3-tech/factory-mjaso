@@ -336,15 +336,24 @@ def precheck_part():
               len(calls) >= 4 and calls[2][1] == calls[3][1] and not set(calls[2][1]) & set(first)
               and "did not fit" in lines[0] and "every one fits" in lines[1], (calls, lines))
         mo = sorted(out)[0]
-        before = next((x for x in sorted(av) if x != mo), "")
-        check("2.72.7 ... and the L62 repeat that left (%s back on its own way, like the slide before it - measured once more "
-              "as it is now) is settled by the layout solver: the slide before it built its next way, both audited at both "
-              "sizes, nothing else" % mo,
-              len(calls) == 8 and calls[4][1] == calls[5][1] == [first[0]] and any("measured again as now built: %s" % mo in x
+        check("2.72.7 ... the slide back on its own way (%s, like the slide before it) is measured once more as it is now; "
+              "two in a row are a note for the reviewer, so the layout solver leaves them (it settles three in a row)" % mo,
+              len(calls) == 6 and calls[4][1] == calls[5][1] == [first[0]] and any("measured again as now built: %s" % mo in x
                                                                                     for x in lines)
-              and calls[6][1] == calls[7][1] == sorted(calls[6][1]) and len(calls[6][1]) == 2
-              and any(x.startswith("settled: %s looked like %s (L62)" % (mo, before)) for x in lines)
-              and av.get(before, {}).get("avoid") and "the layout solver: 1 settled" in lines[-1], (calls, lines, av))
+              and not any(x.startswith("settled:") for x in lines) and sorted(av) == [mo],
+              (calls, lines, av))
+        sec = lambda sid: ('<section class="slide" data-script="%s" data-title="T" data-template="explain-figure.v1" '
+                           'data-variant="figure-right"></section>' % sid)
+        check("l62_pairs: only a slide that makes three in a row that look the same - two in a row are left as they are",
+              b.l62_pairs(sec("a") + sec("b")) == [] and b.l62_pairs(sec("a") + sec("b") + sec("c")) == [("b", "c")], "")
+        out_ = ("Built M01\n\nFor the reviewer (the build carries on):\n  - slide 3 (d3): looks like the slide before it\n\n"
+                "To fix before it is shown:\n  - slide 5 (d5): looks exactly like the slide before it and the one before that\n")
+        check("the compiler's list for the reviewer comes to the build's answer as REVIEW notes, never as problems",
+              b.review_notes(out_) == ["slide 3 (d3): looks like the slide before it"]
+              and b.compile_problems(out_)[0] == ["slide 5 (d5): looks exactly like the slide before it and the one before that"],
+              (b.review_notes(out_), b.compile_problems(out_)))
+        check("an EMPTY drawing is fixed by cropping, larger parts or the box's shape - never by adding parts",
+              "never add parts the slide does not talk about" in b.FIG_HINT["empty"] and "spread" not in b.FIG_HINT["empty"], b.FIG_HINT)
         check("... the laid-out page is removed", not [f for f in os.listdir(os.path.join(md, "presentation"))
                                                    if f.startswith("_layout_precheck_")], os.listdir(os.path.join(md, "presentation")))
         tcm.run(tcm.COMPILE, c, "--module", "1", "--force")     # the build's compile: it writes M01_layouts.json

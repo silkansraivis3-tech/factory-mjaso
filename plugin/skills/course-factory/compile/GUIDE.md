@@ -220,14 +220,17 @@ and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `
 `"box"` (the picture's box, below), `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.
 
-**Never the same look twice in a row (L62, 2.53.0) - and 80 / 20 light (owner, 2.62.1).** A slide's look is its shape
+**The same look at most twice in a row (L62, 2.53.0) - and 80 / 20 light (owner, 2.62.1).** A slide's look is its shape
 and its ground. When a slide would look like the one before it, the compiler builds it another way that holds the same
 words and picture: the picture on the other side, or a photograph across the top with the words in two columns under it
 (`figure-stage` `figure-top`, up to 70 words); a slide on the dark ground may also be the photograph framed on it (up
 to 50 words). The ground is never changed to vary: at least 80 % of a module's slides are light (task launches, the
 module check and the recap too, unless the sheet says `"dark": true`); more than a fifth on the Navy ground or framed
 on it is a build problem - a full-screen photograph does not count. It also avoids the looks of the three slides before
-it when it can. A build sheet's own layout is
+it when it can. Where it cannot: two slides in a row that look the same are listed for the reviewer
+("For the reviewer" in the compile's answer, `REVIEW -` in the build's) and the build carries on; three in a row is a
+build problem. A comparison slide (`compare-two`, `before-after`, a `comparison` picture, a title that compares or says
+before / after) keeps its own way and may take the look of the slide before it on purpose. A build sheet's own layout is
 kept wherever it does not repeat. A slide built another way carries `data-varied`; when the audit finds it does not fit
 there (2.62.0), `build_module.py` builds it its next way at once - the line `LAYOUT - ... built again their next way` -
 and keeps that in `_build\MNN_layout_avoid.json` while the slide's words and build-sheet entry are unchanged. Never pin
@@ -347,7 +350,7 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   sheet's `"_brief"` says what the figure shows, why this kind, what else fits, and when one of the kit's detailed scenes
   (`courses.html`) could tell it better. Build it as it is, or make the kind that tells the slide better - the parts are
   in SPEC.md. Two 2D figures that look alike (the same main part, or boxes laid out the same way) less than 5 slides
-  apart fail the compile, which names what else the slide's words make. Where the words cannot give the values (a
+  apart are listed for the reviewer (the build carries on), with what else the slide's words make. Where the words cannot give the values (a
   chart's points, a task's weeks, a grid's rows) its `"_todo"` says so, and the compile reports it until the values from
   the course's sources are in and the key is gone. Equipment layouts and the tested IGF patterns keep the figure kit's
   starter.
@@ -654,6 +657,8 @@ their stops. The approved words never change - only what is round them.
 
 | a full or split photograph, a carousel (2.109.0) | every photo stacked in the frame; Next walks the lines and the line's photo fades in (opacity only, L65); each opens full screen with its own record (L51, L56), credits in `_photo_meta.json`, never on the slide | `"photos": {"1": "assets/img/a.jpg", "2": "assets/img/b.jpg"}` |
 | a predict- / explain-then-reveal slide (2.109.0) | the intro line is a lead, not step 1; the items are numbered, or lettered A, B, C when the task is to find the order | `"letters": true` / `false` (default: lettered when the question, title or lead says order / sequence / arrange / rank / sort), `"lead": false` (every line an item) |
+| the module's ONE comparison table | 2-4 things side by side, a row a fact or a number (each row: its name, then one cell a thing), as the slide's picture on the white panel in the course's look, the words at reading size; its numbers are checked against the script and the sources like a figure's. Only one a module: a second is a problem, and so is a table with a `"figure"` or `"tiles"`. Any other table stays out of the picture (`check_kit.py` WORDS ONLY) | `"table": {"cols": ["LNG", "Methanol"], "rows": [["Flashpoint", "-188 °C", "12 °C"], ...]}` |
+| a definition, a limit or a quoted regulation | shown whole at once: no step for Next to walk, its 2D-kit or figure-kit drawing as it stands at its last step. Steps stay where something changes, happens in order, or is revealed after a question to the class: a slide with `"ask"` / `"reveal"`, a task, a drill, the recap, or `"spots"` / `"zoom"` / `"photos"` keeps them (a problem names it). A slide without it steps as before | `"still": true` |
 | a room activity with no `"opens"` (2.109.0) | no code on the slide (never the screen id); a text of three lines or more is a lead statement and bullets | - |
 
 `"spots"` and `"zoom"` are in the photograph's own pixels and keyed by line number; a wrong one is reported. A slide

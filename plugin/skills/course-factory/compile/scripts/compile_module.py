@@ -59,7 +59,8 @@ EVERY SLIDE IS ONE OF THE OWNER'S LAYOUT TEMPLATES (L61, 2.52.0)
   (shaped_template). Each slide carries data-template="<id>.v1" and data-variant, chosen from the
   layout below - or asked for in the build sheet: "template": "reference-table", "variant": "figure-left",
   "split": 0.55 (text share, 0.5-0.6), "box": "picture-wide" (the picture's box, layout_fit.py), "blocks": [[1, 3], [4, 6]] (compare-two, three-content-blocks), "parts":
-  [[1, 4], [5, 9]] (content-in-parts), "figure_b" (compare-two's second picture). An unknown or unsuitable template is
+  [[1, 4], [5, 9]] (content-in-parts), "figure_b" (compare-two's second picture), "still": true (a definition, a limit
+  or a quoted regulation shown whole: no steps, its drawing at its last step). An unknown or unsuitable template is
   a problem with the slide's id. gb_layouts.css gives every template the owner's look, in the brandbook's colours,
   with the official logo. The owner's rules are checked here: a dense slide (more than 60 words) always has a picture
   beside it; never three teaching slides in a row without a teaching picture; words that need more room than a
@@ -67,7 +68,10 @@ EVERY SLIDE IS ONE OF THE OWNER'S LAYOUT TEMPLATES (L61, 2.52.0)
   L62 (2.53.0): two slides next to each other never look the same - a slide's look is its template, its variant and its
   ground (light, or dark / photo); when a slide would repeat the slide before it, it is built another way that holds
   its words and picture (the picture on the other side, the other ground, a photograph framed on the dark ground, a
-  drawing on the stage), avoiding the slide before that one too. A photograph smaller than 1600 px on its long side is
+  drawing on the stage), avoiding the slide before that one too. Three slides in a row that still look the same are a
+  problem; two in a row, and 2D figures that look alike within KIT2D_APART slides, are listed for the reviewer and the
+  build carries on. A comparison slide (compare-two, before-after, a comparison picture, a title that compares) keeps its
+  own way and may take the look of the slide before it. A photograph smaller than 1600 px on its long side is
   enlarged in the module (Lanczos, a light sharpening) so a projector never shows blocks of pixels; the original is
   kept in working_claude/photo_originals/M01/, and one under 800 px is still listed - find a larger one.
 
@@ -184,6 +188,7 @@ def word_budget(tid, variant, inset=False):
 STAGE_WORDS = LAYOUTS["variety"]["stage_max_words"]
 TOP_WORDS = LAYOUTS["variety"]["picture_top_max_words"]
 VARIETY_WINDOW = LAYOUTS["variety"]["window"]
+REPEAT_STOP = LAYOUTS["variety"]["stop_at"]     # this many slides in a row that look the same stop the build; fewer are a note
 DARK_SHARE = 0.2            # 2.62.1 - 80 / 20 (owner, 2026-10-21): at most a fifth of a module's slides on the dark ground
 PHOTO_LONG, PHOTO_LOW = 1600, 800        # L62: a photograph is shipped at 1600 px on its long side or more; under 800 is low
 FIGURE_FREE = {("explain-figure", "text-only"), ("procedure", "text-only"), ("opening", "statement"), ("key-numbers", "cards"),
@@ -786,11 +791,86 @@ def tiles_figure(mdir, s, b, probs, where):
     return page, b.get("credit") or fragment_credit(page, credits), False
 
 
+TABLE_COLS, TABLE_ROWS = (2, 4), (2, 6)   # a comparison table: 2-4 things side by side, 2-6 rows of facts or numbers
+
+
+def table_cells(b):
+    """the cells of the build sheet's comparison table ("table"), each as a line of words - [] when it has none"""
+    t = b.get("table")
+    return [str(x) for r in (t.get("rows") or []) if isinstance(r, list) for x in r] if isinstance(t, dict) else []
+
+
+def table_figure(b, probs, where):
+    """the module's one comparison table as the slide's picture - the only table a slide may show as its picture (the
+    figure kits draw things, never a table). "table": {"cols": ["LNG", "Methanol"], "rows": [["Flashpoint", "-188 °C",
+    "12 °C"], ...]}: 2-4 things side by side, each row a fact named first, then one cell a thing. Built by the compiler in
+    the course's look (gb_layouts.css .lt-ctable: the brand's colours, the words at reading size)"""
+    t = b.get("table")
+    cols = [str(c).strip() for c in (t.get("cols") or [])] if isinstance(t, dict) else []
+    rows = t.get("rows") if isinstance(t, dict) else None
+    if not (TABLE_COLS[0] <= len(cols) <= TABLE_COLS[1] and all(cols) and isinstance(rows, list)
+            and TABLE_ROWS[0] <= len(rows) <= TABLE_ROWS[1]
+            and all(isinstance(r, list) and len(r) == len(cols) + 1 and all(str(x).strip() for x in r) for r in rows)):
+        probs.append("%s: \"table\" - a comparison table sets %d-%d things side by side (\"cols\") over %d-%d rows of facts or "
+                     "numbers, each row its name first and then one filled cell a thing: {\"cols\": [\"A\", \"B\"], \"rows\": "
+                     "[[\"what\", \"A's\", \"B's\"], ...]}" % ((where,) + TABLE_COLS + TABLE_ROWS))
+        return "", "", False
+    head = "<tr><th></th>%s</tr>" % "".join("<th>%s</th>" % e(c) for c in cols)
+    body = "".join("<tr><th>%s</th>%s</tr>" % (e(str(r[0]).strip()), "".join("<td>%s</td>" % e(str(x).strip()) for x in r[1:]))
+                   for r in rows)
+    return ('<div class="fill fig lt-light lt-ctable-fig" data-script-ignore><table class="lt-ctable" style="--n:%d">'
+            '<thead>%s</thead><tbody>%s</tbody></table></div>' % (len(cols), head, body)), "", False
+
+
+def still_spec(spec, two_d=False):
+    """a figure shown whole at once (the build sheet's "still": true): the spec as it stands at the end of its last step,
+    with no steps for Next to walk. A 2D-kit spec takes every step's "set" into its "state"; a figure-kit spec takes each
+    part's last value a step plays or sets as its "value" (a pipe's "<id>.fill" as its "fill"), a "reset" step starting
+    again from the parts as drawn"""
+    if not isinstance(spec, dict) or not spec.get("steps"):
+        return spec
+    steps = [st for st in spec["steps"] if isinstance(st, dict)]
+    out = {k: v for k, v in spec.items() if k != "steps"}
+    if two_d:
+        state = dict(spec.get("state") or {})
+        for st in steps:
+            state.update(st.get("set") or {})
+        out["state"] = state
+        return out
+    vals = {}
+    for st in steps:
+        if st.get("reset"):
+            vals = {}
+        vals.update({str(k): v for k, v in (st.get("set") or {}).items()})
+        vals.update({str(act[0]): act[1] for act in st.get("play") or [] if isinstance(act, list) and len(act) >= 2})
+    parts = []
+    for p in spec.get("parts") or []:
+        if isinstance(p, dict) and p.get("id") is not None:
+            pid, p = str(p["id"]), dict(p)
+            if pid in vals:
+                p["value"] = vals[pid]
+            if pid + ".fill" in vals:
+                p["fill"] = vals[pid + ".fill"]
+        parts.append(p)
+    out["parts"] = parts
+    return out
+
+
+def still_body(body, two_d=False):
+    """still_spec() on a spec as its file holds it; a spec that is not valid JSON is left for the kit's own message"""
+    try:
+        return json.dumps(still_spec(json.loads(body), two_d), ensure_ascii=False)
+    except ValueError:
+        return body
+
+
 def figure_html(mdir, figdir, s, b, probs, where):
     """the slide's picture, as it goes into the page, and its credit line"""
     rel = (b.get("figure") or "").replace("\\", "/")
     if not rel and b.get("tiles"):
         return tiles_figure(mdir, s, b, probs, where)
+    if not rel and b.get("table"):
+        return table_figure(b, probs, where)
     if not rel:
         if (s.get("visual_kind") or "none") != "none":
             probs.append("%s has no picture file in the build sheet - it is planned as %s: %s%s"
@@ -806,14 +886,14 @@ def figure_html(mdir, figdir, s, b, probs, where):
     if cs.flat_3d(s, b, body):                         # 2.49.7 (IGF M01 s05): a 3D slide is never quietly built in 2D
         probs.append(FLAT_3D % (where, s.get("visual_kind"), rel))
     if rel.lower().endswith(KIT2D_SPEC):
-        return kit2d_figure(body, s, probs, where), "", False
+        return kit2d_figure(still_body(body, True) if b.get("still") else body, s, probs, where), "", False
     if rel.lower().endswith(KIT_SPEC):
         name = os.path.basename(rel)
         if name in OVERRIDE:                           # the studio trying a candidate on the real slide
             body = json.dumps(OVERRIDE[name], ensure_ascii=False)
         else:
             body = fitted(figdir, name, body, composition_key(s, b), s["id"]) or body
-        return kit_figure(body, s, probs, where), "", False
+        return kit_figure(still_body(body) if b.get("still") else body, s, probs, where), "", False
     if body is not None:
         credits = []
         page = hint_ignored(photos_in(body, mdir, probs, where, credits))
@@ -1038,6 +1118,8 @@ def figure_can(fig, kind, is_photo, build, mdir, sid):
 
 CUE_FIXES = {}      # {slide id: its notes with every drafted cue line} - written by main() as a changes file for propose
 CUE_FIX_HOW = "<cue-fix>"
+REVIEW = []         # what the reviewer looks at and the build carries on with - printed by main() under REVIEW_HEAD
+REVIEW_HEAD = "For the reviewer (the build carries on):"
 
 
 def draft_cue(ln, fig, is_photo):
@@ -1819,13 +1901,17 @@ def unsupported_facts(script, build, figdir, mdir, course):
     corpus, found, seen = None, [], set()
     for sid, b in sorted((build.get("screens") or {}).items()):
         cited = {re.sub(r"\s+", "", k.lower()) for k in (b.get("facts") or {})}
-        for rel in (b.get("figure"), b.get("aside")):
-            if not rel or not str(rel).lower().endswith((".kit.json", ".kit2d.json", ".svg", ".html")):
-                continue
-            raw, err = read_figure(mdir, rel, figdir)
-            if err or not raw:
-                continue
-            for text in figure_texts(raw):
+        shown_in = [(rel, None) for rel in (b.get("figure"), b.get("aside"))]
+        shown_in += [("(the comparison table)", table_cells(b))] if table_cells(b) else []    # the table's facts too
+        for rel, texts in shown_in:
+            if texts is None:
+                if not rel or not str(rel).lower().endswith((".kit.json", ".kit2d.json", ".svg", ".html")):
+                    continue
+                raw, err = read_figure(mdir, rel, figdir)
+                if err or not raw:
+                    continue
+                texts = figure_texts(raw)
+            for text in texts:
                 for shown, key in facts_in(text):
                     if (sid, shown) in seen or re.sub(r"\s+", "", shown.lower()) in cited:
                         continue
@@ -2273,6 +2359,38 @@ def layout_key(slide):
     return (shape_of(t.group(1) if t else "", v.group(1) if v else "", left), ground)
 
 
+COMPARISON = re.compile(r"(?i)\b(compar\w*|versus|vs\.?|before\s*(?:and|/|&)\s*after)(?!\w)")
+
+
+def comparison(tid, visual_kind, title):
+    """a slide the script marks as a comparison: the compare-two or before-after template, a comparison picture, or a
+    title that compares - it may take the look of the slide before it on purpose (L62)"""
+    return tid in ("compare-two", "before-after") or visual_kind == "comparison" or bool(COMPARISON.search(title or ""))
+
+
+def comparison_slide(slide):
+    """comparison() read from a built slide"""
+    t = re.search(r'\bdata-template="([\w-]+)\.v\d+"', slide)
+    v = re.search(r'\bdata-visual="([\w-]+)"', slide)
+    h = re.search(r'\bdata-title="([^"]*)"', slide)
+    return comparison(t.group(1) if t else "", v.group(1) if v else "", html.unescape(h.group(1)) if h else "")
+
+
+def look_repeats(slides):
+    """[(index, run)] - each slide that looks exactly like the slide before it (L62), and how many slides in a row now look
+    the same: REPEAT_STOP is a build problem, fewer a note for the reviewer. A task launch and the recap never count; a
+    comparison slide may repeat the slide before it and starts a new run"""
+    out, run = [], 1
+    for i in range(1, len(slides)):
+        k = layout_key(slides[i])
+        if k != layout_key(slides[i - 1]) or k[0] in ("task-launch", "recap", "") or comparison_slide(slides[i]):
+            run = 1
+            continue
+        run += 1
+        out.append((i, run))
+    return out
+
+
 LEFT = {"explain-figure": "figure-left", "reading-with-figure": "figure-left", "long-explanation": "figure-left",
         "procedure": "figure-left", "content-in-parts": "figure-left", "three-content-blocks": "figure-left",
         "reference-table": "figure-left"}
@@ -2439,6 +2557,29 @@ def step_marks(words, marks):
         i = int(m.group(1))
         return 'data-i="%d" data-k="%d"%s' % (i, i, marks.get(i, ""))
     return [re.sub(r'data-i="(\d+)"', one, w) for w in words]
+
+
+# "still": true in the build sheet - a definition, a limit or a quoted regulation shown whole at once, no steps. A slide
+# whose body walks a question and its answer, a task, a drill or the recap keeps its steps
+STILL_NOT = ("worked-example", "true-false", "scenario", "name-parts", "drill", "recap", "task-launch")
+STOP_MARK = re.compile(r'\s(?:data-k="[^"]*"|data-stops="[^"]*"|data-stop\b(?:="[^"]*")?)')
+
+
+def still_problem(s, b, page):
+    """why a slide asked "still" must keep its steps - "" when it may be shown whole"""
+    t = re.search(r'\bdata-template="([\w-]+)\.v\d+"', page)
+    if s.get("kind") != "slide" or s.get("recap") or (t and t.group(1) in STILL_NOT) or s.get("ask") or s.get("reveal"):
+        return "it reveals after a question to the class, or is a task, a drill or the recap"
+    moving = [k for k in ("spots", "zoom", "photos") if b.get(k)]
+    if moving:
+        return "its \"%s\" walk the photograph with its lines" % "\" / \"".join(moving)
+    return ""
+
+
+def still_slide(page):
+    """the slide shown whole: no stop for Next to walk (gb_steps.js walks only a slide that has one) and data-still, so its
+    step boxes and conclusion show as they are (gb_upgrade.css). Its figure's steps were taken out with still_spec()"""
+    return re.sub(r"(<section\b[^>]*?)>", r"\1 data-still>", STOP_MARK.sub("", page), count=1)
 
 
 def carousel_keys(b, nlines, probs, where):
@@ -3076,9 +3217,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         part_w = layout_fit.PART_WORDS * layout_fit.BOX[fitc["box"]]["words"] / float(layout_fit.BOX[dflt]["words"])
     if tid == "opening" and variant == "photo":            # the opening's photograph is the screen, the title over it
         comp = "photo"
-    # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat
+    # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat. A
+    # comparison keeps its own way: it may take the look of the slide before it on purpose
     varied, wkey = None, fit_key(s, b)                   # 2.72.7: the key build_module.py measures a way out by
-    if recent is not None and kind == "slide" and not s.get("recap") and not (ph_keys and comp == "photo"):   # a carousel keeps its photo layout
+    if recent is not None and kind == "slide" and not s.get("recap") and not (ph_keys and comp == "photo") \
+            and not comparison(tid, s.get("visual_kind"), s.get("title")):   # a carousel keeps its photo layout
         # a photograph, or a figure-kit drawing (made for the dark panel), may move to the dark ground; a drawing or a
         # widget made for a white page keeps the light one - its own controls would vanish (gas M01 s07, s15, s19, s26)
         dark_ok = is_photo or bool(re.search(r'data-kit="|class="kit-screen', fig or ""))
@@ -4358,10 +4501,10 @@ def starter_kit2d(script, s, recent=()):
 K2_SPEC_IN = re.compile(r'<script type="application/json" id="k2-([\w-]+)">(.*?)</script>', re.S)
 
 
-def kit2d_variety(script, screens, slides, probs):
-    """2D figures that look alike (kit2d_look: the same main part, or boxes and arrows laid out the same way) are at least
-    KIT2D_APART slides apart, so a module's figures read as drawn for each slide, never one template after another. A
-    look-alike is a problem that names what else the slide's words can make."""
+def kit2d_variety(script, screens, slides, notes):
+    """2D figures that look alike (kit2d_look: the same main part, or boxes and arrows laid out the same way) are best at
+    least KIT2D_APART slides apart, so a module's figures read as drawn for each slide, never one template after another. A
+    look-alike is a note for the reviewer that names what else the slide's words can make - the build carries on."""
     seen = []
     for n, (s, page) in enumerate(zip(screens, slides)):
         for _, body in K2_SPEC_IN.findall(page):
@@ -4372,8 +4515,8 @@ def kit2d_variety(script, screens, slides, probs):
             twin = next(((m, sid) for m, lk, sid in reversed(seen) if lk == look and n - m < KIT2D_APART), None)
             if twin:
                 other = [KIT2D_KIND_WORDS.get(c[1], c[1]) for c in kit2d_candidates(script, s) if c[1] != look]
-                probs.append("%s: its 2D figure looks like the one on %s, %d slide(s) before (%s) - 2D figures that look alike are "
-                             "at least %d slides apart; compose this one differently%s (course-visuals\\kit2d\\SPEC.md)"
+                notes.append("%s: its 2D figure looks like the one on %s, %d slide(s) before (%s) - 2D figures that look alike are "
+                             "best at least %d slides apart; compose this one differently%s (course-visuals\\kit2d\\SPEC.md)"
                              % (cs.place(script, s["id"]), twin[1], n - twin[0], KIT2D_KIND_WORDS.get(look, look), KIT2D_APART,
                                 ": its words also make %s" % ", ".join(dict.fromkeys(other)) if other else ""))
             seen.append((n, look, s["id"]))
@@ -4444,8 +4587,8 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
                                  "to the script's and its steps' lines. " % spec["_pattern"].split(" ")[0]) if spec.get("_pattern") else
                                 "starter written by --init-build: one part per thing the script names, its steps lighting the "
                                 "slide's lines. ") + "BUILD it as it is; change it only for what the build prints."
-            if out is not None:
-                out[s["id"]] = spec
+            if out is not None:      # a slide the sheet shows whole ("still") gets its starter with no steps
+                out[s["id"]] = still_spec(spec, bool(spec.get("_k2"))) if entry.get("still") else spec
 
 
 PHOTO_KINDS = ("photo", "photo_to_take", "annotated_photo")      # visual kinds that are a photograph (media_kinds.json)
@@ -4680,7 +4823,7 @@ def fill_slots(script, sheet, mdir):
         p = cs.picture_of(s)
         if kind == "slide" and cs.on_picture(s) and p["kind"] != "none":
             e = screens.setdefault(sid, {"figure": "", "visual_kind": s.get("visual_kind") or "none"})
-            if (e.get("figure") or "").strip() or e.get("tiles"):
+            if (e.get("figure") or "").strip() or e.get("tiles") or e.get("table"):
                 continue
             if p["items"]:
                 # one picture a thing (picture.items): a placeholder each, shown as tiles; each is queued, found or made and
@@ -4745,6 +4888,7 @@ def deck_floor(build):
 def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, last=None, chosen=None):
     probs = []
     CUE_FIXES.clear()
+    del REVIEW[:]
     m = cs.mid(script.get("module"))
     title = script.get("title") or ""
     screens = practical_before_recap([s for s in script["screens"] if s["kind"] in cs.INSTRUCTOR])
@@ -4797,15 +4941,38 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     for n, s in enumerate(screens, 1):
         b = settled(avoid, s, (build.get("screens") or {}).get(s["id"]) or {})     # 2.72.7: the layout solver's settle
         recent =[layout_key(x) for x in slides[-VARIETY_WINDOW:]]   # L62: the look of the slides just before this one
-        slides.append(mark_slot(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent,
-                                           avoid, last), s["id"]))
+        page = slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent, avoid, last)
+        if b.get("still"):                       # a definition, a limit or a quoted regulation: shown whole, no steps
+            why = still_problem(s, b, page)
+            if why:
+                probs.append("%s (%s): \"still\" - %s, so it keeps its steps; \"still\" is for a definition, a limit or a "
+                             "quoted regulation shown whole" % (cs.place(script, s["id"]), s["id"], why))
+            else:
+                page = still_slide(page)
+        slides.append(mark_slot(page, s["id"]))
         if chosen is not None and s["kind"] == "slide" and not s.get("recap"):    # 2.62.1: kept for the next compile
             chosen[s["id"]] = {"words": words_key(s, b), "key": list(layout_key(slides[-1]))}
-    for a_, b_, s in zip(slides, slides[1:], screens[1:]):
-        if layout_key(a_) == layout_key(b_) and layout_key(b_)[0] not in ("task-launch", "recap", ""):
-            probs.append("%s: looks exactly like the slide before it (%s, %s ground) - two slides in a row never look the same "
-                         "(L62); give one of them a picture, or ask for another template" % ((cs.place(script, s["id"]),) + layout_key(b_)))
-    kit2d_variety(script, screens, slides, probs)
+    # L62 - three slides in a row that look the same stop the build; two in a row are the reviewer's to look at
+    for i, run in look_repeats(slides):
+        at = (cs.place(script, screens[i]["id"]), screens[i]["id"]) + layout_key(slides[i])
+        if run >= REPEAT_STOP:
+            probs.append("%s (%s): looks exactly like the slide before it and the one before that (%s, %s ground) - three slides in "
+                         "a row never look the same (L62); give one of them a picture, or ask for another template" % at)
+        else:
+            REVIEW.append("%s (%s): looks like the slide before it (%s, %s ground) - two in a row (L62); a third would stop the build"
+                          % at)
+    kit2d_variety(script, screens, slides, REVIEW)
+    # one comparison table a module, as a slide's picture; a second is drawn, photographed or modelled instead
+    tables = [s["id"] for s in screens if ((build.get("screens") or {}).get(s["id"]) or {}).get("table")]
+    for sid in tables:
+        b = (build.get("screens") or {}).get(sid) or {}
+        if b.get("figure") or b.get("tiles"):
+            probs.append("%s (%s): \"table\" and a picture - the comparison table is the slide's picture: one or the other"
+                         % (cs.place(script, sid), sid))
+    for sid in tables[1:]:
+        probs.append("%s (%s): a second comparison table in the module (the first is %s) - one comparison table a module; "
+                     "show this one as a drawing, a photograph or a 3D model, or its facts in the slide's own words"
+                     % (cs.place(script, sid), sid, tables[0]))
     # 2.62.1 - 80 / 20 (owner, 2026-10-21): at least 80 % of the module's slides on the light ground. The rule is the
     # background's colour: a slide on the Navy ground ("dark") and a photograph framed on it count; a full-screen
     # photograph is its own background and does not
@@ -5628,6 +5795,10 @@ def main(argv=None):
             qid = re.search(r"\((\w+), [\w_]+\): the real photograph", x)
             probs.append("%s - use it (the places are boxes in %% of the photo, measured on it), or say why not: \"%s\": "
                          "{\"photo_declined\": \"<why>\"}" % (x, qid.group(1) if qid else "<question>"))
+    if REVIEW:
+        print("\n" + REVIEW_HEAD)
+        for x in REVIEW:
+            print("  - " + x)
     if probs:
         print("\nTo fix before it is shown:")
         for x in probs:

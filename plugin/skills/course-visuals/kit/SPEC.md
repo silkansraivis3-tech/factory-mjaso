@@ -268,7 +268,8 @@ exist yet, the part is added to its family here, never drawn once on a slide.
 | 8 | Concepts | tradeoff (three limits that pull on each other, inside a fixed frame), cycle (work that goes round), timeline (work that starts and ends) | **started** | Project Management M01 s03, s05 |
 
 ## Ideas, not machines - the Concepts family (2.108.0)
-A course with no machinery (project management, leadership, law) still gets drawings, never a table in a figure panel:
+A course with no machinery (project management, leadership, law) still gets drawings, never a table in a figure panel
+(the module's one comparison table excepted - the build sheet's `"table"`, below):
 the Project Management build drew nine of M01's eleven figures as tables (`grid_table`), its triple constraint as three
 number boxes around a ship, and its earned-value sum as nine readouts. An idea is drawn as **its shape**: a trade-off is a
 triangle that stretches inside a frame that does not; routine work is a loop; a project is a line to a flag. Patterns
@@ -286,7 +287,9 @@ triangle that stretches inside a frame that does not; routine work is a loop; a 
 - **`check_kit.py` refuses** (a build FAIL): **WORDS ONLY** - every part is words or a number in a box (a readout with a
   `unit` or `marks` is an instrument, not words); **STEPS SHOW ONLY WORDS** - no step moves anything drawn; **DECORATION** -
   a ship drawn small with nothing on it beside words and number boxes; **BROKEN CHARACTERS** - "Â·" for "·". And a new
-  part that draws only boxes and words (`check_part`): that is a table, which the slide's own layouts show.
+  part that draws only boxes and words (`check_part`): that is a table, which the slide's own layouts show. **One
+  comparison table a module** (2-4 things side by side, a row a fact or a number) may be a slide's picture: the build
+  sheet's `"table"`, built by the compiler in the course's look - never a kit figure; a second is refused.
 - Nothing fits and no photo shows it? **Make the part** (PARTS.md) - the shape of the idea, in the Concepts family.
 
 **Task mode (2.43.0, built).** The same spec drawn on a trainee task page, so a slide and the task built from it
@@ -303,12 +306,14 @@ for its empty label boxes); a deck never sets it.
 - **Draw to the panel.** `size` has the shape of the panel the figure is shown in, at the width it shows at (a slide's
   figure column: about 416 × 254 - 2.66.0: the templates' column shows a drawing 456 px wide at 1280 × 800 and 345 px at
   1024 × 768, so a 640-wide spec showed at half size there and its words collided), and the drawing covers it: `audit_drawing.js` EMPTY allows at most
-  half of the panel blank and no blank piece over a fifth. A figure that steps is judged at its busiest step (a rest state is
+  half of the panel blank (60 % for a simple drawing: 4 named parts or fewer - parts with a label or words) and no blank
+  piece over a fifth. A figure that steps is judged at its busiest step (a rest state is
 sparse by design), each step by what it shows - a part still to come is not counted (2.49.7) - and the finding names
 that step; a pipe counts by its bounding box, so the space inside its bends is not blank; and the finding says where the
 largest blank piece is (side and pixels). A whole ship for five spaces,
-  one pipe with three valves, a small scale in a big panel - crop to what the steps show, spread the parts, add the
-  context the slide's lines name (the master valve before the gas valve unit, the engine-room boundary).
+  one pipe with three valves, a small scale in a big panel - crop to what the steps show, draw the parts larger, or give
+  the slide a box of the drawing's shape (`"box"`, `"composition"`). **Never fill the space with parts the slide does
+  not talk about** - no extra valves, no more of the ship: empty space is fixed by cropping, enlarging or the box's shape.
 - **The words stay beside the figure at reading size.** A figure whose steps light the slide's lines goes in a `two-col`
   slide (`compile/GUIDE.md`), never above a row of small legend cards.
 - **A lit line is a button.** Every line a step lights (or the box a line heads) becomes a tap target: tap it or press

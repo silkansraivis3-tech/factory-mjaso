@@ -142,6 +142,13 @@ def compile_problems(out):
     return probs, rec
 
 
+def review_notes(out):
+    """the compiler's list for the reviewer - two slides in a row that look alike, 2D figures alike within a few slides:
+    shown with the build's answer, never a failure"""
+    m = re.search(r"For the reviewer \(the build carries on\):\n((?:  - .*\n?)*)", out)
+    return [x[4:].rstrip() for x in m.group(1).splitlines() if x.startswith("  - ")] if m else []
+
+
 def lines_of(out, n=12):
     keep = [x.rstrip() for x in out.splitlines() if x.strip() and not x.startswith("  note:") and not set(x.strip()) <= set("=-")]
     return keep[-n:]
@@ -197,7 +204,7 @@ def starter_blanks(course, module):
         e = screens.get(s["id"])
         if e is None:
             continue
-        fig = (e.get("figure") or "").strip() or ("tiles" if e.get("tiles") else "")   # (merge) "tiles" are its picture too
+        fig = (e.get("figure") or "").strip() or ("tiles" if e.get("tiles") else "") or ("table" if e.get("table") else "")   # (merge) "tiles" are its picture too, and so is the comparison table
         if s["kind"] == "slide" and not s.get("recap") and not fig and (s.get("visual_kind") or "none") != "none":
             pics.append(s["id"])
         elif s["kind"] in cs.TASKS and cs.mech(s) in cm.STARTER_ON_PICTURE and not fig:
@@ -453,11 +460,11 @@ def slide_order(deck_html):
 
 
 def l62_pairs(deck_html):
-    """[(the slide before, the slide)] - two slides in a row that look the same (L62), as compile_deck reports them"""
+    """[(the slide before, the slide)] - each slide that makes three in a row that look the same (L62), the problem
+    compile_deck reports; two in a row are a note for the reviewer and are left as they are"""
     import compile_module as cm
     secs = slide_order(deck_html)
-    return [(a_, b_) for (_, a_, x), (_, b_, y) in zip(secs, secs[1:])
-            if cm.layout_key(x) == cm.layout_key(y) and cm.layout_key(y)[0] not in ("task-launch", "recap", "")]
+    return [(secs[i - 1][1], secs[i][1]) for i, run in cm.look_repeats([x for _, _, x in secs]) if run >= cm.REPEAT_STOP]
 
 
 FIT_WORDS = re.compile(r"\b(scrolls|spills|over-filled)\b")
@@ -1096,7 +1103,8 @@ def mark_reviewed(out_dir, m):
 # 98 M cache-read tokens). The answer now says each problem ONCE with its fix and its file; the full log keeps every line.
 FIG_ITEM = re.compile(r"^    ([a-z][a-z ]*?) - (.*)$")
 FIG_HEAD = re.compile(r"^  (\w+) \(([^)]+)\) on its slide - drawn \S+ px in a (\S+) px panel, scale ([\d.]+):")
-FIG_HINT = {"empty": "crop what no step shows, spread the parts, or a column of the drawing's shape (\"composition\")",
+FIG_HINT = {"empty": "crop what no step shows, draw the parts larger, or a box of the drawing's shape (\"box\", \"composition\") - "
+                     "never add parts the slide does not talk about",
             "text zone": "give the part room for its words (larger w/h, or move it clear)",
             "inside": "move the part into what it sits in, or make the room larger",
             "cut off": "smaller, or a larger frame (\"size\")",
@@ -1512,6 +1520,7 @@ def main(argv=None):
                      + " - the build-sheet lines are in the full log (compile_module.py)")
     # 2.63.0 - the compiler's own notes: words past their layout's measured budget, an inset moved under the words
     notes += list(dict.fromkeys(x.strip()[6:] for x in cout.splitlines() if x.startswith("Note: ")))
+    notes += ["REVIEW - " + x for x in review_notes(cout)]
     # 3 - the checks, at the same time
     deck = os.path.join(mdir, "presentation", "index.html")
     jobs = {

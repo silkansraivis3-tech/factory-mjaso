@@ -41,8 +41,8 @@ and ships `kit2d.js` (its minified copy `min/kit2d.js` while that is current - a
 `course-module-ui/scripts/minify_engines.py`) and `kit2d.css` with the module. `--init-build` composes a starter from the slide's own lines -
 the best fit of everything they can make (bars of its numbers, a time line of its times, a cycle, people speaking, a
 comparison, a pyramid, a schedule, a grid, a graph, a process laid out four ways) whose look the slides just before do
-not have - and says why in the build sheet's `"_brief"`. Two figures that look alike less than 5 slides apart fail the
-compile. Its `"_todo"`, when it has one, names the values only the course's sources can give, and the compile reports
+not have - and says why in the build sheet's `"_brief"`. Two figures that look alike less than 5 slides apart are listed for
+the reviewer; the build carries on. Its `"_todo"`, when it has one, names the values only the course's sources can give, and the compile reports
 it until it is gone. Alone: `KIT2D.mount(element, spec)` returns the figure
 (`goStep(n)`, `next()`, `prev()`, `idle()`).
 

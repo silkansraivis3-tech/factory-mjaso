@@ -3149,6 +3149,122 @@ def review_fixes_part(tmp):
     check("F5: a photos key outside the slide's lines is reported", probs and "photos" in probs[0], probs)
 
 
+def relaxed_part(tmp):
+    """three rules made lighter: the same look twice in a row is a note, three a problem, a comparison may repeat on
+    purpose; a slide marked "still" is shown whole with no steps; one comparison table a module as a slide's picture"""
+    print("\n-- L62: three in a row stop the build, two are a note, a comparison may repeat")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+
+    def sec(title="Tanks", tid="explain-figure", var="figure-right", vis="schematic"):
+        return ('<section class="slide" id="x" data-title="%s" data-visual="%s" data-template="%s.v1" data-variant="%s">'
+                '<div class="slide-body two-col"></div></section>' % (title, vis, tid, var))
+    three = [sec("A"), sec("B"), sec("C")]
+    check("look_repeats: three slides that look the same are runs of 2 and 3; REPEAT_STOP is 3 (layout-templates.json)",
+          cm.look_repeats(three) == [(1, 2), (2, 3)] and cm.REPEAT_STOP == 3, cm.look_repeats(three))
+    check("... a comparison slide (a title that compares, compare-two, a comparison picture) starts a new run; a task "
+          "launch never counts",
+          cm.look_repeats([sec("A"), sec("B"), sec("LNG versus methanol")]) == [(1, 2)]
+          and cm.look_repeats([sec("A"), sec("B"), sec("C", vis="comparison")]) == [(1, 2)]
+          and cm.look_repeats([sec("A"), sec("Before and after the leak"), sec("C")]) == [(2, 2)]
+          and cm.look_repeats([sec("A", "task-launch", "tablet")] * 3) == [], "")
+    words = "The tank connection space holds every valve and flange of the fuel tank, so a leak stays inside it.\n" \
+            "• Its ventilation runs all the time.\n• Detectors raise the alarm at 20 % LEL."
+    drawn = [{"id": "d%d" % i, "kind": "slide", "title": "Drawing slide %d" % i, "layout": "split", "visual_kind": "schematic",
+              "visual": "The space.", "minutes": 2, "text": words} for i in range(1, 4)]
+    os.makedirs(os.path.join(tmp, "relaxed"))
+    c, md = new_course(os.path.join(tmp, "relaxed"), script(screens=drawn + SCREENS[-4:]))
+    build_of(c, lambda bs: bs.__setitem__("screens", {x["id"]: {"figure": "ga.html"} for x in drawn}))
+    avoid = os.path.join(c, "working_claude", "_build", "M01_layout_avoid.json")
+    os.makedirs(os.path.dirname(avoid), exist_ok=True)
+
+    def only_own(ids):              # every other way measured out: the slide can only be built its own way
+        io.open(avoid, "w", encoding="utf-8").write(json.dumps({sid: {"words": cm.fit_key(next(x for x in drawn if x["id"] == sid),
+                                                                                         {"figure": "ga.html"}),
+                                                                    "avoid": [["picture-left", "light"]]} for sid in ids}))
+    only_own(["d2"])
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    check("two slides in a row that look the same: listed for the reviewer, the build carries on (exit 0)",
+          code == 0 and cm.REVIEW_HEAD in out and "(d2): looks like the slide before it" in out.split(cm.REVIEW_HEAD)[1]
+          and "looks exactly like" not in out, out[-1500:])
+    only_own(["d2", "d3"])
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    check("three in a row: a problem naming the third slide", code == 1 and "(d3): looks exactly like the slide before it and the "
+          "one before that" in out.split("To fix before it is shown:")[-1], out[-1500:])
+    for i, x in enumerate(drawn[1:], 2):
+        x["title"] = "Fuel tank %d compared with a cargo tank" % i
+    cs.save(os.path.join(c, "working_claude", "script", "M01.json"), script(screens=drawn + SCREENS[-4:]))
+    os.remove(avoid)
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    keys = [cm.layout_key(section(deck(md), x["id"])) for x in drawn]
+    check("comparison slides keep their own way and may look like the slide before them - no note, no problem",
+          code == 0 and len(set(keys)) == 1 and cm.REVIEW_HEAD not in out and 'data-varied=' not in deck(md), (keys, out[-800:]))
+
+    print("\n-- \"still\": a definition, a limit or a quoted regulation shown whole, no steps")
+    spec = {"size": [416, 254], "label": "A tank", "idle": "Press Next step",
+            "parts": [{"id": "T", "type": "tank", "x": 30, "y": 30, "w": 150, "h": 80, "label": "tank", "value": 0.2},
+                      {"id": "P", "type": "pipe", "d": "M180 70 H380"}, {"id": "W", "type": "text", "x": 300, "y": 200, "text": "full",
+                                                                        "reveal": True}],
+            "steps": [{"title": "Fill", "play": [["T", 0.9, 500], ["P.fill", 1, 500]], "line": 1},
+                      {"title": "Say so", "set": {"W": 1}, "line": 2}]}
+    st = cm.still_spec(spec)
+    k2 = cm.still_spec({"state": {"n1": 0, "n2": 0, "a1": 0}, "parts": [], "steps": [{"set": {"n1": 1}}, {"set": {"n2": 1, "a1": 1}}]}, True)
+    check("still_spec: no steps; each part at the value its last step leaves (a pipe's fill too); a 2D-kit state at the last "
+          "step's; the source spec unchanged",
+          "steps" not in st and [p.get("value") for p in st["parts"]] == [0.9, None, 1] and st["parts"][1].get("fill") == 1
+          and k2 == {"state": {"n1": 1, "n2": 1, "a1": 1}, "parts": []} and len(spec["steps"]) == 2
+          and cm.still_spec({"parts": []}) == {"parts": []}, (st, k2))
+    page = ('<section class="slide" id="d1" data-template="procedure.v1" data-stops="4"><div class="lt-step" data-stop>1</div>'
+            '<ul class="lt-boxes"><li data-k="0">a</li><li data-k="1 2">b</li></ul><svg data-kit="#kit-d1"></svg></section>')
+    check("still_slide: no data-k, data-stop or data-stops left, data-kit kept, the section marked data-still",
+          cm.still_slide(page) == '<section class="slide" id="d1" data-template="procedure.v1" data-still><div class="lt-step">1</div>'
+          '<ul class="lt-boxes"><li>a</li><li>b</li></ul><svg data-kit="#kit-d1"></svg></section>', cm.still_slide(page))
+    figs = os.path.join(c, "working_claude", "figures", "M01")
+    io.open(os.path.join(figs, "d1.kit.json"), "w", encoding="utf-8").write(json.dumps(spec))
+    sc = script(screens=drawn + [dict(drawn[0], id="d4", title="Ask the room", ask="What fills it?", reveal="The pump.")] + SCREENS[-4:])
+    cs.save(os.path.join(c, "working_claude", "script", "M01.json"), sc)
+    build_of(c, lambda bs: bs.__setitem__("screens", {"d1": {"figure": "d1.kit.json", "still": True}, "d2": {"figure": "ga.html"},
+                                                      "d3": {"figure": "ga.html", "still": True},
+                                                      "d4": {"figure": "ga.html", "still": True}}))
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    p = deck(md)
+    kit = re.search(r'id="kit-d1">(.*?)</script>', p, re.S)
+    inline = json.loads(kit.group(1).replace("<\\/", "</")) if kit else {}
+    check("a slide marked still: data-still, no stop for Next, its kit drawing inlined with no steps and at its last state",
+          "data-still" in section(p, "d1") and "data-k=" not in section(p, "d1") and "data-stops" not in section(p, "d1")
+          and inline and "steps" not in inline and inline["parts"][0]["value"] == 0.9, (section(p, "d1")[:600], inline))
+    check("... a slide not marked still steps as before (no data-still)", "data-still" not in section(p, "d2"), section(p, "d2")[:300])
+    check("... a slide that reveals after a question keeps its steps: a problem names it",
+          "(d4): \"still\" - it reveals after a question" in out and "data-still" not in section(p, "d4"), out[-1200:])
+
+    print("\n-- one comparison table a module, as a slide's picture")
+    probs = []
+    ok_ = cm.table_figure({"table": {"cols": ["LNG", "Methanol"], "rows": [["Flashpoint", "-188 °C", "12 °C"],
+                                                                           ["Stored", "-162 °C", "ambient"]]}}, probs, "s05")[0]
+    bad = [cm.table_figure({"table": t}, probs, "s06")[0] for t in (
+        {"cols": ["Only one"], "rows": [["a", "b"], ["c", "d"]]},
+        {"cols": ["A", "B", "C", "D", "E"], "rows": [["a"] * 6, ["b"] * 6]},
+        {"cols": ["A", "B"], "rows": [["one row", "x", "y"]]},
+        {"cols": ["A", "B"], "rows": [["a", "x", ""], ["b", "x", "y"]]})]
+    check("table_figure: 2-4 things side by side over 2-6 filled rows, in the course look (lt-ctable on the white panel, "
+          "script-ignored); one thing, five, one row or an empty cell is a problem",
+          'class="fill fig lt-light lt-ctable-fig" data-script-ignore' in ok_ and ok_.count("<tr>") == 3 and "<th>LNG</th>" in ok_
+          and "<td>-188 °C</td>" in ok_ and bad == [""] * 4 and len(probs) == 4, (ok_, probs))
+    css = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_layouts.css"), encoding="utf-8").read()
+    rules = re.findall(r"\.lt-ctable[^{]*\{([^}]*)\}", css)
+    check("... its look is the course's own tokens - no colour or size of its own",
+          rules and not any(re.search(r"#[0-9a-fA-F]{3}|rgba?\(", r) for r in rules) and "var(--lt-fs)" in css, rules)
+    table = {"cols": ["Fuel tank", "Cargo tank"], "rows": [["Holds", "fuel", "cargo"], ["Alarm", "20 % LEL", "99 % LEL"]]}
+    build_of(c, lambda bs: bs.__setitem__("screens", {"d1": {"table": table}, "d2": {"figure": "ga.html"},
+                                                      "d3": {"table": table, "figure": "ga.html"}, "d4": {"figure": "ga.html"}}))
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    fix = out.split("To fix before it is shown:")[-1]
+    check("the first table is the slide's picture; a second in the module is a problem naming the first, and so is a table "
+          "beside a \"figure\"; a number in it no source states is reported like a figure's",
+          "lt-ctable" in section(deck(md), "d1") and "(d3): a second comparison table in the module (the first is d1)" in fix
+          and "(d3): \"table\" and a picture" in fix and "99 % LEL" in fix and "20 % LEL\"" not in fix, fix[-1500:])
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -3752,6 +3868,7 @@ def main():
         sme_figures_part(tmp)
         figure_words_part(tmp)
         seed_part(tmp)
+        relaxed_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

@@ -33,7 +33,13 @@
                      shape (a hull, a room) fills only along its outline; a pipe (an open
                      stroked path) counts by its bounding box; a figure that steps is
                      judged at its BUSIEST step - the state with the least blank, not
-                     step 0 - and the finding says where the largest blank piece is
+                     step 0 - and the finding says where the largest blank piece is.
+                     A simple drawing (at most CONFIG.emptySimpleParts named parts: a
+                     kit figure's parts with a label or words, else the words it
+                     shows) may leave CONFIG.emptySimpleMaxBlank of its frame blank.
+                     Empty space is fixed by cropping, drawing the parts larger or a
+                     box of the drawing's shape - never by adding parts the slide does
+                     not talk about
                      (operator, 2026-10-15: "the visual is too big, much empty space";
                      IGF M06 2026-10-16: thin pipes read as blank, rest states failed).
 
@@ -102,6 +108,8 @@
     emptyMaxBlank: 0.5,      /* EMPTY: at most this share of the frame may be more than one cell from any content
                                 (calibrated on the IGF pilot, 2026-10-15: well-filled figures 24-33 %, the ones the
                                 operator called empty 53-74 %) */
+    emptySimpleParts: 4,     /* EMPTY: a drawing of this many named parts or fewer is simple ... */
+    emptySimpleMaxBlank: 0.6,/*        ... and may leave this share of its frame blank */
     emptyBigPart: 0.06,      /* EMPTY: a shape larger than this share of the frame fills only along its outline */
     emptyPipeBox: 0.25,      /* EMPTY: a pipe (an open stroked path, no fill) counts by its bounding box up to this share of
                                 the frame; a longer route only a cell either side of its line */
@@ -648,9 +656,11 @@
         report(out, { check: "empty", where: where, part: "blank " + Math.round(E4.blank * 100) + " % of the frame, largest piece " +
                       Math.round(E4.w) + " x " + Math.round(E4.h) + " px = " + Math.round(E4.share * 100) + " %", other: E4.frame,
                       detail: "too much empty space" + (E4.steps ? ", even at its busiest step (step " + E4.step + " of " + E4.steps + ")" : "") +
-                      " (limits: " + Math.round(CONFIG.emptyMaxBlank * 100) + " % blank, " +
-                      Math.round(CONFIG.emptyMaxShare * 100) + " % in one piece) - the largest blank piece is " + E4.region +
-                      " - draw to the frame there, crop the drawing, or give the room to the words", region: E4.at }, [svg]);
+                      " (limits: " + Math.round(E4.limit * 100) + " % blank" + (E4.simple ? " for a simple drawing of " + E4.named +
+                      " named part(s)" : "") + ", " + Math.round(CONFIG.emptyMaxShare * 100) + " % in one piece) - the largest " +
+                      "blank piece is " + E4.region + " - crop the drawing to what it shows, draw its parts larger, or give it a " +
+                      "box of its own shape (\"box\", \"composition\"); never add parts the slide does not talk about",
+                      region: E4.at }, [svg]);
       }
       /* ---- 5 CONTRAST ---- every part of a kit figure can be seen against what is behind it */
       checkContrast(svg, where, items, out);
@@ -845,7 +855,9 @@
     } else {
       res = judge(showing(geom));
     }
-    if (!res.hole && res.blank <= CONFIG.emptyMaxBlank) { return null; }
+    var named = namedParts(svg, geom), simple = named > 0 && named <= CONFIG.emptySimpleParts;
+    var limit = simple ? CONFIG.emptySimpleMaxBlank : CONFIG.emptyMaxBlank;
+    if (!res.hole && res.blank <= limit) { return null; }
     /* where the blank piece is, so the drawing can be filled there */
     var tl = res.x <= cell, tr = res.x + res.w >= fr.w - cell, tt = res.y <= cell, tb = res.y + res.h >= fr.h - cell;
     var across = tl && tr ? "across the full width" : tr ? "on the right" : tl ? "on the left" : "in the middle";
@@ -853,7 +865,16 @@
     var region = [across, down].filter(Boolean).join(", ") + " - from x " + Math.round(res.x) + ", y " + Math.round(res.y) + " to x " +
                  Math.round(res.x + res.w) + ", y " + Math.round(res.y + res.h) + " px of the frame (" + Math.round(fr.w) + " x " + Math.round(fr.h) + ")";
     return { w: res.w, h: res.h, share: res.share, blank: res.blank, hole: res.hole, frame: name, step: step, steps: f && f.steps ? f.steps() : 0,
-             region: region, at: { x: res.x, y: res.y, w: res.w, h: res.h } };
+             region: region, at: { x: res.x, y: res.y, w: res.w, h: res.h }, limit: limit, simple: simple, named: named };
+  }
+
+  /* the parts a drawing names: a kit figure's parts that carry a label or words, else the words the drawing shows */
+  function namedParts(svg, geom) {
+    var f = svg.__kit;
+    if (f && f.spec && f.spec.parts) {
+      return f.spec.parts.filter(function (q) { return q && (q.label || q.text); }).length;
+    }
+    return geom.filter(function (it) { return it.t === "text" && (it.el.textContent || "").trim(); }).length;
   }
 
   /* ---- INSET (2.60.0) ---- a real photo laid "over" a kit drawing (figure.inset.over in its .kit-holder) is not part of
