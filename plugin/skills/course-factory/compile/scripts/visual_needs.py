@@ -178,7 +178,7 @@ def fill(course, module, auto=True):
                     "description": rec.get("description") or cs.picture_of(s)["shows"] or pick.get("description"),
                     "shows": rec.get("shows") or cs.picture_of(s)["shows"],
                     "source": rec.get("source") or ("Novikontas old course" if pick["source"] == "old course" else "course knowledge base"),
-                    "author": rec.get("author") or "Novikontas", "license": rec.get("license") or "owner-cleared (L33)",
+                    "author": rec.get("author") or "Novikontas",
                     "rights_state": rec.get("rights_state") or "OWNER_CLEARED", "url_or_origin": rec.get("url_or_origin") or pick["origin"],
                     "catalogue_id": pick["id"], "teaching_purpose": "%s - %s" % (sid, s.get("title") or ""), "auto_picked": True,
                     "width": pick.get("w"), "height": pick.get("h")})

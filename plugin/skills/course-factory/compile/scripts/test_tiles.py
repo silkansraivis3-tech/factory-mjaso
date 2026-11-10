@@ -79,6 +79,18 @@ def main():
         check("a tile that is not there is said", "its tile assets/img/gone.png is not in the module folder" in out, out[-600:])
         code, out = run(os.path.join(HERE, "precheck.py"), c, "--module", "1")
         check("... and the pre-check stops the build on it, before anything is built", code == 1 and "gone.png" in out, out)
+        tc.build_of(c, lambda b: b["screens"][sid].update({"tiles": ["assets/img/t1.png", "assets/img/t2.png"],
+                                                           "figure": "assets/img/t3.png"}))
+        code, out = run(tc.COMPILE, c, "--module", "1")
+        check("\"figure\" and \"tiles\" on one slide stop the build, saying its tiles are lost (the gas trial's M01 s03: five "
+              "tiles shipped as one picture)", code == 1 and "(%s): \"figure\" and \"tiles\"" % sid in out, out[-600:])
+        meta = tc.cs.load(os.path.join(md, "assets", "img", "_photo_meta.json"))
+        meta["t3.png"]["used_in"] = "M01 presentation, slide %s" % sid
+        tc.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+        sheet = {"screens": {sid: {"tiles": ["assets/img/t1.png", "assets/img/t2.png"], "photo_wanted": True}}}
+        cm.prefill(sc, sheet, md, os.path.join(c, "working_claude", "figures", "M01"))
+        check("... and --auto never gives a slide with tiles a \"figure\" of one photograph", "figure" not in sheet["screens"][sid],
+              sheet["screens"][sid])
 
         print("\n-- --init-build: the module's photographs go on the slides their records name")
         os.makedirs(os.path.join(tmp, "b"))

@@ -61,6 +61,18 @@ def main():
         code, out = run(half, "--theory-min", "40", "--practice-min", "20")
         check("2.67.0: a slide of half a minute is counted, never a crash (gas M07 / M15: invalid literal for int(): '0.5')",
               "Traceback" not in out and "ValueError" not in out, out)
+        with open(half, "w", encoding="utf-8") as f:
+            f.write(DECK.replace('data-mins="20" data-track="practice" data-active="20"',
+                                 'data-mins="17.5" data-track="practice" data-active="17.5"')
+                    + '<section class="slide" data-block="b3" data-kind="activity" data-title="Half" data-mins="2.5" '
+                    'data-track="practice" data-active="2.5"></section>')
+        code, out = run(half, "--theory-min", "40", "--practice-min", "20")
+        check("a half-minute activity (data-active \"2.5\", \"17.5\") is a number: the module passes",
+              code == 0 and "not a number" not in out, out)
+        with open(half, "w", encoding="utf-8") as f:
+            f.write(DECK.replace('data-active="20"', 'data-active="lots"'))
+        code, out = run(half, "--theory-min", "40", "--practice-min", "20")
+        check("... a data-active that is not a number still fails", code == 1 and "not a number" in out, out)
 
         code, out = run(deck, "--programme", prog)
         check("--programme alone: the one deck is judged against the WHOLE course's total row - a false FAIL, and it says so",

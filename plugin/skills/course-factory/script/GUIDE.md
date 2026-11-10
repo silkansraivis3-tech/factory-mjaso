@@ -206,6 +206,8 @@ tablets (L35), and the script says which screen is where:
 - Kinds: `slide`, `task-slide`, `activity` (instructor tablet); `self-check`, `module-check`, `final`
   (trainee tablet). Module checks are never graded (L27) and come at the end of the module; a
   final-assessment script (`--module final`, the last module, L34) holds a task slide and `final` questions.
+  An `activity`'s minutes count in the module's practice hours; when the architecture takes them from the theory
+  (a simulator exercise in a topic the programme gives no practical hours), the screen says `"track": "theory"`.
 - **A team task** (the classroom rulebook 4b) is a task slide with `"team": {"size": "3", "roles":
   ["Leader", "Recorder", "Checker"], "scope": "team"}` - `"3-4"` for a range; `"scope"` `team` (one answer per team)
   or `member` (everyone answers, the team's average shown); roles are optional. The review page and the Word file say

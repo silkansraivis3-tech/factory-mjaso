@@ -109,6 +109,16 @@ def main():
         check("... normalise writes the factory's source (its page and credit) and shows (from the library's own entry)",
               code == 0 and m.get("source", "").startswith("https://commons.wikimedia.org") and "Galatsis" in m["source"]
               and m.get("shows") == ["personal 4-gas monitor"] and m["page_url"] == lib["page_url"], (out, m))
+
+        for key in ("licence", "license"):
+            code, out = run(folder(tmp, "cc_" + key, record(rights_state="CLEARED", **{key: "CC BY-SA 4.0"})))
+            check("a CC BY-SA photo with no author is said, its licence written \"%s\"" % key,
+                  'licence "CC BY-SA 4.0" asks for a credit' in out, out[-400:])
+        code, out = run(folder(tmp, "cc_author", record(rights_state="CLEARED", license="CC BY-SA 4.0", author="A. Person")))
+        check("... and with its author it is not", "asks for a credit" not in out, out[-400:])
+        code, out = run(folder(tmp, "free", record(rights_state="FREE_LICENCE_ATTRIBUTION")))
+        check("a rights_state the pipeline does not define fails and lists the ones it does",
+              code == 1 and '"FREE_LICENCE_ATTRIBUTION" is not valid' in out and "ATTRIBUTION_REQUIRED" in out, out[-400:])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

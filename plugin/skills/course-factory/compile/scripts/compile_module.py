@@ -568,9 +568,12 @@ def credit_line(meta, with_title=True):
     stored size is not the original's. A generated picture has none."""
     if is_generated(meta):
         return ""
-    if named_clearance(meta) and not meta.get("licence") and (meta.get("source_work") or meta.get("credit")):
+    lic = (meta or {}).get("licence") or (meta or {}).get("license")       # a record written either way
+    if re.search(r"\(L\d+\)", str(lic or "")):      # "owner-cleared (L33)": the factory's own note, not a licence
+        lic = None
+    if named_clearance(meta) and not lic and (meta.get("source_work") or meta.get("credit")):
         return "Source: " + (meta.get("credit") or meta.get("source_work"))   # 2.63.2: a cleared book figure - its book, edition, page
-    if not meta or not (meta.get("attribution_required") or meta.get("licence")):
+    if not meta or not (meta.get("attribution_required") or lic):
         return ""
     author = re.split(r"\s*[(,]", meta.get("author") or "")[0].strip()
     title = meta.get("title") or ""
@@ -582,7 +585,7 @@ def credit_line(meta, with_title=True):
         title = unquote(m.group(1)).replace("_", " ").strip()
     o, st = str(meta.get("orig_size") or ""), str(meta.get("stored_size") or "")
     changed = meta.get("modification") or ("resized" if "resized" in st or (o and st and o.split()[0] != st.split()[0]) else "")
-    parts = [x for x in (title, author, meta.get("source"), meta.get("licence"), changed) if x]
+    parts = [x for x in (title, author, meta.get("source"), lic, changed) if x]
     return "Photo: " + " · ".join(parts) if parts else ""
 
 
@@ -2965,6 +2968,13 @@ def active_mins(s):
     return "%g" % cs.minutes(s) if on else "0"
 
 
+def activity_track(s):
+    """the allocation a room activity's minutes are counted in (check_balance.py data-track): practice, unless the script
+    says "track": "theory" - the architecture takes its minutes from the topic's theory (a simulator exercise in a topic
+    the programme gives no practical hours)"""
+    return "theory" if str(s.get("track") or "").strip().lower() == "theory" else "practice"
+
+
 # build-sheet fields that never decide a slide's layout - an edit to them keeps what was measured and built (2.62.1)
 NOT_LAYOUT = ("alt", "labels", "unlabel", "areas", "link_hint", "not_things", "declined_3d", "photo_wanted", "photo_badges")
 
@@ -3079,7 +3089,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         else:
             d["data-link-hint"] = b.get("link_hint") or (lines[0] if lines else "")
         d.update(base)
-        d["data-track"] = "practice" if kind == "activity" else "theory"
+        d["data-track"] = activity_track(s) if kind == "activity" else "theory"
         if kind == "activity" and s.get("practice_minutes"):    # 2.63.2 item 13: an exercise in the practical hours
             d.update({"data-mins": "0", "data-active": "0", "data-practical-mins": "%g" % float(s["practice_minutes"])})
         template_attrs(d, "task-launch", "room" if kind == "activity" else "check" if graded else "tablet")
@@ -3222,7 +3232,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if b.get("box") in layout_fit.ORDER or (split is None and fitc["box"] != dflt) \
                 or (grown and split is not None and split > fitc["text"]):
             split = fitc["text"]                            # the picture's room comes first; words past it go in parts
-        part_w = layout_fit.PART_WORDS * layout_fit.BOX[fitc["box"]]["words"] / float(layout_fit.BOX[dflt]["words"])
+        part_w = int(round(layout_fit.PART_WORDS * layout_fit.BOX[fitc["box"]]["words"] / float(layout_fit.BOX[dflt]["words"])))
     if tid == "opening" and variant == "photo":            # the opening's photograph is the screen, the title over it
         comp = "photo"
     # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat. A
@@ -3339,7 +3349,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         label = "Practical"
     if act:
         code = (s.get("opens") or "").strip() or sid.upper()
-        d.update({"data-kind": "Task", "data-activity": code, "data-track": "practice", "data-block": "%s · %s" % (m, code),
+        d.update({"data-kind": "Task", "data-activity": code, "data-track": activity_track(s), "data-block": "%s · %s" % (m, code),
                   "data-link-hint": b.get("link_hint") or (lines[0] if lines else "")})
         label = "Task"
     head = '  <div class="slide-kind"><b>%s</b> · %s · %d / %d</div>' % (label, m, n, total)
@@ -4736,7 +4746,8 @@ def prefill(script, sheet, mdir, figdir):
               and os.path.isfile(os.path.join(mdir, "assets", "img", n))}
     taken = {(e.get("figure") or "").replace("\\", "/").rsplit("/", 1)[-1] for e in screens.values() if isinstance(e, dict)}
     want = [s for s in script["screens"] if s["kind"] == "slide" and s["id"] in screens
-            and not (screens[s["id"]].get("figure") or "").strip()
+            and not (screens[s["id"]].get("figure") or "").strip() and not screens[s["id"]].get("tiles")
+            and not screens[s["id"]].get("table")
             and (cs.parse_kind(s.get("visual_kind", "")) == "photo" or screens[s["id"]].get("photo_wanted"))]
 
     def give(s, name, why):
@@ -4984,6 +4995,12 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         if b.get("figure") or b.get("tiles"):
             probs.append("%s (%s): \"table\" and a picture - the comparison table is the slide's picture: one or the other"
                          % (cs.place(script, sid), sid))
+    for s in screens:
+        b = (build.get("screens") or {}).get(s["id"]) or {}
+        if isinstance(b, dict) and (b.get("figure") or "").strip() and b.get("tiles"):
+            probs.append("%s (%s): \"figure\" and \"tiles\" - the slide shows only its figure, and its %d tiles are lost: "
+                         "several pictures are its \"tiles\" (remove \"figure\"), one picture is its \"figure\" (remove "
+                         "\"tiles\")" % (cs.place(script, s["id"]), s["id"], len(b["tiles"])))
     for sid in tables[1:]:
         probs.append("%s (%s): a second comparison table in the module (the first is %s) - one comparison table a module; "
                      "show this one as a drawing, a photograph or a 3D model, or its facts in the slide's own words"

@@ -201,6 +201,24 @@ def recap_part(tmp):
           '<p class="rc-next" data-script-ignore' in r, r)
     code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
     check("... and check_script_match finds exactly the approved words on it", code == 0, out)
+
+    # the largest recap the script allows - six points of 24 words, each with its question - fits the slide, its cards
+    # closed (as the audit sees them) and open, and "Next: the module check" stays clear of the deck's chrome
+    os.makedirs(os.path.join(tmp, "r6"))
+    point = ("ESD - push buttons, blackout, shore link, fusible links and tank alarms start it; it closes the manifold "
+             "valves and trips pumps and compressors.")
+    big = dict(recap, text="\n".join([point] * 6), asks="\n".join(["Name two things that start an ESD and two things it does."] * 6))
+    screens = json.loads(json.dumps(SCREENS))
+    screens.insert([x["id"] for x in screens].index("t02"), big)
+    c, md = new_course(os.path.join(tmp, "r6"), script(screens=screens))
+    run(COMPILE, c, "--module", "1")
+    audits = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "run_audits.py")
+    code, out = run(audits, os.path.join(md, "presentation", "index.html"), "--viewport", "1024x768", "--viewport", "1280x720")
+    if code == 2:
+        print("  (no Chrome or Edge here: the recap's fit was not measured)")
+    else:
+        check("six recap points of 24 words with their questions fit at 1280 x 800, 1024 x 768 and 1280 x 720 (the gas "
+              "trial: every module's recap spilled 15-30 px)", "lt-ask4" in section(deck(md), "s05") and "(s05)" not in out, out[-900:])
     long_layouts_part(tmp)
 
 
@@ -2467,6 +2485,13 @@ def boxes_part(tmp):
     code, out = run(COMPILE, c, "--module", "1", "--draft")
     check("the build sheet's \"box\" wins; a slide asked onto the stage is not told to change its picture",
           'data-box="even"' in section(deck(md), "s05") and "another kind of picture" not in out, out[-600:])
+    build_of(c, lambda s: s["screens"].update(s06={"figure": "assets/fig/busy.svg", "template": "content-in-parts",
+                                                   "box": "picture-wide"}))
+    code, out = run(COMPILE, c, "--module", "1", "--draft")
+    s6 = section(deck(md), "s06")
+    check("content-in-parts beside a box smaller than the default, no \"parts\" ranges: the words are cut in parts (a part's "
+          "words are a whole number), no crash", "Traceback" not in out and 'data-box="picture-wide"' in s6
+          and len(re.findall(r'class="lt-part[ "]', s6)) >= 2, out[-900:])
 
 
 def kit3d_part(tmp):
@@ -2761,6 +2786,29 @@ def practical_part(tmp):
                         os.path.join(md, "presentation", "index.html")], capture_output=True, text=True, encoding="utf-8", errors="replace")
     m = re.search(r"practice\s+(\d+) min", p.stdout)
     check("... check_balance counts its 30 minutes as practice", m and int(m.group(1)) >= 30, p.stdout[-600:])
+
+    print("\n-- a room activity's minutes: practice, or theory when the script says the architecture takes them from theory")
+    sv = json.loads(json.dumps(SCREENS))
+    sv[4:4] = [{"id": "a01", "kind": "activity", "title": "Pairs - trace the fuel line", "visual_kind": "none",
+                "text": "In pairs, trace the fuel line on paper.", "minutes": 10},
+               {"id": "a02", "kind": "activity", "title": "Simulator exercise - bunkering", "visual_kind": "none",
+                "text": "On the simulator: bunker the fuel tank.", "minutes": 20, "track": "theory"},
+               {"id": "a03", "kind": "activity", "title": "Trace the vent line", "visual_kind": "schematic",
+                "visual": "General arrangement.", "text": "Trace the vent line on the drawing.", "minutes": 5, "track": "Theory"}]
+    os.makedirs(os.path.join(tmp, "acttrack"))
+    c, md = new_course(os.path.join(tmp, "acttrack"), script(screens=sv))
+    build_of(c, lambda s: s["screens"].update(a03={"figure": "ga.html"}))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    page = deck(md)
+    tracks = {sid: (re.search(r'data-track="(\w+)"', section(page, sid)) or re.search("$^", "")) for sid in ("a01", "a02", "a03")}
+    check("an activity is practice; with \"track\": \"theory\" in the script it is theory - a launch slide and an activity with "
+          "a figure alike", {k: v.group(1) if v else None for k, v in tracks.items()}
+          == {"a01": "practice", "a02": "theory", "a03": "theory"}, {k: section(page, k)[:300] for k in tracks})
+    p = subprocess.run([sys.executable, "-I", os.path.join(SKILL, "hours", "scripts", "check_balance.py"),
+                        os.path.join(md, "presentation", "index.html")], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    m = re.search(r"built\s+theory\s+(\d+) min\s+practice\s+(\d+) min", p.stdout)
+    check("... check_balance counts the 10 practice minutes as practice and the 25 from theory as theory",
+          m and int(m.group(2)) == 10 and int(m.group(1)) >= 25, p.stdout[-600:])
 
 
 def exercise_part(tmp):
@@ -3369,6 +3417,13 @@ def main():
         check("a credit names the work, the author, the source, the licence and the change (CC BY-SA)",
               cm.credit_line(meta) == "Photo: MF Bergensfjord filling LNG in Arsvågen · Tholme · Wikimedia Commons · CC BY-SA 4.0 · resized",
               cm.credit_line(meta))
+        us = {k: v for k, v in meta.items() if k not in ("licence", "attribution_required")}
+        us["license"] = "CC BY-SA 4.0"
+        check("... a record that writes it \"license\" has the same credit (the gas trial's M01 s01 shipped with none)",
+              cm.credit_line(us) == cm.credit_line(meta), cm.credit_line(us))
+        check("... but the old --auto pick's \"license\": \"owner-cleared (L33)\" is no licence: no credit line from it",
+              cm.credit_line({"source": "Novikontas old course", "author": "Novikontas", "license": "owner-cleared (L33)",
+                              "rights_state": "OWNER_CLEARED"}) == "")
         few = [f for f in cs.media_findings(script()) if f["rule"] == "v_few_photos"]
         more = json.loads(json.dumps(SCREENS))
         more[1]["visual"] = "Thermometer scale; a real photo of a bunker station beside it."
