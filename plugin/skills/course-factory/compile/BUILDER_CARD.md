@@ -33,7 +33,9 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
   (`phase_a.py`): your brief is then `working_claude\visuals\MNN_VISUAL_NEEDS.md` - each slot's kind, shape, real px size,
   words, what it must show and the course catalogue's candidates. Run `build_module.py ... --auto` first (it takes the
   catalogue's good picks), then fill the rest: a photograph 800 px or more into `assets/img` with its `_photo_meta.json`
-  record, its entry's `"figure"` on it, the `"placeholder"` keys and file gone. A placeholder never ships. The record's
+  record (from Wikimedia Commons: `course-visuals/scripts/commons.py get "File:<name>" <module>\assets\img` - never a
+  fetcher of your own, never a person's name or e-mail address in a request), its entry's `"figure"` on it, the
+  `"placeholder"` keys and file gone. A placeholder never ships. The record's
   `"rights_state"` is one of PUBLIC_DOMAIN, ATTRIBUTION_REQUIRED (CC BY, CC BY-SA: its `"author"` and `"licence"`
   make the credit), CLEARED, PROJECT_OWNED, OWNER_CLEARED, RIGHTS_REVIEW_REQUIRED, REJECTED - no other word. Its
   `"visually_verified"` is words, once you opened it: `"yes - <what you saw> <YYYY-MM-DD>"`, never `true`.

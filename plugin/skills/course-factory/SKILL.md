@@ -285,11 +285,13 @@ A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobod
   `--approve --by "<expert> (Ready in editor)"`, `content_script.py approve ... --by "<expert> (Ready in editor)"`; the
   build plan question takes its first option.
 - Never ask: a question goes to `working_claude/OPEN_EXPERT_QUESTIONS.md` with the choice made, and the build goes on.
+- A request to any site names the tool, never a person: no name, e-mail address or account in a request, a header or a
+  URL - say so in every brief that sends a helper to download.
 - Each script, before approval: the `task-coverage-checker`, then the `fact-checker`, each ending `fixes --apply`; a
   question listed for the person goes to `OPEN_EXPERT_QUESTIONS.md`. When the fact-checker's apply says the task cover
   must be judged again (its cuts changed the slides before a task), the `task-coverage-checker` runs on the module again.
-- No paid pictures. Free sources first — Wikimedia Commons, DVIDS, USCG, NOAA, the old course, the knowledge base (the
-  `visual-sourcer`; small ones enlarged) — then Nano Banana in the Gemini app if a signed-in browser is there
+- No paid pictures. Free sources first — Wikimedia Commons (`course-visuals/scripts/commons.py`, never a helper's own
+  fetcher), DVIDS, USCG, NOAA, the old course, the knowledge base (the `visual-sourcer`; small ones enlarged) — then Nano Banana in the Gemini app if a signed-in browser is there
   (`gemini-browser`). `picture_briefs.py queue` / `place`. An unfilled space keeps its brief and does not stop the build.
 - A simulator task (L66) is never accepted here: its activity screen keeps its minutes, its notes name the draft as
   awaiting the course director, and it goes to `OPEN_EXPERT_QUESTIONS.md`; `check_course_package.py` lists it.

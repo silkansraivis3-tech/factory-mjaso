@@ -81,7 +81,7 @@ not say where the image itself came from.
 - Is it the right manufacturer, if the course names one?
 - **Resolution ≥ 1600 px on the long edge** (2.65.0, owner: *"not this pixel stuff"*): a photograph fills half a
   projector at 1920 px, so a smaller one is stretched into blocks. Get the **original file, never a preview**: on
-  Wikimedia Commons the *Original file* link (not a `/thumb/` URL), on Flickr the largest size offered, a
+  Wikimedia Commons `commons.py get` (below) - it takes the original, never a `/thumb/` URL; on Flickr the largest size offered, a
   manufacturer's press or media kit rather than its web page, a PDF's embedded image rather than a screenshot of the
   page. Write its size in the record (`"px": "2400x1600"`). **1024 px or more is accepted without a warning** - take
   the larger original when there is one; 800-1023 px only when nothing larger exists - say so and give the size;
@@ -126,6 +126,16 @@ it honestly: *"a product tanker, not a gas carrier"* is a usable caption; silenc
 (`course\modules\M01_<title>\assets\`, L43) with their provenance record beside them, and listed - what each shows,
 the page, the site, the size - in the module's report. Only an unclear licence or a paid source is asked about
 first; return those as a list for whoever called you to put to the operator.
+
+**Wikimedia Commons: `course-visuals/scripts/commons.py`, never a fetcher of your own.**
+`python <course-visuals>/scripts/commons.py search "<terms>"` lists the files with their size, licence and author;
+`python <course-visuals>/scripts/commons.py get "File:<name>" <the asset folder> --found-for "<module> <slide>"` downloads
+the original and writes its record (source, page, author, licence, rights) - then open it and write what it shows and
+that you looked (*Verification*, above). It asks at Wikimedia's polite rate.
+
+**A request names the tool, never a person.** No name, e-mail address or account - the operator's or anyone's - in a
+request, a header (User-Agent included), a parameter or a URL, on any site. `commons.py` sends the tool's name and the
+organisation's public website; a download from another site sends the same `USER_AGENT`.
 
 Anything recommended and legally usable must be **downloaded and packaged locally** into the asset
 folder you were given — the tablet has no network and the app returns 403 to every external host.
