@@ -4499,7 +4499,7 @@ def starter_track(script, s, lines, variant="v"):
              for k, (i, _) in enumerate(rows)]
     return {"size": [W, H], "label": first or (s.get("title") or ""), "idle": "Press Next step", "parts": [part], "steps": steps,
             "_note": "starter written by --init-build (2.73.0): the slide's lines as a step track - it names no thing the kit "
-                     "draws. Draw the real thing if it has one; else keep the track and check every step's words"}
+                     "draws, and the build refuses it shipped unchanged. Draw the real thing; else give each step a short name of its own"}
 
 
 # a drawing slide about an idea, a sequence or numbers starts from the 2D kit (course-visuals/kit2d), drawn to

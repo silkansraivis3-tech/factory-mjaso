@@ -146,6 +146,12 @@ lane, `trace` and `region` on charts, and the minified copy modules ship (`min/k
 changing the kit - `test_minify_engines.py` fails a stale copy).
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
+## 2.126.0 · 3D share and speed (2026-11-10)
+
+- The picture rule (SKILL.md, L67): interactive 3D on 60-80 % of a module's slides, never more than 3 in a row.
+- `kit3d/kit3d.js`: one shared WebGL renderer, memory freed two slides away, adaptive quality, label placement throttled; a picked part keeps its colour, the others step back. `kit3d/scripts/check_kit3d.py` reads module-local part states; `scene3d_check.py` reads OVER in any case.
+- `kit/kit.js`: push_button `guard: false`; `kit/scripts/check_kit.py` refuses the starter step track shipped unchanged.
+
 ## Known limits
 
 - `check_visuals.py` reads **static** markup. A figure assembled by JavaScript at runtime is

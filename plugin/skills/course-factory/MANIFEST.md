@@ -7,6 +7,16 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.126.0 · The templates hold the words, the theory covers the task, 3D that does not lag, builds that finish (2026-11-10)
+
+- `scripts/content_script.py`: `t_over_budget` (budget read from course-module-ui `layout-templates.json`), `in_parts` with `t_parts_many` / `t_parts_in_row`, `t_task_not_covered` / `t_task_lost`, `v_3d_share` / `v_3d_in_a_row`; `old_refs` keeps a range after "and"; `propose` changes `dropped_old`.
+- `scripts/task_cover.py` + `agents/task-coverage-checker.md`: each self-check question judged against the theory before it.
+- `scripts/fact_check.py`: never changes a revealed answer, refuses long points, names questions to re-judge after `--apply`, notes a quote cut mid-clause.
+- `compile/scripts/compile_module.py`: whole-number part width, `"track": "theory"`, figure+tiles a build problem, `license` credit; `build_module.py` removes stale probe pages; `check_balance.py` half minutes.
+- `orchestration/workflows/build_course.js`: JUDGEMENT (opus/high) for judges, fixers, walk judge and polish; builders never ask; cheaper re-judging. `scripts/factory_trial.py`: live log, usage-limit stop, the new scorecard rows. `course_portal.unattended_env`.
+- `sim_coverage.py accept` (refused unattended); pending simulator drafts listed by the course package check.
+- Tests beside each script; known failures unchanged (test_task_engine tap area, test_patterns fuel_space_access).
+
 ## 2.125.0 · Scanned pages read whole; the walk review cannot pass what it was not shown (2026-11-10)
 
 - `kb/builder/ocr.py`: `grey_copy` (moved from `pdf.py`), lines cut at `GAP_CUT`, column reflow, the print-cell coverage
