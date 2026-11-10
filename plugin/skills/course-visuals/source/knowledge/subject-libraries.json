@@ -47,6 +47,11 @@
       "name": "NOVIKONTAS Gas Library",
       "env": "NOVIKONTAS_GAS_LIBRARY",
       "default_locations": [
+        "G:/My Drive/Course Libraries/Gas Library",
+        "G:/Shared drives/*/Course Libraries/Gas Library",
+        "G:/.shortcut-targets-by-id/*/Course Libraries/Gas Library",
+        "~/Library/CloudStorage/GoogleDrive-*/My Drive/Course Libraries/Gas Library",
+        "~/Library/CloudStorage/GoogleDrive-*/.shortcut-targets-by-id/*/Course Libraries/Gas Library",
         "G:/My Drive/Gas Library",
         "G:/.shortcut-targets-by-id/*/Gas Library",
         "~/Library/CloudStorage/GoogleDrive-*/My Drive/Gas Library",

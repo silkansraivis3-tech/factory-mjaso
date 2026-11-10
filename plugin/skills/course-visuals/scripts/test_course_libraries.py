@@ -304,8 +304,9 @@ def main() -> int:
         print("the Gas Library entry of the config")
         cfg = SL.config()
         spec = next(x for x in cfg["libraries"] if x["id"] == "gas")
-        check("the config still holds the Gas Library at G:/My Drive/Gas Library",
-              spec["default_locations"][0] == "G:/My Drive/Gas Library" and "gas" in spec["subject_words"])
+        check("the config holds the Gas Library in Course Libraries first, and still at its old place G:/My Drive/Gas Library",
+              spec["default_locations"][0] == "G:/My Drive/Course Libraries/Gas Library"
+              and "G:/My Drive/Gas Library" in spec["default_locations"] and "gas" in spec["subject_words"])
         fake = dict(cfg, course_libraries={}, libraries=[dict(spec, env=None, default_locations=[gas])])
         libs = SL.locate(cfg=fake, env={})
         check("its default place resolves as before, id gas", [x["id"] for x in libs] == ["gas"]
