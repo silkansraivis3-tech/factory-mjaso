@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """test_kit3d.py - the 3D kit in a hidden browser: does it build, put its labels on the parts, fill its box, select a
-part from its label and from a tap, walk its steps with the deck's Next, go full screen, and say so without WebGL?
+part from its label and from a tap, walk its steps with the deck's Next, go full screen, share one WebGL context with the
+deck's other scenes, and say so without WebGL?
 
     python -I test_kit3d.py
 
@@ -227,6 +228,40 @@ check("in a deck: Next after the last step turns the slide", d == "s3", d)
 check("in a deck: Back returns to the scene", e.get("active") == "s2", e)
 check("in a deck: no page error", not any(x.get("errors") for x in r), [x.get("errors") for x in r])
 
+# ---------------------------------------------------------------- many scenes in a deck: ONE WebGL context, memory given back
+MANY = BASE + "course-visuals/kit3d/scripts/fixtures/deck_kit3d_many.html"
+MP = J % ("(function(){var o={active:document.querySelector('.slide.active').id,canvases:document.querySelectorAll('canvas').length,"
+          "scenes:{}},a=KIT3D.all().map(function(x){return x.scene;}),r0=null;a.forEach(function(S){"
+          "var k=S.stage.getAttribute('data-kit3d').slice(4);if(S.r&&!S.own){if(!r0)r0=S.r;if(S.r!==r0)o.split=true;}"
+          "o.scenes[k]={live:!!S.live,prepared:!!S.prepared,own:!!S.own,frames:S.frames}});return o;})()")
+NEXT, BACK = "document.getElementById('btnNext').click()", "document.getElementById('btnPrev').click()"
+r = run([
+    {"url": MANY, "wait": "document.getElementById('startBtn')", "do": ["document.getElementById('startBtn').click()"], "settle": 1200, "probe": MP},
+    {"do": NEXT, "settle": 900, "probe": MP},
+    {"do": [NEXT, NEXT], "settle": 900, "probe": MP},
+    {"do": [NEXT, NEXT], "settle": 1200, "probe": MP},
+    {"do": NEXT, "settle": 900, "probe": MP},
+    {"do": [BACK, BACK, BACK, BACK, BACK], "settle": 1200, "probe": MP},
+], "--w=1280", "--h=800")
+m = [x.get("probe") or {} for x in r]
+sc = [x.get("scenes") or {} for x in m]
+check("many scenes: the scene of the next slide is built ahead, and no canvas is drawn yet",
+      (sc[0].get("m2") or {}).get("prepared") and m[0].get("canvases", 9) <= 1, m[0])
+check("many scenes: every scene draws with ONE renderer - one canvas in the page", m[1].get("active") == "m2"
+      and (sc[1].get("m2") or {}).get("frames", 0) > 0 and m[1].get("canvases") == 1 and not m[1].get("split"), m[1])
+check("many scenes: two slides on, the first scene gave its graphics memory back; still one canvas", m[2].get("active") == "m4"
+      and not (sc[2].get("m2") or {}).get("prepared") and (sc[2].get("m4") or {}).get("frames", 0) > 0
+      and m[2].get("canvases") == 1 and not m[2].get("split"), m[2])
+check("many scenes: two scenes on one slide both draw - the second with a renderer of its own while it is shown",
+      m[3].get("active") == "m6" and all((sc[3].get(k) or {}).get("frames", 0) > 0 for k in ("m6a", "m6b"))
+      and (sc[3].get("m6b") or {}).get("own") and m[3].get("canvases") == 2, m[3])
+check("many scenes: leaving that slide gives the second renderer back - one canvas again",
+      m[4].get("active") == "m7" and not (sc[4].get("m6b") or {}).get("own") and m[4].get("canvases") == 1, m[4])
+check("many scenes: Back to a scene that gave its memory back draws it again",
+      m[5].get("active") == "m2" and (sc[5].get("m2") or {}).get("live")
+      and (sc[5].get("m2") or {}).get("frames", 0) > (sc[1].get("m2") or {}).get("frames", 0), m[5])
+check("many scenes: no page error", not any(x.get("errors") for x in r), [x.get("errors") for x in r])
+
 # ---------------------------------------------------------------- no WebGL: it says so, nothing breaks
 r = run([{"url": STUDIO % ("m01_hull", 800, 500), "settle": 3000,
           "probe": J % "(function(){var i=window.k3&&k3.info();return {ok:i&&i.ok,msg:(document.querySelector('.k3-msg')||{}).textContent||''}})()"}],
@@ -257,9 +292,10 @@ try:
          "probe": J % "({box:window.__p1,full:window.__p2})"},
         {"url": (STUDIO % ("m02_tank", 800, 500)), "wait": "window.k3ready", "settle": 300,
          "do": "(function(){var S=k3.scene,t=0;window.__l0=S.lite;S.r.setPixelRatio(1.5);for(var i=0;i<22;i++){t+=40;S.steady(true,t);}"
+               "window.__due=S.lite;S.steady(false,t);"
                "window.__l1={lite:S.lite,dpr:S.r.getPixelRatio(),env:!!S.scene.environment,sh:S.r.shadowMap.enabled,"
                "mem:localStorage.getItem('kit3d.lite')};localStorage.removeItem('kit3d.lite');})()",
-         "probe": J % "({before:window.__l0,after:window.__l1})"},
+         "probe": J % "({before:window.__l0,turning:window.__due,after:window.__l1})"},
     ], "--w=900", "--h=600")
 finally:
     os.remove(GROUND)
@@ -273,8 +309,9 @@ check("a slow screen (frames of 60 ms) is drawn one step less sharp: 2 -> 1.5", 
 check("a fast screen (frames of 16 ms) keeps its sharpness", d.get("dpr") == 2, d)
 pl = r[5].get("probe") or {}
 la = pl.get("after") or {}
-check("2.75.2 a slow screen at 1.5x (frames of 40 ms) goes lite before it loses sharpness, and the device is remembered",
-      pl.get("before") is False and la.get("lite") is True and la.get("dpr") == 1.5 and not la.get("env") and not la.get("sh")
+check("2.75.2 a slow screen at 1.5x (frames of 40 ms) goes lite before it loses sharpness - when the turn stops, not in it "
+      "(its shaders are compiled again) - and the device is remembered",
+      pl.get("before") is False and pl.get("turning") is False and la.get("lite") is True and la.get("dpr") == 1.5 and not la.get("env") and not la.get("sh")
       and la.get("mem") == "1", pl)
 
 # ---------------------------------------------------------------- a label whose point is just past the picture's edge

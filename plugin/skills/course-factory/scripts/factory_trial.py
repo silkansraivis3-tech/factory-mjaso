@@ -22,7 +22,8 @@ the way the office PC builds. Then it scores what was built and sets the score b
           never called; no paid picture is made; nothing is pushed. --plugin-dir builds with a plugin checkout instead of
           the installed one (a release before it is pushed). The log and the score go to runs\\<date>\\. Then report.
   report  the scorecard of each trial module, and what changed since the last trial:
-            built and its build's last line; slides cut or pictures cropped at 1280 x 800 (fit_gate.py); claims not
+            built and its build's last line; slides cut or pictures cropped at 1280 x 800 (fit_gate.py); 3D slides
+            that lag on a slowed CPU (perf_gate.py); claims not
             proved in the sources (fact_check.py); old-course findings (order, slides left out, thinner theory); Bloom
             lifts of more than one level; must-fix findings left in the script; how many slide templates and the longest
             run of one; simulator and equipment exercises written.
@@ -202,6 +203,20 @@ def fit_slides(deck, no_browser):
     return int(m.group(1)) if m else (0 if code == 0 else None)
 
 
+def perf_slides(deck, no_browser):
+    """slides whose 3D lags at 1280 x 800, CPU slowed 4x (perf_gate.py) - None when not measured"""
+    if no_browser or not os.path.isfile(deck):
+        return None
+    sys.path.insert(0, os.path.join(PLUGIN, "skills", "course-module-ux", "measure", "scripts"))
+    import contextlib
+    import perf_gate
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        code = perf_gate.main([deck])
+    m = re.search(r"FAIL (\d+) slide", buf.getvalue())
+    return int(m.group(1)) if m else (0 if code == 0 else None)
+
+
 def score_module(course, m, no_browser=False):
     mid = cs.mid(m)
     row = {"module": m}
@@ -214,6 +229,7 @@ def score_module(course, m, no_browser=False):
         if os.path.isfile(ans) else []
     row["build_says"] = last[0][:90] if last else ""
     row["cut_or_cropped_slides"] = fit_slides(deck, no_browser)
+    row["slides_3d_lagging"] = perf_slides(deck, no_browser)
     if script:
         import fact_check
         if fact_check.course_kbs(course):
@@ -241,7 +257,7 @@ def score_module(course, m, no_browser=False):
     return row
 
 
-LOWER_IS_BETTER = ("cut_or_cropped_slides", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped", "old_thinner",
+LOWER_IS_BETTER = ("cut_or_cropped_slides", "slides_3d_lagging", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped", "old_thinner",
                    "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row")
 
 
@@ -280,7 +296,7 @@ def report(home, run_dir=None, no_browser=False):
             before = load(p)
             break
     print("FACTORY TRIAL - course-factory %s, started %s" % (card["plugin"], card["started"]))
-    keys = [k for k in ("built", "build_says", "cut_or_cropped_slides", "claims", "claims_unproven", "claims_unchecked", "old_moved",
+    keys = [k for k in ("built", "build_says", "cut_or_cropped_slides", "slides_3d_lagging", "claims", "claims_unproven", "claims_unchecked", "old_moved",
                         "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates", "same_template_in_a_row",
                         "simulator_exercises")]
     for r in card["modules"]:

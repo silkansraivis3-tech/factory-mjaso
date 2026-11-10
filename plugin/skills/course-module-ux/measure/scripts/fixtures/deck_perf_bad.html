@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - 3D that lags: a context per slide, drawing off screen</title>
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_shell.css">
+<style>canvas{width:480px;height:300px;display:block}</style>
+</head>
+<body>
+<!-- Test fixture for test_perf_gate.py: each 3D slide makes a WebGL context of its own and draws every frame for ever,
+     shown or not - the two faults perf_gate.py is there to find. -->
+<div id="landing"><button id="startBtn" type="button">Start</button></div>
+<div id="chrome"><button id="btnPrev" type="button">Back</button><button id="btnNext" type="button" aria-label="Next">&gt;</button></div>
+<main id="stage">
+  <section class="slide" id="b1"><div class="slide-body"><h2>Words</h2></div></section>
+  <section class="slide" id="b2" data-visual="model_3d"><div class="slide-body"><h2>One</h2><canvas data-3d></canvas></div></section>
+  <section class="slide" id="b3" data-visual="model_3d"><div class="slide-body"><h2>Two</h2><canvas data-3d></canvas></div></section>
+  <section class="slide" id="b4"><div class="slide-body"><h2>Words</h2></div></section>
+</main>
+<script src="../../../assets/gb_deck.js"></script>
+<script>
+[].forEach.call(document.querySelectorAll('canvas'), function (cv) {
+  var gl = cv.getContext('webgl'), p = gl.createProgram();
+  [[gl.VERTEX_SHADER, 'void main(){gl_PointSize=40.0;gl_Position=vec4(0.0,0.0,0.0,1.0);}'],
+   [gl.FRAGMENT_SHADER, 'precision mediump float;void main(){gl_FragColor=vec4(0.2,0.5,0.9,1.0);}']].forEach(function (s) {
+    var sh = gl.createShader(s[0]); gl.shaderSource(sh, s[1]); gl.compileShader(sh); gl.attachShader(p, sh);
+  });
+  gl.linkProgram(p); gl.useProgram(p);
+  (function draw() { gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.POINTS, 0, 1); requestAnimationFrame(draw); })();
+});
+GBDeck.init({ hooks: {} });
+</script>
+</body>
+</html>
