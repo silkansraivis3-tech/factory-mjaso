@@ -325,6 +325,25 @@ ed = r[0].get("probe") or {}
 check("a label whose point is just above the picture is hidden, not cut at the box's edge (the factory trial: a step that "
       "framed one tank left its neighbour's name cut off)", ed.get("text") and ed.get("shown") is False, (ed, r[0].get("errors")))
 
+# ---------------------------------------------------------------- the picked part is the clearest thing on the screen
+# (the factory trial: the select look washed the part to a pale see-through blue, the least visible thing in M01, M08, M19)
+LOOK = ("(function(){var S=k3.scene,lum=function(c){return c.r+c.g+c.b;},out={};"
+        "var mats=function(id){return S.parts[id].mats.filter(function(m){return m.userData.c0&&!m.userData.glow;});};"
+        "var asWas=function(id){return mats(id).every(function(m){return m.color.equals(m.userData.c0)&&Math.abs(m.opacity-m.userData.o0)<1e-6;});};"
+        "var a=mats('tank'),b=mats('tcs'),c=mats('pipe_outer');"
+        "k3.select('tank');k3.render();out.own=a.every(function(m){return m.color.equals(m.userData.c0);});"
+        "out.lit=a.filter(function(m){return m.emissive;}).every(function(m){return m.emissiveIntensity>0;});"
+        "out.back=b.every(function(m){return lum(m.color)<lum(m.userData.c0)||lum(m.userData.c0)===0;});"
+        "k3.select('pipe_outer');k3.render();"
+        "out.solid=c.filter(function(m){return m.userData.o0<1;}).map(function(m){return [m.userData.o0,m.opacity];});"
+        "k3.select(null);k3.render();out.rest=asWas('tank')&&asWas('tcs')&&asWas('pipe_outer');return JSON.stringify(out);})()")
+r = run([{"url": STUDIO % ("m02_tank", 900, 560), "wait": "window.k3ready", "settle": 300, "probe": LOOK}], "--w=900", "--h=560")
+lk = r[0].get("probe") or {}
+check("a picked part keeps its own colour and is lit from within (no wash to pale blue)", lk.get("own") and lk.get("lit"), (lk, r[0].get("errors")))
+check("... a see-through part turns more solid", lk.get("solid") and all(o > o0 + 0.2 for o0, o in lk["solid"]), lk.get("solid"))
+check("... the parts not picked step back (darker)", lk.get("back"), lk)
+check("... and let go, every part is as it was", lk.get("rest"), lk)
+
 # ---------------------------------------------------------------- every example spec passes the checker
 specs = sorted(glob.glob(os.path.join(KIT, "examples", "*.kit3d.json")))
 p = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_kit3d.py"), "spec"] + specs, capture_output=True, text=True)

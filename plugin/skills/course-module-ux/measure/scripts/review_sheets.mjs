@@ -213,14 +213,16 @@ async function deck(tiles) {
       var k=s.querySelector('svg[data-kit]'), f=k&&k.__kit; var all=[].slice.call(document.querySelectorAll('.slide'));
       if (f && f.steps && f.steps()) { try { f.go(f.steps(), true); } catch(e){} }
       var ps=s.querySelectorAll('.lt-part'), on=0; for (var j=0;j<ps.length;j++) if (ps[j].classList.contains('on')) on=j;
+      var k3=0; [].forEach.call(s.querySelectorAll('[data-kit3d]'),function(e){ if(e.__k3&&e.__k3.steps) k3+=e.__k3.steps(); });
       var src=[].map.call(s.querySelectorAll('script[type="application/json"],img'),function(e){return e.tagName==='IMG'?e.getAttribute('src'):e.textContent;}).join('|');
       return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0,
-               parts: ps.length, part: on + 1, lines: f && f.steps && f.steps() ? s.querySelectorAll('[data-i]').length : 0,
+               parts: ps.length, part: on + 1, k3: k3, lines: f && f.steps && f.steps() ? s.querySelectorAll('[data-i]').length : 0,
                last: !!(document.getElementById('btnNext')||{}).disabled, src: src }; })()`);
     if (!st) break;
     visits[st.id] = (visits[st.id] || 0) + 1;
-    // a Next that never moves on (IGF M11 s11: 381 times); a figure's steps, its lines and its parts are one counter (2.63.3)
-    if (visits[st.id] > st.parts + st.steps + st.lines + 2) break;
+    // a Next that never moves on (IGF M11 s11: 381 times); a figure's steps, its lines and its parts are one counter (2.63.3),
+    // and a 3D scene's steps, each a Next of its own
+    if (visits[st.id] > st.parts + st.steps + st.k3 + st.lines + 2) break;
     const id = 'deck/' + st.id + (st.part > 1 ? '#' + st.part : '');
     const key = keyOf[st.id] ? sha(keyOf[st.id] + '|' + st.i + '/' + st.of) : '';    // its place too: the deck shows "5 / 20"
     const label = `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.parts > 1 ? ` - part ${st.part} of ${st.parts}` : '')

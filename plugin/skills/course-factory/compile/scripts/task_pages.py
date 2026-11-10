@@ -949,6 +949,11 @@ def button_tag(control):
     return m.group(1).upper() if m and (m.group(1).isupper() or re.search(r"\d", m.group(1))) else ""
 
 
+# the kit's guarded mushroom is an emergency stop; any other push button (an alarm's ACCEPT, a RESET) is drawn plain
+GUARDED = re.compile(r"\b(esd|emergency|e-?stop|shut\s*-?\s*down)\b", re.I)
+PLAIN = re.compile(r"\b(reset|accept|acknowledge|ack|silence|mute|test)\b", re.I)
+
+
 def kit_symbol(sid, n, states, start, control=""):
     """a little figure-kit drawing of the control (a valve, a pump, a push button) when every position is one the kit draws"""
     kinds = {KIT_STATE.get(s.lower(), (None,))[0] for s in states}
@@ -963,6 +968,8 @@ def kit_symbol(sid, n, states, start, control=""):
         part = {"id": "c", "type": "push_button", "x": 70, "y": 110, "state": False, "value": v}
         if button_tag(control):
             part["tag"] = button_tag(control)
+        if not GUARDED.search(control or "") or PLAIN.search(control or ""):
+            part["guard"] = False
         size = [140, 200]
     else:
         part = {"id": "c", "type": "pump", "x": 92, "y": 50, "r": 26, "value": v}

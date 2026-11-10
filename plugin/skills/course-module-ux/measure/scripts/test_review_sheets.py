@@ -169,6 +169,29 @@ def shots_part(md, tmp):
           % len(steps), p.returncode == 0 and len(steps) <= 3, (p.returncode, len(steps), p.stdout[-200:]))
 
 
+def k3_part(md, tmp):
+    """a 3D scene's steps are Nexts that stay on its slide (M08's QA: the walk stopped at slide 2 of a 3D-heavy module) -
+    a stand-in scene of 6 steps on s02 (a [data-kit3d] stage with its api and its GB_HOOKS step, as kit3d.js makes them)"""
+    print("\n-- a 3D scene's steps: the walk goes on past its slide")
+    kd = os.path.join(tmp, "k3_module")
+    shutil.copytree(md, kd)
+    deck = os.path.join(kd, "presentation", "index.html")
+    text = io.open(deck, encoding="utf-8").read()
+    fake = ("<script>(function(){var s=document.getElementById('s02'),e=document.createElement('div'),n=0;"
+            "e.setAttribute('data-kit3d','#none');e.__k3={steps:function(){return 6;}};s.appendChild(e);"
+            "var H=window.GB_HOOKS=window.GB_HOOKS||{},o=H.s02||{};H.s02={enter:o.enter,leave:o.leave,step:function(d){"
+            "if(d>0&&n<5){n++;return true;}if(d<0&&n>0){n--;return true;}return false;}};})();</script>\n")
+    i = text.rfind("<script", 0, text.find("GBDeck.init"))
+    io.open(deck, "w", encoding="utf-8").write(text[:i] + fake + text[i:])
+    out = os.path.join(tmp, "k3_out")
+    p = subprocess.run(["node", REVIEW, kd, out, "--all"], capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       timeout=600)
+    man = json.load(io.open(os.path.join(out, "manifest.json"), encoding="utf-8")) if os.path.isfile(os.path.join(out, "manifest.json")) else {}
+    deck_shots = [k for k in man if k.startswith("deck/")]
+    check("a slide whose 3D scene takes 5 Nexts: every slide after it is still photographed (%s)" % ", ".join(deck_shots),
+          p.returncode == 0 and "deck/s05" in deck_shots, (p.returncode, deck_shots, p.stdout[-300:]))
+
+
 def blind_part(md, tmp):
     """2.63.0 (the IGF full build on 2.63.0: the final passed only with --no-review) - a blind page (a graded final, data-blind,
     2.60.0) shows no verdict, so the probe read every right answer as graded wrong. It reads the page's report instead"""
@@ -225,6 +248,7 @@ def main():
         check("the new waits are faster (%.1f s, the fixed ones %.1f s)" % (t1, t0), t1 < t0, (t0, t1))
         refit_part(md, os.path.join(tmp, "still"))
         shots_part(md, tmp)
+        k3_part(md, tmp)
         blind_part(md, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

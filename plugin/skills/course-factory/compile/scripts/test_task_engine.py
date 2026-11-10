@@ -1146,7 +1146,7 @@ def strip_contrast_part(exe, tmp):
 PUSH_BUTTON_SC = [
     {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1", "text": "Self-check on your tablet now.", "minutes": 4},
     {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "panel_operate", "question": "Stop the bunkering now.",
-     "visual": "the panel", "answer": "ESD push button = pressed", "feedback": "The ESD stops the transfer."}]
+     "visual": "the panel", "answer": "ESD push button = pressed\nACCEPT ALARM = pressed", "feedback": "The ESD stops the transfer."}]
 
 
 def push_button_part(exe, tmp):
@@ -1158,11 +1158,16 @@ def push_button_part(exe, tmp):
     os.makedirs(os.path.join(tmp, "pb"))
     c, md = tcm.new_course(os.path.join(tmp, "pb"), tcm.script(screens=PUSH_BUTTON_SC), build=False)
     tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
-        "t01": {"try_tablet": False}, "q01": {"states": {"ESD push button": ["ready", "pressed"]}}}})
+        "t01": {"try_tablet": False}, "q01": {"states": {"ESD push button": ["ready", "pressed"],
+                                                          "ACCEPT ALARM": ["not pressed", "pressed"]}}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
     page = os.path.join(md, "tasks", "sc1_self_check_1.html")
     text = io.open(page, encoding="utf-8").read() if os.path.isfile(page) else ""
     check("a ready / pressed question on the task page carries the kit's push_button symbol", '"type":"push_button"' in text, out[-500:])
+    syms = [json.loads(x) for x in re.findall(r'<script type="application/json" id="kit-q01-\d+">(.*?)</script>', text)]
+    looks = [(p.get("guard", True), p.get("tag")) for x in syms for p in x.get("parts", [])]
+    check("the ESD button is the guarded mushroom; ACCEPT ALARM a plain push button with no ESD tag plate (M04 q09)",
+          looks == [(True, "ESD"), (False, None)], looks)
     probs, note = drawing_check.check([page])
     bad = [x for x in probs if "contrast" in x]
     check("the push_button symbol passes the drawing check's contrast (cap, lid and tag plate are the kit's own colours)",

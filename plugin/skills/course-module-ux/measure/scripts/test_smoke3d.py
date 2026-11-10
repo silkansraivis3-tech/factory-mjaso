@@ -130,6 +130,17 @@ def main():
         code, out, secs = run(hang, "--slide", "s-fast", "--limit", "3")
         check("a scene that hangs the page is ended by the limit, not after 600 s (%.1f s)" % secs,
               code == 1 and "FAIL 3D smoke test" in out and secs < 90, out)
+        # a busy computer: s-fast stalls only while the whole deck shares one browser (three slides), not alone
+        busy = variant(tmp, "busy", 0, " if (document.querySelectorAll('.slide').length > 2 && !delay) {"
+                                       " var t = Date.now(); while (Date.now() - t < 600000) {} }")
+        code, out, secs = run(busy, "--limit", "2")
+        check("scenes that ran out of time together are tried once more alone, each with its own limit - and pass (%.1f s)" % secs,
+              code == 0 and "s-fast: first frame" in out and "s-slow: first frame" in out and "alone" in out, out)
+        check("... the pages made beside the deck are gone again", os.listdir(os.path.dirname(busy)) == ["index.html"],
+              os.listdir(os.path.dirname(busy)))
+        code, out, secs = run(hang, "--limit", "2")
+        check("a scene that hangs alone too still fails, by name (%.1f s)" % secs,
+              code == 1 and "s-fast: alone, the browser did not finish" in out, out)
         check("a deck with no 3D slide, or a slide it has not, stops (exit 2)",
               run(good, "--slide", "s9")[0] == 2)
         full_screen_part()

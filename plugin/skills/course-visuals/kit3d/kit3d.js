@@ -874,22 +874,28 @@
     st.v = v;
     st.fns.forEach(function (fn) { fn(v); });
   };
-  var GLOW = null, GLOW_L = null;
+  /* a picked part (a = 1) keeps its own colour, lit from within in that colour with a little of the kit's blue, and a
+     see-through one turns more solid; while a part is picked the others (a = -1) step back, a little darker - the part
+     being taught is the clearest thing on the screen, never a pale wash */
+  var GLOW = null, HUE = null, DIM = 0.3;
   P.glow = function (p, a) {
-    var i, m;
-    if (!GLOW) { GLOW = Builder.prototype.col(BLUE); GLOW_L = Builder.prototype.col('#9fdcff'); }
+    var i, m, up = Math.max(0, a), dn = Math.max(0, -a), base;
+    if (!GLOW) { GLOW = Builder.prototype.col(BLUE); HUE = new T.Color(); }
     p.g = a;
     for (i = 0; i < p.mats.length; i++) {
       m = p.mats[i];
-      if (m.userData.glow) { m.userData.glow(a); continue; }
-      if (m.emissive && m.userData.c0) {
-        m.emissive.copy(m.userData.e0 || GLOW).lerp(GLOW, a);
-        m.emissiveIntensity = (m.userData.ei0 || 0) * (1 - a) + a * 1.25;
-        m.color.copy(m.userData.c0).lerp(GLOW, a * 0.4);
-      } else if (m.userData.c0) {
-        m.color.copy(m.userData.c0).lerp(GLOW_L, a * 0.8);
-        if (m.userData.o0 < 1) { m.opacity = Math.min(1, m.userData.o0 + a * 0.3); }
+      if (m.userData.glow) { m.userData.glow(up); continue; }
+      if (!m.userData.c0) { continue; }
+      m.color.copy(m.userData.c0).multiplyScalar(1 - DIM * dn);
+      if (m.emissive) {
+        HUE.copy(m.userData.c0).lerp(GLOW, 0.3);
+        m.emissive.copy(m.userData.e0 || HUE).lerp(HUE, up);
+        m.emissiveIntensity = (m.userData.ei0 || 0) * (1 - up) * (1 - DIM * dn) + up * 0.2;
       }
+      /* on top of the opacity the part has now (a ghost or a cut state sets its own): what the glow added is taken back */
+      base = m.opacity === m.userData.os ? m.opacity - m.userData.oa : m.opacity;
+      m.userData.oa = base < 1 ? (1 - base) * 0.75 * up : 0;
+      m.opacity = m.userData.os = base + m.userData.oa;
     }
   };
   /* the parts a key lights: the part and its kids, or a group's parts */
@@ -908,7 +914,8 @@
     each(states || {}, function (v, n) { if (S.states[n]) { s0[n] = S.states[n].v; s1[n] = v; } });
     S.lit = {};
     (lit || []).forEach(function (k0) { S.keysOf(k0).forEach(function (x) { S.lit[x] = true; }); });
-    each(S.parts, function (p) { p.g0 = p.g; p.g1 = S.lit[p.id] ? 1 : 0; });
+    var any = Object.keys(S.lit).length > 0;
+    each(S.parts, function (p) { p.g0 = p.g; p.g1 = S.lit[p.id] ? 1 : any ? -1 : 0; });
     S.pillsLit();
     if (reduce || !S.live) {
       if (to) { S.setView(to); }

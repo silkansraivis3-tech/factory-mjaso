@@ -199,6 +199,27 @@ words = ck.check_spec(pm([{"id": "A", "type": "text", "x": 20, "y": 20, "text": 
 check("... a table stays refused as a kit figure, and both refusals point to the module's one comparison table (the build "
       "sheet's \"table\")", all("ONE comparison table" in x and '"table"' in x for x in probs + [x for x in words if "WORDS ONLY" in x])
       and any("WORDS ONLY" in x for x in words), (probs, words))
+# --init-build's starter step track - the slide's lines cut short, nothing drawn - shipped on 27 slides of the factory trial
+# and the figure review rated every one broken: the build refuses it as it was written, and passes it once it is changed
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(HERE))), "course-factory", "compile", "scripts"))
+import compile_module as cm  # noqa: E402
+track = cm.starter_figure({"module": 8, "screens": []}, {
+    "id": "s06", "kind": "slide", "title": "Catalytic sensors", "visual_kind": "step_animation", "visual": "The sensor.",
+    "text": "Catalytic type - the sensor filament is heated by the current through it.\n"
+            "The combustible gas indicator uses a Wheatstone bridge to measure the change.\n"
+            "When a flammable gas is present it burns on the filament and raises its resistance."})
+check("the starter writes a step track for these lines (the case below)",
+      [p.get("type") for p in track["parts"]] == ["step_track"], track["parts"])
+probs = ck.check_spec(track, types, "s06")
+check("STARTER STEP TRACK: the starter's step track as it was written is refused, the builder told what to do",
+      any("STARTER STEP TRACK" in x and "Draw what the lines are about" in x for x in probs), probs)
+named = json.loads(json.dumps(track))
+named["parts"][0]["steps"] = ["Filament heated", "Bridge measures", "Gas burns"]
+check("... the same track with step names of the builder's own passes",
+      not any("STARTER STEP TRACK" in x for x in ck.check_spec(named, types, "s06")), ck.check_spec(named, types, "s06"))
+drawn = json.loads(json.dumps(track))
+drawn["parts"].append({"id": "K", "type": "tank", "x": 220, "y": 40, "w": 160, "h": 120})
+check("... and so does the track beside a drawing", not any("STARTER STEP TRACK" in x for x in ck.check_spec(drawn, types, "s06")))
 for t in ("tradeoff", "cycle", "timeline"):
     check("the Concepts family has %s" % t, t in types)
 idea = pm([{"id": "C", "type": "cycle", "x": 20, "y": 10, "r": 60, "name": "Routine work"}])

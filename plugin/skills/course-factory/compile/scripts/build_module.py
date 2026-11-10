@@ -2,7 +2,7 @@
 """build_module.py - a module built and every check run, in ONE command; only what fails is printed (2.50.0).
 
     python compile/scripts/build_module.py <course> --module 1 [--viewport 1920x1080] [--no-course-pages]
-                                           [--no-fix] [--no-review] [--draft] [--force]
+                                           [--no-fix] [--no-review] [--sheets] [--draft] [--force]
 
 WHY (IGF M01 benchmark, 2026-10-19): one module took 6 compiles and about 20 separate check runs, each one a turn of the
 model re-reading a context of ~200k tokens. Every check still runs - nothing here is skipped or loosened - but in one
@@ -16,7 +16,8 @@ process, the independent ones at once, and the answer is short:
                   check_course_package.py (the course's own pages and the classroom's importer)
   4  the review   when everything passes: review_sheets.mjs photographs every slide, every figure step and every question
                   (asked, answered wrong, answered right) onto a few sheets - only the screens changed since the last
-                  review - and checks that every question grades right and wrong answers as such (compile GUIDE 2f)
+                  review - and checks that every question grades right and wrong answers as such (compile GUIDE 2f);
+                  a module that is not clean gets them too at the build the 3-builds rule stops (STOP), or with --sheets
 
   0  (2.52.0) a build sheet that still has --init-build's blanks (a slide with no picture, a question on no picture, a
                   planned 3D scene not written) builds nothing: one line says what to fill (--draft builds anyway)
@@ -1056,6 +1057,47 @@ def parts_out(path, own):
     io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(avoid, indent=1, sort_keys=True))
 
 
+# a hidden browser's page made beside the deck - the audits', the 3D smoke test's, the layout pre-check's - is named by
+# the PID of the run that made it; a run that was ended leaves it there, and the course importer fails on its links
+PROBE_PAGE = re.compile(r"^_(?:audit|smoke3d|layout_precheck)_(\d+)(?:_\d+x\d+)?\.html$")
+
+
+def stale_probes(mdir):
+    """remove the probe pages of runs that are not running any more -> their names"""
+    import browser_slots
+    folder = os.path.join(mdir, "presentation")
+    gone = []
+    for f in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        p = PROBE_PAGE.match(f)
+        if p and not browser_slots.alive(int(p.group(1))):
+            try:
+                os.remove(os.path.join(folder, f))
+                gone.append(f)
+            except OSError:
+                pass
+    return gone
+
+
+def sheets_not_clean(mdir, out_dir, pending, logdir, m, made=None):
+    """the review sheets of a module that is not clean - the build the 3-builds rule stops (STOP), or --sheets: QA's one
+    visual review needs them all the same. This build's own sheets when it made them (made: review_sheets.mjs's
+    (code, output)), else made now, one deck walk -> the line to print"""
+    import shutil
+    code, out = made or (None, "")
+    if code not in (0, 1) or not os.path.isfile(os.path.join(pending, "sheets.json")):
+        shutil.rmtree(pending, ignore_errors=True)
+        code, out = run(["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + reviewed_dir(out_dir),
+                         "--shots=" + os.path.join(logdir, "%s_shots" % m)])
+    if code not in (0, 1) or not os.path.isfile(os.path.join(pending, "sheets.json")):
+        return "Review sheets not made (%s) - do the visual review by hand (GUIDE 2f)" % (lines_of(out, 1) or ["?"])[0]
+    promote(pending, out_dir)
+    n = re.search(r"Review sheets: (\d+) of (\d+) screens.*?on (\d+) sheet", out)
+    return ("REVIEW SHEETS of a module that is not clean (the findings above stay to fix): %s of %s screens on %s sheet(s) in\n"
+            "  %s\n  for the one visual review (%s)" % (n.group(1), n.group(2), n.group(3), out_dir,
+                                                     os.path.join(SKILLS, "course-factory", "compile", "REVIEW_PROMPT.md"))
+            if n else "Review sheets made in %s" % out_dir)
+
+
 def reviewed_dir(out_dir):
     """review\\MNN_reviewed - the manifests of the sheets someone last looked at (--reviewed): what "changed" is judged
     against. Missing: every screen is new to the reviewer"""
@@ -1284,6 +1326,8 @@ def main(argv=None):
     ap.add_argument("--no-course-pages", action="store_true", help="a module agent in a parallel build: no compile_course.py")
     ap.add_argument("--no-fix", action="store_true", help="the figure pre-check makes no fix of its own")
     ap.add_argument("--no-review", action="store_true", help="no review sheets after a pass")
+    ap.add_argument("--sheets", action="store_true", help="make the review sheets even when the module is not clean (the "
+                    "build the 3-builds rule stops makes them by itself) - for the one visual review")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--full", action="store_true", help="never stop after the figures - every stage, every run; the drawing "
@@ -1335,6 +1379,7 @@ def main(argv=None):
                                                                                        if code == 1 else "not measured"))
         print("\n".join(lines))
         return code
+    probes_gone = stale_probes(mdir)
     blanks = [] if o.draft else starter_blanks(course, o.module)
     if blanks:                       # 2.52.0: nothing is built on a sheet with the starter's blanks in it
         print("FAIL %s - nothing built: the build sheet %s still has the starter's blanks - fill %s (or let Phase A hold "
@@ -1389,6 +1434,8 @@ def main(argv=None):
                     pass
     log = io.open(os.path.join(logdir, "%s_build.log" % m), "w", encoding="utf-8")
     say, fails, notes = [], [], ["Pre-check: " + x for x in pre_notes or []]
+    if probes_gone:
+        notes.append("Probe pages an ended run left beside the deck removed: " + ", ".join(probes_gone))
     stages = []                      # 2.52.0: (stage, seconds) - written into the log, so a slow stage is seen
 
     def logged(title, out):
@@ -1558,7 +1605,7 @@ def main(argv=None):
     # their own: they become the review only when everything passes, so a failed build never hides a changed screen
     # 2.63.3: compared with the last REVIEWED sheets, and a screen unchanged since its last picture is not photographed again
     pending = out_dir + ".pending"
-    want_review = not o.no_review and not fails
+    want_review = not o.no_review and (not fails or o.sheets)
     if want_review:
         import shutil
         shutil.rmtree(pending, ignore_errors=True)
@@ -1749,11 +1796,16 @@ def main(argv=None):
             print(review)
     if stages:
         print(stage_line(stages))
+    stops = []
     if not o.no_fix:                             # 2.72.7: a check (QA's --no-fix) is no build of the builder's
         done = passed or (o.no_course_pages and fails == ["course package"])        # after the task pages' verdict
         counts = streak(os.path.join(logdir, "%s_streak.json" % m), [] if done else finding_keys(say))
-        for x in stop_lines(counts, m):
+        stops = stop_lines(counts, m)
+        for x in stops:
             print(x)
+    if not clean and not o.no_review and not slots_left and os.path.isfile(deck) \
+            and (o.sheets or any(x.startswith("STOP") for x in stops)):
+        print(sheets_not_clean(mdir, out_dir, pending, logdir, m, results.get("review sheets")))
     print("Full log: %s" % log.name)
     return 0 if passed else 1
 

@@ -599,6 +599,29 @@ def review_part():
         check("--auto fills the picture slots after a failed build too, not only at PHASE A CLEAN (the factory trial: every "
               "builder lost a run, then filled them by hand)",
               "    if slots_left and o.auto and not o.auto_round:" in src and "if passed and slots_left and o.auto" not in src)
+        # a module the 3-builds rule stopped reaches QA with its sheets (the factory trial: M01 and M19 had none)
+        os.makedirs(pend, exist_ok=True)
+        io.open(os.path.join(pend, "sheets.json"), "w", encoding="utf-8").write("{}")
+        said =b.sheets_not_clean(tmp, out, pend, tmp, "M01",
+                                  (1, "Review sheets: 4 of 12 screens on 2 sheet(s) in %s\n  FAIL q03: ..." % pend))
+        check("the sheets of a module that is not clean are promoted and said, task-page failures and all",
+              "4 of 12 screens on 2 sheet(s)" in said and out in said and not os.path.isdir(pend)
+              and os.path.isfile(os.path.join(out, "sheets.json")), said)
+        check("... made at the build that says STOP, or with --sheets",
+              'any(x.startswith("STOP") for x in stops)' in src and "(o.sheets or" in src
+              and "want_review = not o.no_review and (not fails or o.sheets)" in src)
+        # probe pages a killed run left beside the deck (the factory trial: M01's _smoke3d_13272.html failed the importer)
+        pres = os.path.join(tmp, "module01", "presentation")
+        os.makedirs(pres)
+        dead = 4999999
+        mine = "_layout_precheck_%d.html" % os.getpid()
+        for f in ("index.html", "_smoke3d_%d.html" % dead, "_audit_%d_1280x800.html" % dead, "_layout_precheck_%d.html" % dead,
+                  mine, "_audit_notes.html"):
+            io.open(os.path.join(pres, f), "w", encoding="utf-8").write("<html></html>")
+        gone = b.stale_probes(os.path.join(tmp, "module01"))
+        check("a build removes the probe pages of runs that ended, and keeps a running one's and every other page",
+              len(gone) == 3 and sorted(os.listdir(pres)) == sorted(["index.html", mine, "_audit_notes.html"]),
+              (gone, os.listdir(pres)))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

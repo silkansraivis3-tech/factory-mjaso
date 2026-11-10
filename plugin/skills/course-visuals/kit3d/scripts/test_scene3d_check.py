@@ -45,6 +45,19 @@ def course(root, sheet, specs):
 
 
 def main():
+    # how a smoke3d.py and a perf3d.mjs answer is read, scene by scene - no browser needed
+    sys.path.insert(0, HERE)
+    import scene3d_check as sc
+    said = ("  s05: first frame 420 ms\n    full screen 1280x800 px, drawing (12 frames); label none to tap\n"
+            "FAIL 3D smoke test (61 s):\n  - s09: no first frame within 15 s\n  - s05: the Full screen button is 30x30 px - a tap needs 44\n")
+    check("smoke: a scene's own problem line is its line, and it failed", sc.smoke_said(said, "s05") == (
+        "- s05: the Full screen button is 30x30 px - a tap needs 44", True), sc.smoke_said(said, "s05"))
+    check("smoke: a scene that never drew failed", sc.smoke_said(said, "s09")[1], sc.smoke_said(said, "s09"))
+    check("smoke: a scene with only its first-frame line passed", sc.smoke_said("  s07: first frame 300 ms\n", "s07") ==
+          ("s07: first frame 300 ms", False))
+    check("smoke: a scene the run never named failed", sc.smoke_said("FAIL 3D smoke test (135 s): timed out", "s07")[1])
+    check("perf: perf3d.mjs's \"OVER\" is a scene over the budget", sc.perf_over("s05          1840.2     -       -  OVER"))
+    check("perf: \"OK\" is not", not sc.perf_over("s05           640.0     -       -  OK"))
     if not shutil.which("node"):
         print("SKIP - no Node")
         return 0
