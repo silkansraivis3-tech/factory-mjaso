@@ -66,14 +66,25 @@ def mod_code(m):
 
 
 def main_of(r):
-    ids = r.get("main_ilo_ids")
-    first = ids[0] if ids else None
-    if first:
-        return js_str(first)
+    # main_ilo_ids is the MODULE's list. A module that owes two outcomes (["1", "3"]) numbers its Sub-ILOs after
+    # the outcome each serves (1.1, 3.1), so a Sub-ILO goes under its own; the first is only the fallback.
+    ids = [js_str(i) for i in (r.get("main_ilo_ids") or []) if i]
+    own = js_str(r.get("sub_ilo_id") or "").split(".")[0]
+    if own in ids:
+        return own
+    if ids:
+        return ids[0]
     m = re.match(r"\s*(\d+)\.", js_str(r.get("main_ilo") or ""))
     if m:
         return m.group(1)
     return js_str(r.get("sub_ilo_id") or "").split(".")[0]
+
+
+def main_words(r, mo):
+    """The Main ILO's own words. A module that owes two carries them joined with ' | ', in main_ilo_ids' order."""
+    ids = [js_str(i) for i in (r.get("main_ilo_ids") or []) if i]
+    parts = js_str(r.get("main_ilo") or "").split(" | ")
+    return parts[ids.index(mo)] if mo in ids and len(parts) == len(ids) else js_str(r.get("main_ilo") or "")
 
 
 def clean(s):
@@ -123,7 +134,7 @@ def build(root, out=None):
     for r in map_.get("rows") or []:
         mo = main_of(r)
         if mo not in main_text and re.search(r"\w", mo) and r.get("main_ilo"):
-            main_text[mo] = clean(r["main_ilo"])
+            main_text[mo] = clean(main_words(r, mo))
 
     # Every slide and question of every approved script. A deck slide is a screen without a task set; its number
     # is its place in the deck, as the instructor sees it.

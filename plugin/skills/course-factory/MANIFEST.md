@@ -7,6 +7,13 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.119.1 · A Sub-ILO under its own Main ILO in the admin's ILO map (2026-11-10)
+
+- `scripts/ilo_coverage.py` `main_of`: `main_ilo_ids` on a map row is the module's list, and its first entry was taken for
+  every Sub-ILO of the module. A Sub-ILO now goes under the Main ILO its own number names (3.1 under 3) when the module
+  owes that outcome; the first entry is the fallback. `main_words` gives that outcome its own part of the joined
+  `main_ilo` line. Same change in the training app's `tools/ilo-coverage.mjs`. Pinned in `scripts/test_ilo_coverage.py`.
+
 ## 2.119.0 · The classroom files the tablet app imports (2026-11-09)
 
 - `scripts/classroom_files.py` writes `modules\classroom\prepare.json` and `modules\classroom\forms\<CODE>.json` from the
