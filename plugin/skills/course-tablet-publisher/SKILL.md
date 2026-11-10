@@ -1,9 +1,10 @@
 ---
 name: course-tablet-publisher
 description: >
-  Publish a finished course onto the NOVIKONTAS tablet platform - the trainee (Training)
-  and instructor (Trainer) Android terminals - and into the shared GitHub repository.
-  Trigger on: publish this course / publish to the tablet system / add this course to the
+  Get a finished course onto the NOVIKONTAS classroom (admin panel + upload, L45) after
+  check_course_package.py; the legacy branch-and-pull-request flow is only for the app's own
+  files or when the owner asks. Covers the trainee (Training) and instructor (Trainer)
+  Android terminals. Trigger on: publish this course / publish to the tablet system / add this course to the
   Android training platform / sync with the trainee tablets or the instructor app /
   prepare tablet content / package the finished module or course / add a new NOVIKONTAS
   course / update an existing course in the shared platform / prepare for the

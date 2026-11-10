@@ -118,14 +118,15 @@ Which picture a slide gets - interactive 3D, a photograph or a 2D-kit figure - i
 | a real object the learner must recognise | **photograph**, annotated with a live overlay |
 | a relationship between two quantities | **sourced chart** in the 2D kit, interpolation marked |
 | element count or per-frame maths that genuinely defeats SVG | **canvas**, and accept the cost |
+| an authored figure with topology, labels, state, flow or sequence | **the kits first** (`course-visuals/SKILL.md`, level 4): kit, 2D kit, 3D kit; a custom figure when none shows it |
 
 **The 2D kit is the default for authored 2D figures**: it draws inline SVG, which is themeable,
-annotatable, translatable, diffable and visible to every check in this factory. A PNG of a diagram
-is none of those. Never the old flat SVG illustration.
+annotatable, translatable, diffable and visible to every check in this factory; a hand-written (custom) figure is inline
+SVG too. A PNG of a diagram is none of those. Never the old flat SVG illustration.
 
-**Canvas is a signal to re-read the need.** The reference course, eight modules of technical
-teaching material, uses canvas in **zero** teaching visuals. If you are reaching for it, check you
-have not over-specified the figure.
+**Canvas is a signal to re-read the need.** Hand-written 2D uses canvas only where SVG genuinely fails; 3D is the
+3D kit, which draws to a WebGL canvas. If you are reaching for a canvas by hand, check you have not
+over-specified the figure.
 
 ---
 
@@ -141,8 +142,10 @@ a new asset.
 **Not required for:** a single labelled photograph, a plain-text screen, a figure being reused
 unchanged from the factory library.
 
-The storyboard is approved before implementation. Changing a row is free; rebuilding six figures is
-not — the same economics as the screen inventory in `course-module-ux`.
+The storyboard is written before implementation. When the module is compiled from an approved content script it
+is printed for the record and the build goes on - no stop; wait for approval only for a hand-built module with
+no approved script. Changing a row is free; rebuilding six figures is not — the same economics as the screen
+inventory in `course-module-ux`.
 
 ### Variety, checked at storyboard time
 
@@ -160,4 +163,4 @@ different shapes and should not look alike.
 - Every animation has its four answers and a declared category
 - Every asset has a pipeline level and, where already known, a rights state
 - Concepts decided as **plain text** are recorded as decisions, not omitted
-- The storyboard is approved before any figure is implemented
+- The storyboard exists before any figure is implemented (approved first only for a hand-built module with no approved script)

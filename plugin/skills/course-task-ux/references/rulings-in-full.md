@@ -258,7 +258,7 @@ heuristic; the record sheet is the authority.
 
 ## 11 · Measurable floor — verify, do not assume
 
-At the target viewport (**1280 × 800 landscape**, the classroom's WebView), on every task
+At the target viewport (**1280 × 800 landscape**, the classroom tablet), on every task
 screen:
 
 | | Requirement |
@@ -428,8 +428,8 @@ disagreed with the trainee's.
 count, pass mark, attempts, minutes — is **derived from the task page or not stated at all**.
 When you must state it in prose:
 
-- state it as the proportion the standard actually is, with the count after it
-  ("75 % of the check, currently 8 of 10"), so the next added question does not create a lie;
+- state the count read from the page ("10 questions"), so the next added question does not create a lie; a
+  self-check or module check shows a score and no pass mark;
 - grep the number across **every** tree before believing it is only in one place. It took six
   files to correct one figure;
 - and check the attempt policy the same way. A "try again" button is the page's answer to that

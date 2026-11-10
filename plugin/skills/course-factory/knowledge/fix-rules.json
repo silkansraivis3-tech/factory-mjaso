@@ -8,7 +8,7 @@
   },
 
   "sweeps": {
-    "space":    {"what": "slides with too much free space", "measured": true,
+    "space":    {"what": "slides with free space (a NOTE since 2.116.0 - never a failure)", "measured": true, "level": "note",
                  "ink_floor": 0.45, "empty_bottom_max": 0.25,
                  "_from": "GAS ADVANCED QUALITY_BAR: teaching slides ink >= 45 % at 1280 x 800; S9 'space up and down from that is awfully much'",
                  "sparse_kinds": ["Task", "Check", "Hand-off", "Opener", "Title"],
@@ -25,18 +25,19 @@
   },
 
   "checks": {
-    "_rule": "After a fix, run ONLY the check for the kind of change - once, by whoever made the fix. No second checker, no orchestrator re-check, no whole-course QA, no screenshot contact sheet, no second screen size unless the change was about that size.",
+    "_rule": "After a fix, run ONLY the check for the kind of change - once, by whoever made the fix. No second checker, no orchestrator re-check, no whole-course QA, no second screen size unless the change was about that size. 2.116.0 (operator, 2026-11-09): AFTER ANY FIX the walk review (kind walk) runs on every touched slide - the old 'no visual check after a fix' is gone.",
+    "walk":    {"for": "ANY fix - every touched slide is walked like a trainee", "runs": ["fit_gate.py --walk-dir at 1280 x 800 on the touched modules", "walk_review.py prepare --slides <touched>: contact sheets + brief", "the reviewer (one Opus subagent at high effort per batch of up to 4 sheets, never whoever built it or made the fix) -> walk_review.py sign --built-by, once for each of them", "walk_review.py verify - fails stop the fix; two rounds at most, then the operator accepts what is left on record (walk_review.py accept) or has it fixed (reopen)"]},
     "words":   {"for": "slide or task words, titles, instructor notes changed", "runs": ["check_script_match.py per touched module", "check_slide_text.py per touched module"]},
     "layout":  {"for": "space, size, position, spacing, fonts, a picture made bigger, CSS", "runs": ["measure_slides.py on the touched modules at 1280 x 800: no overflow, no text under the floor; before -> after for swept slides"]},
     "package": {"for": "a file added, moved, renamed or linked; a shared file copied into modules", "runs": ["check_course_package.py on the course"]},
-    "look":    {"for": "a new or changed component, animation or interaction", "runs": ["layout", "one look at ONE changed slide in the browser pane - not every slide, not every module"]}
+    "look":    {"for": "a new or changed component, animation or interaction", "runs": ["layout", "walk"]}
   },
 
   "never_in_a_fix": [
     "a QA agent after the fixer - the fixer runs the check itself and reports its numbers",
     "re-measuring slides that were not touched",
     "two screen sizes, unless the operator asked about the projector",
-    "a contact sheet / screenshots of every slide",
+    "a contact sheet of slides nobody touched (the walk review covers the touched slides only)",
     "a whole-course QA pass - that is for the build's sign-off and the handover",
     "re-reading the whole factory - fix/GUIDE.md, COURSE_STATE.md and STANDARDS.md are enough",
     "more than 2 agents at once - one session does a scripted fix alone; agents only for hand work in many modules"

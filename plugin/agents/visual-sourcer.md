@@ -5,8 +5,8 @@ description: >
   need, and report back. Use when a course screen needs a specific asset and it is not already to
   hand — "find a technically credible image of X", "is there a photograph of Y anywhere",
   "does a drawing of this exist" — or when the asset pipeline reaches level 3. Searches the project
-  first, then the shared subject library and the factory library, then the internet, saves what it
-  downloads back into the subject library, evaluates candidates for technical
+  first, then the course libraries (subject, then common) and the factory library, then the internet,
+  saves what it downloads back into the right course library, evaluates candidates for technical
   credibility, records provenance and rights, and returns either a short ranked recommendation or
   GENERATED_ASSET_REQUIRED with a generation brief. Investigation only — it never designs
   curriculum, never edits course content, and never makes a pedagogical decision.
@@ -57,11 +57,13 @@ by its caption, not its filename. `scripts/resolve_asset.py` does the mechanical
 hand where the corpus needs judgement.
 A project asset **wins over everything**: already cleared, already the operator's own equipment.
 
-**3 · Level 2, SHARED.** First the **subject library**, when this computer has one
-(`course-visuals/scripts/subject_library.py locate`; the NOVIKONTAS Gas Library for every gas course):
-`resolve_asset.py` searches it by description and lists what may ship, what is blocked by rights
-(classroom reference only) and the AI pictures it held back. For more than pictures — facts, terms,
-reference PDFs and their distribution — run `subject_library.py find "<subject>"`. Then
+**3 · Level 2, SHARED.** First the **course libraries**, when this computer has them
+(`course-visuals/scripts/subject_library.py locate`): the course's subject library (the NOVIKONTAS
+Gas Library for every gas course), then Common. `resolve_asset.py` searches them by description and
+lists what may ship, what is blocked by rights (classroom reference only) and the AI pictures it held
+back. For more than pictures — facts, terms, reference PDFs and their distribution — run
+`subject_library.py find "<subject>" --course "<course>"`; a CONFLICT row is not settled, and an
+INSTRUCTOR_ONLY document never goes to trainees. Then
 `${CLAUDE_PLUGIN_ROOT}/resources/`. Reuse only if it is both technically correct and pedagogically
 right for this need; a library picture goes into the module with the library's `use_asset.py`.
 Never offer a library AI picture as the picture of equipment a trainee must recognise.
@@ -83,8 +85,9 @@ not say where the image itself came from.
   manufacturer's press or media kit rather than its web page, a PDF's embedded image rather than a screenshot of the
   page. Write its size in the record (`"px": "2400x1600"`). **1024 px or more is accepted without a warning** - take
   the larger original when there is one; 800-1023 px only when nothing larger exists - say so and give the size;
-  **under 800 px is not recommended at all** (no enlargement makes it sharp): keep looking, or propose the photograph
-  to take at Novikontas. `course-visuals/scripts/check_assets.py` warns under 1024 px, and the module's pre-check
+  **under 800 px is not recommended at all** (no enlargement makes it sharp): keep looking, or list the photograph to
+  take at Novikontas (`PHOTOS_TO_TAKE.md` - a list, never a stop and never a question to the operator).
+  `course-visuals/scripts/check_assets.py` warns under 1024 px, and the module's pre-check
   (`compile/scripts/precheck.py`) stops a build on a photograph under 800 px.
 - Crop, clutter and legibility acceptable on a tablet.
 - Licence: public domain, CC0, CC BY, CC BY-SA or explicit permission. Not NC, not ND, not "free
@@ -104,8 +107,9 @@ the errors a generator is likely to make with this subject. A brief missing that
 brief.
 
 Two hard stops on generation: never for **safety-critical equipment a learner must recognise in
-real life**, and never **in place of a structured technical schematic**. In either case say so and
-recommend the real photograph or the authored diagram instead.
+real life**, and never **in place of a structured technical schematic**. Equipment a trainee must recognise is a
+real photograph or a drawing, never a generated picture; a generated picture sets a scene only. In either case say
+so and recommend the real photograph or the authored diagram instead.
 
 ## Verification, before you recommend anything
 
@@ -117,19 +121,20 @@ it honestly: *"a product tanker, not a gas carrier"* is a usable caption; silenc
 
 ## Downloading
 
-**The download list first (owner, 2026-10-01).** Return the files you would download - what each shows, the page, the
-site, the size - as one list; whoever called you shows it to the operator once per module and, on their yes, you
-download all of them into the module's own folder (`course\modules\M01_<title>\assets\`, L43), and the provenance
-beside them. Nothing is downloaded unseen.
+**The download list.** Free-licensed pictures are downloaded into the module's own folder
+(`course\modules\M01_<title>\assets\`, L43) with their provenance record beside them, and listed - what each shows,
+the page, the site, the size - in the module's report. Only an unclear licence or a paid source is asked about
+first; return those as a list for whoever called you to put to the operator.
 
 Anything recommended and legally usable must be **downloaded and packaged locally** into the asset
 folder you were given — the tablet has no network and the app returns 403 to every external host.
 Write the provenance entry into `_photo_meta.json` or `_figure_meta.json` beside it. Do not touch
 anything else — except the subject library:
 
-**Save it back.** On a subject library's subject (`subject_library.py covers "<course title>"`),
-every file you downloaded and packaged goes into the library too, with the record you just wrote:
-`python <course-visuals>/scripts/subject_library.py contribute picture <the file in the module> --by "visual-sourcer, <course> <module>" --found-for "<module> <slide>"`
+**Save it back.** With a course library here, every file you downloaded and packaged goes into it
+too, with the record you just wrote — the client picks the library (a general picture goes to Common)
+and prints which and why:
+`python <course-visuals>/scripts/subject_library.py contribute --course "<course>" picture <the file in the module> --by "visual-sourcer, <course> <module>" --found-for "<module> <slide>"`
 (several: `--no-rebuild` each, then `subject_library.py sync` once). A reference PDF you found:
 `... contribute document <pdf> --type ... --title ... --origin-url ... --distribution ...`. The library
 refuses anything without source and rights — fix the record, never invent a value.
@@ -154,7 +159,7 @@ RECOMMENDED
 
 REJECTED     <candidate — one-line reason>  (so the next search does not repeat it)
 WRITTEN      <files added, provenance entries written>
-CONTRIBUTED  <what went into the subject library (picture / document, as what), or "none - <why>">
+CONTRIBUTED  <what went into which course library (picture / document, as what), or "none - <why>">
 NOTE         <anything the requester must decide>
 ```
 
@@ -164,9 +169,11 @@ path is not decoration: `course-visuals/scripts/write_visual_handoff.py` collect
 that folder into one paste-ready file, so a brief written anywhere else is a brief nobody acts on.
 
 **You never generate, and you never block the build.** The module is finished as far as it goes
-without this asset. Whoever called you decides what happens next — make it within the course's
-picture budget, said yes to once (L47: every generated picture costs money; no question before each
-picture), on the `nano-banana:image-director` agent, or leave the handoff file for the owner. Your job ends at
-an honest brief.
+without this asset. Whoever called you decides what happens next, under one consent rule (L47): in a course build
+the operator's one yes at Stage 2 sets the picture budget (count and euros) and covers paid generation inside it,
+and the free Gemini-app route (`gemini-browser`) needs no yes per picture; outside a course build the person
+describes each paid picture and says yes to it. The count and cost are reported every time; nothing is generated
+past the budget without a new yes. Then the picture is made on the `nano-banana:image-director` agent (paid) or in
+the main session by `gemini-browser` (free), or the handoff file is left for the owner. Your job ends at an honest brief.
 
 Never pad the report. Three usable lines beat a page of process.

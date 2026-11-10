@@ -57,9 +57,93 @@ KIT2D = """(id) => { const s = document.getElementById(id); if (!window.KIT2D ||
   return { idle: fs.every(f => f.idle()), found: [].concat.apply([], fs.map(f => KIT2D.audit(f))) }; }"""
 
 
-def walk(page, deck, min_shown):
-    """[(slide id, step on that slide, kind, what)] for one deck at the page's size"""
-    found, at = [], {}
+# 2.116.1 - a figure on the slide in front still drawing a step (kit: a frame loop or a line being laid; 2D kit: not idle)
+BUSY = """(id) => { const s = document.getElementById(id); if (!s) { return false; }
+  const kit = [].slice.call(s.querySelectorAll('[data-kit]')).some(h => { const f = h.__kit; return f && f !== 'bad' && (f.raf || f.laying); });
+  const k2 = !!(window.KIT2D && KIT2D.figures.some(f => s.contains(f.host) && !f.idle()));
+  return kit || k2; }"""
+
+
+# 2.115.0 - a figure with steps that does not change on any Next is a dead drawing (PM M02 s12, s13: the chart stayed an empty
+# axis on every Next). Its state at a stop: a hash of what it drew.
+KITSTATE = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
+  const hs = [].slice.call(s.querySelectorAll('[data-kit], [data-kit2d], [data-custom-fig]')); if (!hs.length) { return null; }
+  let steps = 0, sig = '';
+  hs.forEach(h => { const f = h.__kit || h.__k2; if (f && f !== 'bad') { steps += (f.spec && f.spec.steps || f.steps || []).length; }
+    const cs = h.querySelector && h.querySelector('script[data-custom-steps]');       /* 2.116.0: a custom figure's declared steps */
+    if (cs) { try { const d = JSON.parse(cs.textContent); steps += (Array.isArray(d) ? d : (d.steps || [])).length; } catch (e) {} }
+    const t = h.innerHTML; let x = 0; for (let i = 0; i < t.length; i++) { x = (x * 31 + t.charCodeAt(i)) | 0; } sig += ':' + t.length + ':' + x; });
+  return { steps: steps, sig: sig }; }"""
+
+
+# the lines lit now on the slide (.cur): one stop's signature; a signature that comes back after another one is a second pass
+CURSIG = """(id) => { const s = document.getElementById(id); if (!s) { return ''; }
+  const a = s.hasAttribute('data-stops') || s.querySelector('[data-k]') ? 'data-k' : 'data-i';    /* the slide's own stops, else its lines */
+  return [].slice.call(s.querySelectorAll('.cur')).filter(x => !x.hasAttribute('data-ks')).map(x => x.getAttribute(a) != null ? a + x.getAttribute(a) : '')
+    .filter(Boolean).sort().join(','); }"""
+
+
+def walked_twice(seqs):
+    """[(slide id, message)] for each slide where a line lit at one stop is lit again after the walk moved on"""
+    out = []
+    for sid, seq in seqs.items():
+        done, last = set(), None
+        for sig in seq:
+            if sig and sig != last:
+                again = sorted(set(sig.split(",")) & done)
+                if again:
+                    out.append((sid, "Next walks its lines twice on %s - %s lit again after the walk moved on; each line "
+                                     "should light once (then the question, then the answer)" % (sid, ", ".join(again))))
+                    break
+                done |= set(sig.split(","))
+            last = sig or last
+    return out
+
+
+def dead_figures(states):
+    """[(slide id, message)] for each slide whose figure has steps and drew the same at every stop of the walk"""
+    out = []
+    for sid, seen in states.items():
+        if seen["steps"] and len(seen["sigs"]) == 1 and seen["stops"] > 1:
+            out.append((sid, "the drawing on %s does not change on any Next (%d stops walked, its figure has %d step(s)) - "
+                             "point its steps' \"line\" at lines the slide lights, or mark the step \"reveal\": true "
+                             "to play it with the answer" % (sid, seen["stops"], seen["steps"])))
+    return out
+
+
+# 2.116.0 - the walk review's stop record: the lit lines' text, whether the room's question / its answer is on screen, and
+# the figure's signature - saved beside a ~480 px screenshot of the slide, at 1280x800 only (walk_review.py reads them)
+WALKINFO = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
+  const vis = e => { for (let x = e; x && x !== document.body; x = x.parentElement) { const c = getComputedStyle(x);
+    if (c.display === 'none' || c.visibility === 'hidden' || parseFloat(c.opacity) < 0.05) { return false; } } return true; };
+  const t = e => (e.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 160);
+  const a = s.hasAttribute('data-stops') || s.querySelector('[data-k]') ? 'data-k' : 'data-i';
+  const lit = [].slice.call(s.querySelectorAll('.cur')).filter(x => !x.hasAttribute('data-ks')).map(t).filter(Boolean);
+  const ask = [].slice.call(s.querySelectorAll('.ask')).filter(vis).map(t);
+  const rev = [].slice.call(s.querySelectorAll('.lt-ans-under, .lt-ans-over, .reveal, [data-reveal]')).filter(vis).map(t).filter(Boolean);
+  let sig = ''; [].slice.call(s.querySelectorAll('[data-kit], [data-kit2d], svg, canvas')).forEach(h => { const q = h.innerHTML || '';
+    let x = 0; for (let i = 0; i < q.length; i++) { x = (x * 31 + q.charCodeAt(i)) | 0; } sig += ':' + q.length + ':' + x; });
+  return { lit: lit, ask: ask, reveal: rev, fig: sig, title: t(s.querySelector('h1, h2, .title') || s).slice(0, 80) }; }"""
+WALK_WIDTH = 480
+
+
+def save_shot(page, sid, path):
+    """the slide in front, clipped, as a PNG about WALK_WIDTH px wide (Pillow shrinks it when it is there)"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    page.locator("#" + sid).screenshot(path=str(path))
+    try:
+        from PIL import Image
+        im = Image.open(path)
+        if im.width > WALK_WIDTH:
+            im.convert("RGB").resize((WALK_WIDTH, round(im.height * WALK_WIDTH / im.width)), Image.LANCZOS).save(path)
+    except ImportError:
+        pass
+
+
+def walk(page, deck, min_shown, shots=None, record=None):
+    """[(slide id, step on that slide, kind, what)] for one deck at the page's size. shots: a folder - each stop is saved as
+    <slide>_k<step>.png there (the walk review), record: a list that gets one dict per stop"""
+    found, at, states, seqs = [], {}, {}, {}
     page.goto(deck.as_uri())
     page.wait_for_timeout(600)
     if page.locator("#startBtn").count():
@@ -76,6 +160,28 @@ def walk(page, deck, min_shown):
             r = page.evaluate("() => window.FitProbe()")
         if r:
             step = at[r["id"]] = at.get(r["id"], 0) + 1
+            seqs.setdefault(r["id"], []).append(page.evaluate(CURSIG, r["id"]))
+            if shots is not None:
+                # 2.116.1 - the walk shot waits for the figure to stop moving (PM M02 s07-s12 were shot half-drawn)
+                for _ in range(20):
+                    if not page.evaluate(BUSY, r["id"]):
+                        break
+                    page.wait_for_timeout(250)
+                page.evaluate(SETTLE)
+                try:
+                    name = "%s_k%d.png" % (r["id"], step)
+                    save_shot(page, r["id"], Path(shots) / name)
+                    info = page.evaluate(WALKINFO, r["id"]) or {}
+                    if record is not None:
+                        record.append(dict(info, slide=r["id"], k=step, file=name))
+                except Exception as err:   # a shot that could not be taken never fails the fit walk: the stop is recorded
+                    if record is not None:  # with no picture (2.125.0), and the walk review refuses its slide
+                        record.append({"slide": r["id"], "k": step, "file": "", "lost": str(err)[:160]})
+            ks = page.evaluate(KITSTATE, r["id"])
+            if ks:
+                seen = states.setdefault(r["id"], {"steps": ks["steps"], "sigs": set(), "stops": 0})
+                seen["sigs"].add(ks["sig"])
+                seen["stops"] += 1
             for k in ("cut", "spill"):
                 for f in r[k]:
                     found.append((r["id"], step, k, "%s px %s: \"%s\"%s" % (f["px"], f["el"], f["words"],
@@ -103,7 +209,22 @@ def walk(page, deck, min_shown):
         if not nxt.count() or nxt.is_disabled():
             break
         nxt.click()
+    for sid, what in dead_figures(states):
+        found.append((sid, 1, "dead", what))
+    for sid, what in walked_twice(seqs):
+        found.append((sid, 1, "twice", what))
     return found
+
+
+def walked_deck(deck):
+    """what the walk is made of: each slide's fingerprint and the whole deck's, taken BEFORE the first picture and kept
+    beside the pictures - so the walk review tells a picture of an older slide from a picture of this one, and a deck that
+    changed while it was walked is not passed off as walked (walk_review.py). A walk with none cannot be reviewed"""
+    try:
+        import walk_review
+        return walk_review.walk_stamp(deck)
+    except Exception:                                       # noqa: BLE001 - the fit result stands; prepare asks for a new walk
+        return {}
 
 
 def main(argv=None):
@@ -112,6 +233,7 @@ def main(argv=None):
     ap.add_argument("--viewport", action="append", default=[])
     ap.add_argument("--min-shown", type=float, default=0.8)
     ap.add_argument("--json")
+    ap.add_argument("--walk-dir", help="2.116.0: save each stop at 1280x800 here (sNN_kK.png) with walk.json - the walk review's input")
     o = ap.parse_args(argv)
     deck = find_deck(o.deck)
     if not deck:
@@ -142,7 +264,14 @@ def main(argv=None):
             for w, h in sizes:
                 page = b.new_page(viewport={"width": w, "height": h})
                 page.add_init_script(PROBE)
-                res["%dx%d" % (w, h)] = walk(page, deck, o.min_shown)
+                rec = [] if (o.walk_dir and (w, h) == (1280, 800)) else None
+                made_of = walked_deck(deck) if rec is not None else {}
+                res["%dx%d" % (w, h)] = walk(page, deck, o.min_shown, o.walk_dir if rec is not None else None, rec)
+                if rec is not None:
+                    Path(o.walk_dir).mkdir(parents=True, exist_ok=True)
+                    (Path(o.walk_dir) / "walk.json").write_text(
+                        json.dumps(dict({"viewport": "1280x800", "stops": rec}, **made_of), indent=1, ensure_ascii=False),
+                        encoding="utf-8")
                 page.close()
             b.close()
     except Exception as err:                                # the browser did not start or the page did not answer

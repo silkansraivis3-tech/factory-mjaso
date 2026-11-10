@@ -26,11 +26,10 @@
       and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
       (L64) It starts with the PRE-CHECK (compile/scripts/precheck.py - a second, from the files alone): a picture
       the sheet names that is not there, an unknown template or variant, a photograph under 800 px (unless its
-      _photo_meta.json record says why in "low_resolution_ok"), three teaching slides in a row without a picture -
-      "FAIL M01 - nothing built: the pre-check found ..." and nothing is built until it is fixed. More words than the
-      word guideline (`knowledge/theory-rules.json` `slide`) is a note, never a stop. Run it alone any time: python
-      compile/scripts/precheck.py <course> --module 1. Under the first PASS: "TIME M01: <n> min from its starter build
-      sheet to its first PASS" against the gold standard, 30-40 min a module.
+      _photo_meta.json record says why in "low_resolution_ok") - "FAIL M01 - nothing built: the pre-check found ..." and
+      nothing is built until it is fixed. More words than the word guideline (`knowledge/theory-rules.json` `slide`) is a
+      note, never a stop. Run it alone any time: python compile/scripts/precheck.py <course> --module 1. Under the first
+      PASS: "TIME M01: <n> min from its starter build sheet to its first PASS" against the gold standard, 30-40 min a module.
       A module ALREADY BUILT is rebuilt as a fix, not here: scripts/fix.py rebuild <course> --modules 1 (fix/GUIDE.md 3b).
       A rebuild judges again only the slides and task pages changed in anything they load since their last clean check
       (the drawing check and the audits; the figures already did) - a failing one is judged every time, --full judges
@@ -49,25 +48,27 @@
       command); the audits per slide and kind with a count; the same compile line once with "(xN)". Every line is in the
       full log; --full-output prints them all.
 5  on PASS - or MODULE CLEAN in a parallel build (--no-course-pages: only the course package left, judged after assembly)
-      - it has photographed every CHANGED slide (every part of a paged slide), figure step and question (asked, wrong,
-      right) onto a few sheets, and checked that every question grades right and wrong answers as such. A screen
-      unchanged in everything it loads keeps its picture (_build\MNN_shots); the sheets show what changed since the last
-      REVIEWED sheets. Give the sheets to ONE review subagent (model opus) with compile/REVIEW_PROMPT.md (§2f). It labels
-      each finding BROKEN or POLISH. Then mark them looked at: build_module.py <course> --module 1 --reviewed (the next
-      sheets show only what changes after this). Fix every BROKEN one in one go, build again, and send the same reviewer
-      a re-review (the changed screens only, with its BROKEN list: FIXED / NOT FIXED - no new polish), --reviewed again.
-      In the whole-course workflow (orchestration/workflows/build_course.js) the BUILDER STOPS AT MODULE CLEAN and the QA
-      agent does this review; a BROKEN finding sends the module back for one fix round. POLISH is never fixed in the loop
-      (a fix to a drawing that already passes can break it again): write it to working_claude\review\MNN_POLISH.md
-      (beside the sheets' folder, which each promotion replaces; a POLISH.md left inside it is moved there) for the
-      operator. Every BROKEN finding is fixed before hand-over, so the loop ends.
-6  THE POLISH ROUND - once, after PASS (or MODULE CLEAN) with every BROKEN finding fixed, on the best model (opus), about
-      ten minutes: work down MNN_POLISH.md (and the figure and 3D reviews' POLISH lines) most visible first, one item at a
-      time - scripts/fix.py polish begin <course> --module 1 --what "<the item>", the change, then fix.py polish check
-      <course> --module 1: it builds again and, if the module no longer passes, puts the snapshot back by itself. Only
-      layout, sizing, placement, cropping and label positions; never the approved words, an outcome or a fact. Here, and
-      only for the items on the list, a drawing the build did not name may be changed. polish begin refuses after the time
-      box; then fix.py polish end <course> --module 1, the kept items off MNN_POLISH.md - the rest stays for the office.
+      - it has walked the deck (every slide at every stop) and every task page like a trainee - each question of the
+      self-checks and the module check as asked (1280 x 800 and 1024 x 768), answered wrong, answered right, and each
+      page's last screen - into working_claude\_build\walk\MNN, and checked that every question grades right and wrong
+      answers as such (a right answer not graded right, or a wrong one graded right, fails the build). Nobody has
+      LOOKED yet: the WALK REVIEW (2i) is the one visual review of the module - slides and task pages, one reviewer who
+      did not build it, two rounds at most - and the module is not done without it. There is no other sheet review: no
+      screen is judged twice and none by nobody.
+      In the whole-course workflow (orchestration/workflows/build_course.js) the BUILDER STOPS AT MODULE CLEAN; the walk
+      judge reviews the walk beside the QA agent (who looks at no screen), and a BROKEN finding or a walk fail sends the
+      module back for one fix round. Under MODULE CLEAN the build prints "WALK REVIEW - ..." : where the module's walk
+      review stands. What could look better but is not wrong is never fixed in the loop: list it for the operator - a
+      fix to a drawing that already passes can break it again (IGF M02 s02: PASS, then four failed builds).
+6  THE POLISH ROUND - once, after PASS (or MODULE CLEAN) with every BROKEN finding fixed and the walk review passed with
+      a round left, on the best model (opus), about ten minutes: work down the judges' POLISH lines (and MNN_POLISH.md
+      when there is one) most visible first, one item at a time - scripts/fix.py polish begin <course> --module 1 --what
+      "<the item>", the change, then fix.py polish check <course> --module 1: it builds again and, if the module no longer
+      passes, puts the snapshot back by itself. Only layout, sizing, placement, cropping and label positions; never the
+      approved words, an outcome or a fact. Here, and only for the items on the list, a drawing the build did not name may
+      be changed. polish begin refuses after the time box; then fix.py polish end <course> --module 1, the kept items off
+      the list - the rest stays for the office. A kept change makes its slides stale to the walk review: walk_review.py
+      prepare --stale and a reviewer who did not polish it look at them (its second round).
    A FIGURE problem (from the build or the review): fix it in the studio, not in build after build -
       course-visuals\kit\scripts\studio.py <spec> --step all judges one figure at every step in seconds, on its real
       slide or task page. The build lists each finding's spec part ("[part TK1]") and those parts' numbers
@@ -127,8 +128,9 @@ python compile/scripts/compile_module.py <course> --module 1 --init-build   once
                                                                             pass mark from the course's other sheets; a foot;
                                                                             an entry per tap / label question)
 python compile/scripts/compile_module.py <course> --module 1                build (again after every change)
-python scripts/check_script_match.py <course> --module 1 --part instructor  the words are the approved ones
 ```
+
+`build_module.py` (the Quickstart) checks that the words are the approved ones (`check_script_match.py`) as part of its one run.
 
 **The module's design files.** Both `--init-build` and every compile first check the module's design files (style
 files, engines, `kit.js` ...) against the factory's with `design_system.py`'s own check, and **say what they did**, on
@@ -162,9 +164,9 @@ python compile/scripts/compile_course.py <course>                 COURSE.html, _
 python scripts/check_course_package.py <course>\modules           the classroom's own importer
 ```
 
-`build_module.py` runs the usual checks (`check_navigation.py`, `check_course_package.py`, the `audit_deck.js`,
-`audit_collide.js`, `audit_compose.js` and `audit_drawing.js` probes, §2e) - the compiler does not prove a layout fits,
-the audits do.
+The navigation check, the course-package check and the layout audits (`audit_deck.js`, `audit_collide.js`,
+`audit_compose.js`, and the drawing check `audit_drawing.js`, §2e) are run by `build_module.py`; the compiler does not
+prove a layout fits, the audits do.
 
 ## 1 · What goes where
 
@@ -192,8 +194,14 @@ logo top right, Raleway bundled. What the compiler chooses on its own:
 | a drawing on a stage | `figure-stage` |
 | a picture beside up to 60 words | `explain-figure` `figure-right` (`figure-left` with `"figure_first"`) |
 | a picture beside more than 60 words | `reading-with-figure` - or `long-explanation` when the picture is 3D |
-| a picture beside more than 85 words | `content-in-parts`: the lines in order, in parts of about 75 words; Next walks the parts, every part has a tab |
+| a picture beside more than 85 words | `reading-with-figure`, the words whole (never paged by the factory - the script splits the slide, `t_over_budget`, L61); `content-in-parts` (the lines in order, in parts of about 75 words, a tab each) only when the script keeps it in parts on purpose (`"in_parts"`) or the build sheet asks for it (`"parts"`) |
 | no picture and more than 120 words (the word guideline's `steps_from`), or `"parts"` in its build sheet | `explain-figure` `text-only`, its lines in the same parts: shown in steps |
+
+**Word budgets (measured at 1024 x 768 with these templates and the larger logo - `layout-templates.json`
+`budgets`):** beside a picture 85 words, with a photo under the words 70, beside a photo column 85, under a photograph
+across the slide 70, on a full-screen photograph 50, beside a framed photograph 50, a part 75. The compiler chooses by
+them; a slide over its template's budget is a must-fix at the script (`t_over_budget`), and a slide built over its
+layout's budget (a template asked for by name) is a `Note:` in the build's answer before the audit measures it.
 | lines numbered 1, 2, 3 ... | `procedure` (`with-figure`, or `text-only`) |
 | lines whose cells are separated by ` \| ` | `reference-table` - one row a line, the separator kept in the line (hidden) |
 | a short slide with no picture | `explain-figure` `text-only` |
@@ -213,22 +221,10 @@ and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `
 `"box"` (the picture's box, below), `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.
 
-**The same look at most twice in a row (L62) - and 80 / 20 light.** A slide's look is its shape and its ground. When a
-slide would look like the one before it, the compiler builds it another way that holds the same words and picture: the
-picture on the other side, or a photograph across the top with the words in two columns under it (`figure-stage`
-`figure-top`, up to 70 words); a slide on the dark ground may also be the photograph framed on it (up to 50 words). The
-ground is never changed to vary: at least 80 % of a module's slides are light (task launches, the module check and the
-recap too, unless the sheet says `"dark": true`); more than a fifth on the Navy ground or framed on it is a build
-problem - a full-screen photograph does not count. It also avoids the looks of the three slides before it when it can.
-Where it cannot: two slides in a row that look the same are listed for the reviewer ("For the reviewer" in the
-compile's answer, `REVIEW -` in the build's) and the build carries on; three in a row is a build problem. A comparison
-slide (`compare-two`, `before-after`, a `comparison` picture, a title that compares or says before / after) keeps its
-own way and may take the look of the slide before it on purpose. A build sheet's own layout is kept wherever it does
-not repeat. A slide built another way carries `data-varied`; when the audit finds it does not fit there,
-`build_module.py` builds it its next way at once - the line `LAYOUT - ... built again their next way` - and keeps that
-in `_build\MNN_layout_avoid.json` while the slide's words and build-sheet entry are unchanged. Never pin a layout by
-hand for that. A slide whose OWN layout does not fit either (the larger logo can cost a long title its first line
-beside it) is yours: give it `"parts"` or a shorter picture column, as for any slide that spills. A photograph under
+**A repeat of a look is a note (L62).** The compiler never builds a slide another way to avoid a repeat; a repeat, or more
+than a fifth of slides on the dark ground, is a `Note:` line, never a problem. A slide whose OWN layout does not fit (the
+larger logo can cost a long title its first line beside it) is yours: give it `"parts"` or a shorter picture column, as for
+any slide that spills. A photograph under
 1600 px on its long side is enlarged once (Lanczos, a light sharpening, at most four times; the original kept in
 `working_claude/photo_originals/M01/`); under 800 px it is listed - a larger original is still the real fix.
 
@@ -237,7 +233,7 @@ beside it) is yours: give it `"parts"` or a shorter picture column, as for any s
 `picture-large` 65 %. The compiler counts what the picture shows at once - a kit drawing's labelled parts, a 3D scene's
 labels, an SVG's words, a photograph's spots - and gives it the box those names need (up to 6 any box, 7-10 even,
 11-15 picture-wide, 16-22 picture-large, 23 or more the whole slide; a 3D model picture-wide at least), the words what
-is left, in parts when they do not fit. Growing is worth it while it costs the words at most one part more than the
+is left. Growing is worth it while it costs the words at most one part more than the
 even box; past that, or when the picture needs the whole slide and the words are more than 45, the compile stops on
 the slide: make it another kind of picture - in steps (a few names a step), a 3D model whose names show on tap, the
 picture on a slide of its own (`"composition": "stage"`), or fewer names. Each such slide carries `data-box`. When the
@@ -246,10 +242,10 @@ build's layout solver gives it the next larger box (`settled: ... its picture ne
 compile/scripts/layout_fit.py <figure> --words N` says what a figure gets before a build.
 
 **Checked at every build:** a split slide is 55 / 45 by default (50-60 % text when the picture is simple, never
-80 / 20); over the word guideline's 80 words (`knowledge/theory-rules.json` `slide`) a picture goes beside the words or
-the slide is shown in steps - a note, never a stop; never three teaching slides in a row without a teaching picture (a
-task launch and the recap neither count nor break the run); approved words are never cut, summarised or set smaller -
-when they need more room they go into parts.
+80 / 20); over the word guideline's 80 words (`knowledge/theory-rules.json` `slide`) with no picture, a picture goes
+beside the words or the slide is shown in steps - a note, never a stop; approved words are never cut, summarised or set
+smaller, and the factory never pages them beside a picture - when they need more room the writer splits the slide or
+gives it `"parts"`.
 
 | In the script, or in the delivery file | On the screen |
 |---|---|
@@ -278,13 +274,14 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 - **No empty space.** A drawing, animation or 3D model gets the wider column (`fig-wide`) and the column's
   height; words are at reading size (`.copy`). Before showing a deck: `audit_compose.js` (every screen composed,
   none weak), `audit_deck.js` (no spill, no overfill, no tiny labels), `audit_collide.js` - at 1280 × 800 and
-  1024 × 768. A label inside a drawing below 12.5 px on screen is fixed in the drawing.
+  1024 × 768. Two floors: a label inside a drawing below 12.5 px on screen is fixed in the drawing; body text is at least 16 px.
 - **Every drawing whole and clean (L54).** Also `audit_drawing.js`: no part pokes out of the hull, tank, room or box
   it sits in (draw the room along a sloping stern, or clip it), nothing is cut off at the drawing's frame, every label
   keeps 4 px clear of other shapes, lines and labels; a crossing that is meant is marked in the drawing (§2e). Every
   compiled deck also loads `gb_fit.js`, which widens a
   frame a drawing still reaches past and names it in the console - fix the drawing, then compile again.
-- **Figures from the figure kit (L55).** `"s14": {"figure": "s14.kit.json", "dark": true}` - the spec lives in
+- **Figures from the figure kit first; a custom figure is allowed (L55).** When no kit part shows the idea well, see §2i for
+  `"custom_figure"`. `"s14": {"figure": "s14.kit.json", "dark": true}` - the spec lives in
   `working_claude\figures\M02\` like any drawing source (its format: `course-visuals/kit/SPEC.md`). The compiler puts it
   into the page as data with the deck's own step buttons (`.mediabar`: previous, next, replay), and loads `kit.css` and
   `kit.js` (installed by `design_system.py` like `gb_deck.js`) and, when the course made parts of its own,
@@ -312,8 +309,9 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   `description` in `_photo_meta.json` (write it for the trainee when the photo comes in; a photo without one is reported
   at build). A full-screen photo slide opens on a tap of its bare picture and has the ⤢ button. A generated picture
   (`"generated": true` in its record) gets no credit line and no label on screen, and is never an L57 thumbnail.
-- **A drawing carries the real photos of what it shows (L57) - nothing to ask for.** The compiler takes the real things a
-  drawn slide names - the term before " - " in its lines (with the kit figure's step number) and the drawing's own labels -
+- **A drawing carries the real photos of what it shows (L57) - when its build-sheet entry says `"photo_row": true` or its
+  why is `real-thing-recognition`; never unasked.** The compiler then takes the real things the drawn slide names - the term
+  before " - " in its lines (with the kit figure's step number) and the drawing's own labels -
   and puts the matching photos in a row under the drawing (`.photo-strip`, at most four), each opening in the panel.
   Matched by `"shows"` in `_photo_meta.json`: give every photo the plain names of what it really shows, e.g.
   `"shows": ["bunkering station", "LNG bunker hose"]`. A photo of another module is copied in with `copied_from`; one
@@ -328,10 +326,12 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   off the list altogether - `"no_photo"` keeps it listed.
 - **A planned photo that does not exist.** The build names every photo slide with no picture file. Find the real one
   first (project, factory library, a free licence - `course-visuals`). If none exists and the slide only sets the
-  scene, propose an AI picture unasked - `nano-banana:realistic-visuals`: describe it, show the prompt and the price,
-  make it within the course's approved picture budget (one yes per course, L47), record it `"generated": true` in
-  `_photo_meta.json`. Equipment too - first generated, then fixed; nobody is asked to take a photo, and the course's own
-  small pictures are reused, enlarged by the build (Real-ESRGAN).
+  scene, an AI picture may be made - `nano-banana:realistic-visuals`: describe it, show the prompt and the price, make
+  it within the course's approved picture budget (one yes per course, L47), record it `"generated": true` in
+  `_photo_meta.json`. A generated picture sets a scene only: equipment a trainee must recognise is a real photograph or
+  a drawing, never a generated picture. A real photo still missing is listed in `PHOTOS_TO_TAKE.md` - a list, never a
+  stop and never a question to the operator. The course's own small pictures are reused, enlarged by the build
+  (Real-ESRGAN).
 - **A 2D figure - drawn with the 2D kit.** A graph, an object in motion or a concept is a short JSON spec,
   `working_claude\figures\MNN\sNN.kit2d.json`, named as the slide's `"figure": "sNN.kit2d.json"`
   (`course-visuals\kit2d\SPEC.md` is the format and says how the starter is composed; `demos.html` and `pm.html` show
@@ -341,8 +341,8 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   starter for a chart, comparison, animation or interactive-diagram slide whose lines are not mostly equipment and
   spaces - the best fit of the slide's words whose look the 2D figures of the 4 slides before it do not have - with a
   `"_brief"` (what it shows, why this kind, what else fits): build it as it is, or make the kind that
-  tells the slide better. Two 2D figures that look alike less than 5 slides apart are listed for the reviewer (the
-  build carries on). A `"_todo"` names values only the course's sources can give (a chart's points, a task's weeks, a
+  tells the slide better. Two 2D figures that look alike less than 5 slides apart fail the compile, which names what
+  else the slide's words make. A `"_todo"` names values only the course's sources can give (a chart's points, a task's weeks, a
   grid's rows); the compile reports it until they are in and the key is gone. Equipment layouts and the tested IGF
   patterns keep the figure kit's starter.
 - **A `model_3d` slide (L46) - drawn with the 3D kit.** Do not write three.js. Write the scene as a short JSON spec,
@@ -394,22 +394,18 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   and keeps drawing, it covers no word) and taps a label (its part selected, then let go) - FAIL otherwise.
   **Measure it**: `node course-module-ux/measure/scripts/perf3d.mjs <deck.html> --slides=all` (Node + headless Chrome,
   CPU slowed 4x, warm and cold first frame, fps; exit 1 over budget; see `measure/GUIDE.md` §2b).
-  **At least one scene per module where the subject allows it - strongly recommended (L60).** `--init-build`
-  gives a `model_3d` slide a starter scene entry: its figure (`s05.kit3d.json` - nothing goes into `"scripts"`), a
+  **3D only where the figure's `why` is `spatial` (section 2i); the factory picks no scene unasked.**
+  `--init-build` gives a `model_3d` slide a starter scene entry: its figure (`s05.kit3d.json` - nothing goes into `"scripts"`), a
   `"_figure"` note on how to build it, and writes the starter spec itself (a label, metres, a view, parts guessed from the
   slide's words and laid side by side, each with a label, and a `"_todo"` to place them as on board - never overwritten).
-  It also writes the slide's 2D starter spec (`sNN.kit.json`), named in the entry's `"_2d"` note but not in
-  `"figure"`: to keep a 2D figure, point `"figure"` at it and write `"declined_3d"` - then edit the starter, never write
-  a spec from nothing.
-  A script with no `model_3d` slide gets the same entry on its best slide, unasked (`content_script.best_3d`: a shape,
-  an inside or a layout in space; never a real photo's slide), with a `"_3d"` note saying why. **A photograph wanted
-  is never turned 3D:** `"photo_wanted": "<who asked, why>"` - on a build sheet screen, a script screen, or the
-  script's top-level `"photo_wanted": {"s07": "..."}` (outside the approved screens, like `"declined"`) - takes the slide
-  out of the pick and out of the RECOMMENDED block's candidates (the next one is named, or none), and is the reason a
-  planned 3D slide may carry its photo. A module built with no scene gets a RECOMMENDED block in the build and its own
-  card on the review page, naming the best candidate - never a block: the operator declines with their reason,
-  `"declined_3d"` at the TOP of the build sheet, and it is not proposed again. A 3D slide whose figure is not a scene
-  (a 2D kit figure, an `.svg`, a photo - anything but a `.kit3d.json` spec or an `.html` figure holding a `[data-stage]`,
+  It also writes the slide's 2D starter spec (`sNN.kit.json`, 2.50.6), named in the entry's `"_2d"` note but not in
+  `"figure"`: to keep a 2D figure, point `"figure"` at it and write
+  `"declined_3d"` - then edit the starter, never write a spec from nothing (M01 benchmark run 5, s05).
+  **A photograph wanted is never turned 3D:** `"photo_wanted": "<who asked, why>"` - on a build sheet screen, a script
+  screen, or the script's top-level `"photo_wanted": {"s07": "..."}` (outside the approved screens, like `"declined"`) - is
+  the reason a planned 3D slide may carry its photo. `"declined_3d"` at the TOP of the build sheet is an optional note.
+  A 3D slide whose
+  figure is not a scene (a 2D kit figure, an `.svg`, a photo - anything but a `.kit3d.json` spec or an `.html` figure holding a `[data-stage]`,
   `data-3d`, `data-scene` or a `<canvas>`) is a must-fix in the build and a note on the script's review page:
   "asks for a 3D scene; it has a 2D figure". To keep the 2D figure, write the operator's reason in the slide's entry,
   `"declined_3d": "<their reason>"`; it is not flagged again. The deck's `data-visual` and the plan then say the 2D
@@ -420,10 +416,10 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   with its record, to `assets\img\_unused\` (skipped by the classroom); name it in the build sheet again and it comes
   back. `used_in` in `_photo_meta.json` is written by the build. A tap / spot / label / read-the-instrument question whose
   subject a real photo of the module shows is listed after the build with the build-sheet line - a note.
-- **Every photograph once in the whole course (L58).** No photo is shown on two screens - in this module or any other;
-  a copy under another name is the same photo (same `url_or_origin`, or the same bytes). A thumbnail takes a different
-  photo or none; a photo you placed (picture, inset, photo in a drawing) that is already shown is reported - choose a
-  different one or none (the earlier module keeps it). After photos change, build every module again.
+- **Every photograph once in the whole course (L58).** A photograph shows on one screen; a repeat, in this module or any
+  other, carries `"reuse_why"` in its slide's entry. A copy under another name is the same photo (same `url_or_origin`, or
+  the same bytes). A thumbnail takes a different photo or none; a photo you placed (picture, inset, photo in a drawing)
+  that is already shown is reported - choose a different one, none, or give the `"reuse_why"` (the earlier module keeps it). After photos change, build every module again.
 
 ## 2c · More build-sheet choices
 
@@ -570,27 +566,23 @@ written down. No Chrome or Edge: the build says it did not check. `--no-drawing-
 The probes measure what someone thought to measure; only looking finds the rest (invisible curves, a file path in a
 credit, a broken "choose all", tap areas off the things they name). So **looking is a required step**, not a courtesy:
 
-- **Who:** ONE review subagent, model `opus` at high effort - the best model. The main session never views the
-  pictures; it gets a short verdict. Its brief is `compile/REVIEW_PROMPT.md`. It reads sheets; it never drives a browser
-  (a browser-driving review costs many times the calls).
-- **What:** a screenshot of **every slide** of the deck, **every step** of a figure that steps, and **every question**
-  of every task page and the module check - as asked (every tap area and drop zone outlined by a review overlay), answered
-  wrong and checked, answered right and checked - at **1280 × 800**. Not a sample. `build_module.py` makes them on a pass
-  (`course-module-ux/measure/scripts/review_sheets.mjs <module> <out>`, two screens to a sheet, in
-  `working_claude\review\M01\`); the next review gets only the screens whose picture changed (`--all` for every one).
-  Item 4 below is checked by the script: each question is answered by its own keys, and a right answer not graded right
-  (or a wrong one graded right) fails the build.
-- **Against this list:**
-  1. every curve, line and label is visible against what is behind it (a kit figure sits on a dark panel - nothing navy
-     or steel on it, nothing hidden under a shape);
-  2. every credit and caption is clean - no file path, no drive letter, no internal folder name;
-  3. every tap area sits on the thing it names; every drawn label is beside what it labels;
-  4. every answer type is answered **once right and once wrong**, and the screen says which it was ("choose all" keeps
-     every tapped option and scores a fully right answer as right);
-  5. nothing is cut off, covered, or sits under the Check bar until the page is scrolled.
-- **After:** fix what it found, build again, review the screens that changed. `compile_module.py` prints this under
-  **Next** after every clean build. A module is not handed over until it is done.
-- **Two backstops that are cheap and automatic** (they do not replace the review): the drawing check (§2e) also
+- **The look is the walk review (2i) - one review, of everything a trainee sees.** The deck's slides at every stop and
+  **every question** of every task page (self-checks, the module check, the final assessment's variants) - as asked at
+  **1280 × 800** and **1024 × 768**, answered wrong and checked (every tap area and drop zone outlined by a review
+  overlay), answered right and checked, and the page's last screen. Not a sample. One reviewer who did not build the
+  module reads contact sheets (never a browser: 2.50.0 - the M01 benchmark's browser-driving review took 100 model
+  calls and a third of the module's cost; the main session never views the pictures) against the walk's two rubrics,
+  signs, and the module is not done, and not uploaded, without it. The older review of task-page sheets
+  (`REVIEW_PROMPT.md`, `--reviewed`, `working_claude\review\MNN`) is gone: its points are in the walk's task rubric,
+  so no screen is judged twice.
+- **What the script checks, so nobody has to look for it:** each question is answered by its own keys **once right and
+  once wrong**, and a right answer not graded right (or a wrong one graded right) fails the build ("choose all" keeps
+  every tapped option and scores a fully right answer as right) - `build_module.py`'s "task pages" stage
+  (`course-module-ux/measure/scripts/review_sheets.mjs <module> --walk-dir=...`, which also takes the walk's pictures;
+  `--grade-only` in Phase A and in a check build with `--no-walk`).
+- **After:** fix what the walk found, build again, and the reviewer sees only the slides and task pages that changed.
+  `compile_module.py` prints this under **Next** after every clean build. A module is not handed over until it is done.
+- **Two backstops that are cheap and automatic** (they do not replace the walk review): the drawing check (§2e) now also
   reports a part of a kit figure that cannot be seen on the figure's dark panel (`contrast`: a label under 4.5:1, a
   shape or line under 3:1; the kit's own parts are exempt; `data-low-contrast` marks a part meant to be quiet), and a
   credit, caption or full-screen record that shows a file-system path or a drive letter is a **build problem**.
@@ -639,11 +631,23 @@ their stops. The approved words never change - only what is round them.
 | `figure-stage` with two visuals | two columns, each its visual and its lines boxed under it | `"figure_b"`, `"blocks"` |
 | a full photograph | a point lights on the photo with its line | `"spots": {"2": [x, y]}` |
 | a split photograph | the photo zooms to the part the line names, a ring round it | `"zoom": {"2": [x, y, 2.2]}` (scale 1-4) |
-| a full or split photograph, a carousel | every photo stacked in the frame; Next walks the lines and the line's photo fades in (opacity only, L65); each opens full screen with its own record (L51, L56), credits in `_photo_meta.json`, never on the slide | `"photos": {"1": "assets/img/a.jpg", "2": "assets/img/b.jpg"}` |
-| a predict- / explain-then-reveal slide | the intro line is a lead, not step 1; the items are numbered, or lettered A, B, C when the task is to find the order | `"letters": true` / `false` (default: lettered when the question, title or lead says order / sequence / arrange / rank / sort), `"lead": false` (every line an item) |
+
+| a full or split photograph, a carousel (2.109.0) | every photo stacked in the frame; Next walks the lines and the line's photo fades in (opacity only, L65); each opens full screen with its own record (L51, L56), credits in `_photo_meta.json`, never on the slide | `"photos": {"1": "assets/img/a.jpg", "2": "assets/img/b.jpg"}` |
+| a predict- / explain-then-reveal slide (2.109.0) | the intro line is a lead, not step 1; the items are numbered, or lettered A, B, C when the task is to find the order | `"letters": true` / `false` (default: lettered when the question, title or lead says order / sequence / arrange / rank / sort), `"lead": false` (every line an item) |
+| a worked example, or a slide with an `"ask"` and `"reveal"` (predict / explain-then-reveal, `points`), beside a kit figure (2.115.0) | each Next lights line k and plays the figure step whose `"line"` is k (and the steps before it); tapping a lit line replays its step. A step marked `"reveal": true`, or whose `"line"` is past the visible lines, plays on the answer's stop, so the answer shows ON the drawing. Each line is lit once; the question is one stop and the answer one stop, then Next leaves the slide. The answer opens under the question in the text column, never over a kit figure (a photograph keeps "the answer over the picture") | the figure spec's `"line"` / `"reveal"` |
 | the module's ONE comparison table | 2-4 things side by side, a row a fact or a number (each row: its name, then one cell a thing), as the slide's picture on the white panel in the course's look, the words at reading size; its numbers are checked against the script and the sources like a figure's. Only one a module: a second is a problem, and so is a table with a `"figure"` or `"tiles"`. Any other table stays out of the picture (`check_kit.py` WORDS ONLY) | `"table": {"cols": ["LNG", "Methanol"], "rows": [["Flashpoint", "-188 °C", "12 °C"], ...]}` |
 | a definition, a limit or a quoted regulation | shown whole at once: no step for Next to walk, its 2D-kit or figure-kit drawing as it stands at its last step. Steps stay where something changes, happens in order, or is revealed after a question to the class: a slide with `"ask"` / `"reveal"`, a task, a drill, the recap, or `"spots"` / `"zoom"` / `"photos"` keeps them (a problem names it). A slide without it steps as before | `"still": true` |
-| a room activity with no `"opens"` | no code on the slide (never the screen id); a text of three lines or more is a lead statement and bullets | - |
+| a room activity with no `"opens"` (2.109.0) | no code on the slide (never the screen id); a text of three lines or more is a lead statement and bullets | - |
+
+**Three checks keep a drawing honest (2.115.0).** Each is a must-fix that names the slide:
+1. *Dead figure* - `its drawing never moves` (compile: no step of the figure changes any part from where it starts, e.g. a bar
+   left at value 0 on every step) and, in the browser walk (`fit_gate.py`), `the drawing on sNN does not change on any Next`.
+   A figure with no steps (a still picture) is exempt.
+2. *The drawing agrees with the answer* - on a slide with a `"reveal"`, every labelled share (`composition_bar` segments) and
+   every number with its unit the kit figure prints must be in THAT slide's own text, question, answer or notes, with the same
+   value ("the drawing says 'Yard labour 20 %' but the answer says 'Yard labour 25 %'"). `20%` and `20 %` are the same. When the
+   drawing legitimately differs, the build sheet says why: `"numbers_differ": "<why>"`, or cites the number in `"facts"`.
+3. *Next walks the lines once* - `Next walks its lines twice` when a figure's steps name an earlier line after a later one.
 
 `"spots"` and `"zoom"` are in the photograph's own pixels and keyed by line number; a wrong one is reported. A slide
 without these fields is built as before.
@@ -653,15 +657,105 @@ photo of its own keeps the previous one, and the first photo (`"figure"`, or the
 `"figure"`) shows before any line. It needs a photograph slide (composition `photo`) and cannot be combined with `"spots"` or
 `"zoom"`; a bad key or a file that is not a photograph is reported.
 
-**Content in parts is the writer's finding, not a layout trick.** A slide with a picture and more than 85 words is
-paged by the compiler into parts with number tabs (1 2 ...) - beside a 3D model on a split slide, more than 65 (its
-picture-wide box); trainees find the switching confusing. It is stopped at the script (L61): the script check
-(`content_script.py`, rule `t_over_budget`) makes it a must-fix - split the slide in two, or another slide type - unless
-the script keeps it in parts on purpose (`"in_parts": "<why>"`, at most two in a module, never two in a row). The build
-still pages such a slide, never cuts it, and the compile prints `WARNING (content in parts)` for it
-(`content_script.paged_findings`, rule `v_paged_slide`; `"parts"` or `"template": "content-in-parts.v1"` in the build
-sheet silences that). The build stops on words only when the fit gate measures them cut off or scrolling; a scenario or
-a worked example over its template is stopped at the script too (`t_overfull`).
+**Content in parts is the writer's finding, not a layout trick; the factory never pages by itself.** A slide with a
+picture and more than 85 words - beside a 3D model on a split slide, more than 65 (its picture-wide box) - would need
+parts with number tabs (1 2 ...); trainees find the switching confusing, and the compiler does not make them (no
+automatic `content-in-parts` or `points` beside a picture, no pre-check fallback). It is stopped at the script (L61):
+the script check (`content_script.py`, rule `t_over_budget`) makes it a must-fix - split the slide in two, or another
+slide type - unless the script keeps it in parts on purpose (`"in_parts": "<why>"`, at most two in a module, never two
+in a row). A slide that still reaches the build over its budget is listed by the review page
+(`content_script.paged_findings`, rule `v_paged_slide`) and the compile as `MUST FIX (too many words for the picture)`;
+`"parts"` or `"template": "content-in-parts.v1"` in the build sheet keeps the parts on purpose and silences it. The
+build stops on words only when the fit gate measures them cut off or scrolling; a scenario or a worked example over its
+template is stopped at the script too (`t_overfull`).
+
+## 2i · Every figure has a reason, custom figures, and the walk review (2.116.0)
+
+**Why (operator Aleksis Vējs, 2026-11-09, after the Project Management review: "draw the drawings 2d kit and 3d with a reason,
+dont just put it in just because").** Every kit figure (`sNN.kit.json`, `sNN.kit2d.json`), 3D model (`sNN.kit3d.json`) and
+custom figure carries `"why"` and `"why_text"` - in the spec, or in the figure's build-sheet entry:
+
+| why | what the trainee sees | the steps must |
+|---|---|---|
+| `mechanism`, `sequence` | how a thing works / what comes in which order | be at least two, tied to lit lines (`"line"`) or a `"reveal"` |
+| `quantity-change` | a number or level change | change a state value between stops |
+| `comparison` | two states side by side | show two states (a step that changes the figure, or `"figure_b"`) |
+| `spatial` | where things are, in space | - (a 3D model; refused when the slide's visual is a flat idea: chart, matrix, checklist ...) |
+| `real-thing-recognition` | what the real thing looks like | - (also asks for the real photographs under the drawing) |
+| `still` | one picture that needs no steps | - |
+
+`"why_text"` is ONE sentence: what the trainee sees change, or sees. Refused: no why, no why_text, a why its steps do not
+serve, `spatial` / 3D on a flat idea (`figure_why.py`; `v_why` in the content script, the compile before it builds, `check_kit.py`).
+A slide may have **no picture** at all when its words read on their own - there is no picture quota anywhere.
+
+**Custom figures - kit first, custom allowed.** When no kit part shows the idea well, draw a custom figure: a self-contained
+`.html` or `.svg` file in `working_claude\figures\MNN\assets\figures\sNN.html`, named in the build sheet:
+`"custom_figure": "assets/figures/s09.html", "why": "sequence", "why_text": "..."`. The contract (the same checks as a kit figure):
+- **steps that Next drives**: `<script type="application/json" data-custom-steps>[{"line": 2}, {"line": 3, "reveal": true}]</script>`
+  (steps keyed by line, a `"reveal"` step plays with the answer) and a hook `GB_HOOKS.s09 = {enter, leave, step(dir)}` where
+  `step(dir)` returns true while it has a step to play - the deck's Next walks it; the figure changes on Next (the fit gate fails a
+  drawing that does not - `dead`);
+- **offline**: no `src` / `href` / `url()` / `import` / `fetch` to the network, no `<script src>` - the code is inside the file (a chart
+  library only when it is already bundled in the plugin; otherwise hand SVG);
+- **fits and does not overflow** (fit gate, audits), **smooth motion** (`audit_motion.js`, L65), **full-screen zoom** (it sits in the
+  slide's `.fill.fig` box, so the viewer opens it like any picture).
+A good custom figure is offered to the kit afterwards (`course-visuals/kit2d/SPEC.md`, "Custom figures").
+
+**The walk review - "walk it like a trainee" (the module is not done without it).** `build_module.py` walks the deck at 1280x800
+(`fit_gate.py --walk-dir`: every Start and every Next, a ~480 px picture of each stop, `working_claude\_build\walk\MNN\walk.json`)
+**and every task page** (`review_sheets.mjs --walk-dir`: each question of `tasks\*.html` and `assessment\*.html` as asked at
+1280x800 and at 1024x768, answered wrong with its tap areas outlined, answered right, and the page's last screen -
+`walk\MNN\tasks\<page>\`, `walk\MNN\tasks.json`; a page with question groups is walked group by group).
+When every other check passes it prints `NOT DONE: walk review missing/stale/failing/incomplete` until an AI reviewer has looked;
+a module of a parallel build (`--no-course-pages`) prints the same under `MODULE CLEAN` (under `PASS`, when the course was assembled before), as `WALK REVIEW - ...`, and never fails on it. The factory cannot
+call the reviewer. The final assessment is walked like a module (`--module final`: `walk\FINAL\`, `FINAL_walk_review.json` - the one
+name the build, `walk_review.py` and the portal use). **In the whole-course workflow the walk judge runs it** (`build_course.js`: ONE
+reviewer a module beside QA, for its deck and its task pages, reading the sheets in batches of up to 4; its fails in the one fix
+round, one more look at the slides and task pages the round changed; one judge for the final after it is built); **in a build by
+hand the lead session does:**
+1. `python course-module-ux\measure\scripts\walk_review.py prepare <course> --module N --stale` - one contact sheet per slide,
+   per task-page question (`<page>.<question>`) and per task page's last screen (`<page>.result`) that
+   has no verdict for what it shows now (`walk\MNN\sheets\sNN.png`, `sheets\<page>.<question>.png`; the first time that is every one) and
+   `walk\MNN\review_brief.md`: the sheets in batches of up to 4 slides with each slide's stop texts, its figure's why / why_text, its
+   fails of the last review, and the rubric (1 something visibly changes on each Next; 2 the picture shows what the lit line says;
+   3 nothing empty, hidden, cut, duplicated or contradictory; 4 a trainee knows what to do / what the slide teaches; 5 the drawing has
+   a reason and serves it; 6 the answer / reveal is visible and does not cover the figure; 7 nothing of the factory's on screen - a
+   file path, a placeholder, a cut credit; 8 the picture is the thing the words name and a seafarer would not call it wrong).
+   **The task rubric**, judged per question: 1 the question and every choice readable and whole at 1280x800 and 1024x768; 2 the
+   picture is the one the question is about and its tap areas / drop zones sit on the right parts; 3 the feedback explains and
+   does not hand over a later question's answer; 4 nothing a trainee needs is under the Check bar; 5 usable with zero tablet
+   experience - tap and drag, big controls (L42); 6 the last screen is the last: the trainee's own score and no way onward (L27,
+   L45); 7 nothing of the factory's on screen. A task page is ONE fingerprint (the page and what it loads): a page that changes
+   shows all of its questions again, and no other page's.
+   (Pillow: `python -m pip install pillow`.)
+2. **One Opus subagent at high effort per batch** (up to 4 contact sheets - several images in one look, never one screenshot at a time; the
+   workflow's one judge a module reads the same batches itself): give it the batch's section of the brief and the sheet files; it
+   returns JSON `{"reviewed_by": "...", "slides": {"s03": {"ok": true, "fails": []}, "s07": {"ok": false, "fails": ["stop 3: the
+   chart is still an empty axis"]}}}` - `ok` a real `true` / `false`: the word `"false"` in quotes, or an `ok` with fails beside it,
+   counts as a fail. **Never the agent or session that built the module or made the fix.**
+3. Save each batch's JSON and `walk_review.py sign <course> --module N --review <reviewer.json> --built-by "<who built it>"`
+   (`--built-by` once more for each agent that fixed it; the results merge by slide). It records who reviewed and everyone who built
+   or fixed, and refuses a review signed by any of them, by nobody, or of a slide that is not what its contact sheet showed - a
+   module built again while the reviewer looked: `prepare --stale` again and review the new sheets. The names are labels the caller
+   gives: the script cannot tell which agent typed them, so the lead session passes the true ones.
+4. **Fix every fail in one go, build again, and review once more:** `prepare --stale` then shows only the slides with no verdict for
+   what they show now - the ones the fix changed. The walk keeps each slide's fingerprint, the one the audits' cache uses: its
+   markup (build timestamps and comments ignored), the module's stylesheet and scripts, the shell, the files it names - a changed
+   `gb_*.js`, kit part or photo makes its slides stale, a slide nothing touched keeps its verdict, and a slide that failed and was
+   not changed keeps its fail and is not shown again. **Two rounds at most** - a third `sign` is refused, and a round is counted for
+   the module, so renaming a slide does not start it over. What still fails after the second is the operator's:
+   `walk_review.py verify <course> --module N` lists each one with its slide and stop, and the operator either accepts it -
+   `walk_review.py accept <course> --module N --by "<operator>" --why "<why it may ship>" [--slides s04]`, recorded in the signed
+   file and shown by `verify`, in the draft's notes and at upload from then on - or has it fixed and opens one more pair of rounds
+   (`walk_review.py reopen <course> --module N --by "<operator>"`). After the second round a changed slide needs `reopen` first:
+   `accept` is refused for a slide that is not the one reviewed. **`accept` and `reopen` are the operator's own**, typed by the
+   operator - no agent runs them, and the file records how each was run (typed in a terminal, or not). An accepted slide that
+   changes again is stale again. `--no-walk` leaves the walk pictures alone: the factory's own tests, and a check build that runs
+   beside a reviewer.
+`fix.py upload` and `course_portal.py upload` refuse while a built module's walk review - or the final's - is missing, stale,
+incomplete or failing with nothing accepted; a slide or a task page that was never walked does not pass (`incomplete` - a
+module whose deck is reviewed and whose task pages are not is NOT DONE), and what the operator accepted is listed at upload.
+`fix.py check --kind walk --slides s03,self_check_1` walks and checks the slides and task pages a fix touched.
 
 ## 3 · When the look is not enough
 

@@ -234,6 +234,20 @@ def main():
         check("the employer sheet: can do, decays (with the honest figure in comparable training), drill, watch for, refresher",
               all(x in emp for x in ("Line up a bunker station", "The line-up order.", "In comparable training", "15 minutes: the ESD test",
                                      "A standby who says no", "Revalidation does not retrain it.")), emp)
+        # ---- the classroom files the tablet app reads on publish: prepare.json always, a form only for a recorded run
+        import classroom_files as cf
+        cdir = os.path.join(k, "modules", "classroom")
+        prep = json.loads(read(cdir, "prepare.json"))
+        m1 = [x["label"] for x in prep["modules"].get("module01", [])]
+        check("prepare.json is written beside the modules: the practice run's cards to print, its safety brief - no assessment form yet",
+              any(x.startswith("Print: pre-brief, debrief and observation cards - A01") for x in m1)
+              and any(x.startswith("Safety brief ready - A01: The ESD link is tested first.") for x in m1)
+              and not any("assessment form" in x for x in m1), m1)
+        check("the employer sheet is on the course list; no recorded run, so no assessor line and no forms folder",
+              [x["label"] for x in prep["course"]].count("Print: the employer sheet") == 1
+              and not any("assessor" in x["label"] for x in prep["course"]) and not os.path.isdir(os.path.join(cdir, "forms")), prep["course"])
+        check("what the build wrote passes the package checks (limits, kinds, module codes)", cf.folder_problems(os.path.join(k, "modules"),
+              ["module01"]) == [], cf.folder_problems(os.path.join(k, "modules"), ["module01"]))
         check("INDEX.html lists the kit by day", "Practical kit" in read(kroot, "INDEX.html")
               and stem + "_PREBRIEF.pdf" in read(kroot, "INDEX.html"))
         rec = json.loads(json.dumps(guide))
@@ -249,6 +263,33 @@ def main():
               all(x in form for x in ("A. Critical steps", "Tests the ESD link", "STOP: Stops the transfer", "3 Performs safely unprompted",
                                       "Yes / Not yet", "two re-attempts at most", "the ESD link fails on the first test")), form or out)
         check("... and its pre-brief card says it is recorded", "This run is recorded on the assessment form" in kd("_PREBRIEF.docx"))
+        forms_dir = os.path.join(cdir, "forms")
+        fnames = sorted(os.listdir(forms_dir)) if os.path.isdir(forms_dir) else []
+        ft = json.loads(read(forms_dir, fnames[0])) if fnames else {}
+        fd = ft.get("definition") or {}
+        crit = [c for s in fd.get("sections", []) for c in s["criteria"]]
+        check("a recorded run gets one form file named by its code (course, module, task), with its critical steps as pass / fail rows "
+              "and the stop step marked", len(fnames) == 1 and fnames[0] == ft.get("code", "?") + ".json" and cf.FORM_CODE.match(ft["code"])
+              and ft["code"].endswith("-M01-A01") and [c["label"] for c in crit[:2]] == ["Tests the ESD link", "STOP: Stops the transfer when the link fails"]
+              and all(c["scale"] == "pass_fail" for c in crit[:2]), (fnames, ft))
+        check("... with the global rating (1-4 with the paper's words), the decision (yes / no) and the changed condition in the header; "
+              "the app's form rules accept it", [c["key"] for c in crit[2:]] == ["global_rating", "decision"]
+              and [m["mark"] for m in fd["scale_meanings"]["0-4"]] == ["1", "2", "3", "4"]
+              and any("the ESD link fails on the first test" in h["label"] for h in fd["header_fields"])
+              and cf.definition_problems(fd) == [] and cf.folder_problems(os.path.join(k, "modules"), ["module01"]) == [], cf.definition_problems(fd))
+        prep = json.loads(read(cdir, "prepare.json"))
+        check("the recorded run adds the form to print and an assessor to name",
+              any(x["label"].startswith("Print: assessment form, one per candidate - A01") for x in prep["modules"]["module01"])
+              and any("assessor" in x["label"] for x in prep["course"]), prep)
+        code, out = run(TOOL, k, "--no-pdf", "--check")
+        check("--check finds both files current after a build", not any("classroom" in x for x in out.splitlines()), out[-400:])
+        approve(guide)
+        code, out = run(TOOL, k, "--no-pdf")
+        check("the run no longer recorded: its form file is moved aside, never deleted",
+              (not os.path.isdir(forms_dir) or not os.listdir(forms_dir))
+              and any(f == fnames[0] for _, _, fs in os.walk(os.path.join(k, "working_claude", "additional_materials", "old")) for f in fs), out[-400:])
+        approve(rec)
+        code, out = run(TOOL, k, "--no-pdf")
 
         # ---- L19: the programme is in Latvian, the course is in English
         lv = course(os.path.join(tmp, "lv"), minutes=30)

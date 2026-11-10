@@ -1188,7 +1188,9 @@ def theory_check(script):
                 basic, rich = sc_mix(st["questions"])
                 need = min(RS["rich_min"], max(0, n - RS["basic_max"]))
                 if basic > RS["basic_max"] or rich < need:
-                    add(s["id"], "", FAIL, "t_sc_mix", set=set_name(script, st), b=basic, r=rich, q=n, lo=need)
+                    # a subject with nothing to tap or operate says so on the task slide ("basic_why"): then a note
+                    add(s["id"], "", NOTE if str(s.get("basic_why") or "").strip() else FAIL, "t_sc_mix",
+                        set=set_name(script, st), b=basic, r=rich, q=n, lo=need)
                 # 2.74.0 (owner, 2026-10-28) - a self-check is Part A, checking what was taught before it in the module (Bloom
                 # 1-2), then Part B, a harder task the trainee solves alone (Bloom 3 or higher). Suggestions, never blocking.
                 lv = [bloom_map.task_level(mech(q), q.get("bloom"))["level"] for q in st["questions"]]
@@ -1331,6 +1333,25 @@ def is_3d(s):
     return MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in MEDIA["three_d"]["families"]
 
 
+def flat_word(s):
+    """the word that makes this slide's visual a flat idea (a chart, a matrix, a checklist ...), else "" - the L67 v_3d_flat
+    word list (media-and-tasks.json three_d.flat_words), read from the slide's picture description and title"""
+    said = " %s %s " % (s.get("visual", ""), s.get("title", ""))
+    return next((x for x in MEDIA["three_d"]["flat_words"] if re.search(r"(?i)\b%s\b" % re.escape(x), said)), "")
+
+
+def why_problems(kind, spec, entry, s):
+    """2.116.0 - every figure has a teaching reason (figure_why.py): the figure's why / why_text (build-sheet entry first, then
+    the spec) and whether its steps serve it. -> [problem, ...]. kind: kit | kit2d | kit3d | custom; spec: the figure's spec
+    (a dict) or None for a custom figure; for a custom figure the steps are read by the caller"""
+    import figure_why
+    why, text = figure_why.declared(entry, spec)
+    steps = (spec or {}).get("steps") if isinstance(spec, dict) else (entry or {}).get("_steps")
+    flat = flat_word(s) if (why == "spatial" or kind == "kit3d") else ""
+    return figure_why.check(why, text, steps, kind, (spec or {}).get("state") if isinstance(spec, dict) else None, flat,
+                            bool((entry or {}).get("figure_b")))
+
+
 def flat_3d(s, b, body):
     """the build sheet's 2D figure of a slide the script plans as 3D, else "". b is the slide's build-sheet entry, body the
     figure file's text (None for a picture). No figure, a 3D scene, or a 2D figure kept with a reason -> "". A photograph
@@ -1444,14 +1465,26 @@ def build_findings(course, script):
         if flat:
             found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "visual_kind", "level": NOTE,
                           "rule": "v_3d_flat_figure", "detail": T(script, "v_3d_flat_figure", fig=flat), "fix": ""})
-    if not scene and not found and not str(build.get("declined_3d") or "").strip():
-        best = best_3d(script, [sid for sid, b in (build.get("screens") or {}).items() if str((b or {}).get("declined_3d") or "").strip()],
-                       build=build)
-        if best:
-            found.append({"where": T(script, "s_the_module"), "screen": "", "field": "", "level": NOTE, "rule": "v_3d_none_built",
-                          "detail": T(script, "v_3d_none_built", sid=best[0], title=next(
-                              (s.get("title") or "" for s in script["screens"] if s.get("id") == best[0]), ""),
-                              why=best[1] or T(script, "v_3d_why_planned")), "fix": ""})
+        # 2.116.0 - every figure has a teaching reason: its why must be declared and its steps must serve it (figure_why.py)
+        kind = ("kit3d" if rel.lower().endswith(".kit3d.json") else "kit2d" if rel.lower().endswith(".kit2d.json")
+                else "kit" if rel.lower().endswith(".kit.json") else "")
+        if b.get("custom_figure"):
+            kind, rel = "custom", str(b["custom_figure"]).replace("\\", "/")
+        if kind:
+            spec, p_ = None, os.path.join(figdir, rel)
+            if kind != "custom" and os.path.isfile(p_):
+                try:
+                    spec = load(p_)
+                except (OSError, ValueError):
+                    spec = None
+            elif kind == "custom" and os.path.isfile(p_):
+                import figure_why
+                b = dict(b, _steps=figure_why.custom_steps(io.open(p_, encoding="utf-8").read()))
+            if kind == "custom" or spec is not None:
+                for why in why_problems(kind, spec, b, s):
+                    found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "visual", "level": FAIL,
+                                  "rule": "v_why", "detail": T(script, "v_why", detail=why), "fix": ""})
+    # 2.116.0: the "no 3D scene in this module" recommendation (v_3d_none_built, L60) is gone - 3D only where its why is spatial
     return found
 
 
@@ -1492,6 +1525,12 @@ def media_check(script):
             add(s["id"], "visual", FAIL, "v_no_what", kind=kind_label(k, lang))
         if k in VISUAL_KINDS:
             kinds.append(k)
+            if str(s.get("why") or "").strip():              # 2.116.0: a why the script declares must be one of the seven (v_why)
+                import figure_why
+                if s["why"] not in figure_why.WHYS or (s["why"] == "spatial" and flat_word(s)):
+                    add(s["id"], "visual", FAIL, "v_why", detail=(
+                        "\"why\": %r is not one of %s" % (s["why"], ", ".join(figure_why.WHYS)) if s["why"] not in figure_why.WHYS
+                        else "\"spatial\" on a slide whose visual is a flat idea (\"%s\")" % flat_word(s)))
             if MEDIA["visual_kinds"][k]["made_by"] == "nano_banana":
                 add(s["id"], "visual_kind", NOTE, "v_generated", kind=kind_label(k, lang))
     final = str(script.get("module")).lower() == "final"
@@ -1527,8 +1566,8 @@ def media_check(script):
         for s in three:
             said = " %s %s " % (s.get("visual", ""), s.get("title", ""))
             word = next((x for x in TD["flat_words"] if re.search(r"(?i)\b%s\b" % re.escape(x), said)), None)
-            if word:
-                add(s["id"], "visual", NOTE, "v_3d_flat", word=word)
+            if word:                                            # 2.116.0: a FAIL - a 3D model of a flat idea teaches nothing
+                add(s["id"], "visual", FAIL, "v_3d_flat", word=word)
         # 2.49.0 (operator, 2026-10-16): 3D and AI pictures proposed unasked, slide by slide - kept or struck
         declined = script.get("declined") or {}
         for sid, words, rule in propose_3d(teach, three, set(declined.get("3d") or {}) | set(photo_wanted(script))):
@@ -2057,7 +2096,7 @@ def recap_findings(script):
 
 
 # the design rules (knowledge/design-rules.json) a finding enforces - an operator's choice against one waives it (L26)
-DESIGN_FINDINGS = {"recap": "r_", "three-d-share": "v_3d_share"}
+DESIGN_FINDINGS = {"recap": "r_"}
 
 
 def sub_ilos_of(s):

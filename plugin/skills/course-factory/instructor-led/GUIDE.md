@@ -102,8 +102,10 @@ Any change afterwards makes it unapproved again (`status` says so), and the prac
 
 ## 4 · Not the factory's yet
 
-- The final test on the trainees' phones, and the assessment form filled on the instructor's tablet: the training app's.
+- The final test on the trainees' phones, and filling the assessment form on the instructor's tablet: the training app's.
+  The factory writes each recorded-run assessment form as `modules\classroom\forms\<CODE>.json` (`classroom_files.py`), which
+  the app imports.
 - A must-pass question failing a candidate: the final's marking is the app's.
-- "No decorative photos": against L52 (as many real photographs as possible) and L67 (the picture rule) -
-  a decision for the owner, until then a by-hand item.
+- "No decorative photos": against L52 (as many real photographs as possible) - a decision for the owner, until then a
+  by-hand item.
 - Counting a tablet task as a practical hour (R7): the factory never moves the programme's hours (L1, L49).

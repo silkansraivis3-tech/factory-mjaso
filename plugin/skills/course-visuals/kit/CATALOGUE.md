@@ -74,7 +74,7 @@ screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"a
 - `fan` (gas-fire-machinery) - label dir(right/left/up/down) - value: 0 stopped … 1 running - ex: `{"type":"fan","x":160,"y":56,"dir":"right","r":34,"len":300,"label":"extract fan"}`
 - `spray` (gas-fire-machinery) - nozzle(monitor/hand/sprinkler) agent(powder/water/foam) angle reach reachLabel - value: 0..1 how much is discharged - ex: `{"type":"spray","x":100,"y":235,"nozzle":"monitor","agent":"powder","angle":12,"reach":270,"label":"powder monitor"}`
 - `gas_cylinder` (gas-fire-machinery) - w h gas label bar kg liquid reading code - value: 0..1 how full - MUST KNOW: x y is the middle of its BASE - ex: `{"type":"gas_cylinder","x":100,"y":240,"w":84,"h":180,"gas":"N2","label":"nitrogen","value":1}`
-- `push_button` (instruments) - label tag h - value: 0 ready, 1 pressed (trip red) - ex: `{"type":"push_button","x":110,"y":114,"tag":"ESD 1","label":"navigation bridge"}`
+- `push_button` (instruments) - label tag h guard - value: 0 ready, 1 pressed (trip red; plain: lit) - ex: `{"type":"push_button","x":110,"y":114,"tag":"ESD 1","label":"navigation bridge"}`
 - `person` (procedures) - wear:[helmet,visor,goggles,respirator,gloves,suit,apron,boots,scba] scale label labels - value: 0..n PPE item k appears - ex: `{"type":"person","x":110,"y":290,"scale":1.3,"wear":["goggles","respirator","apron","gloves"],"labels":{"respirator":"HALF MASK"},"label":"sample handler"}`
 - `sensor` (cutaways) - kind(catalytic/infrared) oxygen - value: 0..1 gas in the sensor - ex: `{"type":"sensor","kind":"catalytic","x":70,"y":170,"label":"catalytic"}`
 - `static_charge` (gas-fire-machinery) - bonded labels [charge on an isolated part, the spark] - value: 0..1 charge, 1..1.2 spark

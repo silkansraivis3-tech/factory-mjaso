@@ -29,7 +29,8 @@ must be right is everything decided *before* it, because parallel agents cannot 
      |               MNN_VISUAL_NEEDS.md (BUILDER_CARD.md), fills the slots, builds to module clean -
      |               then its judges and QA; a module Phase A finished goes straight to them
      v
-  Q  QA              per module as it lands, then one cross-module pass
+  Q  QA + WALK       per module as it lands: QA (words, teaching, task pages) and the walk judge (every slide at
+     |               every stop, signed) side by side; ONE fix round for both; then one cross-module pass
      |
   P  POLISH          a module that passes with nothing BROKEN left: one round on opus, about ten minutes, through its
      |               POLISH list - each change kept only if the module still passes (fix.py polish, compile/GUIDE.md 6)
@@ -137,6 +138,21 @@ parallel worker:
 The per-module QA agent must be a **different** agent from the one that built the module: an agent checking its
 own work confirms it.
 
+**The walk judge stands beside QA.** A module is not done, and the portal refuses its upload, until an AI reviewer
+has looked at every slide at every stop a trainee sees (`compile/GUIDE.md` 2i). The workflow runs that itself: ONE
+reviewer per module - never its builder or a fixer, whose signature `walk_review.py` refuses - reads the contact sheets
+in batches of up to 4, signs, and reports the fails with slide and stop (a session working by hand gives each batch to
+its own Opus subagent at high effort instead: the same sheets, the same brief). They join the module's ONE fix round; after it the
+walk judge looks once more, only at the slides the round changed (the walk keeps each slide's fingerprint, the audits'
+own), and signs against the builder and every fixer of the round. Two looks, never a third: what still fails is on the
+module's `for_aleksis` with the `walk_review.py accept` command, the module is not failed for it, and the run's result
+names the modules whose upload waits (`walk.not_passed`). The final assessment gets one judge after it is built
+(`walk:final`, `final_walk` in the result) and no fix round. A second run of the workflow over a module that has had
+its two rounds sends no walk fail to a fixer and reviews nothing again: the operator accepts what is left or reopens
+it (`walk_review.py reopen`) - both are the operator's own, never an agent's. A judge that brought back nothing is not
+retried in the run: that module is walked by hand. So the two reviews do not overlap: the QA agent's sheets hold the
+task pages only, the deck's slides are the walk judge's.
+
 ---
 
 ## Rule 5 · The build has this QA; a fix does not (L50)
@@ -153,11 +169,12 @@ builders still to run read it.
 |---|---|---|---|---|
 | **Reader** | the strongest available | read + search only | programme, model course, KB | `architecture.json`, `ilo_map.json` (via the Stage 2 page), the KB suggestion |
 | **Script writer** (a module whose script is not approved) | the strongest available | full | its own rows of the ILO map, its module in `architecture.json`, its source extracts, `script/GUIDE.md` | its script, review page and Word file - then STOP |
-| **Module** (an approved script) | Sonnet, medium effort | full | its own rows of the ILO map (`ilo_map.py show`) and its module in `architecture.json`, its source extracts, `script/GUIDE.md`, then - once its script is approved - `compile/GUIDE.md` and the picture lanes (`course-visuals`). **Not** the HTML rules (`course-module-ux`, `course-module-ui`, `course-task-ux`): the compiler builds their standard | its script and build sheet, its figures, `modules/moduleNN/` - and never HTML by hand |
+| **Module** (an approved script) | Sonnet, medium effort | full | its own rows of the ILO map (`ilo_map.py show`) and its module in `architecture.json`, its source extracts, `script/GUIDE.md`; once its script is approved, `compile/BUILDER_CARD.md` and nothing else. **Not** the HTML rules (`course-module-ux`, `course-module-ui`, `course-task-ux`): the compiler builds their standard | its script and build sheet, its figures, `modules/moduleNN/` - and never HTML by hand |
 | **Phase A** | no model: one local process, `phase_a.py`, started and waited on by a Sonnet agent at low effort | nothing | every approved module as far as it goes with placeholders, and its `MNN_VISUAL_NEEDS.md` |
 | **Photo pass** | Sonnet, medium effort - ONE for the course | `visuals/PHOTOS_TO_FIND.md` | `working_claude/photos_found/` with each photo's record and `found_for` |
 | **Visual** | the `nano-banana:image-director` agent (generates) or `course-factory:visual-sourcer` (finds) | read, write, web, the nano-banana tools | a `GENERATED_ASSET_REQUIRED` brief | the asset files named in the brief |
-| **QA** | Opus, high effort - a judgement job (the job -> model table in SKILL.md, *Building*); never the builder | read + run checks: `build_module.py --no-fix --no-review` once, the checks it does not run in one more call | the module, the two maps | a findings list — **never a fix** |
+| **QA** | Opus, high effort - a judgement job (the job -> model table in SKILL.md, *Building*); never the builder | read + run checks: `build_module.py --no-fix --no-walk` once, the checks it does not run in one more call | the module, the two maps | a findings list — **never a fix** |
+| **Walk judge** | Opus, high effort - a judgement job; never the builder | read + `walk_review.py` (prepare, sign, verify) - never a build | the walk's contact sheets and `review_brief.md` | its verdicts, signed into `working_claude/_build/MNN_walk_review.json` — **never a fix** |
 
 **A missing picture never stops the build.** When a module reaches an image it cannot produce, it carries on. A real
 picture is searched for by `visual-sourcer` without asking. A **generated** one is made only within the course's
@@ -212,13 +229,14 @@ table: changing a table row is free, changing eight built modules is not.
 
 **Neither is the script approval (L29).** In pass 2 a module agent whose content script is not approved
 writes it and stops at its review page; the operator approves each one, and pass 2 runs again - an approved
-module is then compiled, never typed. So a module agent loads the script lane and the picture lanes, not the
-HTML rules, and writes a 3-5 KB build sheet and its figures, never the deck and task HTML.
-A module agent builds and checks with ONE command, `compile/scripts/build_module.py <course> --module N
---no-course-pages` (the orchestrator alone writes the course's pages), starting from the Quickstart of
-`compile/GUIDE.md` and `course-visuals/kit/CATALOGUE.md`; its visual review is one `opus` subagent reading the sheets
-the build made (`compile/REVIEW_PROMPT.md`). The words come from the session's model (the reader, the script writer);
-building an approved script, the mechanical loop, runs on Sonnet at medium effort (`MECHANICAL`), and the gate (one
-command) at low; the 3D, figure and QA judges and the fixes that act on them run on Opus at high effort (`JUDGEMENT`) -
-the job -> model table in SKILL.md, *Building*. `args.factory` pins the factory's skills folder for a benchmark,
+module is then compiled, never typed. So a module agent loads the script lane, not the HTML rules, and it writes no deck or task HTML - it writes a 3-5 KB build
+sheet and its figures.
+A module builder reads `compile/BUILDER_CARD.md` and nothing else, and builds and checks with ONE command,
+`compile/scripts/build_module.py <course> --module N --no-course-pages` (the orchestrator alone writes the course's
+pages). The builder stops at MODULE CLEAN and reviews nothing of its own; the walk judge does the one visual review - the
+deck's slides at every stop and every question of every task page - and signs (Rule 4), and the QA agent beside it
+looks at no screen. The words come from the session's model (the reader, the script writer); building an approved
+script, the mechanical loop, runs on Sonnet at medium effort (`MECHANICAL`), and the gate (one command) at low; the 3D,
+figure, walk and QA judges and the fixes and polish that act on them run on Opus at high effort (`JUDGEMENT`) - the
+job -> model table in SKILL.md, *Building*. `args.factory` pins the factory's skills folder for a benchmark,
 `args.notes` passes the operator's words for the run to every module agent.

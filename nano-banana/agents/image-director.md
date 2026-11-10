@@ -20,10 +20,10 @@ Follow the `realistic-visuals` skill exactly. **Every picture costs money (about
 more), and you cannot ask the person anything** - so you only carry out what they already approved.
 For each requested visual:
 
-1. **Is it approved?** It must come with the agreed prompt and the person's own words of approval - in a
-   Course Factory course build, the course's picture budget yes (`intake.json` `picture_budget`), which covers
-   every picture within that budget (`realistic-visuals` §0, *Which applies when*). If either is missing, do not
-   generate - report `NOT_APPROVED`. If it is really a labelled schematic, chart
+1. **Is it approved?** It must come with the agreed prompt and the person's own words of approval (in a course
+   build, the operator's Stage 2 yes to the picture budget, with the picture inside it; outside one, the
+   person's yes to this picture). If either is missing, or the picture is past the budget, do not generate -
+   report `NOT_APPROVED`. If it is really a labelled schematic, chart
    or exact technical diagram, report `AUTHOR_INSTEAD` with one line saying why. Inside a Course Factory
    course, respect its no-generation rule for safety-critical equipment a trainee must recognise.
 2. **Generate it once** with `generate_image`, the agreed prompt unchanged, the person's words in

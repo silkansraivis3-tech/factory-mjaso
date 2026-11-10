@@ -454,7 +454,9 @@ def modules_folder(course):
     return m if os.path.isfile(os.path.join(m, "COURSE.html")) else None
 
 
-def cmd_import(course, pending=()):
+def cmd_import(course, pending=(), accepted=()):
+    """pending: the picture spaces still to fill; accepted: the walk-review fails the operator let stand - both go into
+    the draft's notes, so whoever opens the draft sees what it carries"""
     p = _need_portal(course)
     if not p:
         return 2, None
@@ -465,7 +467,9 @@ def cmd_import(course, pending=()):
     node = json.loads(os.environ["NOVIKONTAS_NODE"]) if os.environ.get("NOVIKONTAS_NODE") else ["node"]
     notes = (["Pictures pending: %d picture space(s) still hold a Phase A placeholder - fill them and import again before "
               "this draft is published" % len(pending)] + list(pending)[:40]) if pending else []
-    run = subprocess.run(node + [os.path.join(HERE, "course_import.mjs"), folder, p["course_id"]], capture_output=True,
+    if accepted:
+        notes += ["Walk review: %d fail(s) nobody fixed - the operator accepted them as they are" % len(accepted)] + list(accepted)[:40]
+    run =subprocess.run(node + [os.path.join(HERE, "course_import.mjs"), folder, p["course_id"]], capture_output=True,
                          text=True, encoding="utf-8", errors="replace", env=dict(os.environ, NOVIKONTAS_IMPORT_NOTES=json.dumps(notes)),
                          stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     last = (run.stdout.strip().splitlines() or ["{}"])[-1]
@@ -502,9 +506,47 @@ def failed_builds(course):
     for ans in sorted(glob.glob(os.path.join(logdir, "*_answer.txt"))):
         said = [x.strip() for x in io.open(ans, encoding="utf-8", errors="replace").read().splitlines()
                 if x.startswith(("PASS ", "FAIL "))]
-        if said and said[-1].startswith("FAIL ") and " - course package" not in said[-1]:
+        # only the course package (a --no-course-pages build: the workflow's pass) is let through - 2.125.0: a build
+        # that also failed something else ("course package, task pages") is a failed build
+        why = said[-1].split(" - ", 1)[-1].split(" (")[0].strip() if said else ""
+        if said and said[-1].startswith("FAIL ") and why != "course package":
             out.append("%s - its last build did not pass" % said[-1][:120])
     return out
+
+
+def _walked(course):
+    """-> (walk_review, the work folder, the numbers of the module folders that hold a deck - the final assessment's
+    folder among them: walk_review knows it by its deck)"""
+    work = workspace.work_folder(course, create=False)
+    mods = os.path.join(work, "modules")
+    measure = os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-module-ux", "measure", "scripts")
+    if measure not in sys.path:
+        sys.path.insert(0, measure)
+    import walk_review
+    import re
+    if not os.path.isdir(mods):
+        return walk_review, work, []
+    nums = sorted({int(m.group(1)) for d in os.listdir(mods) for m in [re.match(r"(?:module|M|m)(\d+)", d)] if m})
+    return walk_review, work, [n for n in nums if walk_review.deck_file(work, n)]
+
+
+def walk_problems(course):
+    """the walk review (walk_review.py) of every built module with a deck, the final assessment too: missing, stale,
+    incomplete or failing stops the upload. -> ["walk review missing for M03 - ...", ...]"""
+    walk_review, work, nums = _walked(course)
+    out = []
+    for n in nums:
+        ok, _kind, msg = walk_review.verify(work, n)
+        if not ok:
+            out.append(msg)
+    return out
+
+
+def walk_accepted(course):
+    """the walk-review fails the operator let stand, one line each with its module - what goes up with a fail nobody
+    fixed. -> ["M01 s04 - stop 3: ... - accepted by <who>, <date> (<how>): <why>", ...]"""
+    walk_review, work, nums = _walked(course)
+    return ["%s %s" % (walk_review.mid(walk_review.canon(work, n)), x) for n in nums for x in walk_review.accepted(work, n)]
 
 
 def _stop_message(cid, why):
@@ -529,6 +571,7 @@ def cmd_upload(course):
         print("Not uploaded yet - this is the unattended build: the watch uploads it when the run ends.")
         return 0
     pics, other = blockers(course)
+    other = other + walk_problems(course)              # no upload without the walk review of every built module
     if other:
         why = "Not uploaded after the session of %s - %d thing(s) still stop it: %s" % (
             date.today().isoformat(), len(other), "; ".join(other[:3]) + (" ..." if len(other) > 3 else ""))
@@ -536,7 +579,11 @@ def cmd_upload(course):
         if _stop_message(p["course_id"], why[:2000]):
             print("  The editor's stop message now says this.")
         return 1
-    return cmd_import(course, pics)[0]
+    let = walk_accepted(course)
+    if let:
+        print("Going up with %d walk-review fail(s) nobody fixed - the operator accepted them:" % len(let))
+        print("\n".join("  " + x for x in let))
+    return cmd_import(course, pics, let)[0]
 
 
 def _log(line):

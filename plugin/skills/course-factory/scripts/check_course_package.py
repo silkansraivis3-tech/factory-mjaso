@@ -66,6 +66,7 @@ SKILLS = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import workspace  # noqa: E402
 import design_choices  # noqa: E402  - the operator's design choices are theirs, not problems (L26, 2.30.0)
+import classroom_files  # noqa: E402  - the instructor-only classroom\ folder (prepare.json, forms\) the tablet app reads on publish
 
 CONTRACT = json.load(io.open(os.path.join(os.path.dirname(HERE), "knowledge", "classroom-system.json"), encoding="utf-8"))
 LIM = CONTRACT["limits"]
@@ -320,10 +321,12 @@ def check(folder):
             # the IGF full build: every module's package check failed on two of them copied in from a synced folder)
             notes.append("%s\\ is an empty sync-tool folder - nothing in it ships; delete it when the sync tool is done" % d)
             continue
-        if os.path.isdir(full) and not MODULE.match(d) and not d.startswith("_") and d != "assets":
+        if os.path.isdir(full) and not MODULE.match(d) and not d.startswith("_") and d not in ("assets", "classroom"):
             probs.append("%s\\ is not a module (module01 ...) - the factory's own material belongs in working_claude, or in a folder starting with _" % d)
         if os.path.isfile(full) and d not in ("COURSE.html",) and not d.lower().endswith((".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico")):
             notes.append("%s at the top of the course folder is skipped by the classroom or not used" % d)
+    # the classroom\ folder (prepare.json, forms\) - the app's own limits and form rules; a module code must be a module here
+    probs += classroom_files.folder_problems(folder, mods)
     mp = os.path.join(folder, "_course_shell", "course_map.js")
     if os.path.isfile(mp):
         m = re.search(r"window\.COURSE_MAP\s*=\s*(\[[\s\S]*\])\s*;?\s*$", read(mp))

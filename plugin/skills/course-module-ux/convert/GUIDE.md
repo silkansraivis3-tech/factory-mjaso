@@ -107,7 +107,7 @@ Same order as building: the timetable first. List every block with its minutes, 
 each one **does it have a screen?** A block whose work lived on a separate page has no screen
 by definition, and on one page that means it does not happen.
 
-Present the inventory table from the router's gate and get it approved before writing markup.
+Print the inventory table from the router's gate. From an approved content script the build goes on; a hand-converted module with no approved script waits for approval before markup is written.
 
 ---
 
@@ -122,7 +122,7 @@ rewrite JavaScript-held links and every step button 404s in the single-file pack
 
 **2 · Fold every page into screens.** Practical write-ups, activity-launch pages, marking
 pages, debrief notes, the module check. Use the kinds and the markup contract in
-`build/knowledge/screen-kinds.json`. The check screen goes **last**.
+`build/knowledge/screen-kinds.json`. The recap goes before the module check, the check is second-to-last and the hand-off screen is last (`measure/knowledge/floor.json` → structural).
 
 **3 · Strip the chain.** Everything in §0. Then re-grep — do not trust yourself to have caught
 them all.

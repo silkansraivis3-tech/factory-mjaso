@@ -46,10 +46,84 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)) if detail and not ok else ""))
 
 
-def run(*a, cwd=None):
+NO_BUILDER = os.path.join(tempfile.gettempdir(), "kb_no_builder_here")     # the tests never use this computer's own builder
+
+
+NO_SCRIPT = os.path.join(tempfile.gettempdir(), "kb_no_build_script_here")  # ... nor this computer's own factory builder
+
+
+def run(*a, cwd=None, builder=NO_BUILDER, script=NO_SCRIPT, engine=""):
     p = subprocess.run([sys.executable, TOOL] + list(a), capture_output=True, text=True, encoding="utf-8", errors="replace",
-                       cwd=cwd)
+                       cwd=cwd, env=dict(os.environ, NOVIKONTAS_KB_BUILDER=builder, NOVIKONTAS_KB_BUILD_SCRIPT=script,
+                                         NOVIKONTAS_KB_ENGINE=engine))
     return p.returncode, p.stdout + p.stderr
+
+
+FAKE_BUILDER = '''import json, os, sys
+root = sys.argv[sys.argv.index("--cli") + 1]
+if os.path.exists(os.path.join(root, "BREAK")):
+    sys.exit(1)
+kb = os.path.join(root, "KNOWLEDGE_BASE")
+os.makedirs(os.path.join(kb, "sources"), exist_ok=True)
+names = [f for _d, _s, fs in os.walk(root) for f in fs if f.lower().endswith((".pdf", ".pptx"))]
+json.dump({"source_count": len(names), "sources": []}, open(os.path.join(kb, "SOURCE_MANIFEST.json"), "w"))
+logs = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_runtime", "data", "logs")
+os.makedirs(logs, exist_ok=True)
+open(os.path.join(logs, "run_1.log"), "w").write("read %d files\\n" % len(names))
+'''
+
+
+# a stand-in for the factory's own builder: kb_build.py <source root>, progress on stdout, a manifest with every status
+FAKE_FACTORY = '''import json, os, sys
+root = sys.argv[1]
+if os.path.exists(os.path.join(root, "BREAK")):
+    print("starting")
+    sys.exit(5)
+for i in (1, 2, 3):
+    print("[%d/3] reading file %d" % (i, i))
+    sys.stdout.flush()
+kb = os.path.join(root, "KNOWLEDGE_BASE")
+os.makedirs(os.path.join(kb, "sources"), exist_ok=True)
+rows = [{"status": s} for s in ("ok", "ocr_applied", "ok_with_gaps", "duplicate", "duplicate", "needs_ocr", "failed")]
+json.dump({"source_count": len(rows), "sources": rows}, open(os.path.join(kb, "SOURCE_MANIFEST.json"), "w"))
+print("[3/3] done")
+'''
+
+
+def csp_tokens(text):
+    """the Course Source Processor's own rule, written out again here so the test does not lean on the code it checks"""
+    stop = {"a", "an", "and", "are", "as", "at", "be", "been", "but", "by", "can", "for", "from", "had", "has", "have", "if",
+            "in", "into", "is", "it", "its", "may", "must", "not", "of", "on", "or", "shall", "should", "such", "than", "that",
+            "the", "their", "them", "then", "there", "these", "they", "this", "those", "to", "was", "were", "when", "which",
+            "will", "with", "would", "you", "your"}
+    return [t for t in re.findall(r"[^\W_]+", text.lower()) if len(t) >= 2 and t not in stop and not (t.isdigit() and len(t) > 4)]
+
+
+def build_csp_digits(root):
+    """a Course Source Processor index whose terms keep their digits (h2s, 162), as its indexer writes them"""
+    kb = os.path.join(root, "KNOWLEDGE_BASE")
+    texts = {"gas.pdf": "Hydrogen sulphide H2S exposure limit is 10 ppm for a working shift.",
+             "lng.pdf": "Methane boils at -162 degrees C at atmospheric pressure in an LNG tank.",
+             "other.pdf": "Fire extinguishing with CO2 in the engine room needs a release alarm."}
+    chunks, lines, off = [], [], 0
+    for i, (f, t) in enumerate(texts.items()):
+        rec = {"source_filename": f, "source_path": "source_files/" + f, "page_start": 1, "page_end": 1, "text": t}
+        line = (json.dumps(rec) + "\n").encode("utf-8")
+        chunks.append({"i": i, "sp": rec["source_path"], "n": len(csp_tokens(t)), "nav": 0, "off": off, "bytes": len(line),
+                       "_t": csp_tokens(t)})
+        lines.append(line)
+        off += len(line)
+    df, post = Counter(), {}
+    for c in chunks:
+        for t, n in Counter(c.pop("_t")).items():
+            df[t] += 1
+            post.setdefault(t, []).append([c["i"], n])
+    idx = {"index_version": 5, "chunk_count": len(chunks), "bm25": {"k1": 1.2, "b": 0.75}, "min_token_length": 2,
+           "avg_tokens_per_chunk": sum(c["n"] for c in chunks) / len(chunks), "chunks": chunks, "df": dict(df), "postings": post}
+    w(os.path.join(kb, "search_index", "index.json"), json.dumps(idx))
+    with open(os.path.join(kb, "search_index", "chunks.jsonl"), "wb") as fh:
+        fh.write(b"".join(lines))
+    return kb
 
 
 def w(p, s, mode="w"):
@@ -311,8 +385,8 @@ def main():
         os.makedirs(empty)
         code, out = run("find", empty)
         check("none found -> the factory suggests making one, unasked: what, how, and what is lost without it (2.42.0)",
-              code == 1 and "SUGGESTS MAKING A KNOWLEDGE BASE" in out and "Course Source Processor" in out
-              and "the factory has no tool that builds one" in out and "Without it:" in out and "kb_tool.py decision" in out, out)
+              code == 1 and "SUGGESTS MAKING A KNOWLEDGE BASE" in out and "Course KB Builder" in out
+              and "Without it:" in out and "kb_tool.py decision" in out, out)
         os.rmdir(empty); os.rmdir(os.path.dirname(empty))
         check("find wrote nothing anywhere", snapshot(tmp) == before_all)
         chem = os.path.join(tmp, "chem", "chem-advanced")
@@ -344,10 +418,50 @@ def main():
         q = sg.get("question") or {}
         check("--json carries the ready pop-up question, making one first and marked Recommended",
               q.get("header") == "Sources" and len(q.get("options", [])) == 3 and "(Recommended)" in q["options"][0]["label"], q)
-        check("the suggestion says what the operator must run - and never that the factory builds it",
-              "Course Source Processor" in sg.get("text", "") and "has no tool that builds one" in sg.get("text", "")
+        check("with no builder on this computer the suggestion says what it is, where to put it and what to run by hand",
+              "Course KB Builder" in sg.get("text", "") and "was not found on this computer" in sg.get("text", "")
+              and "I will make it" in q["options"][0]["label"] and not sg.get("builder")
               and os.path.join(master, "source_files") in sg.get("text", ""), sg.get("text"))
         check("finding and suggesting wrote nothing", snapshot(os.path.join(tmp, "m")) == before)
+
+        print("\n-- the factory makes the knowledge base itself, with the Course KB Builder")
+        tool = os.path.join(tmp, "tool", "COURSE_KB_BUILDER", "fake_builder.py")
+        w(tool, FAKE_BUILDER)
+        code, out = run("find", master, "--json", builder=tool)
+        sg2 = json.loads(out).get("suggestion") or {}
+        check("with the builder on this computer the suggestion says the factory makes it, and the first answer is 'make it now'",
+              "the factory makes it itself" in sg2.get("text", "") and "kb_tool.py build" in sg2.get("text", "")
+              and "make it now" in sg2["question"]["options"][0]["label"] and sg2.get("builder") == tool, sg2.get("text"))
+        code, out = run("build", master, "--course", master)
+        check("build with no builder stops (exit 3), says what the builder is, and makes nothing",
+              code == 3 and "was not found" in out and snapshot(os.path.join(tmp, "m")) == before, out)
+        bare = os.path.join(tmp, "bare")
+        w(os.path.join(bare, "notes.txt"), "x")
+        code, out = run("build", bare, builder=tool)
+        check("build with nothing to read stops (exit 2)", code == 2 and "nothing to make a knowledge base from" in out, out)
+        made = os.path.join(tmp, "made", "IGF basic")
+        for rel in ("source_files/IGF CODE 2016.pdf", "source_files/Study programme.pdf", "old course/ch1.pptx"):
+            w(os.path.join(made, rel), "x")
+        w(os.path.join(made, "source_files", "BREAK"), "x")
+        code, out = run("build", made, "--course", made, builder=tool)
+        check("a builder that ends with no knowledge base is a stop (exit 5), and no decision is recorded",
+              code == 5 and "left no knowledge base" in out
+              and not os.path.exists(os.path.join(made, "course", "working_claude", "intake.json")), out)
+        os.remove(os.path.join(made, "source_files", "BREAK"))
+        code, out = run("build", made, "--course", made, builder=tool)
+        kb_made = os.path.join(made, "source_files", "KNOWLEDGE_BASE")
+        d = (json.load(io.open(os.path.join(made, "course", "working_claude", "intake.json"), encoding="utf-8"))
+             if os.path.isfile(os.path.join(made, "course", "working_claude", "intake.json")) else {}).get("knowledge_base_decision") or {}
+        check("build runs the builder with no window on source_files, and the knowledge base is there",
+              code == 0 and os.path.isfile(os.path.join(kb_made, "SOURCE_MANIFEST.json")) and "Knowledge base made" in out, out)
+        check("... the decision is recorded as built, with its kind - nothing is asked",
+              d.get("answer") == "built" and d.get("format") == "course_source_processor"
+              and os.path.normcase(d.get("path", "")) == os.path.normcase(kb_made), d)
+        code, out = run("find", made)
+        check("... and find now finds it", code == 0 and "KNOWLEDGE_BASE" in out, out)
+        code, out = run("build", made, "--course", made, builder=tool)
+        check("a second build refreshes it", code == 0 and "Refreshing" in out, out)
+        shutil.rmtree(os.path.join(tmp, "tool")); shutil.rmtree(os.path.join(tmp, "bare")); shutil.rmtree(os.path.join(tmp, "made"))
 
         wc = os.path.join(master, "course")
         code, out = run("decision", master)
@@ -423,6 +537,109 @@ def main():
               code == 0 and os.path.isdir(packs) and len(os.listdir(packs)) == 1, out)
         check("... and neither knowledge base nor source_files changed", kbs_before == [
             snapshot(os.path.join(master, d)) for d in ("KNOWLEDGE_BASE", "knowledge_base_existing", "source_files")])
+
+        print("\n-- the search reads a query the way the index was built (digits kept)")
+        kd = build_csp_digits(os.path.join(tmp, "digits"))
+        top = lambda q: (kb_tool.search_csp(kd, q, 1, set()) or [{}])[0].get("file")
+        check("'H2S exposure limit' finds the chunk about H2S", top("H2S exposure limit") == "gas.pdf", top("H2S exposure limit"))
+        check("'boiling point -162' finds the chunk with 162", top("boiling point -162") == "lng.pdf", top("boiling point -162"))
+        check("'CO2 fire extinguishing' keeps co2 as one term", top("CO2 fire extinguishing") == "other.pdf")
+        check("a Course Source Processor index is tokenized with digits, its stop words, and no number over 4 digits",
+              kb_tool.toks_for({"index_version": 5})("The H2S in 162 and 123456") == ["h2s", "162"],
+              kb_tool.toks_for({"index_version": 5})("The H2S in 162 and 123456"))
+        check("an index with no version and no tokenizer is read the same way", kb_tool.toks_for({})("O2 content") == ["o2", "content"])
+        check("any other tokenizer keeps the letters-only rule",
+              kb_tool.toks_for({"index_version": 6, "tokenizer": "x-1"})("H2S limit 162") == ["limit"],
+              kb_tool.toks_for({"index_version": 6, "tokenizer": "x-1"})("H2S limit 162"))
+
+        print("\n-- read_report sorts every status")
+        rr = os.path.join(tmp, "rr")
+        w(os.path.join(rr, "SOURCE_MANIFEST.json"), json.dumps({"sources": [
+            {"status": "ok"}, {"status": "ocr_applied"}, {"status": "ok_with_gaps"}, {"status": "duplicate"},
+            {"status": "duplicate"}, {"status": "needs_ocr"}, {"status": "failed"}, {"status": "empty"},
+            {"status": "ok", "error": "boom"}, {}]}))
+        check("whole / gaps / not read / copies: ok + ocr_applied + no status, gaps, needs_ocr + failed + empty + error, duplicates",
+              kb_tool.read_report(rr) == (3, 1, 4, 2), kb_tool.read_report(rr))
+
+        print("\n-- the engine switch: --engine auto | factory | exe")
+        eng = os.path.join(tmp, "eng", "IGF basic")
+        for rel in ("source_files/IGF CODE 2016.pdf", "source_files/Study programme.pdf", "old course/ch1.pptx"):
+            w(os.path.join(eng, rel), "x")
+        exe = os.path.join(tmp, "engtool", "COURSE_KB_BUILDER", "fake_builder.py")
+        fac = os.path.join(tmp, "engtool", "kb_build.py")
+        w(exe, FAKE_BUILDER)
+        w(fac, FAKE_FACTORY)
+        kb_eng = os.path.join(eng, "source_files", "KNOWLEDGE_BASE")
+        code, out = run("build", eng, "--engine", "factory", script=fac)
+        check("--engine factory runs the stand-in kb_build.py on the source root and echoes its progress",
+              code == 0 and os.path.isfile(os.path.join(kb_eng, "SOURCE_MANIFEST.json")) and "the factory's own builder" in out
+              and "[3/3]" in out and "Knowledge base made" in out, out)
+        check("... the summary sorts the manifest: 2 read whole, 1 with gaps, 2 not read, and 2 copies of another file as their own count",
+              "2 read whole, 1 with gaps" in out and "2 not read" in out and "2 copies of another file" in out, out)
+        shutil.rmtree(kb_eng)
+        code, out = run("build", eng, "--engine", "factory", script=fac, builder=exe)
+        check("--engine factory ignores the exe even when it is there", code == 0 and "the factory's own builder" in out, out)
+        shutil.rmtree(kb_eng)
+        code, out = run("build", eng, script=fac, builder=exe)
+        check("auto tries the exe first when both are there", code == 0 and "the factory's own builder" not in out
+              and "fake_builder.py" in out, out)
+        shutil.rmtree(kb_eng)
+        code, out = run("build", eng, script=fac)
+        check("auto falls back to the factory's builder when there is no exe", code == 0 and "the factory's own builder" in out, out)
+        shutil.rmtree(kb_eng)
+        code, out = run("build", eng, script=fac, engine="factory", builder=exe)
+        check("NOVIKONTAS_KB_ENGINE sets the engine when --engine is not given", code == 0 and "the factory's own builder" in out, out)
+        shutil.rmtree(kb_eng)
+        code, out = run("build", eng, "--engine", "exe", script=fac, builder=exe)
+        check("--engine exe ignores the factory's builder", code == 0 and "the factory's own builder" not in out, out)
+        shutil.rmtree(kb_eng)
+        code, out = run("build", eng, "--engine", "exe", script=fac)
+        check("--engine exe with no exe stops (exit 3) and does not fall back", code == 3 and "was not found" in out
+              and not os.path.exists(kb_eng), out)
+        code, out = run("build", eng, "--engine", "factory")
+        check("--engine factory with no builder stops (exit 3) and says how to install PyMuPDF",
+              code == 3 and "pip install pymupdf" in out and not os.path.exists(kb_eng), out)
+        code, out = run("build", eng)
+        check("auto with neither stops (exit 3) and gives both remedies",
+              code == 3 and "pip install pymupdf" in out and "COURSE_KB_BUILDER" in out and not os.path.exists(kb_eng), out)
+        calls = []
+        got = kb_tool.ensure_pymupdf(runner=lambda c: calls.append(c) or 0, ok=lambda: False)
+        check("PyMuPDF missing: it is installed with pip, nothing asked, and checked in a new interpreter",
+              got is True and len(calls) == 2 and calls[0][1:4] == ["-m", "pip", "install"]
+              and any(x.startswith("pymupdf") for x in calls[0]) and calls[1][1] == "-c", calls)
+        calls = []
+        check("... already there: nothing is installed",
+              kb_tool.ensure_pymupdf(runner=lambda c: calls.append(c) or 0, ok=lambda: True) is True and not calls, calls)
+        check("... pip fails (no network): said as not available, never an exception",
+              kb_tool.ensure_pymupdf(runner=lambda c: 1, ok=lambda: False) is False)
+        os.environ["NOVIKONTAS_OFFLINE"] = "1"
+        calls = []
+        check("... NOVIKONTAS_OFFLINE=1: nothing is fetched",
+              kb_tool.ensure_pymupdf(runner=lambda c: calls.append(c) or 0, ok=lambda: False) is False and not calls, calls)
+        del os.environ["NOVIKONTAS_OFFLINE"]
+        w(os.path.join(eng, "source_files", "BREAK"), "x")
+        code, out = run("build", eng, "--engine", "factory", script=fac)
+        check("a factory builder that fails is a stop (exit 5)", code == 5 and "left no knowledge base" in out, out)
+        os.remove(os.path.join(eng, "source_files", "BREAK"))
+        code, out = run("find", eng, "--json", script=fac)
+        sg3 = json.loads(out).get("suggestion") or {}
+        check("the suggestion names the engine build would use (factory when only it is there)",
+              sg3.get("engine") == "factory" and sg3.get("builder") == fac, sg3.get("text"))
+        code, out = run("find", eng, "--json", script=fac, builder=exe)
+        check("... and the exe when both are there", (json.loads(out).get("suggestion") or {}).get("engine") == "exe", out)
+        saved = (kb_tool.ENGINE_ORDER, dict(os.environ))
+        try:
+            os.environ.update(NOVIKONTAS_KB_BUILD_SCRIPT=fac, NOVIKONTAS_KB_BUILDER=exe)
+            os.environ.pop("NOVIKONTAS_KB_ENGINE", None)
+            kb_tool.ENGINE_ORDER = ("factory", "exe")
+            check("ENGINE_ORDER decides which engine auto tries first", kb_tool.choose_engine(eng)[0] == "factory")
+            kb_tool.ENGINE_ORDER = ("exe", "factory")
+            check("... the other way round too", kb_tool.choose_engine(eng)[0] == "exe")
+        finally:
+            kb_tool.ENGINE_ORDER = saved[0]
+            os.environ.clear()
+            os.environ.update(saved[1])
+        shutil.rmtree(os.path.join(tmp, "eng")); shutil.rmtree(os.path.join(tmp, "engtool"))
 
         print("\n-- not a knowledge base")
         code, out = run("detect", tmp)

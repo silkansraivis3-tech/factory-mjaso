@@ -2,7 +2,7 @@
 """build_module.py - a module built and every check run, in ONE command; only what fails is printed (2.50.0).
 
     python compile/scripts/build_module.py <course> --module 1 [--viewport 1920x1080] [--no-course-pages]
-                                           [--no-fix] [--no-review] [--sheets] [--draft] [--force]
+                                           [--no-fix] [--no-review] [--draft] [--force]
 
 WHY (IGF M01 benchmark, 2026-10-19): one module took 6 compiles and about 20 separate check runs, each one a turn of the
 model re-reading a context of ~200k tokens. Every check still runs - nothing here is skipped or loosened - but in one
@@ -14,10 +14,16 @@ process, the independent ones at once, and the answer is short:
   3  the checks   at the same time: check_script_match.py --part instructor and --part trainee, check_navigation.py,
                   run_audits.py (1280 x 800, 1024 x 768 and any --viewport), then compile_course.py and
                   check_course_package.py (the course's own pages and the classroom's importer)
-  4  the review   when everything passes: review_sheets.mjs photographs every slide, every figure step and every question
-                  (asked, answered wrong, answered right) onto a few sheets - only the screens changed since the last
-                  review - and checks that every question grades right and wrong answers as such (compile GUIDE 2f);
-                  a module that is not clean gets them too at the build the 3-builds rule stops (STOP), or with --sheets
+  4  task pages   at the same time as the checks: review_sheets.mjs answers every question of every task page by its own
+                  keys and checks that it grades right and wrong answers as such (compile GUIDE 2f). When the module can
+                  be reviewed it also photographs each question as a trainee meets it - asked (1280 x 800 and
+                  1024 x 768), answered wrong with its feedback, answered right, and the set's last screen - into the
+                  walk folder, beside the deck's stops. Picture spaces still to fill, --draft, --no-walk: graded only
+  5  the walk     at module clean: walk_review.py verify - every slide of the deck AND every question and last screen of
+                  every task page needs a reviewer's verdict for what it shows now (compile GUIDE 2i); the final
+                  assessment's too. It is the one visual review: nothing is judged twice and nothing by nobody. A build by
+                  itself is NOT DONE without it; a module of a parallel build (--no-course-pages) prints where the walk
+                  review stands under MODULE CLEAN and the workflow's walk judge takes it from there
 
   0  (2.52.0) a build sheet that still has --init-build's blanks (a slide with no picture, a question on no picture, a
                   planned 3D scene not written) builds nothing: one line says what to fill (--draft builds anyway)
@@ -37,14 +43,7 @@ Every hidden browser takes a slot of one pool for the whole computer (browser_sl
     2.71.0, at most 45 min; --long-pole goes first): wave 1's three first builds overlapped and M01's took 1,076 s;
   - a build that runs past ANSWER_WITHIN (9 min, CF_BUILD_ANSWER_WITHIN) is not lost to the shell's 10-minute limit: it
     goes on by itself and says "STILL BUILDING"; the same command with --wait waits for it and prints its answer (a builder
-    whose shell call ended at 600 s waited blind). A second build of a module that is building waits for that one;
-  - the review sheets are promoted at MODULE CLEAN (in a parallel build only the course package is left, judged after
-    assembly), photographed only for the screens that changed (--shots), and compared with the last REVIEWED sheets
-    (review\\MNN_reviewed, written by --reviewed once someone looked at them) - not with the last build's, so no change
-    goes unseen when nobody reviewed in between; POLISH.md is kept outside the folder a promotion replaces
-    (review\\MNN_POLISH.md - five POLISH lists were deleted in the run).
-      build_module.py <course> --module 1 --reviewed     the sheets in review\\MNN were looked at: the next ones show
-                                                         only what changes after them
+    whose shell call ended at 600 s waited blind). A second build of a module that is building waits for that one.
 Exit 0 PASS, 1 problems to fix, 2 stopped (the compiler refused: not approved, changed by hand, design files edited),
 3 still building (run the same command with --wait), 4 PHASE A CLEAN (2.73.0: every check passed, but picture slots still
 hold --init-build's placeholders or a 3D starter - fill them from working_claude\\visuals\\MNN_VISUAL_NEEDS.md, Phase B).
@@ -68,6 +67,12 @@ SKILLS = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 FACTORY = os.path.join(SKILLS, "course-factory", "scripts")
 MEASURE = os.path.join(SKILLS, "course-module-ux", "measure", "scripts")
 KIT = os.path.join(SKILLS, "course-visuals", "kit", "scripts")
+# under MODULE CLEAN in a parallel build, when the walk review is still open: who takes it from here
+WALK_NEXT = ("A builder stops here: in a whole-course workflow the walk judge reviews the slides and the task pages. In one "
+             "session: walk_review.py "
+             "prepare <course> --module %s --stale, a reviewer that did not build or fix the module on its brief, then "
+             "walk_review.py sign <course> --module %s --review <reviewer.json> --built-by \"<who built it>\" (--built-by again "
+             "for each one who fixed it; compile/GUIDE.md 2i)")
 sys.path.insert(0, HERE)
 sys.path.insert(0, FACTORY)
 sys.path.insert(0, KIT)
@@ -92,8 +97,8 @@ def run(cmd, timeout=900, started=None):
 
 def run_checks(jobs, pkg_cmd, retry=None):
     """the checks at the same time, then the course package once the files it reads are still (it waits for every job but
-    the review sheets). -> (results, seconds, retry's answer). retry(key, result), asked as each check ends, says whether
-    the round will be built again (2.63.0): then every check still running is ended - the review sheets first, a third of
+    the task pages' job). -> (results, seconds, retry's answer). retry(key, result), asked as each check ends, says whether
+    the round will be built again (2.63.0): then every check still running is ended - the task pages first, a third of
     a round - and the package is not checked; the next round runs them all (IGF M01 / M02 v262: retried rounds of
     22-824 s waited for sheets and a package check nobody read)."""
     import browser_slots
@@ -111,7 +116,7 @@ def run_checks(jobs, pkg_cmd, retry=None):
         for f in cf.as_completed(futs):
             k = futs[f]
             results[k] = f.result()
-            if retry and again[0] is None and not k.startswith("review"):
+            if retry and again[0] is None and k != "task pages":
                 again[0] = retry(k, results[k]) or None
                 if again[0]:
                     for p in list(live.values()):
@@ -121,8 +126,8 @@ def run_checks(jobs, pkg_cmd, retry=None):
                         except OSError:
                             pass
             # the importer reads every file of the module folder: it waits for the audits, whose probe pages come and go
-            # in presentation\, and for the course pages; it then runs beside the review sheets
-            if again[0] is None and pkg is None and all(x in results for x in jobs if x != "review sheets"):
+            # in presentation\, and for the course pages; it then runs beside the task pages' job
+            if again[0] is None and pkg is None and all(x in results for x in jobs if x != "task pages"):
                 pkg = ex.submit(run_timed, "course package", pkg_cmd)
         if again[0] is None:
             if pkg is None:
@@ -211,7 +216,10 @@ def starter_blanks(course, module):
         if e is None:
             continue
         fig = (e.get("figure") or "").strip() or ("tiles" if e.get("tiles") else "") or ("table" if e.get("table") else "")   # (merge) "tiles" are its picture too, and so is the comparison table
-        if s["kind"] == "slide" and not s.get("recap") and not fig and (s.get("visual_kind") or "none") != "none":
+        # 2.116.1 (PM M03) - a slide whose words read on their own drops its planned picture with "no_figure": "<reason>" in the
+        # build sheet; the approved script's visual_kind is the plan, not a quota
+        if s["kind"] == "slide" and not s.get("recap") and not fig and (s.get("visual_kind") or "none") != "none" \
+                and not str(e.get("no_figure") or "").strip():
             pics.append(s["id"])
         elif s["kind"] in cs.TASKS and cs.mech(s) in cm.STARTER_ON_PICTURE and not fig:
             ons.append(s["id"])
@@ -466,8 +474,8 @@ def slide_order(deck_html):
 
 
 def l62_pairs(deck_html):
-    """[(the slide before, the slide)] - each slide that makes three in a row that look the same (L62), the problem
-    compile_deck reports; two in a row are a note for the reviewer and are left as they are"""
+    """[(the slide before, the slide)] - each slide that makes three in a row that look the same (L62): what the layout
+    flip acts on (LAYOUT_FLIP, factory tests only); a repeat in a real build is a note and is left as it is"""
     import compile_module as cm
     secs = slide_order(deck_html)
     return [(secs[i - 1][1], secs[i][1]) for i, run in cm.look_repeats([x for _, _, x in secs]) if run >= cm.REPEAT_STOP]
@@ -567,20 +575,10 @@ def fit_tries(s, b, have, sec):
     except (TypeError, ValueError):
         split = cm.LAYOUTS["split"]["default"]
     wider = {"split": cm.SPLIT_HI} if split < cm.SPLIT_HI else {}
-    paged, said = {}, ""
-    if len(lines) >= 2:
-        if 'data-template="content-in-parts.' in sec:
-            n = int((re.search(r'data-parts="(\d+)"', sec) or re.search(r"()", "")).group(1) or 0)
-            more = parts_in(lines, n + 1) if n else []
-            if len(more) > n:
-                paged, said = {"parts": more}, "its words in %d parts (\"parts\": %s)" % (len(more), json.dumps(more))
-        else:
-            paged, said = {"template": "content-in-parts"}, "its words in parts (\"template\": \"content-in-parts\")"
+    # 2.116.0 (operator, 2026-11-09): the factory never moves the words into parts by itself - only a wider words' column
+    # is tried. Words that still do not fit are the writer's finding (v_paged_slide): shorten them with the operator's approval.
     w = "the words' column at %d %% (\"split\": %g)" % (round(100 * cm.SPLIT_HI), cm.SPLIT_HI)
-    out = [(w, dict(have, **wider))] if wider else []
-    out += [(said, dict(have, **paged))] if paged else []
-    out += [(said + " and " + w, dict(have, **dict(paged, **wider)))] if wider and paged else []
-    return out
+    return [(w, dict(have, **wider))] if wider else []
 
 
 def room_tries(have, sec):
@@ -709,7 +707,9 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
         tried = set(a0.get("tried") or [])
         plan = [(w, with_set(sid, st), True) for w, st in fit_tries(s, (build.get("screens") or {}).get(sid) or {},
                                                                   a0.get("set") or {}, sec_of(deck, sid)) if w not in tried]
-        if s.get("kind") == "slide" and not s.get("recap"):
+        # 2.116.0: no "other ways" (layout flipping) any more - a slide's look is never changed by the factory
+        # (compile_module.LAYOUT_FLIP, off in a real build, keeps the old solver reachable for the factory's own tests)
+        if cm.LAYOUT_FLIP and s.get("kind") == "slide" and not s.get("recap"):
             plan += [(w, a_, False) for w, a_ in ways(sid)]
         why = ""
         for what, av2, is_set in plan:
@@ -737,7 +737,7 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
             if is_set:
                 rec(av, sid).setdefault("tried", []).append(what)
         else:
-            if sid not in done and plan:
+            if sid not in done and (plan or a0.get("tried")):
                 lines.append("%s: no way found that fits (%s) - fewer words in a part, or a smaller picture beside them"
                              % (sid, why or "every try made before"))
             elif not plan and s.get("kind") == "activity" and not ((build.get("screens") or {}).get(sid) or {}).get("figure") \
@@ -783,7 +783,8 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
     # the old column may be built again
     # every try laid out first and the ones the layout already rules out dropped (no audit); then the slide with a side
     # measured out and the slide before it built its next way, fewest slides changed first; then the rest
-    for prev, sid in [x for x in l62_pairs(deck) if pairs is None or x in pairs]:
+    for prev, sid in ([x for x in l62_pairs(deck) if pairs is None or x in pairs] if cm.LAYOUT_FLIP else []):
+        # 2.116.0: an L62 repeat is a note, never settled by changing a slide (only with the test switch CF_LAYOUT_FLIP=1)
         if (prev, sid) not in l62_pairs(deck):
             continue
         cands = []
@@ -930,7 +931,7 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None, extra=No
     room = {sid: v for sid, v in room.items() if v}
     for sid in last_room(logdir, m):
         room.setdefault(sid, ["the last build's fit gate: its picture shown in part"])
-    if bad or l62_pairs(deck) or room:
+    if bad or room or (cm.LAYOUT_FLIP and l62_pairs(deck)):
         t = time.time()
         av, said, done, fits = solve_layouts(script, build, mdir, figdir, avoid, last,
                                              {sid: bad[sid] for _, sid, _ in slide_order(deck) if sid in bad}, audit, sizes,
@@ -1012,51 +1013,6 @@ def check_slides(course, module, sids, sizes, audit=None):
     return (1 if bad else 0), lines
 
 
-def spilled_own(deck_html, audit_out, course, module):
-    """2.67.0 - the slides whose OWN layout scrolls or spills at the audit - the compiler's choice (no "template" in the
-    build sheet, not built another way for L62), with a picture and more than one line: {slide id: its words key}. Their
-    words go in parts at once (compile_module.wants_parts) - on gas M01 (2.65) six slides scrolled at 1024 x 768, each a
-    builder's run to put them in parts by hand"""
-    # 2.69.0 - and a photograph cropped to a strip: its words in parts give it the height (gas M01 s11, the ship cut through)
-    bad = set(re.findall(r"slide \d+ \((\w+)\): (?:scrolls|spills|photo cropped to a strip)\b", audit_out or ""))
-    if not bad:
-        return {}
-    import compile_module as cm
-    import content_script as cs
-    try:
-        script = cs.load(cs.paths(course, module)["script"])
-        sheet = cs.load(cm.build_path(course, module)).get("screens") or {}
-    except (OSError, ValueError, KeyError):
-        return {}
-    by_id = {x["id"]: x for x in script.get("screens", [])}
-    out = {}
-    for tag in re.findall(r"<section [^>]*>", deck_html):
-        sid = re.search(r'\bdata-script="(\w+)"', tag)
-        if not sid or sid.group(1) not in bad or "data-varied=" in tag or 'data-template="content-in-parts' in tag:
-            continue
-        sc, b = by_id.get(sid.group(1)), sheet.get(sid.group(1)) or {}
-        if not sc or sc.get("kind") != "slide" or b.get("template") or not b.get("figure") or len(cs.lines_of(sc.get("text"))) < 2:
-            continue
-        # (merge with 2.72.x) the layout record's one key, fit_key - the layout solver and measure_out read it too
-        out[sid.group(1)] = cm.fit_key(sc, b)
-    return out
-
-
-def parts_out(path, own):
-    """each slide's words go in parts while its words key is the same (compile_module.wants_parts)"""
-    try:
-        avoid = json.load(io.open(path, encoding="utf-8"))
-    except (OSError, ValueError):
-        avoid = {}
-    for sid, words in own.items():
-        a = avoid.get(sid) or {}
-        if a.get("words") != words:
-            a = {"words": words, "avoid": []}
-        a["parts"] = True
-        avoid[sid] = a
-    io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(avoid, indent=1, sort_keys=True))
-
-
 # a hidden browser's page made beside the deck - the audits', the 3D smoke test's, the layout pre-check's - is named by
 # the PID of the run that made it; a run that was ended leaves it there, and the course importer fails on its links
 PROBE_PAGE = re.compile(r"^_(?:audit|smoke3d|layout_precheck)_(\d+)(?:_\d+x\d+)?\.html$")
@@ -1076,72 +1032,6 @@ def stale_probes(mdir):
             except OSError:
                 pass
     return gone
-
-
-def sheets_not_clean(mdir, out_dir, pending, logdir, m, made=None):
-    """the review sheets of a module that is not clean - the build the 3-builds rule stops (STOP), or --sheets: QA's one
-    visual review needs them all the same. This build's own sheets when it made them (made: review_sheets.mjs's
-    (code, output)), else made now, one deck walk -> the line to print"""
-    import shutil
-    code, out = made or (None, "")
-    if code not in (0, 1) or not os.path.isfile(os.path.join(pending, "sheets.json")):
-        shutil.rmtree(pending, ignore_errors=True)
-        code, out = run(["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + reviewed_dir(out_dir),
-                         "--shots=" + os.path.join(logdir, "%s_shots" % m)])
-    if code not in (0, 1) or not os.path.isfile(os.path.join(pending, "sheets.json")):
-        return "Review sheets not made (%s) - do the visual review by hand (GUIDE 2f)" % (lines_of(out, 1) or ["?"])[0]
-    promote(pending, out_dir)
-    n = re.search(r"Review sheets: (\d+) of (\d+) screens.*?on (\d+) sheet", out)
-    return ("REVIEW SHEETS of a module that is not clean (the findings above stay to fix): %s of %s screens on %s sheet(s) in\n"
-            "  %s\n  for the one visual review (%s)" % (n.group(1), n.group(2), n.group(3), out_dir,
-                                                     os.path.join(SKILLS, "course-factory", "compile", "REVIEW_PROMPT.md"))
-            if n else "Review sheets made in %s" % out_dir)
-
-
-def reviewed_dir(out_dir):
-    """review\\MNN_reviewed - the manifests of the sheets someone last looked at (--reviewed): what "changed" is judged
-    against. Missing: every screen is new to the reviewer"""
-    return out_dir + "_reviewed"
-
-
-def polish_path(out_dir):
-    return out_dir + "_POLISH.md"
-
-
-def promote(pending, out_dir):
-    """the new sheets replace the folder of the last ones - and a POLISH.md written into that folder is kept beside it,
-    in review\\MNN_POLISH.md (2.63.3: the 2.63.2 run's re-check deleted five builders' POLISH lists this way)"""
-    import shutil
-    old = os.path.join(out_dir, "POLISH.md")
-    if os.path.isfile(old):
-        keep = io.open(old, encoding="utf-8", errors="replace").read()
-        dest = polish_path(out_dir)
-        have = io.open(dest, encoding="utf-8", errors="replace").read() if os.path.isfile(dest) else ""
-        if keep.strip() and keep.strip() not in have:
-            io.open(dest, "w", encoding="utf-8").write((have.rstrip() + "\n\n" if have.strip() else "") + keep.strip() + "\n")
-    shutil.rmtree(out_dir, ignore_errors=True)
-    os.replace(pending, out_dir)
-
-
-def mark_reviewed(out_dir, m):
-    """--reviewed: the promoted sheets were looked at - their manifests become the baseline the next sheets are compared
-    with, so the next review shows only what changes after this one"""
-    import shutil
-    man = os.path.join(out_dir, "manifest.json")
-    if not os.path.isfile(man):
-        print("Nothing to mark: %s has no review sheets yet (build_module.py makes them at module clean)" % out_dir)
-        return 1
-    base = reviewed_dir(out_dir)
-    os.makedirs(base, exist_ok=True)
-    for f in ("manifest.json", "manifest_src.json"):
-        src = os.path.join(out_dir, f)
-        if os.path.isfile(src):
-            shutil.copyfile(src, os.path.join(base, f))
-        elif os.path.isfile(os.path.join(base, f)):
-            os.remove(os.path.join(base, f))
-    n = len(json.load(io.open(man, encoding="utf-8")))
-    print("Reviewed %s: %d screens - the next review sheets show only what changes after this (%s)" % (m, n, base))
-    return 0
 
 
 # ------------------------------------------------------------------ 2.71.0: the short answer
@@ -1325,16 +1215,17 @@ def main(argv=None):
     ap.add_argument("--viewport", action="append", default=[], help="another audit size, WxH (1280x800, 1024x768 and 1280x720 always run)")
     ap.add_argument("--no-course-pages", action="store_true", help="a module agent in a parallel build: no compile_course.py")
     ap.add_argument("--no-fix", action="store_true", help="the figure pre-check makes no fix of its own")
-    ap.add_argument("--no-review", action="store_true", help="no review sheets after a pass")
-    ap.add_argument("--sheets", action="store_true", help="make the review sheets even when the module is not clean (the "
-                    "build the 3-builds rule stops makes them by itself) - for the one visual review")
+    ap.add_argument("--no-review", action="store_true", help="the task pages are not answered, graded or walked (factory "
+                    "tests) - a real build's walk review is then incomplete")
+    ap.add_argument("--no-walk", action="store_true", help="2.116.0: no walk review gate and no walk pictures (the task pages "
+                    "are graded only) - factory tests, and "
+                    "the workflow's QA check (the walk judge reads the builder's walk at the same time). A real build is not done "
+                    "without the walk review (walk_review.py)")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--full", action="store_true", help="never stop after the figures - every stage, every run; the drawing "
                                                         "check and the audits judge every slide and page again (2.57.0)")
     ap.add_argument("--layout-round", type=int, default=0, help=argparse.SUPPRESS)
-    ap.add_argument("--reviewed", action="store_true", help="the review sheets were looked at: the next ones show only what "
-                                                            "changes after them (2.63.3); builds nothing")
     ap.add_argument("--wait", action="store_true", help="wait for this module's build that said STILL BUILDING and print its "
                                                         "answer (2.63.3)")
     ap.add_argument("--long-pole", action="store_true", help="the course's biggest module (build_order.py, 2.71.0): its first "
@@ -1368,10 +1259,7 @@ def main(argv=None):
     import cf_timing                 # 2.65.0 - the module's clock (gold standard 30-40 min), if --init-build did not start it
     if o.layout_round == 0:
         cf_timing.clock_start(course, m, since="its first build run")
-    out_dir = workspace.claude_path(course, "review", m)
-    if o.reviewed:
-        return mark_reviewed(out_dir, m)
-    if o.slides:                     # 2.72.7: a slide check in seconds - nothing built, nothing written
+    if o.slides:                    # 2.72.7: a slide check in seconds - nothing built, nothing written
         sizes = [(1280, 800), (1024, 768)] + [tuple(int(x) for x in v.split("x")) for v in o.viewport
                                               if v not in ("1280x800", "1024x768")]
         code, lines = check_slides(course, o.module, [x.strip() for x in o.slides.split(",") if x.strip()], sizes)
@@ -1597,20 +1485,18 @@ def main(argv=None):
         # the deck walked with Next to every slide's last step (fit_gate.py, Playwright): the audits measure each slide as
         # it opens, and an answer or a last line that arrives later was never measured - one job a size, side by side
         for v in ["1280x800"] + sizes:
-            jobs["fit %s (every Next)" % v] = [PY, os.path.join(MEASURE, "fit_gate.py"), deck, "--viewport", v]
+            jobs["fit %s (every Next)" % v] = fit_job(course, o.module, deck, v, o.no_walk)
 
     if not o.no_course_pages:
         jobs["course pages (compile_course.py)"] = [PY, os.path.join(HERE, "compile_course.py"), course]
-    # 4 - the review sheets are made at the same time (2.50.1: they were a third of a passing build), into a folder of
-    # their own: they become the review only when everything passes, so a failed build never hides a changed screen
-    # 2.63.3: compared with the last REVIEWED sheets, and a screen unchanged since its last picture is not photographed again
-    pending = out_dir + ".pending"
-    want_review = not o.no_review and (not fails or o.sheets)
+    # 4 - the task pages are answered at the same time (2.50.1: a third of a passing build): every question graded right and
+    # wrong by its own keys and, when the module can be reviewed, photographed as a trainee meets it into the walk folder,
+    # beside the deck's stops - the walk review judges both. Each page's fingerprint is stamped first: a page changed
+    # after this walk is stale to the review. A page walked clean and unchanged since keeps its pictures
+    want_review = not o.no_review and not fails
     if want_review:
-        import shutil
-        shutil.rmtree(pending, ignore_errors=True)
-        jobs["review sheets"] = ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + reviewed_dir(out_dir),
-                                 "--shots=" + os.path.join(logdir, "%s_shots" % m)] + (["--grade-only"] if slots_left else [])
+        walking = not (slots_left or o.no_walk or o.draft)
+        jobs["task pages"] = task_job(mdir, walk_review_py().stamp_tasks(course, o.module) if walking else "", logdir)
     pkg_cmd = [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)]
     ak = next((k for k in jobs if k.startswith("audits")), None)
 
@@ -1636,7 +1522,7 @@ def main(argv=None):
             pass
     stages += [("  " + k, took[k]) for k in list(jobs) + ["course package"] if k in took]
     if early:
-        # 2.63.0 - the round is built again: what the checks found on the slides is said; the review sheets and the
+        # 2.63.0 - the round is built again: what the checks found on the slides is said; the task pages' job and the
         # package check that were ended (or never started) run in the next round
         code, out = results[ak]
         logged(ak, out)
@@ -1644,7 +1530,7 @@ def main(argv=None):
         say.append("%s - FAIL:" % ak.upper())
         say += short_audits(out) if not o.full_output else \
             ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")), 40)]
-        stopped = sorted(k for k in jobs if k not in took or k == "review sheets") + ["course package"]
+        stopped = sorted(k for k in jobs if k not in took or k == "task pages") + ["course package"]
         log.write("\n===== ended early - this round is built again: %s\n" % ", ".join(stopped))
     if early is None and slots_left and "course package" in results:
         results["course package"] = without_placeholders(*results["course package"])
@@ -1657,7 +1543,7 @@ def main(argv=None):
         if left:
             notes.append("Course package: %d finding(s) about the course's own pages or other modules left to the check after "
                          "assembly (compile_course.py, then check_course_package.py)" % left)
-    for k in ([x for x in jobs if x != "review sheets"] + ["course package"]) if early is None else []:
+    for k in ([x for x in jobs if x != "task pages"] + ["course package"]) if early is None else []:
         code, out = results[k]
         logged(k, out)
         if code != 0:
@@ -1679,14 +1565,10 @@ def main(argv=None):
     if ak in fails and not drawings_open and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):
         page_ = io.open(deck, encoding="utf-8").read()
         mis = early or moved_misfits(page_, results[ak][1])
-        own = {} if early else spilled_own(page_, results[ak][1], course, o.module)
-        if mis or own:
-            if mis:
-                measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
-            if own:
-                parts_out(os.path.join(logdir, "%s_layout_avoid.json" % m), own)
-                print("PARTS - %d slide(s) whose own layout spilled at the audit: %s - built again with their words in parts "
-                      "(content-in-parts; kept while their words are unchanged)" % (len(own), ", ".join(sorted(own))))
+        # 2.116.0: no automatic parts for a slide whose own layout spilled (spilled_own / parts_out are gone) - the factory never
+        # moves or pages the words; the writer shortens them (v_paged_slide) with the operator's approval
+        if mis:
+            measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
             log.write("\n===== this round's findings (the build runs again for the slides above)\n%s\n" % "\n".join(say))
             write_stages(log, stages, t0, timing)
             log.close()
@@ -1700,37 +1582,23 @@ def main(argv=None):
             return main(list(sys.argv[1:] if argv is None else argv) + ["--layout-round", str(o.layout_round + 1)])
     passed = not fails
     # 2.63.3 - MODULE CLEAN: in a parallel build (--no-course-pages) everything but the course package passed - the package is
-    # judged after assembly. The sheets are promoted then too: before, nothing in a parallel build ever promoted, and the
-    # builders re-read stale sheets (IGF M09 re-reviewed a sheet from before its fix)
+    # judged after assembly
     clean = passed or (o.no_course_pages and fails == ["course package"])
-    review = ""
-    if want_review and clean and "review sheets" in results:
-        rcode, rout = results["review sheets"]
-        if rcode == 0 and not slots_left:        # the sheets are the review now: the last review's folder is replaced
-            promote(pending, out_dir)
-            rout = rout.replace(pending, out_dir)
+    module_clean = False                         # said under FAIL - course package: the task pages graded as they should
+    if want_review and clean and "task pages" in results:
+        rcode, rout = results["task pages"]
         logged("review_sheets.mjs", rout)
-        if rcode == 1:                          # not promoted: the next review still compares with the last one shown
+        if rcode == 1:
             passed = False
             fails.append("task pages")
             say.append("TASK PAGES - FAIL (review_sheets.mjs answered every question by its own keys and checked every leader "
                        "line as the engine placed it - fix the drawing or the build sheet's \"labels\"):")
             say += ["  " + x for x in rout.splitlines() if "FAIL" in x]
-        elif rcode == 0 and slots_left:          # 2.73.0 Phase A: graded only - the sheets wait for the real pictures
-            pass
-        elif rcode == 0:
-            first = rout.strip().splitlines()[0] if rout.strip() else ""
-            n = re.search(r"Review sheets: (\d+) of (\d+) screens.*?on (\d+) sheet", first)
-            review = (("VISUAL REVIEW (required, GUIDE 2f): %s of %s screens changed since the last review, on %s sheet(s) in\n  %s\n"
-                       "  Give the sheets to ONE review subagent (model opus, high effort) with %s - it returns a short verdict;\n"
-                       "  then mark them looked at: build_module.py <course> --module %s --reviewed (in a whole-course workflow the "
-                       "QA agent does this review, not the builder)"
-                       % (n.group(1), n.group(2), n.group(3), out_dir, os.path.join(SKILLS, "course-factory", "compile", "REVIEW_PROMPT.md"),
-                          o.module))
-                      if n and n.group(1) != "0" else
-                      "Visual review: no screen changed since the last review - nothing new to look at.")
+        elif rcode == 0:                         # Phase A (picture spaces still to fill) is graded only and not clean yet
+            module_clean = not slots_left
         else:
-            notes.append("Review sheets not made (%s) - do the visual review by hand (GUIDE 2f)" % (lines_of(rout, 1) or ["?"])[0])
+            notes.append("Task pages not answered (%s) - no question was graded and the walk review has no task page to judge "
+                         "until this runs (GUIDE 2f)" % (lines_of(rout, 1) or ["?"])[0])
     slowest = write_stages(log, stages, t0, timing)
     log.close()
     if slowest and slowest[0] > 60:      # 2.62.1: one hidden browser for over a minute - a stalled page or a loaded PC
@@ -1746,6 +1614,14 @@ def main(argv=None):
         print(x)
     for x in notes:
         print(x)
+    # 2.116.0 - THE WALK REVIEW GATE: a module whose checks all pass is still not done until an AI reviewer has looked at every
+    # stop of every slide as a trainee does (walk_review.py; compile/GUIDE.md says how the lead session runs it).
+    # It is reached at MODULE CLEAN too: a module of a parallel build never passes by itself (the course package is judged
+    # after assembly), so there the walk review's state is printed under MODULE CLEAN and neither `passed` nor `fails`
+    # changes - the builder stops at module clean and the workflow's walk judge reviews the slides. A parallel build whose
+    # course package passes too (the course was assembled before) is the same builder's: it prints PASS and the same line
+    passed, fails, walk_open, walk_said = walk_step(course, o.module, deck, passed, fails, parallel=o.no_course_pages,
+                                                    skip=bool(slots_left) or o.no_walk or o.draft)
     secs = time.time() - t0
     needs = ""
     if slots_left or os.path.isfile(os.path.join(workspace.claude_path(course, "visuals"), "%s_VISUAL_NEEDS.json" % m)):
@@ -1769,7 +1645,7 @@ def main(argv=None):
               "navigation, every question graded right and wrong, audits 1280x800 %s, course package (%.0f s)"
               % (m, " ".join(sizes), secs))
         print("  %d picture slot(s) still hold Phase A's stand-ins: %s" % (len(slots_left), ", ".join("%s (%s)" % x for x in slots_left)))
-        print("  Phase B: fill them from %s - then build again (only the changed slides are judged) for PASS and the review sheets"
+        print("  Phase B: fill them from %s - then build again (only the changed slides are judged) for PASS and the walk review"
               % needs)
         if stages:
             print(stage_line(stages))
@@ -1786,14 +1662,23 @@ def main(argv=None):
         gold = cf_timing.clock_pass(course, m)          # 2.65.0 - at the first PASS: its minutes against 30-40
         if gold:
             print(gold)
-        if review:
-            print(review)
+        if walk_said:
+            print(walk_said)
+    elif walk_open:
+        print("NOT DONE: %s (%.0f s)" % (walk_open, secs))
+        print("  Every other check passed. Run the reviewer on the brief (one Opus subagent at high effort per batch of up to 4 contact "
+              "sheets, returning reviewer JSON - compile/GUIDE.md 2i; never the session that built or fixed the module), then: "
+              "walk_review.py sign <course> --module %s --review <reviewer.json> --built-by \"<who built it>\" (and --built-by "
+              "again for each one who fixed it). Fix every fail and build again: the "
+              "brief then holds only the slides and task pages that changed. Two rounds at most - what still fails after the second is the "
+              "operator's: walk_review.py accept, or reopen" % o.module)
     else:
         print("FAIL %s - %s (%.0f s)" % (m, ", ".join(fails), secs))
-        if review and fails == ["course package"]:
+        if module_clean and fails == ["course package"]:
             print("MODULE CLEAN - only the course package is left, judged after assembly (compile_course.py, then "
-                  "check_course_package.py); the review sheets are promoted:")
-            print(review)
+                  "check_course_package.py); every question of the task pages graded as it should")
+        if walk_said and fails == ["course package"]:
+            print(walk_said)
     if stages:
         print(stage_line(stages))
     stops = []
@@ -1803,11 +1688,67 @@ def main(argv=None):
         stops = stop_lines(counts, m)
         for x in stops:
             print(x)
-    if not clean and not o.no_review and not slots_left and os.path.isfile(deck) \
-            and (o.sheets or any(x.startswith("STOP") for x in stops)):
-        print(sheets_not_clean(mdir, out_dir, pending, logdir, m, results.get("review sheets")))
     print("Full log: %s" % log.name)
     return 0 if passed else 1
+
+
+def walk_review_py():
+    if MEASURE not in sys.path:
+        sys.path.insert(0, MEASURE)
+    import walk_review
+    return walk_review
+
+
+def task_job(mdir, walk_dir, logdir):
+    """the task pages answered by their own keys -> the command. walk_dir: each question is also photographed as a trainee
+    meets it (asked at both tablet sizes, answered wrong, answered right, the set's last screen) for the walk review,
+    beside the deck's stops. No walk_dir (picture spaces still to fill, a draft, --no-walk): answered and graded only -
+    nothing in the walk folder is touched, so the workflow's QA check never changes the walk its judge is reading"""
+    return ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, walk_dir or logdir, "--tasks-only",
+            "--walk-dir=" + walk_dir if walk_dir else "--grade-only"]
+
+
+def fit_job(course, module, deck, viewport, no_walk=False):
+    """the fit walk of one size -> its command. At 1280x800 it also saves every stop for the walk review, in the folder
+    walk_review.py reads (the final assessment's is FINAL) - unless --no-walk"""
+    return [PY, os.path.join(MEASURE, "fit_gate.py"), deck, "--viewport", viewport] + (
+        ["--walk-dir", walk_review_py().walk_dir(course, module)] if viewport == "1280x800" and not no_walk else [])
+
+
+def walk_step(course, module, deck, passed, fails, parallel, skip=False):
+    """the walk review gate at module clean -> (passed, fails, open, said).
+    A build by itself that passed every check is NOT DONE while the review is open: passed turns False, "walk review"
+    joins the fails, `open` says why. A module of a parallel build (the course package is judged after assembly) keeps
+    its verdict as it is - "FAIL MNN - course package" is what the workflow reads as its pass - and `said` is the line for
+    under MODULE CLEAN. skip: picture spaces still to fill, a draft, --no-walk - nothing a reviewer should judge yet"""
+    module_clean = passed or (parallel and fails == ["course package"])
+    if not module_clean or skip or not os.path.isfile(deck):
+        return passed, fails, "", ""
+    walk_open, walk_said = walk_gate(course, module, alone=passed and not parallel)
+    if walk_open:
+        return False, fails + ["walk review"], walk_open, walk_said
+    return passed, fails, walk_open, walk_said
+
+
+def walk_gate(course, module, alone):
+    """where the walk review of a module that is clean stands -> (open, said).
+    alone (a build by itself that passed every check): `open` says why it is NOT DONE - with the contact sheets and the
+    brief of the slides that still need a verdict - or is '' when the review stands.
+    not alone (a module of a parallel build, at MODULE CLEAN): nothing is open for the build; `said` is the line printed
+    under MODULE CLEAN - the workflow's walk judge takes it from there"""
+    walk_review = walk_review_py()
+    w_ok, w_kind, w_msg = walk_review.verify(course, module)
+    if not alone:
+        return "", "WALK REVIEW - %s" % (w_msg if w_ok else "%s: %s\n  %s" % (w_kind, w_msg, WALK_NEXT % (module, module)))
+    if w_ok:
+        return "", ""
+    said = "walk review %s - %s" % (w_kind, w_msg)
+    try:
+        w_rc, w_lines = walk_review.prepare(course, module, stale_only=True)
+        said += "\n  " + "\n  ".join(w_lines + ["still open: " + x for x in walk_review.open_fails(course, module)])
+    except Exception as why:                            # noqa: BLE001 - the sheets are a help; the gate stands
+        said += "\n  (the contact sheets could not be made: %s)" % why
+    return said, ""
 
 
 ANSWER_WITHIN = 540     # s: a build still running then goes on by itself - under the shell's 10-minute limit (2.63.3)
@@ -1824,7 +1765,7 @@ def running_files(course, module):
 
 def state_key(course, module, args):
     """2.72.3 - everything a build reads and writes, as it is now: the script and build sheet, the module's figures and
-    folder (photos, kit_parts.js, what the last build wrote), its review baseline, the factory's own files, the arguments
+    folder (photos, kit_parts.js, what the last build wrote), its walk review, the factory's own files, the arguments
     and the CF_ settings - by name, size and time, so taking it costs a fraction of a second. Taken when a build ends; the
     same key at the next call means nothing changed since that answer (the 2.66 run's builders built again to re-read a
     report they already had)"""
@@ -1836,13 +1777,15 @@ def state_key(course, module, args):
                          sorted((k, v) for k, v in os.environ.items() if k.startswith("CF_")
                                 and k not in ("CF_BUILD_RUNNING", "CF_TIMING", "CF_BUILD_ANSWER_WITHIN", "CF_BUILD_TEST_SLEEP"))]).encode())
     course = workspace.work_folder(course, create=False)
-    m = cs.mid(module) if str(module).isdigit() else str(module)
     mdir, _ = cm.module_folder(course, module)
     p = cs.paths(course, module)
-    out_dir = workspace.claude_path(course, "review", m)
     files = [p["script"], cm.build_path(course, module)] + [os.path.join(course, x) for x in sorted(os.listdir(course))
                                                               if os.path.isfile(os.path.join(course, x))]
-    trees = [workspace_figdir(course, module), mdir or "", out_dir, reviewed_dir(out_dir), os.path.dirname(SKILLS)]
+    trees = [workspace_figdir(course, module), mdir or "", os.path.dirname(SKILLS)]
+    try:                                                 # the answer says where the walk review stands: a review signed,
+        files.append(walk_review_py().review_file(course, module))      # accepted or reopened since is a change
+    except Exception:                                    # noqa: BLE001 - a module walk_review cannot name has no review
+        pass
     for f in files:
         try:
             st = os.stat(f)
@@ -1892,7 +1835,7 @@ def entry(argv=None):
     The IGF 2.63.2 run: M01's first build took 1,076 s and the builder's 600 s shell call ended without an answer"""
     argv = list(sys.argv[1:] if argv is None else argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    if "--inner" in argv or "--reviewed" in argv or "-h" in argv or "--help" in argv:
+    if "--inner" in argv or "-h" in argv or "--help" in argv:
         return main(argv)
     slides = any(a == "--slides" or a.startswith("--slides=") for a in argv)     # 2.72.7: seconds, in this process
     ap = argparse.ArgumentParser(add_help=False)

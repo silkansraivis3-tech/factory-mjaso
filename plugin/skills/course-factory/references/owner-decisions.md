@@ -8,23 +8,17 @@ Read a row here before working on its step, and whenever an operator's request s
 heading per law: grep `## L45` and read that section only.
 
 ## L27
-**Built out in:** step 6
-
 Three test levels, all on the **trainee tablet**: self-checks and the module check show the trainee **their own score** — it is for them and does not count; the **final assessment is the only graded test**. Every task opens only when the instructor opens it (L35); the instructor sees done / not done and the result as information, never pass/fail or red
 
 ## L28
-**Built out in:** steps 2, 7
-
 Course type `NEW_ENTRANT` or `EXPERIENCED` is declared at intake and shapes the build (new entrants: more explanation, more screens, more worked examples). **Never easier names** — every course uses the professional terms used on board and in the regulations, explained so a new entrant understands them and can explain their actions at sea (owner, 2.18.2). Every instrument and simulator in the IMO model course is assumed available — never asked
 
 ## L29
 **Built out in:** now
 
-Before any HTML, a word-for-word **content script** per module is approved by the operator; the slides then say exactly that. Facts the operator stated are listed there once per module, marked *operator-stated*, so they are checked before HTML — see *Stage 3* below
+Before any HTML, a word-for-word **content script** per module is approved by the operator; the slides then say exactly that. Facts the operator stated are listed there once per module, marked *operator-stated*, so they are checked before HTML — see *Stage 3* in SKILL.md
 
 ## L30
-**Built out in:** step 10
-
 **Module 1 is a pilot**, built by five roles and approved before any other module is built
 
 ## L31
@@ -35,12 +29,10 @@ Ask like a colleague: real expert questions batched as **one pop-up with options
 ## L32
 **Built out in:** now
 
-`COURSE_STATE.md` updated at the end of every stage; every operator correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy — see *The course remembers* below
+`COURSE_STATE.md` updated at the end of every stage; every operator correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy — see *The course remembers* in SKILL.md
 
 ## L33
-**Built out in:** step 8
-
-Pictures: KB → old course → source files → internet → authored → generated; keep legit old schematics; **every picture in the knowledge base and the old course is usable as it is** (credited where known, listed); what is missing is **searched on the internet and downloaded** into the course folder, the download list confirmed once per module (owner, 2.19.0); equipment a trainee must recognise is **never** an AI image — schematic plus the "photos to take at Novikontas" list
+Pictures: KB → old course → source files → internet → authored → generated; keep legit old schematics; **Novikontas's own pictures in the knowledge base and old course are usable as they are; a source-book figure is used only after a named person clears it (L52)** (credited in the full-screen view and on the credits page, listed); what is missing is **searched on the internet and downloaded** into the course folder with its record and listed in the module's report - only an unclear licence or a paid source is asked about; equipment a trainee must recognise is **never** a generated picture — a real photograph or a drawing, and a real photo still missing is listed in `PHOTOS_TO_TAKE.md` (a list, never a stop and never a question to the operator)
 
 ## L34
 **Built out in:** now (2.17.0)
@@ -78,14 +70,10 @@ Pictures: KB → old course → source files → internet → authored → gener
 **The factory works in `course\`** beside the operator's material: the folder given is the master folder (source_files, knowledge base, old course - read only); everything the factory makes goes into `course\` next to them. `scripts/workspace.py`; every tool accepts either folder
 
 ## L42
-**Built out in:** built in step 6
-
 **Trainee-tablet tasks are modern, exciting, and usable with zero tablet experience** - a first *try the tablet* screen; tap and drag only (drag also tap-then-tap); an animated hand shows each new gesture once; big controls (56 px), big text; instant, alive feedback; real equipment in 3D and working panels; forgiving, no timers, no error messages. `course-task-ux` §0
 
 ## L43
-**Built out in:** built in steps 6-10
-
-**Every module in its own folder** - `course\modules\M01_<title>\` holds everything it needs (presentation, tasks, instructor files, every asset and script), reaches nothing outside it, fetches nothing; `START_HERE.html` opens the presentation straight away; `START_HERE_EXTENDED.html` has a button for the presentation, every task, the module plan, the notes. `scripts/check_module_folder.py`
+**Every module in its own folder** - `course\modules\module01\` holds everything it needs (presentation, tasks, instructor files, every asset and script), reaches nothing outside it, fetches nothing; `START_HERE.html` opens the presentation straight away; `START_HERE_EXTENDED.html` has a button for the presentation, every task, the module plan, the notes. `scripts/check_module_folder.py`
 
 ## L44
 **Built out in:** now (2.20.0)
@@ -93,20 +81,17 @@ Pictures: KB → old course → source files → internet → authored → gener
 **Three places in `course\`:** `to_review\` - only what the operator checks (architecture page, content scripts and their Word files, instructor notes); `modules\` - the finished modules; `working_claude\` - everything only the factory uses (state, logs, notes, data, checkpoints - all kept). Nothing loose. An older course: `scripts/workspace.py tidy`
 
 ## L45
-**Built out in:** built in steps 6-10
-
-**The course folder is built to the classroom system's own rules** (`knowledge/classroom-system.json`, from the owner's `COURSE_FACTORY_PROMPT.md`): `course\modules\` = COURSE.html + `_course_shell\course_map.js` + `module01\` ... each with `presentation\index.html` (every `.slide` with `data-title`, the instructor notes in `data-cue`, a task slide with `data-activity` + `data-task-href`), `tasks\sc1_<slug>.html`, `assessment\check.html`; task pages report `gb-task-done`; module checks PASSED / NOT PASSED (for understanding, not an official grade); no spaces, ≤ 15 MB a file, offline; 1280 × 800 landscape. `scripts/check_course_package.py` runs the list and the classroom's own importer. **Rulebook of 2026-10-12 (2.23.0):** team tasks (`data-mode="team"` + `task-mode` / `task-scope` metas, `gb-team`), answers marked by `data-key`, never readable; no link into a `_` folder. **2026-10-19 (2.50.3):** the result screen is the last screen - nothing to press, no link; a task never leaves its own page.
+**The course folder is built to the classroom system's own rules** (`knowledge/classroom-system.json`, from the owner's `COURSE_FACTORY_PROMPT.md`): `course\modules\` = COURSE.html + `_course_shell\course_map.js` + `module01\` ... each with `presentation\index.html` (every `.slide` with `data-title`, the instructor notes in `data-cue`, a task slide with `data-activity` + `data-task-href`), `tasks\sc1_<slug>.html`, `assessment\check.html`; task pages report `gb-task-done`; module checks show the score only - no pass mark, no verdict (2.63.0); no spaces, ≤ 15 MB a file, offline; 1280 × 800 landscape. `scripts/check_course_package.py` runs the list and the classroom's own importer. **Rulebook of 2026-10-12 (2.23.0):** team tasks (`data-mode="team"` + `task-mode` / `task-scope` metas, `gb-team`), answers marked by `data-key`, never readable; no link into a `_` folder. **2026-10-19 (2.50.3):** the result screen is the last screen - nothing to press, no link; a task never leaves its own page.
 
 ## L46
 **Built out in:** now (2.22.0); built in step 9
 
-**3D where it makes sense - at full quality, and smooth on the tablet** *(Its share is L67's since 2.110.0: 60-80 % interactive 3D; the cap of half is gone.)* (owner, 2026-10-07: *"don't make it in all slides ... but also don't cut quality, and put it only on slides where it makes sense, not only because you can"*). 3D for equipment and structures whose shape, inside or layout in space is taught - not charts, symbols, documents or ideas. Speed from how scenes run, never a lesser look: one shared renderer, scenes built when their slide comes and freed after, no frame while nothing moves, soft shadows worked out once while still, pixel ratio min(device, 2); 30 frames a second with the CPU slowed 4x. `knowledge/media-and-tasks.json` → `three_d`; `content_script.py`, `check_course_package.py` (each `.slide` carries `data-visual`)
+**3D where it makes sense - at full quality, and smooth on the tablet** *(Its share is L67's: 60-80 % interactive 3D, never more than 3 in a row; each 3D model's why is spatial.)* (owner, 2026-10-07: *"don't make it in all slides ... but also don't cut quality, and put it only on slides where it makes sense, not only because you can"*). 3D for equipment and structures whose shape, inside or layout in space is taught - not charts, symbols, documents or ideas. Speed from how scenes run, never a lesser look: one shared renderer, scenes built when their slide comes and freed after, no frame while nothing moves, soft shadows worked out once while still, pixel ratio min(device, 2); 30 frames a second with the CPU slowed 4x. `knowledge/media-and-tasks.json` → `three_d`; `content_script.py`, `check_course_package.py` (each `.slide` carries `data-visual`)
 
 ## L47
 **Built out in:** now (2.24.0)
 
-**A generated picture only after the person described it and said yes** (owner, 2026-10-14: about €0.10 a picture, four developers redoing them use the budget up). Places first (`scripts/picture_briefs.py list`); one place at a time, eight plain questions with a suggestion each (`knowledge/media-and-tasks.json` → `generation_brief`); the prompt shown; generated once on a yes - the nano-banana tools refuse without the person's words; a redo needs a new yes; the count and cost said every time. In a course build the yes is the course's picture budget,
-asked once at the start (`intake.json` `picture_budget`) - no question before each picture after it
+**A generated picture only within the budget the person said yes to** (owner, 2026-10-14: about €0.10 a picture, four developers redoing them use the budget up). One yes per course at Stage 2, with the count and the euros (`intake.json` `picture_budget`, 2.73.2) - no question before each picture after it. Each place keeps its brief (`picture_briefs.py`); the count and cost are reported every time; nothing is generated past the budget without a new yes, and a redo counts against it. Outside a course build (a single deck or picture) the person still describes each picture and says yes to it (`nano-banana`)
 
 ## L48
 **Built out in:** now (2.25.0)
@@ -120,6 +105,8 @@ asked once at the start (`intake.json` `picture_budget`) - no question before ea
 
 ## L50
 **Built out in:** now (2.29.0)
+
+**Changed 2026-11-09 (2.118.0) on operator Aleksis Vējs's instruction after the Project Management review: *"remove contradicting and too limiting rules that don't benefit anything"* - and yes to a "walk it like a trainee" review that looks at several images at once.** The old "no visual check after a fix" is gone: after ANY fix the walk review (`fix.py check --kind walk`) runs on every touched slide; `fix-rules.json` `checks.walk`, `never_in_a_fix` no longer forbids the contact sheet of the touched slides.
 
 **A fix is not a build - find, one list, one yes, change, one check** (owner, 2026-10-15: *"i want for fixes to be faster and still quality ... it will not go to 3-4 qa reviews"*). A correction to built modules - one, some or all - reads only `fix/GUIDE.md`, COURSE_STATE and the course's `STANDARDS.md`; "find it in the others" is one sweep of every module (`scripts/fix.py sweep`, measured in a hidden browser by `scripts/measure_slides.py`); the operator says yes once for the whole list; words go through every content script in one batch and into the built slides; a part every module uses is changed once and copied (`sync-shared`); a wish for every module becomes a standard; then **one** check for the kind of change, by whoever made it - no QA agent after the fixer, no whole-course QA, at most 2 agents. `knowledge/fix-rules.json`
 
@@ -136,7 +123,9 @@ asked once at the start (`intake.json` `picture_budget`) - no question before ea
 ## L53
 **Built out in:** now (2.25.1, 2.26.3)
 
-**No empty space, good padding** (owner, 2026-10-15). Pictures take the room the words leave, words at reading size, padding and the chrome's safe area kept, nothing spills. The deck is compiled from the shared layouts (`compile/GUIDE.md`) and passes `audit_compose.js`, `audit_deck.js`, `audit_collide.js` before it is shown. **Inside the figure too** (operator, 2.26.3): a figure fills its panel (`audit_drawing.js` EMPTY), sits beside its words at reading size (`two-col`, not a stage over small cards), and every line a step lights is a tap target for that step
+**Changed 2026-11-09 (2.118.0) on operator Aleksis Vējs's instruction after the Project Management review: *"remove contradicting and too limiting rules that don't benefit anything"*.** "No empty space" (`fix.py` sweep `space`, ink 45 %) is a NOTE, never a failure; overflow, collide and the figure's own EMPTY check stay.
+
+**Good padding; free space is a note** (owner, 2026-10-15). Pictures take the room the words leave, words at reading size, padding and the chrome's safe area kept, nothing spills. The deck is compiled from the shared layouts (`compile/GUIDE.md`) and passes `audit_compose.js`, `audit_deck.js`, `audit_collide.js` before it is shown. **Inside the figure too** (operator, 2.26.3): a figure fills its panel (`audit_drawing.js` EMPTY), sits beside its words at reading size (`two-col`, not a stage over small cards), and every line a step lights is a tap target for that step
 
 ## L54
 **Built out in:** now (2.25.2)
@@ -146,7 +135,9 @@ asked once at the start (`intake.json` `picture_budget`) - no question before ea
 ## L55
 **Built out in:** now (2.26.0)
 
-**Figures come from the figure kit** (owner, 2026-10-15). A system, state, flow or sequence is a `NAME.kit.json` spec in `working_claude\figures\MNN\` (`course-visuals/kit/SPEC.md`), never a one-off SVG. A part the kit lacks is made to `kit/PARTS.md` in the module's `assets\kit_parts.js` and used at once; **after the module is complete** `kit/scripts/kit_parts.py promote` puts it in the factory's kit and the merge request goes to the owner (ask the operator before the push). Parallel build: module agents write only their own `kit_parts.js`; the orchestrator promotes at assembly
+**Changed 2026-11-09 (2.118.0) on operator Aleksis Vējs's instruction after the Project Management review: *"draw the drawings 2d kit and 3d with a reason, dont just put it in just because"* - and yes to custom drawings beyond the kit.** "Figures only from the kit" became KIT FIRST, CUSTOM ALLOWED: when no kit part shows the idea well, a custom figure (`"custom_figure"` in the build sheet - a self-contained offline file whose steps Next drives) is allowed; and every kit figure, 3D model and custom figure carries `"why"` (mechanism, sequence, comparison, quantity-change, spatial, real-thing-recognition, still) + `"why_text"` that its steps serve (`figure_why.py`; `v_why` in `content_script.py`, `compile_module.py` before building, `check_kit.py`). A slide may have no picture when its words read on their own. A good custom figure is offered to the kit afterwards.
+
+**Kit first, custom allowed, every figure with a reason** (owner, 2026-10-15; 2.118.0). A figure is a `NAME.kit.json` spec in `working_claude\figures\MNN\` (`course-visuals/kit/SPEC.md`) where a kit part shows the idea well; otherwise a `custom_figure`. A part the kit lacks is made to `kit/PARTS.md` in the module's `assets\kit_parts.js` and used at once; **after the module is complete** `kit/scripts/kit_parts.py promote` puts it in the factory's kit and the merge request goes to the owner (ask the operator before the push). Parallel build: module agents write only their own `kit_parts.js`; the orchestrator promotes at assembly
 
 ## L56
 **Built out in:** now (2.27.0, 2.33.0)
@@ -156,10 +147,14 @@ asked once at the start (`intake.json` `picture_budget`) - no question before ea
 ## L57
 **Built out in:** now (2.27.0)
 
-**A drawing of real things carries their real photographs - unasked** (operator, 2026-10-15: *"an illustration like this would also have a real image of it, smaller, close, which you can click"*). The compiler finds the real things a drawn slide names (its line terms, the drawing's own labels) and puts their photos in a row under the drawing - numbered like the drawing, each opening in the L56 panel, at most four - matched by the photo's `shows` in `_photo_meta.json` (write it whenever a photo comes in). A cleared photo of another module is copied in; one awaiting rights review never. A real thing with no photo is reported and listed in `working_claude\PHOTOS_TO_TAKE.md` - never blocks the build
+**Changed 2026-11-09 (2.118.0) on operator Aleksis Vējs's instruction after the Project Management review: *"remove contradicting and too limiting rules that don't benefit anything"*.** The automatic photo thumbnails under a drawing are added only when the build sheet lists them (`"photo_row": true`) or the figure's why is real-thing-recognition.
+
+**A drawing of real things carries their real photographs when the build sheet lists them (`"photo_row"`) or the figure's why is real-thing-recognition** (operator, 2026-10-15: *"an illustration like this would also have a real image of it, smaller, close, which you can click"*). When listed, the compiler finds the real things a drawn slide names (its line terms, the drawing's own labels) and puts their photos in a row under the drawing - numbered like the drawing, each opening in the L56 panel, at most four - matched by the photo's `shows` in `_photo_meta.json` (write it whenever a photo comes in). A cleared photo of another module is copied in; one awaiting rights review never. A real thing with no photo is reported and listed in `working_claude\PHOTOS_TO_TAKE.md` - never blocks the build
 
 ## L58
 **Built out in:** now (2.27.0)
+
+**Changed 2026-11-09 (2.118.0) on operator Aleksis Vējs's instruction after the Project Management review: *"remove contradicting and too limiting rules that don't benefit anything"*.** "Every photograph once" allows a repeat when its slide says why: `"reuse_why": "<reason>"` in its build-sheet entry.
 
 **Every photograph once in the whole course** (operator, 2026-10-15: *"don't have duplicate images - either a different one or none, on all modules"*). One photograph, one screen - slide picture, inset, photo in a drawing or L57 thumbnail; a copy under another name in another module is the same photograph (`url_or_origin`, else the bytes). A thumbnail takes a different photo or none (the thing goes on `PHOTOS_TO_TAKE.md`); one placed by hand twice, or later than a module that already shows it, is reported at build - choose a different one or none. Build every module again after photos change
 
@@ -171,18 +166,24 @@ asked once at the start (`intake.json` `picture_budget`) - no question before ea
 ## L60
 **Built out in:** now (2.49.7)
 
-**At least one 3D scene in every module where the subject allows it - strongly recommended** (Aleksis, 2026-10-19: *"it should be like it is very recommended to build a 3d model at least once where you can in a module"*). A script with no 3D slide is no reason to skip it: `compile_module.py --init-build` picks the best slide unasked (a shape, an inside or a layout in space; never a real photo's slide) and writes its starter scene entry from IGF M03's `m03_station3d.js`. A module built with no scene is said loud - the build's RECOMMENDED block and its own card on the review page, naming the best candidate and why. Never a block (2.18.1): the operator declines with their reason, `"declined_3d"` at the top of the build sheet, and it is not proposed again. A slide the script plans as 3D given a 2D figure stays a must-fix until its own `"declined_3d"` holds a reason. **A photograph wanted is never turned 3D** (Aleksis, 2026-10-22; 2.63.2): `"photo_wanted": "<who asked, why>"` on a slide (build sheet, script screen, or the script's top-level `"photo_wanted"`) takes it out of the pick and of the recommendation's candidates. L46's limits and `compile/GUIDE.md` 2b's speed and tap rules unchanged
+**REMOVED 2026-11-09 (2.118.0) on operator Aleksis Vējs's instruction after the Project Management review: *"draw the drawings 2d kit and 3d with a reason, dont just put it in just because"*.** `--init-build` no longer picks a slide for a 3D scene unasked, and the RECOMMENDED block and `v_3d_none_built` are gone; `declined_3d` stays an optional note.
+
+**No 3D scene is picked unasked** (2.118.0). **A photograph wanted is never turned 3D** (Aleksis, 2026-10-22; 2.63.2): `"photo_wanted": "<who asked, why>"` on a slide (build sheet, script screen, or the script's top-level `"photo_wanted"`) is never turned 3D. `compile/GUIDE.md` 2b's speed and tap rules unchanged
 
 ## L61
 **Built out in:** now (2.52.0)
 
-**Every slide is one of the owner's layout templates, in the brandbook's colours, with the official logo** (owner, 2026-10-20: *"Implement the layout templates. All slides for all modules that will be made need to be in this style, it's a RULE. Configure the compiler so it does this style - of course the logo should be our official one, and the colours from the brandbook."*). The thirteen templates of `design/course-layout-templates/` are the production contract `course-module-ui/knowledge/layout-templates.json`; the compiler names each slide's `data-template="<id>.v1"` and `data-variant`, chosen from the script and the build sheet or asked for by name (`"template"`, `"variant"`, `"split"`, `"blocks"`, `"parts"`, `"figure_b"`, `"panel"`); an unknown or unsuitable one is a problem with the slide's id. `gb_layouts.css` is the look - Navy, Novikontas Blue, Pitch Black, Steel Blue, Light Grey, White; the reference's amber is Novikontas Blue; the official `novikontas_logo.svg` top right (a white plate on dark slides); Raleway bundled. The owner's rules are build problems: split slides 55 / 45 (50-60 % text); more than 60 words always has a picture beside it; never three teaching slides in a row without a teaching picture (a task launch and the recap neither count nor break a run); more than 135 words beside a picture go into readable parts (content-in-parts - Next walks them), never cut or set smaller. `compile/scripts/compile_module.py` (`pick_template`, `auto_template`, the sequence rule in `compile_deck`), `course-module-ui/templates/gb_layouts.css`, `course-module-ux/assets/gb_deck.js` (the parts); `compile/GUIDE.md` §2
+**Changed 2026-11-09 (2.118.0) on operator Aleksis Vējs's instruction after the Project Management review: *"remove contradicting and too limiting rules that don't benefit anything"*.** REMOVED: "dense: more than 60 words always has a picture" (a note now - a slide may have no picture when its words read on their own; no picture quota anywhere) and "no more than 2 teaching slides in a row without a visual". REMOVED: the automatic paging of words into parts and the automatic "points" fallback (`content-in-parts` only when a build sheet asks; the pre-check's parts fallback that overrode a requested template; `spilled_own` / `parts_out` / `wants_parts`) - words are NEVER cut or moved by the factory, `v_paged_slide` stays as the writer's must-fix. LOOSENED: the 50-60 % text band - the figure gets the share it needs (40 % up to the whole slide); theory-rules `slide.min_words` 50 -> 30 and a note.
+
+**Every slide is one of the owner's layout templates, in the brandbook's colours, with the official logo** (owner, 2026-10-20: *"Implement the layout templates. All slides for all modules that will be made need to be in this style, it's a RULE. Configure the compiler so it does this style - of course the logo should be our official one, and the colours from the brandbook."*). The thirteen templates of `design/course-layout-templates/` are the production contract `course-module-ui/knowledge/layout-templates.json`; the compiler names each slide's `data-template="<id>.v1"` and `data-variant`, chosen from the script and the build sheet or asked for by name (`"template"`, `"variant"`, `"split"`, `"blocks"`, `"parts"`, `"figure_b"`, `"panel"`); an unknown or unsuitable one is a problem with the slide's id. `gb_layouts.css` is the look - Navy, Novikontas Blue, Pitch Black, Steel Blue, Light Grey, White; the reference's amber is Novikontas Blue; the official `novikontas_logo.svg` top right (a white plate on dark slides); Raleway bundled. Words are never cut, moved or paged by the factory (`v_paged_slide` is the writer's must-fix); a figure gets 40 % up to the whole slide (`layout_fit.py`); a slide may have no picture when its words read on their own (2.118.0). `compile/scripts/compile_module.py` (`pick_template`, `auto_template`, the sequence rule in `compile_deck`), `course-module-ui/templates/gb_layouts.css`, `course-module-ux/assets/gb_deck.js` (the parts); `compile/GUIDE.md` §2
 
 ## L62
 **Built out in:** now (2.62.0; 2.53.0 on main)
 
+**Changed 2026-11-09 (2.118.0) on operator Aleksis Vējs's instruction after the Project Management review: *"remove contradicting and too limiting rules that don't benefit anything"* (layouts were flipped just to clear a check).** "Never the same look twice in a row" and "80 % on the light ground" are NOTES: `choose_layout` / `layout_options` / `layout_key` and the `*_layout_avoid.json` flipping no longer change any slide's layout (`compile_module.LAYOUT_FLIP` is off; `CF_LAYOUT_FLIP=1` exists only for the factory's own tests); repeats are reported as a note.
+
 **Never the same look twice in a row; a larger logo; no blocky photographs** (owner, 2026-10-21, after the gas course's
-Module 1 came out with 29 of 33 slides in one layout: *"Check module 1 - it is now done with the new templates, see how bad it is. Optimise the factory so the logo looks bigger and better, and images are upscaled, not this pixel stuff. Also make sure that two types of slides never repeat in a row - now 6-7 slides are exactly the same layout, and it hurts the eyes."*). Two slides next to each other never look the same. A slide's look is what the eye sees - its shape (picture right, picture left, a photograph across the top with the words in two columns under it, a photograph full or framed on the dark ground, text only, the task, recap and opening screens) and its ground (light, or dark / photo). When a slide would repeat the one before it, the compiler builds it another way that holds the same approved words and picture, and avoids the looks of the three slides before it when it can; a repeat it cannot avoid is a build problem. Only a photograph or a figure-kit drawing moves to the dark ground - a drawing or a widget made for a white page keeps the light one, so its own controls stay readable; a light panel stays white, with dark words, on a dark slide. The official logo shows larger: its artwork about 8 vmin tall, its built-in clear space running into the slide's margin, the file unchanged. A photograph smaller than 1600 px on its long side is enlarged once in the module (Lanczos and a light sharpening, at most four times), its original kept in working_claude/photo_originals/; one under 800 px is listed - find a larger original. Then (owner, same day: "bigger logo, and on blue slides the logo should be white without background"): the artwork about 10.5 vmin tall; on a dark (blue) or photo slide the white version, no plate - the official file with its one colour switched to white (plugin/resources/brand/novikontas_logo_white.svg; the brand note allows white on a dark ground when asked), and over a full photograph the corner behind it is darkened, never the logo. **80 / 20** (owner, 2026-10-21, after the IGF instructors' review "a lot of dark slides"): at least 80 % of a module's slides on the light ground; the ground is never a way to vary; task launches, the module check and the recap are light unless the sheet asks `"dark": true`; a Navy-ground slide or a photo framed on it counts as dark, a full-screen photo does not; more than a fifth dark is a build problem (2.62.1, `DARK_SHARE`). `compile/scripts/compile_module.py`
+Module 1 came out with 29 of 33 slides in one layout: *"Check module 1 - it is now done with the new templates, see how bad it is. Optimise the factory so the logo looks bigger and better, and images are upscaled, not this pixel stuff. Also make sure that two types of slides never repeat in a row - now 6-7 slides are exactly the same layout, and it hurts the eyes."*). *(2.118.0: repeats of a look and a dark share over a fifth are notes; the compiler never changes a slide's layout to avoid a repeat.)* A slide's look is what the eye sees - its shape (picture right, picture left, a photograph across the top with the words in two columns under it, a photograph full or framed on the dark ground, text only, the task, recap and opening screens) and its ground (light, or dark / photo). Only a photograph or a figure-kit drawing moves to the dark ground - a drawing or a widget made for a white page keeps the light one, so its own controls stay readable; a light panel stays white, with dark words, on a dark slide. The official logo shows larger: its artwork about 8 vmin tall, its built-in clear space running into the slide's margin, the file unchanged. A photograph smaller than 1600 px on its long side is enlarged once in the module (Lanczos and a light sharpening, at most four times), its original kept in working_claude/photo_originals/; one under 800 px is listed - find a larger original. Then (owner, same day: "bigger logo, and on blue slides the logo should be white without background"): the artwork about 10.5 vmin tall; on a dark (blue) or photo slide the white version, no plate - the official file with its one colour switched to white (plugin/resources/brand/novikontas_logo_white.svg; the brand note allows white on a dark ground when asked), and over a full photograph the corner behind it is darkened, never the logo. **80 / 20** (owner, 2026-10-21, after the IGF instructors' review "a lot of dark slides"): at least 80 % of a module's slides on the light ground; the ground is never a way to vary; task launches, the module check and the recap are light unless the sheet asks `"dark": true`; a Navy-ground slide or a photo framed on it counts as dark, a full-screen photo does not; more than a fifth dark is a note (2.118.0, `DARK_SHARE`). `compile/scripts/compile_module.py`
 (`layout_key`, `layout_options`, `choose_layout`, `enlarge_photos`), `course-module-ui/templates/gb_layouts.css`,
 `knowledge/layout-templates.json` `variety`
 
@@ -197,10 +198,9 @@ Module 1 came out with 29 of 33 slides in one layout: *"Check module 1 - it is n
 **A module in 30-40 minutes, its fixes in 20: what would fail is caught before the build, photographs are found large,
 and a rebuild is a fix** (owner, 2026-10-26: *"How can we optimise the time of a build - cut some time and usage off, with the quality the same or even better? ... Build points 1 and 2"*; *"when I want to rebuild or fix something, it does not go through the same thing, it goes through the fix process"*; *"we want to aim for 30-40 minutes per module + 20 minutes for possible fixes, that is our gold standard"*). (1) **The pre-check** - `compile/scripts/precheck.py`,
 a second, from the files alone - runs first in every `build_module.py` and `fix.py rebuild`: a picture the build sheet
-names that is not there, a template or variant the factory does not have, a photograph under 800 px on its long side (no
-enlargement makes it sharp - unless its `_photo_meta.json` record says why in `"low_resolution_ok"`), more than 60 words
-with no picture, three teaching slides in a row without one: nothing is built until it is fixed. A photograph of
-800-1023 px and the same template forced on three slides in a row are notes. (2) **Photographs are looked for at 1600 px
+names that is not there, a template or variant the factory does not have, a photograph found under 800 px on its long side (no
+enlargement makes it sharp - unless its `_photo_meta.json` record says why in `"low_resolution_ok"`): nothing is
+built until it is fixed. Old-course and knowledge-base pictures, 800-1023 px photos and a forced template are notes. (2) **Photographs are looked for at 1600 px
 or larger** on their long side, and accepted from 1024 px without a warning (`visual-sourcer`: the original file - Wikimedia's "Original file", never a /thumb/; Flickr's
 largest; a maker's press kit; its `"px"` recorded); `check_assets.py` warns under 1024 and under 800 at finding time,
 judging the size it was found at (the kept original, not L62's enlargement). (3) **A rebuild of a built module is a
@@ -209,7 +209,7 @@ check; only what fix.py names goes to `build_module.py`; one named change in one
 `fix_triggers._built`). (4) **The gold standard**: a module's clock starts at `--init-build` (or its first build run) and
 its first PASS prints `TIME M01: <n> min ... - inside the gold standard (30-40 min a module)` or OVER by how much;
 `fix.py rebuild` prints its minutes against 20; the whole-course workflow returns `gold_standard` - every module's minutes
-and which went over (`scripts/cf_timing.py` `clock_start`, `clock_pass`, `fix_line`). A still rendered from the module's own 3D model is a note (render it again larger); a picture from the old course has no larger original, and the stop says so - find a larger photograph of the same thing; a REBUILD (`fix.py rebuild`, `precheck.py --rebuild`) is never stopped by the small pictures a module already has - they are notes (the gas course has 100+ old-course pictures under 800 px across its 22 modules). The whole-course workflow builds the biggest approved module first (the most minutes in the approved table) in a rolling pool of `args.wave`: the next build starts the moment one ends - no wave waits for its slowest module; a QA agent holds no place, a fix round does.
+and which went over (`scripts/cf_timing.py` `clock_start`, `clock_pass`, `fix_line`). A still rendered from the module's own 3D model is a note (render it again larger); a picture from the old course or the knowledge base is a note, never a stop (2.73.2); a REBUILD (`fix.py rebuild`, `precheck.py --rebuild`) is never stopped by the small pictures a module already has - they are notes (the gas course has 100+ old-course pictures under 800 px across its 22 modules). The whole-course workflow builds the biggest approved module first (the most minutes in the approved table) in a rolling pool of `args.wave`: the next build starts the moment one ends - no wave waits for its slowest module; a QA agent holds no place, a fix round does.
 
 ## L65
 **Built out in:** now (2.78.0)
@@ -254,9 +254,13 @@ Advanced - 332 items of MC 7.14, 69 COVERED, 43 PARTLY, 18 GAP (fire the biggest
 **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, and `images` for its pictures); at the Stage 2 STOP every module says what it **keeps**, what it **modernises and makes digital**, and what it **adds**
 
 ## L67
+**Changed 2026-11-09 (2.118.0) on operator Aleksis Vējs's instruction after the Project Management review: *"draw the drawings 2d kit and 3d with a reason, dont just put it in just because"*.** REMOVED: the 60-80 % 3D share (`v_3d_share`, `check_course_package.py`, `p_3d_many`, `media-and-tasks.json` `three_d.min_share / max_share`, design choice `three-d-share`) and "a picture is 3D or a photograph, never a flat line drawing" - the figure's kind follows its why (`figure_why.py`). A 3D model of a flat idea (`v_3d_flat`) is now a must-fix. Heavy 3D stays a tablet-performance note (`perf3d`).
+
+**Kept by the owner's later decision (the picture rule):** the 60-80 % interactive-3D share and never more than 3 interactive-3D slides in a row are must-fix again (`v_3d_share`, `v_3d_in_a_row`, `check_course_package.py`, `three_d.min_share / max_share / max_in_a_row`); each 3D model still carries a spatial why, and a 3D model of a flat idea stays a must-fix.
+
 **Built out in:** styles and engines (2.88.0); the compiler writes the summary, task slide, step boxes, compare boxes, two-column figure, photo spots and zoom (2.89.0, compile/GUIDE.md §2h); the content script's new words next
 
-**Each slide gets the picture that shows what it teaches; every slide moves on Next** - interactive 3D, a photograph or a 2D-kit figure by the picture rule (`course-visuals` SKILL.md), never the figure kit's flat line drawing; Navy, never Pitch Black. The upgraded templates: `design/slide-templates/`, `course-module-ui/templates/gb_upgrade.css`, `gb_steps.js`, `gb_scene.js`
+**Each slide gets the picture that shows what it teaches; every slide moves on Next where its picture has something to show** - interactive 3D on 60-80 % of the teaching slides and never more than 3 in a row, the rest a photograph, static 3D, a 2D-kit or a custom figure, each drawn with a reason, by the picture rule (`course-visuals` SKILL.md); Navy, never Pitch Black. The upgraded templates: `design/slide-templates/`, `course-module-ui/templates/gb_upgrade.css`, `gb_steps.js`, `gb_scene.js`
 
 ## L68
 **Built out in:** now (2.97.0)
@@ -271,7 +275,7 @@ Advanced - 332 items of MC 7.14, 69 COVERED, 43 PARTLY, 18 GAP (fire the biggest
 ## L70
 **Built out in:** now
 
-**Built after the expert's Ready** - the expert's answers in the training app's editor are the approval: Ready on the pedagogy queues the whole course, at once for an expert the office trusts or after the office checked the answers and pressed Build course; the office PC builds it unattended (`course_portal.py watch --once`, every 10 minutes) and imports it into the staging editor as a draft. Unattended, the factory never stops to ask, makes no paid picture and never pushes - see *Auto build* below
+**Built after the expert's Ready** - the expert's answers in the training app's editor are the approval: Ready on the pedagogy queues the whole course, at once for an expert the office trusts or after the office checked the answers and pressed Build course; the office PC builds it unattended (`course_portal.py watch --once`, every 10 minutes) and imports it into the staging editor as a draft. Unattended, the factory never stops to ask, makes no paid picture and never pushes - see *Auto build* in SKILL.md
 
 ## L71
 **Built out in:** now

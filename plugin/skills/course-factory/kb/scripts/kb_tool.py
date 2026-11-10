@@ -8,6 +8,7 @@
     kb_tool.py decide  <course folder> --keep "<source path>" [--keep ...] [--different "<group id>" ...]
     kb_tool.py decision <course folder> --yes <kb> | --built <kb> | --declined "<reason>"
     kb_tool.py search  <kb folder> "<what you are looking for>" --course <course folder> [--top 12] [--all] [--stdout]
+    kb_tool.py build   <source folder> [--course <course folder>] [--engine auto|factory|exe] [--builder <folder>]
 
 WHY THIS EXISTS
 Until 2.13.0 the factory assumed every knowledge base was a docling extraction, and the owner's
@@ -25,8 +26,13 @@ WHAT IT DOES
   find      every knowledge base in the course folder, its sub-folders and one level up - by its
             files, never by its name. Writes nothing. One found: used. Several: a ready question. (2.13.1)
             None: the factory SUGGESTS making one, unasked - what it is, which of the folder's files it would
-            be built from, how (the Course Source Processor - not part of the factory), and what the course
-            loses without it - with a ready pop-up question in --json. (2.42.0)
+            be built from, how (`build`, or by hand where the builder is not on this computer), and what the
+            course loses without it - with a ready pop-up question in --json. (2.42.0)
+  build     makes the knowledge base itself: finds the Course KB Builder on this computer (the owner's
+            program, BUILD_KNOWLEDGE_BASE.exe - the Course Source Processor), runs it with no window on the
+            course's source files, waits, says how many sources it holds and records the decision with --course.
+            A second run reads only what changed. No builder found: exit 3, and `find` says what to tell the
+            operator.
   decision  records the operator's answer in intake.json - yes / built / declined with their reason - so
             it is asked once. Every module waits for it (scripts/course_gate.py). (2.42.0)
   sources   lists every source; groups EXACT duplicates (same file content - cited once, no
@@ -46,7 +52,8 @@ WHAT IT DOES
 
 WHAT IT NEVER DOES
 Write inside the knowledge base (L14). Every write goes to the course folder, and a course folder
-inside the knowledge base is refused. The SEARCH program writes its packs into the knowledge
+inside the knowledge base is refused. `build` starts the builder, and the builder writes its own
+KNOWLEDGE_BASE folder beside the files it read - no source file is changed. The SEARCH program writes its packs into the knowledge
 base's own retrieval/ folder; this one does not.
 Make up a course folder (2.48.1). --course must be an existing master folder or its course/ folder,
 outside the factory and every knowledge base; anything else stops with the folder it should have been.
@@ -56,12 +63,16 @@ from __future__ import annotations
 import argparse
 import difflib
 import hashlib
+import importlib.util
 import io
 import json
 import math
 import os
 import re
+import subprocess
 import sys
+import threading
+import time
 from collections import Counter, defaultdict
 from datetime import date
 
@@ -426,13 +437,43 @@ def toks(s):
     return [t for t in TOKEN.findall(s.lower()) if t not in STOP]
 
 
+# The Course Source Processor's own tokenizer (its indexer.py): letters AND digits, so "H2S", "CO2" and "162" are terms.
+CSP_TOKEN = re.compile(r"[^\W_]+", re.U)
+CSP_STOP = set("""a an and are as at be been but by can for from had has have if in into is it its may must not of on or
+shall should such than that the their them then there these those to was were when which will with would you your""".split())
+
+
+def toks_for(idx):
+    """The query tokenizer that matches how this index was built: the Course Source Processor's rule for its indexes
+    (index_version 5 or lower, or no tokenizer named), the letters-only rule for any other."""
+    try:
+        old = int(idx.get("index_version") or 0) <= 5
+    except (TypeError, ValueError):
+        old = True
+    if not (old or not idx.get("tokenizer")):
+        return toks
+    try:
+        shortest = int(idx.get("min_token_length") or 2)
+    except (TypeError, ValueError):
+        shortest = 2
+
+    def csp_toks(s):
+        out = []
+        for t in CSP_TOKEN.findall((s or "").lower()):
+            if len(t) < shortest or t in CSP_STOP or (t.isdigit() and len(t) > 4):
+                continue
+            out.append(t)
+        return out
+    return csp_toks
+
+
 def search_csp(kb, q, top, skip_paths):
     idx = load_json(os.path.join(kb, "search_index", "index.json"))
     k1, b = idx["bm25"]["k1"], idx["bm25"]["b"]
     N, avg = idx["chunk_count"], idx["avg_tokens_per_chunk"]
     chunks, df, post = idx["chunks"], idx["df"], idx["postings"]
     score = Counter()
-    for t in dict.fromkeys(toks(q)):
+    for t in dict.fromkeys(toks_for(idx)(q)):
         if t not in post:
             continue
         idf = math.log(1 + (N - df[t] + 0.5) / (df[t] + 0.5))
@@ -707,12 +748,28 @@ def suggestion(folder):
     else:
         lines.append("No source files were found in %s - put the programme, the model course, the codes and the old" % folder)
         lines.append("course into a source_files folder there first.")
-    lines += ["",
-              "How: the factory has no tool that builds one. The Course Source Processor does (Raivis Silkans's tool - it",
-              "is not part of the factory; ask him for it if you do not have it). Run it on this folder:",
-              "    %s" % root,
-              "It writes a KNOWLEDGE_BASE folder there; scanned pages are read by OCR. Then tell me, and I will find it.",
-              "",
+    kind, program = choose_engine(folder)
+    if program and total:
+        lines += ["",
+                  ("How: the factory makes it itself, with its own builder (PyMuPDF is installed here):"
+                   if kind == "factory" else
+                   "How: the factory makes it itself, with the Course KB Builder found on this computer:"),
+                  "    %s" % program,
+                  "    kb_tool.py build \"%s\" --course <course>" % folder,
+                  "No window opens and no source file is changed; it writes a KNOWLEDGE_BASE folder in",
+                  "    %s" % root,
+                  "Scanned pages are read by OCR, a few seconds each - a big scanned book takes a while.",
+                  ""]
+    else:
+        lines += ["",
+                  "How: the Course KB Builder makes one (the folder COURSE_KB_BUILDER with BUILD_KNOWLEDGE_BASE.exe - Raivis",
+                  "Silkans's tool; ask him for it if you do not have it). It was not found on this computer. Put the folder",
+                  "on the Desktop, or name it: kb_tool.py build <folder> --builder <its folder>. Or install PyMuPDF",
+                  "(python -m pip install pymupdf) and the factory makes it with its own builder. Or run the program by hand on:",
+                  "    %s" % root,
+                  "It writes a KNOWLEDGE_BASE folder there; scanned pages are read by OCR. Then tell me, and I will find it.",
+                  ""]
+    lines += [
               "Without it: facts are checked by opening whole PDFs instead of searching them, so a slide's facts are",
               "harder to trace to their page; two editions of one book (an old and a new MARPOL) cannot be sorted out",
               "for you; scanned pages with no text cannot be read; and the content scripts rest on fewer sources.",
@@ -724,12 +781,271 @@ def suggestion(folder):
     question = {"header": "Sources", "multiSelect": False,
                 "question": "There is no knowledge base for this course yet. Shall we make one before the modules are planned?",
                 "options": [
-                    {"label": "Yes - I will make it (Recommended)",
-                     "description": "Run the Course Source Processor on %s; tell me when it is done." % root},
+                    ({"label": "Yes - make it now (Recommended)",
+                      "description": "The factory makes it from %s itself; no source file is changed." % root}
+                     if program and total else
+                     {"label": "Yes - I will make it (Recommended)",
+                      "description": "Run the Course KB Builder on %s; tell me when it is done." % root}),
                     {"label": "There is one - I will point to it", "description": "A knowledge base made earlier, in another folder."},
                     {"label": "No - use the source files", "description": "Allowed. Facts are harder to trace to their page; "
                                                                           "the Stage 2 page will show this decision."}]}
-    return {"source_root": root, "files": total, "groups": groups, "text": "\n".join(lines), "question": question}
+    return {"source_root": root, "files": total, "groups": groups, "builder": program, "engine": kind, "text": "\n".join(lines),
+            "question": question}
+
+
+# ------------------------------------------------------------------ making one: the Course KB Builder, with no window
+BUILDER_EXE = "BUILD_KNOWLEDGE_BASE.exe"
+BUILDER_DIR = "COURSE_KB_BUILDER"
+
+
+def find_builder(folder, given=None):
+    """The Course KB Builder on this computer - the program that makes a knowledge base - or None. A place that is
+    named (--builder, NOVIKONTAS_KB_BUILDER) is the only one looked in; else beside the folder and up to four
+    folders above it, then the Desktop, Documents and the home folder, one folder deep."""
+    def program(p):
+        p = os.path.abspath(os.path.expanduser(p))
+        if os.path.isdir(p):
+            p = os.path.join(p, BUILDER_EXE)
+        return p if os.path.isfile(p) else None
+
+    named = given or os.environ.get("NOVIKONTAS_KB_BUILDER")
+    if named:
+        return program(named)
+    places = []
+    for i, a in enumerate(ancestors(folder)):
+        if i > 4:
+            break
+        places.append(os.path.join(a, BUILDER_DIR))
+    home = os.path.expanduser("~")
+    for base in (os.path.join(home, "Desktop"), os.path.join(home, "Documents"), home):
+        places.append(os.path.join(base, BUILDER_DIR))
+        if base != home and os.path.isdir(base):
+            try:
+                places += [os.path.join(base, n, BUILDER_DIR) for n in sorted(os.listdir(base))]
+            except OSError:
+                pass
+    for p in places:
+        if os.path.isdir(p) and program(p):
+            return program(p)
+    return None
+
+
+def builder_progress(program, since):
+    """The last line of the progress file the builder is writing beside itself, or ''."""
+    d = os.path.join(os.path.dirname(program), "_runtime", "data", "logs")
+    try:
+        logs = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(".log")]
+        logs = [p for p in logs if os.path.getmtime(p) >= since - 2]
+        if not logs:
+            return ""
+        with io.open(max(logs, key=os.path.getmtime), "r", encoding="utf-8", errors="replace") as f:
+            lines = [x.strip() for x in f.read()[-4000:].splitlines() if x.strip()]
+        return lines[-1].split(" | ", 1)[-1][:160] if lines else ""
+    except OSError:
+        return ""
+
+
+# Which builder makes a knowledge base. "exe" is the Course KB Builder program; "factory" is the factory's own builder
+# (kb/builder/kb_build.py, needs PyMuPDF). With --engine auto the first one in this order that is available runs.
+ENGINE_ORDER = ("exe", "factory")
+FACTORY_BUILD = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "builder", "kb_build.py")
+PYMUPDF_MIN = (1, 24)
+
+
+def factory_builder():
+    """The factory's own builder script when this computer can run it, else None. NOVIKONTAS_KB_BUILD_SCRIPT names another
+    script (a stand-in in the tests) and is then the only one used, with no PyMuPDF check."""
+    named = os.environ.get("NOVIKONTAS_KB_BUILD_SCRIPT")
+    path = os.path.abspath(os.path.expanduser(named)) if named else FACTORY_BUILD
+    if not os.path.isfile(path):
+        return None
+    if named:
+        return path
+    return path if pymupdf_ok() else None
+
+
+def pymupdf_ok():
+    """True when this Python can import PyMuPDF 1.24 or newer."""
+    importlib.invalidate_caches()
+    if importlib.util.find_spec("pymupdf") is None:
+        return False
+    try:
+        from importlib.metadata import version
+        return tuple(int(x) for x in re.findall(r"\d+", version("PyMuPDF"))[:2]) >= PYMUPDF_MIN
+    except Exception:                                   # noqa: BLE001 - no readable version, so not usable
+        return False
+
+
+def ensure_pymupdf(runner=None, ok=None):
+    """PyMuPDF for this Python, installed with pip when it is missing or too old - once, nothing asked. False when that
+    could not be done: no network, pip missing, or NOVIKONTAS_OFFLINE=1."""
+    if (ok or pymupdf_ok)():
+        return True
+    if os.environ.get("NOVIKONTAS_OFFLINE") == "1":
+        return False
+    run = runner or (lambda c: subprocess.run(c, stdin=subprocess.DEVNULL, timeout=900).returncode)
+    cmd = [sys.executable, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", "pymupdf>=1.24,<2"]
+    if sys.prefix == getattr(sys, "base_prefix", sys.prefix):       # no virtual environment: this user's own packages
+        cmd.insert(4, "--user")
+    print("Installing PyMuPDF, which the factory's own builder reads the source files with (once, about 20 MB) ...")
+    sys.stdout.flush()
+    try:
+        if run(cmd) != 0:
+            return False
+        # a new interpreter sees it; this one may not, so the check runs in one
+        return run([sys.executable, "-c", "import pymupdf"]) == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def choose_engine(folder, engine=None, builder=None):
+    """(engine name, its program) that `build` would use, or (None, None). engine: auto / factory / exe."""
+    engine = engine or os.environ.get("NOVIKONTAS_KB_ENGINE") or "auto"
+    order = ENGINE_ORDER if engine == "auto" else (engine,)
+    for name in order:
+        program = find_builder(folder, builder) if name == "exe" else factory_builder()
+        if program:
+            return name, program
+    return None, None
+
+
+def read_report(kb):
+    """How the builder's own manifest says each source went: (read whole, read with gaps, not read, copies of another
+    file). Statuses: ok and ocr_applied are read whole; ok_with_gaps is read with gaps; duplicate is a copy, counted on its
+    own; failed, empty, needs_ocr, anything with an error and anything unknown are not read."""
+    try:
+        rows = load_json(os.path.join(kb, "SOURCE_MANIFEST.json")).get("sources") or []
+    except (OSError, ValueError):
+        return None
+    if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+        return None
+    whole = gaps = bad = copies = 0
+    for r in rows:
+        status = str(r.get("status") or "ok")
+        if status == "duplicate":
+            copies += 1
+        elif r.get("error"):
+            bad += 1
+        elif status == "ok_with_gaps":
+            gaps += 1
+        elif status == "ocr_applied" or status.startswith("ok"):
+            whole += 1
+        else:
+            bad += 1
+    return whole, gaps, bad, copies
+
+
+def cmd_build(folder, course, builder, timeout_min, engine=None):
+    """Make (or refresh) the knowledge base of a course folder with a builder (see choose_engine) - no window, nothing asked.
+    The builder writes KNOWLEDGE_BASE into the folder it reads; this tool writes only the decision, into the course."""
+    folder = os.path.abspath(folder)
+    if not os.path.isdir(folder):
+        print("Stopped - that folder does not exist:\n    %s" % folder)
+        return 2
+    total, _groups, src_dir = source_files_of(folder)
+    root = src_dir or folder
+    if not total:
+        print("Stopped - there is nothing to make a knowledge base from in\n    %s\n  Put the programme, the model course, "
+              "the codes and the old course into a source_files folder there first." % folder)
+        return 2
+    wanted = engine or os.environ.get("NOVIKONTAS_KB_ENGINE") or "auto"
+    if wanted not in ("auto", "factory", "exe"):
+        print("Stopped - the engine is auto, factory or exe, not %r." % wanted)
+        return 2
+    kind, program = choose_engine(folder, wanted, builder)
+    if (not program and wanted in ("auto", "factory") and not os.environ.get("NOVIKONTAS_KB_BUILD_SCRIPT")
+            and os.path.isfile(FACTORY_BUILD) and ensure_pymupdf()):
+        kind, program = "factory", FACTORY_BUILD        # the factory's builder, PyMuPDF installed for it just now
+    if not program:
+        named = builder or os.environ.get("NOVIKONTAS_KB_BUILDER")
+        exe_text = ("the Course KB Builder was not found%s.\n  It is the folder %s with %s in it (Raivis Silkans's tool). "
+                    "Put that folder on the Desktop,\n  or name where it is: kb_tool.py build <folder> --builder <its folder>."
+                    % ((" at\n    %s" % named) if named else " on this computer", BUILDER_DIR, BUILDER_EXE))
+        factory_text = ("the factory's own builder cannot run here: it needs PyMuPDF 1.24 or newer, and installing it "
+                        "did not work (no network?).\n  Install it with: python -m pip install pymupdf")
+        text = {"exe": exe_text, "factory": factory_text,
+                "auto": "no builder is available. Either\n  - %s\n  or\n  - %s" % (factory_text, exe_text)}[wanted]
+        print("Stopped - %s\n  Nothing was made; `kb_tool.py find` prints what to tell the operator." % text)
+        return 3
+    own = kind == "factory"
+    kb = os.path.join(root, "KNOWLEDGE_BASE")
+    manifest = os.path.join(kb, "SOURCE_MANIFEST.json")
+    had = detect(kb)
+    print("%s the knowledge base from %d file(s) in\n    %s\n  with %s%s\n  No window opens. Scanned pages take a few "
+          "seconds each; files read before are not read again."
+          % ("Refreshing" if had else "Making", total, root, "the factory's own builder, " if own else "", program))
+    sys.stdout.flush()
+    started = time.time()
+    if own:
+        cmd = [sys.executable, program, root]
+    else:
+        cmd = ([sys.executable, program] if program.lower().endswith(".py") else [program]) + ["--cli", root]
+    lines = []                                                   # the factory's builder says what it is doing on stdout
+
+    def drain(pipe):
+        for raw in pipe:
+            if raw.strip():
+                lines.append(raw.strip())
+
+    try:
+        if own:
+            p = subprocess.Popen(cmd, cwd=os.path.dirname(program), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+        else:
+            p = subprocess.Popen(cmd, cwd=os.path.dirname(program), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL)
+    except OSError as e:
+        print("Stopped - the builder could not be started: %s%s" % (e, "" if own else
+              "\n  Double-click CHECK_THIS_COMPUTER beside it to see why."))
+        return 3
+    reader = None
+    if own:
+        reader = threading.Thread(target=drain, args=(p.stdout,), daemon=True)
+        reader.start()
+
+    def latest():
+        return (lines[-1][:160] if lines else "") if own else builder_progress(program, started)
+
+    said, said_at = "", started
+    while p.poll() is None:
+        if time.time() - started > timeout_min * 60:
+            p.kill()
+            print("Stopped after %d min - the builder was still working%s.\n  Run the same command again: files already "
+                  "read are not read again." % (timeout_min, (" (%s)" % said) if said else ""))
+            return 4
+        time.sleep(1)
+        line = latest()
+        if line and line != said and time.time() - said_at >= (3 if own else 30):
+            print("  ... " + line)
+            sys.stdout.flush()
+            said, said_at = line, time.time()
+    if reader:
+        reader.join(5)
+        if latest() and latest() != said:
+            print("  ... " + latest())
+    fmt = detect(kb)
+    fresh = fmt and os.path.isfile(manifest) and os.path.getmtime(manifest) >= started - 2
+    if not fmt or (not fresh and p.returncode):
+        last = latest()
+        print("Stopped - the builder ended (code %s) and %s in\n    %s%s%s"
+              % (p.returncode, "left the earlier knowledge base untouched" if fmt else "left no knowledge base", root,
+                 ("\n  Its last line: " + last) if last else "",
+                 "" if own else "\n  Its own record of the run is in _runtime\\data\\logs beside the builder."))
+        return 5
+    s = kb_summary(kb, fmt)
+    rep = read_report(kb)
+    detail = ""
+    if rep and sum(rep):
+        detail = (": %d read whole, %d with gaps (a scanned page with no words, a table to check by eye), %d not read%s.%s"
+                  % (rep[0], rep[1], rep[2], (", and %d copies of another file (read once)" % rep[3]) if rep[3] else "",
+                     "\n  What to look at is in NEEDS_ATTENTION.md there - tell the operator the numbers." if rep[1] or rep[2] else ""))
+    print("\nKnowledge base %s in %d s:\n    %s\n  %s sources%s"
+          % ("made" if not had else ("refreshed" if fresh else "already up to date"), round(time.time() - started), kb,
+             s["sources"] if s["sources"] is not None else "?", detail or "."))
+    if course:
+        return cmd_decision(course, None, kb, None)
+    print("  Record it for the course: kb_tool.py decision <course> --built \"%s\"" % kb)
+    return 0
 
 
 def cmd_decision(course, yes, built, declined):
@@ -869,6 +1185,12 @@ def main(argv=None):
     q = sub.add_parser("search"); q.add_argument("kb"); q.add_argument("query"); q.add_argument("--course", required=True)
     q.add_argument("--top", type=int, default=12); q.add_argument("--all", action="store_true")
     q.add_argument("--stdout", action="store_true", help="print the pack, write nothing at all")
+    b = sub.add_parser("build"); b.add_argument("folder"); b.add_argument("--course")
+    b.add_argument("--builder", metavar="FOLDER", help="where the Course KB Builder is, when it is not found by itself")
+    b.add_argument("--engine", choices=("auto", "factory", "exe"), default=None,
+                   help="which builder makes it: the factory's own (needs PyMuPDF), the Course KB Builder program, or auto "
+                        "(env NOVIKONTAS_KB_ENGINE, else auto)")
+    b.add_argument("--timeout-min", type=int, default=180)
     a = ap.parse_args(argv)
     if getattr(a, "course", None):                 # what the factory writes goes to course\ (L40)
         given = a.course
@@ -887,6 +1209,8 @@ def main(argv=None):
         return cmd_decide(a.course, set(a.keep), set(a.different))
     if a.cmd == "decision":
         return cmd_decision(a.course, a.yes, a.built, a.declined)
+    if a.cmd == "build":
+        return cmd_build(a.folder, a.course, a.builder, a.timeout_min, a.engine)
     return cmd_search(a.kb, a.query, a.course, a.top, a.all, a.stdout)
 
 

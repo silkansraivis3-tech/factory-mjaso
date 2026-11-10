@@ -1,7 +1,7 @@
 # 3D kit - the scene spec (`*.kit3d.json`)
 
 The 3D kit (`kit3d.js`, `kit3d.css`, on the factory's three.js r128) draws a 3D scene from a short JSON spec, the
-way the figure kit (`../kit/`) draws a 2D figure. It is made from the best of the nine hand-made 3D scenes of the IGF
+way the 2D kits (`../kit/`, `../kit2d/`) draw a figure. It is made from the best of the nine hand-made 3D scenes of the IGF
 course (M01 hull, M02 tank, M03 bunker station, M04 leak, M05 spaces, M06 trapped liquid, M07 zones, M09 detection,
 M15 venting). A builder never writes three.js for a slide again: they write the parts, the labels and the steps.
 

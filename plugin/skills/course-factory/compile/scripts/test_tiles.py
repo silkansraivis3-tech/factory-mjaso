@@ -54,6 +54,9 @@ def main():
         photos(md, ["t1.png", "t2.png", "t3.png", "t4.png"])
         sc = tc.cs.load(os.path.join(c, "working_claude", "script", "M01.json"))
         sid = next(x["id"] for x in sc["screens"] if x["kind"] == "slide" and len(tc.cs.lines_of(x.get("text"))) >= 2)
+        # 2.116.0: this slide's words (more than a column holds) used to be paged automatically; the factory never does that now,
+        # so the build sheet asks for the parts it needs
+        tc.build_of(c, lambda b: b["screens"]["s03"].update(template="content-in-parts"))     # the fixture's long s03 asks for its parts too
         tc.build_of(c, lambda b: b["screens"].update({sid: {"tiles": ["assets/img/t1.png", {"photo": "assets/img/t2.png", "caption": "The shipper's SDS"},
                                                                      "assets/img/t3.png", "assets/img/t4.png"]}}))
         code, out = run(tc.COMPILE, c, "--module", "1")

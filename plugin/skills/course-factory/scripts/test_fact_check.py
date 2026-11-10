@@ -20,6 +20,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -89,7 +90,33 @@ def main():
         kb = os.path.join(tmp, "KB")
         make_kb(kb)
 
-        print("-- the claims")
+        print("-- the search tokenizes a query the way the index was built (digits kept)")
+        kd = os.path.join(tmp, "KBD")
+        os.makedirs(os.path.join(kd, "search_index"))
+        digit_texts = [("Gas.pdf", 3, "Hydrogen sulphide H2S exposure limit is 10 ppm for a working shift."),
+                       ("Lng.pdf", 9, "Methane boils at -162 degrees C at atmospheric pressure in an LNG tank."),
+                       ("Fire.pdf", 2, "Fire extinguishing with CO2 in the engine room needs a release alarm.")]
+        dchunks, ddf, dpost, doff = [], Counter(), {}, 0
+        with open(os.path.join(kd, "search_index", "chunks.jsonl"), "wb") as f:
+            for i, (name, page, text) in enumerate(digit_texts):
+                b = (json.dumps({"source_filename": name, "source_path": name, "page_start": page, "page_end": page, "text": text}) + "\n").encode("utf-8")
+                f.write(b)
+                dt = [t for t in re.findall(r"[^\W_]+", text.lower()) if len(t) >= 2 and t not in kb_tool.CSP_STOP]
+                dchunks.append({"n": len(dt), "off": doff, "bytes": len(b), "nav": 0})
+                for t, tf in Counter(dt).items():
+                    ddf[t] += 1
+                    dpost.setdefault(t, []).append([i, tf])
+                doff += len(b)
+        io.open(os.path.join(kd, "search_index", "index.json"), "w", encoding="utf-8").write(json.dumps({
+            "index_version": 5, "bm25": {"k1": 1.2, "b": 0.75}, "chunk_count": len(dchunks),
+            "avg_tokens_per_chunk": sum(c["n"] for c in dchunks) / float(len(dchunks)), "chunks": dchunks, "df": dict(ddf), "postings": dpost}))
+        di = fc.Index([kd])
+        check("'H2S exposure limit' finds the H2S passage", (di.search("H2S exposure limit", 1) or [{}])[0].get("src") == "Gas.pdf p.3",
+              di.search("H2S exposure limit", 1))
+        check("'boiling point -162' finds the passage with 162", (di.search("boiling point -162", 1) or [{}])[0].get("src") == "Lng.pdf p.9",
+              di.search("boiling point -162", 1))
+
+        print("\n-- the claims")
         got = [(sid, field, text) for _, sid, field, _, text in fc.claims_of(SCRIPT)]
         texts = [x[2] for x in got]
         check("a slide's lines are claims; a short line and a question are not",

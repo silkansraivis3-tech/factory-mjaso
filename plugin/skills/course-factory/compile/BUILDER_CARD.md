@@ -38,9 +38,10 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
   make the credit), CLEARED, PROJECT_OWNED, OWNER_CLEARED, RIGHTS_REVIEW_REQUIRED, REJECTED - no other word.
 - Fill the build sheet (each slide's picture, layout, photos - photos from `assets/img` or the Gas Library copy the
   operator names); a starter figure spec is edited only for what the build prints (`figures/MNN/sNN.kit.json`; parts and options:
-  `course-visuals/kit/CATALOGUE.md`; never kit.js). **Never a box for a thing (L55 (4)):** a machine, vessel, device or
-  structure the kit lacks is MADE as a kit part in the module's `assets/kit_parts.js` (`course-visuals/kit/PARTS.md`) - a
-  `space` box a pipe runs into, or one named for equipment, fails the build (BOX). A 3D slide: its `sNN.kit3d.json` (`course-visuals/kit3d/SPEC.md`,
+  `course-visuals/kit/CATALOGUE.md`; never kit.js). **Kit first, a custom figure allowed (L55):** a machine, vessel, device or
+  structure the kit lacks is a kit part made in the module's `assets/kit_parts.js` (`course-visuals/kit/PARTS.md`), or a
+  `custom_figure` when no kit part shows the idea; a labelled box standing for equipment - a `space` box a pipe runs into,
+  or one named for equipment - fails the build (BOX). A 3D slide, only where the figure's why is spatial: its `sNN.kit3d.json` (`course-visuals/kit3d/SPEC.md`,
   `PARTS.md`) - place the parts as on board, delete `"_todo"`. The workflow's 3D step checks and photographs it after you.
 - **BUILD FIRST, then fix only what the build prints** - redrawing figures by hand costs the build. Fill the blanks the build names and
   run the build - the starters are drawn already: never delete or rewrite a starter, never open the studio on a figure
@@ -51,6 +52,13 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
   SAME command with `--wait` until it answers. Never a second build meanwhile, never an edit while it runs, never end your
   turn while it runs. A first build waits its turn behind another module's first build (one at a time on this computer) -
   expected: it answers STILL BUILDING meanwhile; keep running the same command with `--wait`.
+
+## What a builder must also know
+- Draw 2D figures with the 2D kit (`course-visuals/kit2d/SPEC.md`) beside the kit; 3D only where the figure's why is spatial.
+- Every figure spec carries `"why"` + `"why_text"` - what the figure's steps serve.
+- When no kit part shows the idea, write a `custom_figure` (an offline, self-contained file whose steps Next drives).
+- The walk review is never the builder's: the workflow's walk judge runs it (by hand: the lead session). The "WALK REVIEW"
+  line under MODULE CLEAN says where it stands; never run `walk_review.py` - a builder's own signature is refused.
 
 ## Reading its answer - one line per problem, with its fix and file
 The answer lists only what fails (the full log's path is its last line - open it only when a line is not enough).
@@ -64,16 +72,13 @@ The answer lists only what fails (the full log's path is its last line - open it
 | `... a fit was saved as ... candidate.kit.json` | it was not applied (it would add a meaning BLOCK, or needs the photo row off): fix the spec yourself |
 | `COMPILE ... nothing built: ... starter's blanks` | fill exactly what it names in the build sheet (or `compile_module.py ... --fill-slots`: placeholders) |
 | `PHASE A CLEAN MNN ... picture slot(s) still hold Phase A's stand-ins` | fill each from the needs file (above), then ONE build |
-| `COMPILE ... looks exactly like the slide before it and the one before that (L62)` - three in a row; two in a row is only a `REVIEW -` line | the build's layout solver tried the slide before it its next way already; still there: give one of the two another picture, or a template, in the build sheet - check with `--slides` first |
 | `COMPILE ... the words say X, the drawing's readout shows Y` | make the step's readout agree (`play`), or `"numbers_differ": "<why>"` |
 | `COMPILE ... the photo ... is "not a X" by its own record` | a picture of the thing itself, or `"photo_ok": "<why>"` |
 | `COMPILE ... the real photograph ... could carry` a question | use the line it gives (areas in % of the photo), or `"photo_declined": "<why>"` |
-| `AUDITS ... scrolls / over-filled` | the next build's pre-check settles it by itself (the words' column at 60 %, the words in parts, both, its other ways - `LAYOUT (pre-check) - ...` says what, nothing to copy). It says `no way found`: fewer words in a part (`"parts"`), a smaller picture beside them - try it with `--slides` (seconds), then build |
+| `AUDITS ... scrolls / over-filled` | the factory never pages the words: a smaller picture beside them, the words' column wider, or `"parts"` in the build sheet - try it with `--slides` (seconds), then build |
 | `LAYOUT (pre-check) - <slide> ... settled` | nothing - the build did it (kept beside the measured-out ways in `MNN_layout_avoid.json`) |
 | `AUDITS ... small / low contrast` on a drawing | the figure's column is too narrow - a wider layout, fewer words in the drawing |
 | `TASK PAGES - FAIL` | a question graded wrong or a leader line crosses words: the sheet's `"labels"` / `"areas"`, or the drawing |
-| `RECOMMENDED (L60)` | build the scene on that slide, or `"declined_3d": "builder: <reason>"` at the TOP of the sheet - never unanswered |
-| `LAYOUT - ... built again their next way` | nothing - the build did it (L62) |
 | `(nothing changed since this build's last answer ...)` | the same report again, nothing built: change what it lists first - a build with no change only repeats it |
 | `SAME FINDING 3 BUILDS RUNNING: ...` | your changes have not moved it: never build for it again - list it in your report; fix only what else the build prints |
 | `STOP - everything this build prints has failed 3 builds running` | STOP now and report: the judges and the one fix round take it from here |
@@ -88,10 +93,11 @@ At **PASS**, or **`FAIL MNN - course package`** with **`MODULE CLEAN`** under it
 Or when everything the build prints has failed three builds running - the build says **`STOP`**: report it with
 its FAIL line and list what is left. More builds do not move it; a FAIL with what is left listed goes straight to the
 judges - no fresh agent carries on (that is only for a builder that ended mid-build or with no build answer).
-Do NOT review the sheets and do not polish - the workflow's FIGURE review (every figure at projector size, a reviewer who
-did not build it) and the QA agent look after you. Anything you would polish: list it.
+Do NOT review your own module and do not polish - the workflow's FIGURE review (every figure at projector size, a reviewer
+who did not build it), the WALK judge (every slide at every stop and every question of every task page - the one visual
+review; never run walk_review.py yourself) and the QA agent look after you. Anything you would polish: list it.
 
 ## Report (your final message)
 First line: the PASS / FAIL line build_module.py printed. Then: the full log's path, how many build_module.py runs, every
 honesty marker with its source, the Track A buckets and Track B ratio the build printed, what moved to the handout, every
-line under "To fix" or "left as it is", the L60 answer (the scene's slide, or the reason), and what you would polish.
+line under "To fix" or "left as it is", and what you would polish.

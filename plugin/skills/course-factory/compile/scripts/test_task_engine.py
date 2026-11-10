@@ -981,7 +981,8 @@ def deck_fit_part(exe, tmp):
         tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
             # s02 asks for the split photo by name: since 2.62.1 a long full-screen photo is a photo column by default
             "s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/img/deck.jpg", "composition": "two-col"},
-            "s03": {"figure": "assets/img/station.jpg", "composition": "wide-left", "split": 0.6},
+            # 2.116.0: the 121 words are paged only because the sheet asks - the factory never pages them by itself
+            "s03": {"figure": "assets/img/station.jpg", "composition": "wide-left", "split": 0.6, "template": "content-in-parts"},
             "s04": {"figure": "assets/img/hose.jpg", "composition": "stage"}, "t01": {"try_tablet": False}}})
         code, out = tcm.run(tcm.COMPILE, c, "--module", "1")
         page = os.path.join(md, "presentation", "index.html")
@@ -1129,7 +1130,7 @@ def strip_contrast_part(exe, tmp):
         MID_CREDIT, description="A type C fuel tank on a ship's deck.", shows=["fuel tank"])}))
     tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "corner.kit.json"), CORNER_KIT)
     tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
-        "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "corner.kit.json", "composition": "two-col"},
+        "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "corner.kit.json", "composition": "two-col", "photo_row": True},
         "s04": {"figure": "hull.svg", "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
     page = os.path.join(md, "presentation", "index.html")
@@ -1229,7 +1230,7 @@ def ship_plan_part(exe, tmp):
     tcm.cs.save(os.path.join(img, "_photo_meta.json"), meta)
     tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "plan.kit.json"), SHIP_PLAN)
     tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
-        "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "plan.kit.json", "composition": "two-col"},
+        "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "plan.kit.json", "composition": "two-col", "photo_row": True},
         "s04": {"figure": "hull.svg", "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
     page = os.path.join(md, "presentation", "index.html")

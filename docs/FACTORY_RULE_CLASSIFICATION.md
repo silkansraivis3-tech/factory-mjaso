@@ -1,5 +1,7 @@
 # Factory rule classification
 
+> Phase 1 document (2026-09): a record of the plan at that time, not the current state. The laws in force are the table in `plugin/skills/course-factory/SKILL.md`.
+
 Every rule, procedure and artefact found in the golden course and the existing skills, sorted into
 the eight categories Phase 1 asked for. Duplicates are consolidated. Contradictions are named at the
 end rather than silently resolved.

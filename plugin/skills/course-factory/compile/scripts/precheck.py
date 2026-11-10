@@ -15,13 +15,13 @@ MUST (the build stops before its figures; build_module.py runs this first):
   * a picture the build sheet names that is not there (figure, figure_b, inset, aside, a photograph inside a drawing)
   * a photograph under 800 px on its long side - enlarging cannot make it sharp: find a larger original (1600 px or
     more), or record in its _photo_meta.json entry why this one stays: "low_resolution_ok": "<reason>"
-  * three teaching slides in a row with no picture (L61)
 NOTE (said, never stops it):
   * a picture whose rights are not cleared (RIGHTS_REVIEW_REQUIRED) - the build carries on; publishing is refused
   * a photograph of 800-1023 px - the compile enlarges it (L62), a larger original would be sharper; from 1024 px it is
     accepted without a note
   * a teaching slide with more than the word guideline's picture_from words and no picture (theory-rules.json "slide"):
-    a picture goes beside the words, or the slide is shown in steps - past steps_from the build does that by itself
+    fine when its words read on their own; else a picture goes beside the words, or the slide is shown in steps - past
+    steps_from the build does that by itself
   * the same template forced on three slides in a row or more - the compiler chooses and varies the look (L62); a
     forced template only takes that away
 The still picture inside a 3D scene (its poster) is not judged: the live scene is what the room sees. A still the module
@@ -97,7 +97,7 @@ def check(course, module, rebuild=False):
     sheets = build.get("screens") or {}
     must, notes = [], []
     photos = {}                     # rel -> [slide ids]
-    run_plain, forced, runs = [], None, []   # L61's run of slides with no picture; L62's runs of one forced template
+    forced, runs = None, []   # L62's runs of one forced template
     for s in script.get("screens", []):
         if s.get("kind") not in cs.INSTRUCTOR:
             continue
@@ -122,7 +122,7 @@ def check(course, module, rebuild=False):
                 forced = (want, [sid]) if want else None
         # every picture the slide names is there
         has_pic = False
-        for key in ("figure", "figure_b", "aside"):
+        for key in ("figure", "figure_b", "aside", "custom_figure"):          # 2.116.0: a custom figure's file is there too
             rel = (b.get(key) or "").replace("\\", "/")
             if not rel:
                 continue
@@ -133,7 +133,7 @@ def check(course, module, rebuild=False):
             if err:
                 must.append("%s: its %s %s %s" % (where, key, rel, err))
                 continue
-            has_pic = has_pic or key == "figure"
+            has_pic = has_pic or key in ("figure", "custom_figure")
             if rel.lower().endswith(PHOTO_EXT):
                 photos.setdefault(rel, []).append(sid)
             poster = bool(re.search(r"\bdata-(?:3d|model3d|model)\b", body or ""))   # a 3D scene's still: not judged
@@ -159,16 +159,13 @@ def check(course, module, rebuild=False):
                 must.append("%s: its inset photograph %s is not in the module folder" % (where, rel))
             else:
                 photos.setdefault(rel, []).append(sid)
-        # L61 - dense words have a picture; never three teaching slides in a row without one
+        # 2.116.0 (operator, 2026-11-09): no picture quota - a slide may have no picture when its words read on their own.
+        # Dense words with no picture are a note only; the "three in a row" rule is gone.
         if s.get("kind") == "slide" and not s.get("recap"):
             if not has_pic and words > cm.PICTURE_FROM:
                 notes.append("%s: %d words and no picture beside them - over %d words a picture goes beside the words, or the "
                              "slide is shown in steps (\"parts\" in the build sheet); past %d words the build shows it in steps "
                              "by itself (theory-rules.json \"slide\")" % (where, words, cm.PICTURE_FROM, cm.STEPS_FROM))
-            run_plain = run_plain + [sid] if not has_pic else []
-            if len(run_plain) == cm.NO_VISUAL_RUN + 1:
-                must.append("%s: three teaching slides in a row without a picture (%s) - give one of them a picture (L61)"
-                            % (where, ", ".join(run_plain)))
     if forced and len(forced[1]) >= FORCED_RUN:
         runs.append(forced)
     for tid, ids in runs:

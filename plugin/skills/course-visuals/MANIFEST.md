@@ -76,9 +76,13 @@ review/GUIDE.md                 the quality gate that asks whether it teaches
   knowledge/motion-rules.json       categories, four questions, 9 rejected patterns
   knowledge/visual-floor.json       measurable floor + 14 human review questions
 scripts/resolve_asset.py        pipeline levels 1-2, mechanically (2a: the subject library, by description)
-scripts/subject_library.py      find the shared subject libraries; find / contribute / sync through them
+scripts/subject_library.py      the course libraries: ensure (at intake) / create / locate / covers / find / route /
+                                contribute / sync
 scripts/test_subject_library.py the locator, the rights gate, an absent library
-source/knowledge/subject-libraries.json   how a subject library is found, what may ship
+scripts/test_course_libraries.py  create, ensure, route, contribute, find across libraries, the template's tools
+source/knowledge/subject-libraries.json   how the libraries are found, where a finding goes, what may ship
+source/library_template/        what a new library starts with: tools/ (find, search, use_asset, contribute,
+                                build_library), empty knowledge files, library_config.json
 scripts/check_visuals.py        deterministic visual checks
 scripts/check_assets.py         provenance, licences, rights
 templates/                      VISUAL_STORYBOARD.md · visual-notes.md

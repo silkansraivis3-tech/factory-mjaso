@@ -1,0 +1,4 @@
+{
+  "_about": "The shared topic list of this library. Assets and sources are tagged with these ids. A topic: {\"id\": \"T01\", \"title\": \"...\", \"keywords\": [lower-case words or stems matched against file name, description, shows and teaching purpose], \"courses\": {\"<course id>\": [\"module01\", ...]}}.",
+  "topics": []
+}

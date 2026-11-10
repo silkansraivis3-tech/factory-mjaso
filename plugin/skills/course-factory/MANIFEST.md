@@ -7,6 +7,158 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.125.0 · Scanned pages read whole; the walk review cannot pass what it was not shown (2026-11-10)
+
+- `kb/builder/ocr.py`: `grey_copy` (moved from `pdf.py`), lines cut at `GAP_CUT`, column reflow, the print-cell coverage
+  check (`INK_DPI`, `INK_CELL`, `LOW_COVER`, `MIN_PRINT_CELLS`, `LOW_CHARS_PER_CELL`), `complete_reading` (uncovered
+  regions again at 300 dpi). `kb_build.py`: `ocr_low_pages`, `ocr_empty_pages`, the run's `ocr_pages_low` /
+  `ocr_pages_empty`; `write.py` lists both in `NEEDS_ATTENTION.md`. `cache.py` `EXTRACT_VERSION = 2`.
+- `scripts/course_portal.py` `failed_builds`: only a fail list that is exactly "course package" is let through.
+- In `course-module-ux/measure/scripts/`: `review_sheets.mjs` (`ids`, `missed` in `tasks.json`; a kept walk needs `ids`),
+  `walk_review.py` (`Deck.unshot`, units with no picture for missed questions), `fit_gate.py` (a failed shot is a stop
+  with no file). Tests: `test_walk_review.py`, `test_fit_gate.py`, `test_course_portal.py`, `test_builder.py`.
+- The measurements and the known gaps are in the release row of `_claude/CONTEXT.md`.
+
+## 2.123.0 · The factory's own knowledge-base builder (2026-11-10)
+
+- `kb/builder/`: `kb_build.py` (the command, progress lines, build into `KNOWLEDGE_BASE.building` then swap), `discover.py`,
+  `pdf.py`, `structure.py` (after the Course Source Processor's), `ocr.py` (PyMuPDF's Tesseract, rotation retry, the page's
+  language, `ensure_tessdata` with the pinned files), `lang.py`, `office.py` (zipfile + XML), `chunk.py`, `index.py` (the
+  version-5 tokenizer), `write.py`, `cache.py`, `pool.py`, `common.py`; `test_builder.py`; `compare_kb.py` (test only: a
+  knowledge base the .exe made against a new one - sources, units, characters, word coverage, chunks, search).
+- `cache.py` `EXTRACT_VERSION`: raise it only when a release changes how a page is read - every computer then reads all
+  its sources again once.
+- `kb/scripts/kb_tool.py`: `ENGINE_ORDER`, `factory_builder`, `choose_engine`, `pymupdf_ok`, `ensure_pymupdf`, `toks_for`,
+  `read_report` with copies; `scripts/fact_check.py` uses `toks_for`; `scripts/photo_catalogue.py` `page_words`.
+- The reading models are not in the repository (10.7 MB); the pin and checksums are in `ocr.py`. Flipping `ENGINE_ORDER`
+  to the factory's builder first waits for the gas-basic comparison (1,398 scanned pages).
+- Known gaps are listed in the release row of `_claude/CONTEXT.md`.
+
+## 2.122.0 · The walk review is part of the whole-course workflow, covers the task pages, and is cheap to repeat (2026-11-10)
+
+(2.121.0 is the knowledge-base release, built beside this one on `aleksis/factory-flow-audit`.)
+
+Audit `_claude/AUDIT_2026-11-10_FACTORY_FLOW.md` section 3, items 1-3: the walk review (2.118.0) gated "done" and the
+upload, but no workflow build ever ran it, a one-slide fix made every slide stale, and its loop had no end.
+
+- `orchestration/workflows/build_course.js`: a **walk judge** beside the 3D, figure and QA judges (`walk:N`, Sonnet,
+  never the builder or a fixer; one a module, reading the sheets in batches of up to 4). It runs `walk_review.py prepare
+  --stale`, reads the contact sheets, signs against the builder's name and returns `verify`'s answer. Its fails join the
+  module's ONE fix round (`fixAll` "(WALK)", a figure's fixer hears what the walk said of its own slide); after any fix
+  round - or a 3D check that rebuilt - `walk:N+fix` / `walk:N+3d` looks once more, only at the slides that changed, and
+  signs against the builder AND every agent that changed the module since (`--built-by` for `fix:N`, each `fixfig:N:sNN`,
+  `fixbuild:N`, a rebuilding `3d:N`). Never a third look: what is left goes to `for_aleksis` with slide, stop and the
+  accept command, the module is not failed for it, and the result carries `walk.not_passed` and says so in `next`.
+  **A module that has had its two rounds** (a second run of the workflow) sends no walk fail to a fixer; after another
+  judge's fix round its walk judge only reads the state, and the operator is told to reopen it (accept is refused for a
+  changed slide). **The final assessment is walked**: `walk:final` after `build:final`, `--module final`, `final_walk`
+  in the result, no fix round. The judge is told never to run `accept` / `reopen`, and what to do when the deck changed
+  under it (no "wait a minute"). QA's check build runs with `--no-walk` (the walk pictures are the walk judge's).
+- `compile/scripts/build_module.py`: `walk_gate()`. A module of a parallel build (`--no-course-pages`, "course package"
+  the only open fail) reaches the walk and prints `WALK REVIEW - ...` under `MODULE CLEAN` (under `PASS` when the course
+  was assembled before) and never fails on it; a build by itself fails on
+  "walk review" as before and now prepares only the stale slides' sheets. Its task-page job walks the task pages
+  (`review_sheets.mjs --tasks-only --walk-dir`, below) and with `--no-walk` only grades them (`--grade-only`); the
+  sheet-review promotion, `--reviewed` and `working_claude\review\MNN` are gone. The build's "nothing changed since the
+  last answer" reads the walk review too: a
+  review signed, accepted or reopened since that answer is a change, so the old answer is not repeated with a walk
+  line that no longer stands.
+- `course-module-ux/measure/scripts/walk_review.py` + `fit_gate.py`: `walk.json` and the signed file carry **each
+  slide's fingerprint - the one the audits' cache uses** (`check_cache.fingerprints`: the slide's markup, the module's
+  stylesheet and scripts, the shell, the files it names), stamped before the walk starts: a changed `gb_*.js`, kit part
+  or photo makes its slides stale. `verify` kinds are missing / stale / incomplete / failing and name the slides; a
+  slide of the deck that was never walked is `incomplete`, never a pass. `prepare --stale` shows only slides with no
+  verdict for what they show now and records what each sheet showed (`sheets/manifest.json`); **`sign` signs for what
+  the sheets showed** and refuses a slide built again since. `sign --built-by` (repeatable, kept as a list) records the
+  reviewer and everyone who built or fixed, and refuses the signature of any of them (exit 2) and a third round
+  (`MAX_ROUNDS = 2`, exit 3) - the round is the module's, so a round-2 fail is not signed over and a renamed slide does
+  not start again; only a real `true` with no fails is a pass. `accept --by --why [--slides]` records the operator's
+  accept of the open fails (refused for a slide that changed), `reopen --by` opens two more rounds, both recorded with
+  how they were run; `verify` lists open fails with slide and stop. The final assessment has one name everywhere:
+  `--module final`, `walk/FINAL`, `FINAL_walk_review.json`. A review signed before this release (one whole-deck hash)
+  stands for the deck it was signed for; a change after it makes every slide stale once.
+- `scripts/fix.py` `check --kind walk`: the same rules, and the open fails printed. `scripts/course_portal.py`: the
+  upload asks for the final's review under the same name, and lists what the operator accepted.
+- **The task pages are walked too** (Aleksis: "add trainee task pages as well"; audit section 4, item 5). Every page of
+  `tasks\` and `assessment\` (never an answer key) is answered like a trainee by `review_sheets.mjs --walk-dir`: per
+  question a picture as asked at 1280 x 800 and at 1024 x 768, answered wrong and checked (the tap areas and drop zones
+  outlined), answered right and checked, and the page's last screen after a run answered wrong and one answered right
+  (and scrolled to its end where it is longer than the screen) - each group of a page whose questions differ per group
+  in turn - into `walk\MNN\tasks\<page>\` with `tasks.json`; the grading is still checked by script. A blind page (the
+  final) records an answer and goes straight on, so its answer is photographed in place, before the press that records
+  it. A calculation is answered with the middle of the accepted values - the answer itself, not the edge of its
+  tolerance (a reviewer read 329 for 330 as a wrong key). On a contact sheet the picture's number, and what a task picture shows, stand in a band above the picture (on the
+  picture the number hid the screen's first words). `walk_review.py`: one verdict per question (`<page>.<question>`) and per last screen (`<page>.result`), **one
+  fingerprint per task page** (`check_cache.fingerprints`: the page and what it loads), stamped before the walk
+  (`tasks_stamp.json`) - a changed page makes its own questions stale and nothing else. `prepare` makes their contact
+  sheets and puts a **task rubric** of seven points in the brief (readable and whole at both sizes; the picture is the one
+  the question is about and its tap areas sit on the right parts; the feedback explains and gives away no later answer;
+  nothing needed under the Check bar; usable with no tablet experience; the last screen is the last, with the trainee's
+  own score and no way onward; nothing of the factory's on screen). The same machinery as the slides: `verify` is
+  `incomplete` for a page never walked or never reviewed (a module whose deck is reviewed and whose task pages are not is
+  NOT DONE and refused at the upload), the two rounds, `accept` (shown at the upload with page and question), the
+  builder's signature refused, `fix.py check --kind walk --slides s03,self_check_1` (walks a touched page first).
+- **One visual review, not two**: `compile/REVIEW_PROMPT.md` is removed, and with it Quickstart step 5's sheet reading,
+  the builder's "review the Quickstart names", QA's sheet reading and `POLISH.md` in the workflow. Its points are the
+  walk's rubrics. The workflow's walk judge (one a module) reads the deck's and the task pages' sheets; QA looks at no
+  screen. `review_sheets.mjs` keeps its older sheet mode as code no step calls (`test_review_sheets.py` runs it); outside
+  the walk it still answers the first group of a blind page only.
+- Guides: `compile/GUIDE.md` Quickstart step 5, 2f and 2i, `fix/GUIDE.md` 4 and 6, `orchestration/GUIDE.md` (flow, Rule 4,
+  the role table), `compile/BUILDER_CARD.md`, `course-module-ux/measure/GUIDE.md` 4, `knowledge/fix-rules.json`,
+  `knowledge/build-order.json` step 16, law L71's row.
+- Tests (they run the behaviour): `test_walk_review.py` (`tasks_part` for the task pages), `test_fit_gate.py`,
+  `test_build_module.py` (`walk_part`, the last-answer check in `blanks_part`), `test_build_course.py` (`walk_part`),
+  `test_course_portal.py`, `test_fix.py`.
+- Not done here: who built, fixed, reviewed, accepted or reopened is a label the caller gives - the script cannot tell
+  which agent ran it, so "never an agent" for `accept` / `reopen` is a rule in the prompts and guides, recorded but not
+  enforced; a walk fail on a figure slide goes to the module fixer and, for its own slide, the figure's fixer - kept
+  apart by their prompts only; a last screen longer than two windows is photographed at its start and its end, not in
+  between; a change to the walk's own driver does not make a verdict stale (the fingerprint is the page's) - units the
+  driver photographed wrong are reopened by the operator (`walk_review.py reopen --slides`) and reviewed again.
+
+## 2.121.0 · The factory makes the knowledge base itself (2026-11-10)
+
+- `kb/scripts/kb_tool.py build <folder> [--course] [--builder] [--timeout-min]`: `find_builder` (named place, else the
+  course folder's ancestors, Desktop, Documents, home), the builder started as `BUILD_KNOWLEDGE_BASE.exe --cli <source
+  root>` with no window, `builder_progress` (the last line of `_runtime\data\logs`), `read_report` (statuses in the
+  builder's `SOURCE_MANIFEST.json`), then `cmd_decision --built`. Exit 2 nothing to read, 3 no builder, 4 time out,
+  5 the builder left no knowledge base. A builder named with a `.py` file is run with Python (the tests' stand-in).
+- `suggestion()` says the factory makes it where a builder is found, and how to get the builder where it is not.
+- The builder writes `KNOWLEDGE_BASE` inside the folder it reads; `kb_tool.py` itself still writes only into the course.
+- The builder remembers the last folder it was run on (`_runtime\data\last_used.json`): a factory run changes that.
+
+## 2.120.0 · One rule per subject (2026-11-10)
+
+- The law table in `SKILL.md` wins over every other file; rows L9, L14, L23, L28, L30, L33, L37, L38, L46, L47, L60, L64
+  reworded, the 2.118.0 changes tagged 2.118.0 (they said 2.116.0), the reply rules cut to one paragraph.
+- Leftovers of the rules 2.118.0 removed are taken out of `docs/FACTORY_LAWS.md`, `references/laws-in-full.md`,
+  `references/owner-decisions.md`, the compile / script / fix / hours / bloom / orchestration / instructor-led guides,
+  `compile/BUILDER_CARD.md`, `plugin/agents/fact-checker.md`, the five screen skills, `visual-sourcer.md` and the
+  nano-banana skills (1.4.1). Text only there: no script's behaviour is described differently from what it does.
+- `scripts/content_script.py` `t_sc_mix`: a note when the task slide that opens the set carries `"basic_why"`, still a
+  must-fix without it (`knowledge/theory-rules.json` `_rich`, `page-labels.json`).
+- `course-visuals/scripts/check_visual_first.py`: a compiled slide (`data-template`) with no figure is a note; a hand-built
+  screen still fails or declares `data-novisual`.
+- `orchestration/workflows/build_course.js`: the cross-check on Sonnet (`MECHANICAL`), the builder prompt without the L60
+  answer and the picture on every topic screen, the cold-build wait 45 min.
+- Open rulings and the speed, cost and quality proposals: `_claude/AUDIT_2026-11-10_FACTORY_FLOW.md`.
+## 2.119.1 · A Sub-ILO under its own Main ILO in the admin's ILO map (2026-11-10)
+
+- `scripts/ilo_coverage.py` `main_of`: `main_ilo_ids` on a map row is the module's list, and its first entry was taken for
+  every Sub-ILO of the module. A Sub-ILO now goes under the Main ILO its own number names (3.1 under 3) when the module
+  owes that outcome; the first entry is the fallback. `main_words` gives that outcome its own part of the joined
+  `main_ilo` line. Same change in the training app's `tools/ilo-coverage.mjs`. Pinned in `scripts/test_ilo_coverage.py`.
+
+## 2.119.0 · The classroom files the tablet app imports (2026-11-09)
+
+- `scripts/classroom_files.py` writes `modules\classroom\prepare.json` and `modules\classroom\forms\<CODE>.json` from the
+  course's own data; `compile/scripts/additional_materials.py` `plan()` adds them to its output (kind `json`, so a build,
+  `--check` and the move-aside rule treat them like the HTML pages). `scripts/check_course_package.py` checks them with the
+  app's limits and form rules. Instructor-only: the app never copies `classroom/` to the trainees.
+- Form codes are global on the server (one template per code), so they lead with the course name and are cut to 40.
+- The app's Prepare tab reads `prepare.json` (release manifest); the course page's own "To get ready" box is `courses.prep_items`,
+  typed in admin, and is not filled from the package.
+
 ## 2.116.0 · The 2D kit ships minified (2026-11-09)
 
 - `course-module-ui/scripts/minify_engines.py` makes `course-visuals/kit2d/min/kit2d.js` beside kit.js and kit3d.js;

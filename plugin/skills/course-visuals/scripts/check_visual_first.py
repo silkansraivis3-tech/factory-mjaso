@@ -174,6 +174,14 @@ def scan(path, rel, rules, out):
             continue
 
         if not fig:
+            # a compiled slide (data-template) was given a text layout from its approved script: its words read on
+            # their own (L61) - a note; a hand-built screen still has to show a figure or declare why it has none
+            if "data-template" in attrs_of(open_tag):
+                out.append(Finding(
+                    NOTE, rel, num, title,
+                    "a compiled slide with %d words and no figure." % words_in(body),
+                    "Fine when its words read on their own; a picture goes into the script's picture slot."))
+                continue
             out.append(Finding(
                 FAIL, rel, num, title,
                 "a topic screen with %d words and no figure." % words_in(body),

@@ -153,7 +153,8 @@ def page_words(md, kind, number, cache):
         except OSError:
             text = ""
         secs = {}
-        for m in re.finditer(r"^##\s+(Page|Slide|Section)\s+(\d+)\s*$(.*?)(?=^##\s+(?:Page|Slide|Section)\s+\d+\s*$|\Z)", text, re.M | re.S):
+        head = r"^##\s+(Page|Slide|Section)\s+(\d+)\b[^\n]*$"
+        for m in re.finditer(head + r"(.*?)(?=^##\s+(?:Page|Slide|Section)\s+\d+\b[^\n]*$|\Z)", text, re.M | re.S):
             secs[(m.group(1).lower(), int(m.group(2)))] = " ".join(m.group(3).split())
         cache[md] = secs
     return cache[md].get((str(kind or "page").lower(), number), "")

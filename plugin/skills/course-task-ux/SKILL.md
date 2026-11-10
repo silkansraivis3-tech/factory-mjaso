@@ -36,8 +36,9 @@ the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
 
 Everything measurable below was ruled for:
 
-> **Android tablet, 1280 × 800 landscape, offline, in a WebView, operated by a trainee's
-> finger. Plain HTML/CSS/ES5. No build step, no frameworks, no network.**
+> **The trainee tablet: Android, landscape 1280 × 800 (1024 × 768 stated), offline, in a WebView, operated by a
+> trainee's finger. Plain HTML/CSS/ES5. No build step, no frameworks, no network.** Tasks run only on the trainee's
+> tablet (L35); `course-module-ux/measure/knowledge/floor.json` → viewports is the table of sizes.
 >
 > **L45:** the classroom system opens a task inside a frame - an Android WebView in **landscape, about
 > 1280 × 800**, touch only. Task pages are built and measured for that. Each page reports its result once with
@@ -77,11 +78,14 @@ This skill governs **the screen**. It never decides what a task assesses, and ne
 1. **Its task content** — questions, options, explanations, photographs and their licences (from the exercise skills).
 2. **Its answer keys** — which option is right and *why*; the reasoning is rendered on the task screen (§2).
 3. **A manifest of its tasks** — one row per task, which is also the approval gate below.
-4. **Its own measured floor** if the device is not a 1280 × 800 landscape tablet.
+4. **Its own measured floor** if the device is not the 1280 × 800 landscape tablet.
 
 ## The gate — before writing any HTML
 
-Present this table and get approval before writing markup (a row is free to change; 32 built pages are not):
+Building task screens is the expensive step. Editing a row of a table is free; re-editing 32
+built pages is not, and a wrong answer mechanic is not a cosmetic fix. So work out this table
+before writing markup. When the tasks are compiled from an approved content script, the table is printed
+for the record and the build goes on - no stop; wait for approval only for a hand-built set with no approved script:
 
 | # | Task | Answer mechanic (§2) | Parts | Typed input? | Numbers a record asks for (§10) | Engines |
 |---|---|---|---|---|---|---|
@@ -124,7 +128,7 @@ that is clear but dull fails, and so does one that is impressive but confusing.
    look and behave like the ones on board; smooth motion between steps; the module's own look (`course-module-ui`).
    Nothing may look or feel like an old web form.
 7. **Forgiving.** Nothing can be broken or lost: a wrong drag can be moved again, an answer can be changed until Check
-   is pressed, no timer on a self-check or module check. The trainee is never stuck and never sees an error message.
+   is pressed; the page shows no countdown of its own, and when the instructor sets the classroom timer (`gb-timer`) the page obeys it (§9a). The trainee is never stuck and never sees an error message.
 8. **Fast and offline.** No loading spinners, nothing fetched (L6) - every picture, model and sound is in the pack.
 9. **Proved, not assumed.** Step 6 checks every task type at tablet size in a browser; QA adds a *"never used a
    tablet"* walkthrough - a colleague doing every task in their own browser with no explanation (L39); the owner's
@@ -136,12 +140,13 @@ that is clear but dull fails, and so does one that is impressive but confusing.
 
 ## 1 · What a task screen must NOT have
 
-- **No header block** — no course name, module number, task code, "in-class activity" label, time estimate, ILO or
-  Sub-ILO code, or scored-item count. The task begins with the task; keep only the injected back-link.
-- **No handout advertising.** A single contextual deep link inside a task is acceptable where it genuinely helps
-  mid-task; a "the handout is yours" card is not.
-- **No printed-worksheet thinking** — no "read this page, then go to another page, then type your answer in", and no
-  group-work tasks unless the delivery has a system for grouping trainees.
+- **No header block** — no course name, module number, task code, "in-class activity" label,
+  time estimate, ILO or Sub-ILO code, or scored-item count. The trainee arrives from a card that
+  already showed the title. The task begins with the task; keep only the injected back-link.
+- **No handout advertising.** A single contextual deep link inside a task is acceptable where it
+  genuinely helps mid-task; a "the handout is yours" card is not.
+- **No printed-worksheet thinking** — no "read this page, then go to another page, then type your
+  answer in", and no group work outside the classroom's team-task system (§9a).
 - **No fake or duplicated furniture** — no mock-up of the app's own UI, no "SCREEN 1 OF 4" counters.
 
 ---
@@ -150,11 +155,11 @@ that is clear but dull fails, and so does one that is impressive but confusing.
 
 The task screens' layouts - where the question, its picture, the answers and the side cards go - are in
 `course-module-ui/knowledge/blueprints.json` "tasks", with their live references in `design/task-templates` (the
-twelve quick-check screens in `live/`, the nineteen richer tasks in `engines/`, both themes by `themes.py`).
+twelve quick-check screens in `live/`, the richer-task demos in `engines/demo/tasks/` (three built as engines so far), both themes by `themes.py`).
 Every compiled task page has that look: `assets/gb_task_look.css` loads last and gives each question's screen the white
 or the Navy theme - the other one than the screen before, or the build sheet's `"theme"` - and changes no size, place
 or typeface weight of `gb_answer.css`, so every fit and tap area stands. Each question names its picture (a static 3D
-render or a photograph, build sheet `"figure"`); a screen without one is said at build. The answers themselves can be
+render or a photograph, build sheet `"figure"`); a screen without one is fine, and a picture that would give the answer away goes in the feedback (§6). The answers themselves can be
 pictures (`"figures"`: a tile each to tap; on true or false, a picture behind each card), the places to put in order sit
 on one rail, a match's names are joined to their places, and set the value has a knob a finger turns.
 
@@ -168,12 +173,13 @@ equipment (`lay_out`).
 **order / sequence** · **match** · **choose-and-justify** (pick the action, then the reason from a set — both must be
 right).
 
-> **Widened (L38):** as many ways of answering as possible, realistic and technical - fourteen, none of them typing:
-> choose one · choose all that are right · choose-and-justify · order · match · sort into groups · complete the
-> sentence · tap the place · drag labels onto a drawing · find the hazards · read the instrument · set the value
-> (slider or dial) · operate the panel / line up the valves · scenario - and five more (§2a): find the fault · spot the
-> errors · build the plan · rebuild the incident · compare. The list, how each answer is written and the variety floors
-> are `course-factory/knowledge/media-and-tasks.json`; the operator approves every task's words in the content script.
+> **Widened by the owner, 2026-09-30 (L38, 2.18.0):** as many ways of answering as possible, realistic and
+> technical - none of them typing: choose one · choose all that are right · choose-and-justify · order ·
+> match · sort into groups · complete the sentence · tap the place · drag labels onto a drawing · find the hazards ·
+> read the instrument · set the value (slider or dial) · operate the panel / line up the valves · scenario - and more
+> for the higher Bloom levels (§2a): find the fault · spot the errors · build the plan · rebuild the incident · compare. The list,
+> how each answer is written and the variety floors are `course-factory/knowledge/media-and-tasks.json`; the
+> operator approves every task's words in the content script first.
 
 **Free typing is allowed in exactly one place:** a simulator or field reporting task. If it is allowed, §5 becomes
 mandatory.
@@ -182,7 +188,7 @@ mandatory.
 short reason, and the debrief shows the right answer (§2b). There is no second try. The reasoning lives in the task, so
 the deck needs no answers slide.
 
-### 2a · Five more, for the higher Bloom levels (L49 step 4)
+### 2a · More, for the higher Bloom levels
 
 Still no typing, still tap and drag (drag always also tap-then-tap), still §0 first. The answer formats are
 `course-factory/knowledge/media-and-tasks.json`; every item the page shows carries `data-script-field="answer"`, exactly
@@ -193,16 +199,17 @@ the items `content_script.answer_items` lists, and the right ones carry their `d
 | **Find the fault** | The symptoms on top (`!` lines), over the drawing or panel. Each part is a big card: **tap it to check it** - it turns over and shows what you see (the reading, the sound, the temperature). Checking is free and never wrong. Then **This is the fault** on one card. | the faulty part is named; a wrong one is marked wrong, with its short reason (§2b) |
 | **Spot the errors** | The filled-in document as it looks on board - a permit, a log page, a checklist, a loading plan - one line per row, large type. **Tap a line to flag it**, tap again to unflag; **Check** at the bottom. | every wrong line flagged and nothing else; each wrong line then shows its *why* |
 | **Build the plan** | A bank of shuffled cards below, an empty plan with numbered slots above. Drag (or tap a card, then a slot) to build the plan; cards that do not belong stay in the bank. | the right cards in the right order; a card that does not belong, when placed, says why |
-| **Rebuild the incident** | Shuffled event cards; first put them in order (as *order*) and Check; then the cards stay and the question changes: **tap where it should have been stopped**. | the order, then the stop point - two parts, each with its own Check |
-| **Fill the table** (`fill_matrix` - a RACI matrix, a duty roster, a responsibility chart) | A table: row names down the left, column names on top, every cell empty. A palette of big value chips (the script's `"values"`: R, A, C, I, –) above it. **Tap a value, then tap cells** to fill them; tap a filled cell with the same value to clear it, or tap a cell again with no value held to step through the values. Cells are 56 px or more (6 rows x 5 columns fit 1024 x 768). **Check** is enabled when every cell is filled. | every cell holds its right value; wrong cells are marked (the wrong style, never the right value); the table locks at Check. Scored as one question. The cells' keys are `gbKey(id, "row \| column", value)`, so the grid's answers are not in the page. |
+| **Rebuild the incident** | Shuffled event cards; first put them in order (as *order*); once the order is right, the cards stay and the question changes: **tap where it should have been stopped**. | the order, then the stop point - two parts, each with its own Check |
+| **Fill the table** (`fill_matrix`, 2.109.0 - a RACI matrix, a duty roster, a responsibility chart) | A table: row names down the left, column names on top, every cell empty. A palette of big value chips (the script's `"values"`: R, A, C, I, –) above it. **Tap a value, then tap cells** to fill them; tap a filled cell with the same value to clear it, or tap a cell again with no value held to step through the values. Cells are 56 px or more (6 rows x 5 columns fit 1024 x 768). **Check** is enabled when every cell is filled. | every cell holds its right value; wrong cells are marked (the wrong style, never the right value); until Check any cell can be changed, and at Check the part locks (§2). Scored as one question. The cells' keys are `gbKey(id, "row \| column", value)`, so the grid's answers are not in the page. |
 | **Compare** | The options side by side as columns - one row per figure, the figures large and aligned; each column's name on top is its big **Choose** button, and a tap on any figure of the column chooses it too. | the right option chosen; the feedback names the figures that decide it |
 
-**All nineteen are compiled**: `compile/scripts/task_pages.py` builds each from the approved script and the one shared
-engine, `assets/gb_answer.js` + `gb_answer.css`, and grades it - a question is one or more parts, each with its own
-Check (a scenario's steps; the incident's order, then its stop point). No task page is made by hand.
+**Every mechanic in `course-factory/knowledge/media-and-tasks.json` is compiled:** `compile/scripts/task_pages.py` builds each from the approved
+script and the one shared engine, `assets/gb_answer.js` + `gb_answer.css`, grades it - a question is one or more parts,
+each with its own Check (a scenario's steps; the incident's order, then its stop point). Task pages are compiled from
+the approved script; a page the compiler cannot express is hand-made on the same engine and passes the same checks.
 
-None of them hides information the trainee needs to answer: the readings in *find the fault* are one tap away and stay
-turned over; nothing is timed; a wrong answer is never an error message - it is *Not right.* and a short reason (§2b).
+None of them hides information the trainee needs to answer: the readings in *find the fault* are one tap away and
+stay turned over; a wrong answer is never an error message - it is *Not right*, its brief reason and the debrief (§2b, L42).
 
 ### 2b · Part A and Part B, and ten interactive types
 
@@ -219,6 +226,10 @@ gets the same functionality and types, never copies of them.
   recalled: *work it out*, *predict*, *explore*, *investigate*, *check a colleague*, and on-board activities in 3D: *line it up*,
   *inspection round*, *take it apart*, *test before entry*. Difficult because it is real, never difficult for its own
   sake.
+
+The mix is L38: a self-check has at most 2 basic tasks (choose, match, order) and the rest rich (a picture to tap,
+a panel, 3D) - 3 + 2 in a set of five. A set whose subject has nothing to tap or operate says why in `"basic_why"`,
+and the rule is then a note (`content_script.py` `t_sc_mix`).
 
 **The debrief rule (every task page).** A wrong answer says **Not right.**, the question's `brief` reason (one short
 line that never names the right answer - content_script.py refuses one that does) and *we will check this one together
@@ -259,7 +270,7 @@ their build-sheet entries, and `example_set.json`, a whole Part A + Part B set. 
 label would give the answer away (check_kit3d.py's "a part nobody names" is expected there).
 
 Fingers first, as everywhere (§0): every drag has a tap, every pinch has + and -, a 3D tap forgives a near miss, 56 px
-targets, nothing hover-only. Nothing is ever typed: the calculator is buttons.
+targets, nothing hover-only. Nothing on a self-check or module check is typed: the calculator is buttons.
 
 ---
 
@@ -270,7 +281,7 @@ targets, nothing hover-only. Nothing is ever typed: the calculator is buttons.
 > trainee cannot see all tasks on one page, cannot browse or open another task, and there is **no "all tasks", "module
 > tasks" or "back to tasks" button**. The slide on the classroom screen only says that a task starts now. At the end of
 > a self-check or module check the trainee sees their own score (it does not count). The "task list" rulings below are
-> kept for the old app until its change list (step 6) is applied, and never used for a new build.
+> kept for the old app only, and never used for a new build.
 
 - **Every route out has a route back** — to the exact page it came from, never via the module list.
 - **Never end a task with a row of unexplained buttons**, and never offer to jump to a different numbered task.
@@ -426,9 +437,9 @@ At the target viewport (**1280 × 800 landscape**, the classroom's WebView), on 
 **The browser measurement is the authority. Every static check is a pre-filter.** A clean report from an unverified
 probe is worse than no report — read **`references/verify.md`** before reporting any measurement.
 
-**11.1 · `clamp(MIN, COEFFICIENT, CEILING)` resolves to exactly one of the three.** Compute all three at the target
-viewport, take whichever binds, and judge only that. `scripts/check_task_pages.py --only floor` does this and names the
-binding dial; `--viewport WxH` defaults to `1280x800`.
+**11.1 · `clamp(MIN, COEFFICIENT, CEILING)` resolves to exactly one of the three.** Compute all three
+at the target viewport, take whichever binds, and judge only that. `scripts/check_task_pages.py
+--only floor` does this and names the binding dial; `--viewport WxH` defaults to `1280x800`.
 
 ---
 
@@ -479,17 +490,22 @@ Never fill a gap plausibly. Use exactly these four, and land every one of them i
 
 Never invent a photograph's licence or credit, a regulatory reference, or an answer key.
 
-Write **`templates/task-notes.md`** during the run, not afterwards, and finish it with the feedback section on this
-skill — the only channel through which real delivery reaches this standard.
+Markers live in `data-` attributes, `data-cue` or the notes file - never in visible text on a trainee page
+(`course-factory/knowledge/slide-text-rules.json` → honesty_markers).
+
+Write **`templates/task-notes.md`** during the run, not afterwards, and finish it with the
+feedback section on this skill — that section is the only channel through which real delivery
+reaches this standard. Read it at the next revision.
 
 ---
 
 ## 15 · Every number a screen states must match the page
 
-Any number a deck, plan, score sheet or reference states about a task — question count, pass mark, attempts, minutes —
-is **derived from the task page or not stated at all**. In prose, state the proportion with the count after it
-(*"75 % of the check, currently 8 of 10"*); grep the number across **every** tree before believing it is only in one
-place; and check the attempt policy against the page's own buttons, not its prose.
+Any number a deck, plan, score sheet or reference states about a task — question count, pass mark,
+attempts, minutes — is **derived from the task page or not stated at all**. In prose, state the
+count read from the page (*"10 questions"*) - a self-check or module check shows a score and no pass mark; grep the number across
+**every** tree before believing it is only in one place; and check the attempt policy against the
+page's own buttons, not its prose.
 
 ## 16 · Nothing is useless until you grep for what depends on it
 

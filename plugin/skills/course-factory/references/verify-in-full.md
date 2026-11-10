@@ -1,7 +1,6 @@
 # Verify before reporting done, in full
 
-*Moved here word for word from `course-factory/SKILL.md` in 2.11.0 (Phase 5, step 11) so the
-skill file every session reads stays light. Nothing was deleted or reworded. SKILL.md keeps the list of checks; this is why each one exists. Read it at sign-off.*
+*SKILL.md keeps the list of checks; this is why each one exists. Read it at sign-off.*
 
 ---
 

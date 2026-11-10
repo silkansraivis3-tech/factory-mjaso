@@ -31,30 +31,20 @@ Two traps, both real:
 
 ## Step 2 · Decide what sits outside the modules
 
-> **Superseded by L34 (owner, 2026-09-30, 2.17.0):** the final assessment is **not** outside the modules -
-> it is the **last module**, and the assessment only (GAS BASIC: module 23, 2 h = 80 min, no slides, no
-> teaching). Only a topic that is genuinely not taught in class and not assessed - rare - may sit outside.
-> The text below is kept as it was.
+The final assessment is **not** outside the modules (L34) - it is the **last module**, and the assessment only (GAS BASIC:
+module 23, 2 h = 80 min, no slides, no teaching). Only a topic that is genuinely not taught in class and not assessed -
+rare - may sit outside; list it at the gate explicitly, with the reason, so it is excluded from the module budget on
+purpose rather than lost.
 
-Some topics are not module content. On GAS BASIC the final assessment (topic 23, 2 h) is separate
-from every module check. List these at the gate explicitly, with the reason, so they are excluded
-from the module budget on purpose rather than lost.
+## Step 3 · One module per topic — the minutes decide, not the story
 
-## Step 3 · Split topics into modules — the minutes decide, not the story
+**One module per programme topic**, in the programme's order, with exactly that topic's hours - GAS BASIC has 22 topics, so
+22 teaching modules, plus module 23, the final assessment. Topics are never combined and never divided.
+`scripts/make_architecture_page.py` builds the modules straight from the programme's topics and flags any plan that
+merges them. So:
 
-> **Superseded by L34 (owner, 2026-09-30, 2.17.0):** there is nothing to split. **One module per programme
-> topic**, in the programme's order, with exactly that topic's hours - GAS BASIC has 22 topics, so 22
-> teaching modules, plus module 23, the final assessment. Topics are never combined and never divided.
-> What still holds from this step: sum each module's minutes from the programme and **design inside that
-> budget**, and check the day shape. `scripts/make_architecture_page.py` builds the modules straight from
-> the programme's topics and flags any plan that merges them. The text below is kept as it was.
-
-You may combine topics into a module freely; the programme does not mandate a module structure.
-What it mandates is time. So:
-
-1. assign topics to modules,
-2. sum each module's allocated minutes from the programme,
-3. **design inside that budget.**
+1. take each module's allocated minutes from the programme,
+2. **design inside that budget.**
 
 The order matters. Designing the teaching first and totalling the minutes afterwards is exactly
 how GAS BASIC ended up 33 % over, and the discovery came after all eight modules existed.
@@ -85,9 +75,8 @@ Nothing about the programme changed; the build stopped misdescribing itself.
 **Track B — modality.** Put `data-active="N"` on the same screens: the minutes of that block in
 which the trainee does, decides, produces or says something. Target 80 % across the module. Where
 the programme's *practical* share is small — GAS BASIC allocates 19 % — the theory hours are
-**delivered as active learning**: a trainee activity inside the theory block. A theory block with
-no trainee activity in it is a defect, and that is the rule the target degrades into, not an
-excuse to stop trying.
+**delivered as active learning**: a trainee activity inside the theory block. A passive run of
+more than 15 minutes, or more than 20 % of a module's theory, needs a one-line reason (L68).
 
 Record both figures and the reason for any shortfall. The instructor plan's Trainee column is
 what substantiates each declared active minute; if a block's row says "listens", the declaration

@@ -32,14 +32,14 @@ Then, before the first screen is written, read — in this order, and only these
    `"moved_why"` with the expert's reason; an old slide that taught something and is left out goes in the script's
    `"dropped_old"` (`[{"from": "<deck>.pptx, slide 27", "why": "..."}]`); the slides must show at least 60 % of the
    old slides' words.
-4. **The subject library first, when the course is on its subject** (`intake.json` → `subject_library`;
-   the Gas Library for every gas course): `python <course-visuals>/scripts/subject_library.py find "<the slide's subject>"` —
-   the shared topic and which module of each course teaches it, the **cited facts**, glossary, regulations held,
-   reference PDFs with their distribution, and passages from every course's knowledge base at once (file + page).
-   Quote a value only with its source. **A row marked CONFLICT is not settled**: do not pick one of its values — name
-   the conflict on the screen's notes and in `"sources"`, and point to the library's `OPEN_DECISIONS.md`; the course
-   owners decide. An inbox row (NEW) is not reviewed: check its source before using it. No library on this computer:
-   skip this.
+4. **The course libraries first** (`intake.json` → `subject_library`; the Gas Library for every gas course,
+   then Common): `python <course-visuals>/scripts/subject_library.py
+   find "<the slide's subject>" --course "<course>"` — the shared topic and which module of each course teaches it, the
+   **cited facts**, glossary, regulations held, reference PDFs with their distribution, and passages from
+   every course's knowledge base at once (file + page). Quote a value only with its source. **A row marked
+   CONFLICT is not settled**: do not pick one of its values — name the conflict on the screen's notes and
+   in `"sources"`, and point to the library's `OPEN_DECISIONS.md`; the course owners decide. An inbox row
+   (NEW) is not reviewed: check its source before using it. No library on this computer: skip this.
 5. **The knowledge base — only through `kb/scripts/kb_tool.py search`** (several phrasings: the other
    names, the abbreviation, the older term). Never open a whole `document.md`. A declined knowledge base
    (the Stage 2 page says so) means the source files themselves, searched the same narrow way.
@@ -52,10 +52,12 @@ While writing:
 - **Every fact on a slide traces to a source in `"sources"`**: the document, its edition, the section or page
   (`"IGF Code 2016 (MSC.391(95)): 6.7.1, 15.8.2"`). Only the current edition is cited (intake). An
   operator-stated fact goes in `operator_facts`, not in `sources`.
-- **Save back what the library did not have** (on its subject): a fact you verified in a source, with
-  its document, edition and page, that `find` did not return — `subject_library.py contribute fact
-  "<subject>" "<value, unit, conditions>" --source "<doc, edition, page>" --found-for "<course> M04 s03"`;
-  a term with its regulation's definition — `... contribute term "<term>" "<meaning>" --source "<...>"`.
+- **Save back what the libraries did not have**: a fact you verified in a source, with
+  its document, edition and page, that `find` did not return — `subject_library.py contribute --course "<course>"
+  fact "<subject>" "<value, unit, conditions>" --source "<doc, edition, page>" --found-for "<course> M04 s03"`;
+  a term with its regulation's definition — `... term "<term>" "<meaning>" --source "<...>"`; a regulation —
+  `... regulation "<title>" "<edition, what it requires>" --source "<...>"`. The client picks the library
+  (a convention's material goes to Common) and says which.
   They go to the library's inbox as NEW for the course owners to review, never straight into its facts.
   An operator-stated fact is not contributed. Say in the module's report what was contributed.
 
@@ -151,22 +153,22 @@ tablets (L35), and the script says which screen is where:
 
   Each template's slots and what fills them, in one line: `course-module-ui/knowledge/blueprints.json`.
   A picture and a short explanation, two pictures, numbered steps and three parts of one system keep the templates
-  they had (`compile/GUIDE.md` §2, §2h). Never the same look twice in a row (L62) - two claims or two scenarios side
-  by side are a problem; each picture by the picture rule (L67, `course-visuals` SKILL.md). A drill comes after the
+  they had (`compile/GUIDE.md` §2, §2h). Each picture by the picture rule (L67, `course-visuals` SKILL.md). A drill comes after the
   module's last teaching slide; minutes are the module's as before (L1). `content_script.py` checks each shape
   (`shape_problems`). Beside a picture a scenario's situation holds 60 words and its question, choices and whys 85;
   a worked example's lines and question 85 (`layout-templates.json` `budgets`, `t_overfull`, a must-fix that names the
   split) - an active slide's question, choices, whys and answer count toward its words, so trim the situation, not the
   teaching.
-- **3D and AI pictures - planned unasked.** Before the review page is shown, plan them yourself - the operator never
-  has to ask:
+- **3D and AI pictures - planned in the script.** Before the review page is shown, plan them yourself - the operator
+  never has to ask:
   - **3D:** where a slide's lesson is a shape, an inside or a layout in space (a tank and its barriers, a space and
-    what is around it, a pump or a compressor), set its `visual_kind` to `model_3d` and describe the scene in
-    `visual`. How many and which is the picture rule (L67, `course-visuals` SKILL.md): a procedure, a flow or a chart is
-    never turned 3D to reach the share; never a real photo replaced, full quality.
+    what is around it, a pump or a compressor) - its why is spatial - set its `visual_kind` to `model_3d` and describe
+    the scene in `visual`. How many and which is the picture rule (L67, `course-visuals` SKILL.md): a procedure, a flow
+    or a chart is never turned 3D to reach the share (a 3D model of a flat idea is a must-fix); never a real photo
+    replaced, full quality.
   - **AI picture:** where a slide sets a scene or a situation that no real photograph shows (people at work, an
-    operation, an incident) - `ai_illustration`; equipment too, first generated, then fixed. Planning it is
-    free; the pictures are made within the course's one approved budget (nano-banana, L47).
+    operation, an incident) - `ai_illustration`. It sets a scene only; planning it is free, and the pictures are
+    made within the course's one approved budget (nano-banana, L47).
   - The review page names what you left out as proposals (`v_3d_propose`, `v_ai_propose`): the slide and the words
     that made it. Each one the operator keeps goes into the script (propose / apply); each one they strike goes into
     the script's `"declined"`, outside the approved words, so it is never proposed again:
@@ -233,8 +235,9 @@ tablets (L35), and the script says which screen is where:
   `interactive_diagram`, `model_3d`, `model_3d_scan`, `model_3d_licensed`, `video_real`,
   `video_generated`, `ai_illustration` — or `none`, only on the closing summary. Pick it from what the
   slide must teach (`course-visuals`, `decide/knowledge/learning-needs.json`): what moves or changes state
-  is animated; what has an inside is a cutaway or a 3D model; what must be recognised on board is the course's own
-  photograph (reused, enlarged) or a photorealistic generated one - never a photo to take (L33).
+  is animated; what has an inside is a cutaway or a 3D model; what a trainee must recognise on board is a real photograph
+  (the course's own, reused, enlarged) or a drawing, never a generated picture; a real photo still missing is listed in
+  `PHOTOS_TO_TAKE.md` - a list, never a stop (L33).
 - `"from_old"` (L41; on every slide of a course rebuilt from an old one) — where in the old course the slide comes
   from and what changed: *"1. Liquefied Gas tankers.pptx, slides 37-40 - the photographs became a 3D model"*, the deck's
   file name and its slide numbers as written there. Shown on the review page and read by the order check.
@@ -256,16 +259,18 @@ tablets (L35), and the script says which screen is where:
   phase needs no agent (placeholders of this shape, compile/GUIDE.md 2g), and the course photo catalogue matches photos
   to it by `shows`. Must fix: an unknown kind, a kind the visual does not need, a photo or figure with no aspect, nothing
   it must show. A script without `"picture"` is read from `visual_kind` and `visual` (a reminder, never a block).
-- **The words a layout holds are a must-fix here**, not a build-time note: beside a picture a slide's lines go
-  into parts of at most 75 words (1024 x 768, layout-templates.json "budgets"); the build can put lines in parts but never
-  cut one, so a single line over 75 words must be split in the script.
-- **The course's ship.** STANDARDS.md may carry a `## Ship profile` section - `- Pump arrangement: deepwell pumps`,
+- **The words a layout holds are a must-fix here**, not a build-time note: beside a picture a slide holds at most 85
+  words, beside a 3D model on a split slide 65 (1024 x 768, layout-templates.json "budgets"; `compile/GUIDE.md` §2) -
+  over it the slide is split in two or made another slide type (`t_over_budget`). The factory never pages or cuts
+  words beside a picture; a slide the script keeps in parts on purpose (`"in_parts"`) has parts of at most 75 words,
+  so a single line over 75 words must be split in the script.
   `- Not on board: pump room, cargo pump room` - and render then says (a note) every screen that names what the course's
   ship does not have. Write the profile at Stage 2, before the scripts are written in parallel.
 - **No quota**: wherever a picture, an animation or a realistic 3D illustration can show what the slide
   teaches, put it in. A slide with none, a long module where nothing moves, few kinds of picture - these come
   back as suggestions, never blocks; nothing is added only for variety (L13).
-- **3D by the picture rule, at full quality** (L67, `course-visuals` SKILL.md). Its share counts `model_3d`,
+- **3D by the picture rule, at full quality** (L67, `course-visuals` SKILL.md): 60-80 % of the teaching slides
+  interactive 3D, never more than 3 in a row; each 3D model where its why is spatial. Its share counts `model_3d`,
   `model_3d_scan` and `model_3d_licensed` once a module has 3 teaching slides; the operator may keep another share as
   a design choice. Each 3D model is a main picture: true proportions, real materials,
   labels, a cut-open view where the inside is taught. The built slide carries the kind as `data-visual="model_3d"`, so the finished deck is counted too.
@@ -299,7 +304,7 @@ one line per item, `*` marking what is right:
 
 **Part A, then Part B.** Write each self-check as Part A - quick questions that check what
 was taught (Bloom 1-2), at least one of them on a Sub-ILO from an earlier block - then Part B: one harder task the
-trainee works out alone (Bloom 3+). Every question gets a `"brief"`: one short line said when the answer is wrong - why
+trainee works out alone (Bloom 3+). A self-check has at most 2 basic tasks, the rest rich - 3 + 2 of five; a set whose subject has nothing to tap or operate says why in "basic_why" and the rule is a note. Every question gets a `"brief"`: one short line said when the answer is wrong - why
 it is not right, never which answer is ("That is the boiling point of another cargo.", not "It is -42 °C."). The right
 answer is shown in the debrief, where the class checks it together. Add `"confidence": true` to a Part A choice to ask
 how sure the trainee is. The ten interactive types, how each looks on the tablet and an example of each:
@@ -461,7 +466,7 @@ apply), or, if the operator has read it and wants the words as they are (L26), a
 ## 5 · Building from it, and proving it
 
 **The deck is compiled, not typed**: `compile/GUIDE.md`. The marks below are what the compiler
-writes; they are listed here for a module still built by hand.
+writes.
 
 The screen inventory is **derived from the approved script** — not a separate approval. Every screen
 built from it carries its id, and every approved text its field:

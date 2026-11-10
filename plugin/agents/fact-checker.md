@@ -36,4 +36,5 @@ You check one module's content script against the course's sources. Nothing else
 
 Report in five lines or fewer: claims, found, partly, not found, the change list's path and the `propose` command
 `fixes` printed, any question or room's answer listed for the person, and - after `--apply` - the questions whose task
-cover must be judged again (the task-coverage-checker runs on the module again). The operator sees the changes before they are applied.
+cover must be judged again (the task-coverage-checker runs on the module again). In an unattended build the fixes are
+applied and listed on the review page; in an attended session the operator sees them before they are applied.

@@ -58,6 +58,8 @@ each download or before the list** (owner, 2026-10-16: *"dont have any confirmat
 in"*). The pictures cost nothing and land only in the project's own files. The person may stop or correct a line
 at any time; a correction is saved (`picture_briefs.py save --slide <id> --brief <json>`) and that picture made
 again. If your browser tool itself insists on a yes for downloads, ask once for the whole list - never per picture.
+This is the free route: the count is reported every time, and the paid API route (`realistic-visuals`) keeps its
+own yes inside the course budget.
 
 ## 2 · The loop - per picture, no thinking between steps
 
@@ -169,9 +171,11 @@ do not loop.
   own image?"*, *"put each picture next to the visualizations"*). Three tanks side by side in one drawing → a row of
   three pictures directly under it, one under each tank (`.m02-tankrow` in the IGF M02 drawing fragment).
 - **No scrollbar on a slide, ever** (owner, 2026-10-16). A dense two-column slide has no room in the words column -
-  a picture there made the slide body scroll by 8 px. Use the room the drawing column has spare; do not shrink the
-  drawing (its labels keep their px size and collide). **A photograph is never shown smaller than about 200 px on
-  screen**: where there is no room for that, it gets its own step, or a tap opens it full screen with its record.
+  a picture there made the slide body scroll by 8 px. Use the room the drawing column has spare, and keep the
+  pictures readable (a photograph is never squeezed - `course-module-ux` build guide, "Never squeeze a
+  photograph"); do not shrink the drawing (its labels keep their px size and collide). **A photograph is never shown
+  smaller than about 200 px on screen**: if the pictures do not fit at that size they get their own step or slide. A
+  tap opens each one full screen with its record.
 - On a stepped slide a picture that would give the answer away comes with its own step, never before: "predict,
   then reveal" is spoiled by a picture of the answer (CSS `:has(.<steptext>[data-step="N"].cur)`). A picture may
   fade with its drawing's part while another part is talked about.
@@ -183,7 +187,9 @@ do not loop.
   Viking Grace LNG tanks moved under / onto their drawings; Gemini only for what no camera shows (the integral tank
   inside the hull, the cofferdam between engine room and fuel hold).
 - **Equipment a trainee must recognise** (an airlock, a bunkering station, a bolted hatch, a drip tray - an
-  `annotated_photo` in the script) gets a real photograph, never a generated one: it is on `PHOTOS_TO_TAKE.md`.
+  `annotated_photo` in the script) is a real photograph or a drawing, never a generated picture; a generated picture
+  sets a scene only. A real photo still missing is listed in `PHOTOS_TO_TAKE.md` - a list, never a stop and never a
+  question to the operator.
 - `compile_module.py` must report nothing to fix (it now reports `scrolls`), then look at the slide at every step.
 - A picture the person made in their own browser: `gemini_take.py put <picture> <save_as> --about "..."`, then
   `picture_briefs.py done ... --free`.

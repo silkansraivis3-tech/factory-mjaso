@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - a kit figure beside a worked example's lines</title>
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_shell.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_compose.css">
+</head>
+<body>
+<!-- Regression fixture for gb_steps.js (2.115.0): a worked example (3 lines, the question, the answer = data-stops 5) with a kit
+     figure. A stand-in for kit.js: figure.__kit = {spec, n, go}, and the kit's own step hook that steps the figure after the
+     slide's stops (which lit line 1 again, PM M03 s02).
+     k1: steps line 1, 2, 3 and a "reveal" step - Next plays step 1, 2, 3 on the lines and step 4 with the answer, each line once.
+     k2: the same figure, steps that all stay at 0 - a dead drawing (fit_gate must name it). -->
+<div id="landing"><button id="startBtn" type="button">Start</button></div>
+<div id="progress"></div>
+<div id="blockTag"></div>
+<div id="overview"><button class="fbtn" id="ovClose" type="button">Close</button><div class="ov-grid" id="ovGrid"></div></div>
+<div id="cue"></div>
+<div id="chrome">
+  <button class="cbtn" id="btnPrev" type="button" aria-label="Back">&lt;</button>
+  <span id="counter"><b>1</b> / 1</span>
+  <button class="cbtn" id="btnNext" type="button" aria-label="Next">&gt;</button>
+</div>
+<main id="stage">
+  <section class="slide" id="k1" data-title="Moves" data-stops="5">
+    <h2>Moves</h2>
+    <div class="slide-body"><ol class="lt-work">
+      <li data-k="0"><div data-i="1">One</div></li>
+      <li data-k="1"><div data-i="2">Two</div></li>
+      <li data-k="2"><div data-i="3">Three</div></li>
+      <li data-k="3" class="you"><div><b class="ask">Your turn?</b><span class="ans">The answer</span></div></li>
+    </ol><svg data-kit="#x" width="80" height="20" data-n="0"></svg></div>
+  </section>
+  <section class="slide" id="k2" data-title="Dead" data-stops="5">
+    <h2>Dead</h2>
+    <div class="slide-body"><ol class="lt-work">
+      <li data-k="0"><div data-i="1">One</div></li>
+      <li data-k="1"><div data-i="2">Two</div></li>
+      <li data-k="2"><div data-i="3">Three</div></li>
+      <li data-k="3" class="you"><div><b class="ask">Your turn?</b><span class="ans">The answer</span></div></li>
+    </ol><svg data-kit="#y" width="80" height="20"></svg></div>
+  </section>
+  <section class="slide" id="k3" data-title="End"><h2>End</h2></section>
+</main>
+<script src="../../../assets/gb_steps.js"></script>
+<script src="../../../assets/gb_deck.js"></script>
+<script>
+function kitStandIn(slide, steps, draws) {
+  var host = slide.querySelector("[data-kit]"), f = { spec: { steps: steps }, n: 0, handlers: {} };
+  host.__kit = f;
+  f.go = function (n) {
+    f.n = Math.max(0, Math.min(steps.length, n));
+    if (draws) { host.setAttribute("data-n", f.n); host.innerHTML = '<rect width="' + (10 * f.n) + '" height="5"/>'; }
+    [].forEach.call(slide.querySelectorAll("[data-i]"), function (x) { x.classList.remove("cur", "lit"); });
+    steps.slice(0, f.n).forEach(function (s, i) {
+      [].concat(s.line == null ? [] : s.line).forEach(function (k) {
+        var l = slide.querySelector('[data-i="' + k + '"]'); if (l) { l.classList.add(i === f.n - 1 ? "cur" : "lit"); }
+      });
+    });
+  };
+  var before = (window.GB_HOOKS || {})[slide.id] || {};
+  window.GB_HOOKS[slide.id] = {
+    enter: function () { if (before.enter) { before.enter(); } f.go(0); },
+    leave: function () { if (before.leave) { before.leave(); } },
+    step: function (dir) {
+      if (before.step && before.step(dir)) { return true; }
+      if (dir > 0 && f.n < steps.length) { f.go(f.n + 1); return true; }
+      if (dir < 0 && f.n > 0) { f.go(f.n - 1); return true; }
+      return false;
+    }
+  };
+}
+kitStandIn(document.getElementById("k1"), [{ line: 1 }, { line: 2 }, { line: 3 }, { reveal: true }], true);
+kitStandIn(document.getElementById("k2"), [{ line: 1 }, { line: 2 }, { reveal: true }], false);
+GBDeck.init({ hooks: window.GB_HOOKS });
+</script>
+</body></html>

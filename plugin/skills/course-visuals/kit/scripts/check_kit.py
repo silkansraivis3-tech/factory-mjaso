@@ -464,6 +464,17 @@ def last_step_dims_all(spec):
     return None
 
 
+def why_problems(spec, where):
+    """2.116.0 - every figure has a teaching reason (course-factory/scripts/figure_why.py): why + why_text, served by the steps"""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(KIT)), "course-factory", "scripts"))
+    import figure_why
+    if not isinstance(spec, dict):
+        return []
+    kind = "kit3d" if where.endswith(".kit3d.json") else "kit2d" if where.endswith(".kit2d.json") else "kit"
+    why, text = figure_why.declared({}, spec)
+    return ["%s: %s (L55, 2.116.0)" % (where, p) for p in figure_why.check(why, text, spec.get("steps"), kind, spec.get("state"))]
+
+
 def load_spec(path):
     try:
         return json.loads(read(path)), None
@@ -512,7 +523,7 @@ def main(argv=None):
         prefetch(o.files)
         for f in o.files:
             spec, err = load_spec(f)
-            probs += [err] if err else check_spec(spec, types, os.path.basename(f))
+            probs += [err] if err else check_spec(spec, types, os.path.basename(f)) + why_problems(spec, os.path.basename(f))
         return report(probs, "%d spec(s)" % len(o.files))
     parts_js = os.path.join(o.module_dir, "assets", "kit_parts.js")
     probs, names = check_parts_file(parts_js) if os.path.isfile(parts_js) else ([], [])
@@ -521,7 +532,12 @@ def main(argv=None):
     prefetch(specs)
     for f in specs:
         spec, err = load_spec(f)
-        probs += [err] if err else check_spec(spec, types, os.path.basename(f))
+        probs += [err] if err else check_spec(spec, types, os.path.basename(f)) + why_problems(spec, os.path.basename(f))
+    for f in (sorted(glob.glob(os.path.join(o.figures, "*.kit2d.json")) + glob.glob(os.path.join(o.figures, "*.kit3d.json")))
+              if o.figures else []):                       # 2.116.0: the 2D and 3D kits' specs carry a why too
+        spec, err = load_spec(f)
+        probs += [err] if err else why_problems(spec, os.path.basename(f))
+        specs.append(f)
     if not specs and not names:
         print("nothing to check - no kit_parts.js and no *.kit.json (give --figures)")
         return 2

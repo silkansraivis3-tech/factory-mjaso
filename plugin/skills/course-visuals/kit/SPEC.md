@@ -3,7 +3,7 @@
 Writing a spec? Read CATALOGUE.md first (one line per part) - this file is the full reference.
 
 A figure is a JSON spec: **parts** placed on a canvas, and **steps** that move their values.
-`kit.js` draws the parts and runs the steps, and `kit.css` gives the look. Nothing is drawn by hand.
+`kit.js` draws the parts and runs the steps, and `kit.css` gives the look. A kit figure is drawn by `kit.js`, never by hand; a figure no kit part shows is a custom figure (`../kit2d/SPEC.md`, Custom figures).
 `GALLERY.html` shows every part moving, plus slide M02 s14 rebuilt from a spec.
 
 **In a course (L55)** the spec is a figure file: `working_claude/figures/M02/s14.kit.json`, named in the build
@@ -253,7 +253,8 @@ for its name at the grown type (1024 x 768) sends the name outside with a leader
 
 ## The seven families
 Each family is a set of parts. A figure may mix families. When a module needs a part that doesn't
-exist yet, the part is added to its family here, never drawn once on a slide.
+exist yet, the part is made into its family here when it will be reused; a one-off idea may be a custom figure
+(`../kit2d/SPEC.md`). Either way it passes the same checks.
 
 | # | Family | Parts | Status | Courses it serves (IGF Basic) |
 |---|---|---|---|---|
@@ -275,10 +276,11 @@ from them.
 - **The look:** a figure made only of Concepts parts is shown on the **light panel** (white, `lt-light`, the kit's light
   tokens) - the compiler does it; `"theme": "dark"` keeps the Navy one. Blue is the idea, **amber what changed**, a dashed
   red frame what is never traded. Machinery, ships and screens stay on the Navy panel.
-- **An idea carries its real example** (drawn ideas alone read as arrows and lines): a figure made only of Concepts parts
-  names the real thing(s) it is about in `"example"` (`["watch round", "ship in dry dock"]`) - **NO REAL EXAMPLE** is
-  refused without it. The compiler treats each as a drawn thing (L57): the course's photograph of it goes under the
-  drawing, tappable; with none it goes on `PHOTOS_TO_TAKE.md`. Shapes explain the idea, the photo keeps it on board.
+- **An idea carries its real example** (drawn ideas alone read as arrows and
+  lines): a figure made only of Concepts parts names the real thing(s) it is about in `"example"`
+  (`["watch round", "ship in dry dock"]`) - **NO REAL EXAMPLE** is refused without it. The compiler treats each as a
+  drawn thing (L57): the course's photograph of it goes under the drawing, tappable, when the build sheet names
+  `photo_row` or the figure's why is real-thing-recognition; with none it goes on `PHOTOS_TO_TAKE.md`. Shapes explain the idea, the photo keeps it on board.
 - **No step buttons** under a figure: the deck's Next walks its steps with the slide's lines (`gb_deck.js`); a lit line is
   still a tap target that plays its step.
 - **`check_kit.py` refuses** (a build FAIL): **WORDS ONLY** - every part is words or a number in a box (a readout with a
