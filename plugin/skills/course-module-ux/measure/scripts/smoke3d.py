@@ -15,6 +15,8 @@ WHAT IT DOES
   as the compiler writes it, data-visual="model_3d".
   Each slide: OK with its first frame in ms - or FAIL: it never drew within the limit, the page threw an error, it does
   not report window.__scene3d, or the browser did not finish at all (a scene that hangs is ended with its browser).
+  Several scenes share one browser; a scene that did not draw there (or all of them, when that browser did not finish)
+  is tried once more alone, with its own limit, before it fails - a busy computer is not a hung scene.
 Exit 0 every scene drew with no page error, 1 a scene failed, 2 bad input (no deck, no 3D slide, no Node).
 """
 from __future__ import annotations
@@ -97,6 +99,32 @@ def full_screen(sid, fs):
     return bad, seen
 
 
+def drive(node, deck, page, ids, limit):
+    """(perf3d.mjs's report or None, what it said) - the asked 3D slides in one hidden browser, `limit` s each to draw"""
+    tmp = os.path.join(os.path.dirname(os.path.abspath(deck)), "_smoke3d_%d.html" % os.getpid())
+    io.open(tmp, "w", encoding="utf-8", newline="\n").write(alone(page, set(ids)))
+    ms = int(limit * 1000)
+    cmd = [node, PERF, tmp, "--slides=" + ",".join(ids), "--no-cold", "--no-fps", "--throttle=1", "--dwell=300",
+           "--wait-ms=%d" % ms, "--budget-ms=%d" % ms, "--json", "--fs3d"]
+    rep, said = None, ""
+    try:
+        p = browser_slots.run_tree(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                   timeout=limit * len(ids) + 30)
+        said = (p.stdout or "") + (p.stderr or "")
+        try:
+            rep = json.loads(p.stdout[p.stdout.index("{"):p.stdout.rindex("}") + 1])
+        except ValueError:
+            rep = None
+    except subprocess.TimeoutExpired:
+        said = "timed out"
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+    return rep, said
+
+
 def main(argv=None):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -121,27 +149,26 @@ def main(argv=None):
     if unknown:
         print("Stopped - the deck has no slide %s" % ", ".join(unknown))
         return 2
-    tmp = os.path.join(os.path.dirname(os.path.abspath(o.deck)), "_smoke3d_%d.html" % os.getpid())
-    io.open(tmp, "w", encoding="utf-8", newline="\n").write(alone(page, set(ids)))
-    ms = int(o.limit * 1000)
-    cmd = [node, PERF, tmp, "--slides=" + ",".join(ids), "--no-cold", "--no-fps", "--throttle=1", "--dwell=300",
-           "--wait-ms=%d" % ms, "--budget-ms=%d" % ms, "--json", "--fs3d"]
-    t0, rep, said = time.time(), None, ""
-    try:
-        p = browser_slots.run_tree(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                                   timeout=o.limit * len(ids) + 30)
-        said = (p.stdout or "") + (p.stderr or "")
-        try:
-            rep = json.loads(p.stdout[p.stdout.index("{"):p.stdout.rindex("}") + 1])
-        except ValueError:
-            rep = None
-    except subprocess.TimeoutExpired:
-        said = "timed out"
-    finally:
-        try:
-            os.remove(tmp)
-        except OSError:
-            pass
+    t0 = time.time()
+    rep, said = drive(node, o.deck, page, ids, o.limit)
+    # several modules building on one computer slow every scene of a shared run: a scene that did not draw - or every
+    # scene, when the browser did not finish - gets one more try alone, with a budget of its own, before it is failed
+    late = ids if rep is None and said == "timed out" else \
+        [s.get("id") for s in (rep or {}).get("slides") or [] if (s.get("warm") or {}).get("firstFrameMs") is None]
+    alone_ok, hung = set(), []
+    if len(ids) > 1 and late:
+        rep = rep or {"slides": [], "consoleErrors": []}
+        for sid in late:
+            one, one_said = drive(node, o.deck, page, [sid], o.limit)
+            if one is None:
+                hung.append((sid, one_said))
+                continue
+            rep["slides"] = [s for s in rep.get("slides") or [] if s.get("id") != sid] + (one.get("slides") or [])
+            rep["consoleErrors"] = (rep.get("consoleErrors") or []) + [e for e in one.get("consoleErrors") or []
+                                                                         if e not in (rep.get("consoleErrors") or [])]
+            if one.get("error"):
+                rep["error"] = one["error"]
+            alone_ok.add(sid)
     secs = time.time() - t0
     bad = []
     if rep is None:
@@ -150,6 +177,10 @@ def main(argv=None):
               "no answer from perf3d.mjs: %s" % " ".join(said.split())[-300:]
         print("FAIL 3D smoke test (%.0f s): %s" % (secs, why))
         return 1
+    for sid, said in hung:
+        bad.append("%s: alone, the browser did not finish in %.0f s - the scene hangs the page (an endless loop, a wait "
+                   "that never ends); it was ended" % (sid, o.limit + 30) if said == "timed out" else
+                   "%s: no answer from perf3d.mjs: %s" % (sid, " ".join(said.split())[-300:]))
     errs = rep.get("consoleErrors") or []
     for s in rep.get("slides") or []:
         w = s.get("warm") or {}
@@ -157,7 +188,8 @@ def main(argv=None):
         if ff is None:
             bad.append("%s: no first frame within %.0f s%s" % (s.get("id"), o.limit, (" - " + w["error"]) if w.get("error") else ""))
         else:
-            print("  %s: first frame %.0f ms%s" % (s.get("id"), ff, " (built ahead on the slide before)" if w.get("preparedAhead") else ""))
+            print("  %s: first frame %.0f ms%s%s" % (s.get("id"), ff, " (built ahead on the slide before)" if w.get("preparedAhead") else "",
+                                                     " (alone - beside the others it was not in time)" if s.get("id") in alone_ok else ""))
             fs = w.get("fs3d") or {}
             said_fs = full_screen(s.get("id"), fs)
             bad += said_fs[0]

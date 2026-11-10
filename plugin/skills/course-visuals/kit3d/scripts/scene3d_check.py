@@ -156,6 +156,19 @@ def shots(specs, parts, out, size):
     return out_
 
 
+def smoke_said(text, sid):
+    """(the line smoke3d.py said of one scene, failed?) - its own problem line ("- s05: no first frame ...") before its
+    first-frame line; a scene the run said nothing of failed too"""
+    mine = [x.strip() for x in text.splitlines() if re.search(r"\b%s\b" % re.escape(sid), x)]
+    line = next((x for x in mine if "FAIL" in x or x.startswith("- ")), mine[0] if mine else "")
+    return line, "FAIL" in line or line.startswith("- ") or not line
+
+
+def perf_over(line):
+    """perf3d.mjs's line of a scene says it failed or is over the budget (it prints "OVER")"""
+    return bool(re.search(r"\b(FAIL|over)\b", line, re.I))
+
+
 def check(course, module, out=None, size=(720, 450), perf=True):
     """{"scenes": [...], "ok": bool} or None when the module has no 3D-kit scene"""
     specs = scenes(course, module)
@@ -183,11 +196,12 @@ def check(course, module, out=None, size=(720, 450), perf=True):
     # 2 smoke, 3 perf - on the built deck's slides
     if os.path.isfile(deck):
         ids = ",".join(sid for sid, _ in specs)
-        code, text = run([PY, os.path.join(MEASURE, "smoke3d.py"), deck, "--slide", ids], 300)
+        # smoke3d.py gives the scenes 15 s each in one browser, then each late one a browser of its own (15 + 30 s)
+        code, text = run([PY, os.path.join(MEASURE, "smoke3d.py"), deck, "--slide", ids], 60 * len(specs) + 120)
         for sid in res:
-            line = next((x.strip() for x in text.splitlines() if re.search(r"\b%s\b" % re.escape(sid), x)), "")
+            line, failed = smoke_said(text, sid)
             res[sid]["smoke"] = line
-            if code != 0 and ("FAIL" in line or not line):
+            if code != 0 and failed:
                 res[sid]["problems"].append("smoke3d: " + (line or (text.strip().splitlines() or ["did not run"])[-1]))
         if perf and shutil.which("node"):
             code, text = run(["node", os.path.join(MEASURE, "perf3d.mjs"), deck, "--slides=" + ids, "--budget-ms=1000",
@@ -195,7 +209,7 @@ def check(course, module, out=None, size=(720, 450), perf=True):
             for sid in res:
                 line = next((x.strip() for x in text.splitlines() if re.search(r"\b%s\b" % re.escape(sid), x)), "")
                 res[sid]["perf"] = line
-                if code == 1 and re.search(r"\b(FAIL|over)\b", line):
+                if code == 1 and perf_over(line):
                     res[sid]["problems"].append("perf3d: " + line)
     else:
         for sid in res:
