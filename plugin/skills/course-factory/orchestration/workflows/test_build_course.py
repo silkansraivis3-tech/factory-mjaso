@@ -48,7 +48,8 @@ const agent = async (prompt, o) => {
   if (o.label.startsWith('gate:')) return { open: true, output: 'open', approved: args._approved || ['1', '2'], order: args._order || [],
                                             skill_dir: args._skill_dir }
   if (/^3d:/.test(o.label)) return (args._scene || []).indexOf(o.label.slice(3).split('+')[0]) >= 0
-    ? { has_scene: true, ok: true, shots: ['C:/c/r/s05_step1.png'], scenes: [{ slide: 's05', spec: 's05.kit3d.json' }] }
+    ? { has_scene: true, ok: true, shots: ['C:/c/r/s05_step1.png'], scenes: [{ slide: 's05', spec: 's05.kit3d.json' }],
+        rebuilt: (args._rebuilt3d || []).indexOf(o.label.slice(3)) >= 0 }
     : { has_scene: false, ok: true, shots: [] }
   if (/^fix3d:/.test(o.label)) return { has_scene: true, ok: true, shots: ['C:/c/r/s05_step1.png'] }
   if (/^review3d:/.test(o.label)) return (args._bad3d || []).indexOf(o.label.slice(9)) >= 0
@@ -66,6 +67,17 @@ const agent = async (prompt, o) => {
                     findings: [{ severity: 'BROKEN', what: 'the vent mast stands inside the hull, under the deck' },
                                { severity: 'POLISH', what: 'a label could sit closer' }] }] }
     : { figures: [{ slide: 's03', shows: 'a ship side view', seafarer_ok: true, findings: [] }] }
+  if (/^walk:/.test(o.label)) {                             // the walk judge: a slide fails, at first (_badwalk) or still (_stillwalk)
+    const [wm, wtag] = o.label.slice(5).split('+')
+    if ((args._lostwalk || []).indexOf(wm) >= 0) return null
+    if ((args._nowalk || []).indexOf(wm) >= 0)
+      return { walked: false, ok: false, state: 'walk_review: no walk for M0' + wm + ' in C:/c/working_claude/_build/walk/M0' + wm, fails: [] }
+    const bad = (args._stillwalk || []).indexOf(wm) >= 0 || (!wtag && (args._badwalk || []).indexOf(wm) >= 0)
+    return bad
+      ? { walked: true, ok: false, round: wtag ? 2 : 1, state: 'NOT DONE: walk review failing for M0' + wm + ' - 1 slide with open fails',
+          fails: [{ slide: 's04', what: 'stop 3: the chart is still an empty axis' }] }
+      : { walked: true, ok: true, round: wtag ? 2 : 1, state: 'OK: walk review passed for M0' + wm, fails: [] }
+  }
   if (o.label === 'qa:2') return null                       // the QA agent for module 2 brought back nothing
   if ((args._broken || []).indexOf(o.label.slice(3)) >= 0)  // a QA that found a picture of another thing (2.63.3)
     return { module: o.label.slice(3), classification: 'A', blocking: true,
@@ -115,6 +127,76 @@ def run(tmp, args):
         return json.loads(p.stdout.strip().splitlines()[-1])
     except (ValueError, IndexError):
         return {"error": p.stdout + p.stderr}
+
+
+def walk_part(tmp, mods, clean, qa_broken, all_broken):
+    """the walk judge: beside the other judges, its fails in the one fix round, one more look, then the operator"""
+    base = {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "factory": "C:/f/skills"}
+    lc, pc = clean.get("labels", []), clean.get("prompts", {})
+    w1 = pc.get("walk:1", "")
+    check("the WALK judge: every built module is walked by a reviewer beside QA, after the build - prepare --stale, the "
+          "sheets, sign against the builder's name, verify",
+          "walk:1" in lc and "walk:2" in lc and lc.index("walk:1") > lc.index("build:1")
+          and all(w in w1 for w in ("You did NOT build this module", "walk_review.py prepare \"C:/c\" --module 1 --stale",
+                                    "review_brief.md", "--built-by \"build:1 (workflow builder)\"",
+                                    "\"reviewed_by\": \"walk:1 (workflow walk judge)\"", "walk_review.py verify \"C:/c\" --module 1",
+                                    "never sign under another name", "you never build and never fix")), (lc, w1[:1500]))
+    check("... a clean walk sends nothing back and is not looked at twice; the run says how many were reviewed",
+          not any(x.startswith(("fix:", "walk:1+", "walk:2+")) for x in lc)
+          and (clean.get("r") or {}).get("walk") == {"reviewed": 2, "not_passed": []}, (lc, (clean.get("r") or {}).get("walk")))
+    check("... the builder is told the walk is not theirs, and QA's check build leaves the walk pictures alone (--no-walk)",
+          "never run walk_review.py" in pc.get("build:1", "") and "--no-walk" in pc.get("qa:1", "")
+          and "TASK-PAGE screens" in pc.get("qa:1", "") and "the walk judge beside you" in pc.get("qa:1", ""), pc.get("qa:1", "")[:2500])
+    bad = run(tmp, dict(base, _badwalk=["1"]))
+    lb, pb = bad.get("labels", []), bad.get("prompts", {})
+    qb = [q for q in (bad.get("r") or {}).get("qa", []) if q and q.get("module") == "1"]
+    check("... a walk fail joins the ONE fix round (slide and stop), then the walk judge looks once more - only at what "
+          "changed - and QA is not run again for it",
+          lb.count("fix:1") == 1 and lb.index("fix:1") > lb.index("walk:1") and "(WALK)" in pb.get("fix:1", "")
+          and "s04: stop 3: the chart is still an empty axis" in pb.get("fix:1", "") and "never run walk_review.py yourself" in pb.get("fix:1", "")
+          and lb.count("walk:1+fix") == 1 and lb.index("walk:1+fix") > lb.index("fix:1") and "qa:1+fix" not in lb
+          and "only the slides the round changed" in pb.get("walk:1+fix", "") and not any(x.startswith(("fix:2", "walk:2+")) for x in lb)
+          and qb and qb[0].get("walk", {}).get("ok") is True and qb[0]["walk"].get("first_fails")
+          and not any("WALK" in x for x in qb[0].get("for_aleksis", [])), (lb, qb))
+    check("... any fix round is followed by the walk judge (a fix changes slides): QA's, and the 3D + figure + QA one",
+          qa_broken.get("labels", []).count("walk:1+fix") == 1 and all_broken.get("labels", []).count("walk:1+fix") == 1
+          and all_broken["labels"].index("walk:1+fix") > all_broken["labels"].index("fixbuild:1"), all_broken.get("labels"))
+    still = run(tmp, dict(base, _stillwalk=["1"]))
+    ls = still.get("labels", [])
+    rs = still.get("r") or {}
+    qs = [q for q in rs.get("qa", []) if q and q.get("module") == "1"]
+    fa = (qs[0].get("for_aleksis", []) if qs else [])
+    check("... TWO walk rounds, never a third: what still fails goes to the operator with slide and stop and the accept "
+          "command; the module is not failed for it, and the run's result names it",
+          ls.count("fix:1") == 1 and [x for x in ls if x.startswith("walk:1")] == ["walk:1", "walk:1+fix"]
+          and any(x == "WALK s04: stop 3: the chart is still an empty axis" for x in fa)
+          and any("WALK M01 NOT PASSED" in x and "walk_review.py accept \"C:/c\" --module 1 --by" in x and "--why" in x for x in fa)
+          and qs and not qs[0].get("blocking") and "1" not in rs.get("blocking", [])
+          and [w.get("module") for w in rs.get("walk", {}).get("not_passed", [])] == ["1"]
+          and "WALK REVIEW not passed for module(s) 1" in rs.get("next", ""), (ls, fa, rs.get("walk"), rs.get("next")))
+    both = run(tmp, dict(base, _figs=["1"], _badfig=["1"], _badwalk=["1"]))
+    l2, p2 = both.get("labels", []), both.get("prompts", {})
+    check("... a walk fail beside a broken figure: the module fixer gets it and does not build, the figure's fixer hears "
+          "what the walk said of ITS slide only, one build after both",
+          l2.count("fix:1") == 1 and "DO NOT RUN build_module.py" in p2.get("fix:1", "") and "s04: stop 3" in p2.get("fix:1", "")
+          and "the chart is still an empty axis" not in p2.get("fixfig:1:s03", "")
+          and l2.index("fixbuild:1") > max(l2.index("fix:1"), l2.index("fixfig:1:s03"))
+          and "the walk" in p2.get("fixbuild:1", "") and l2.index("walk:1+fix") > l2.index("fixbuild:1"), l2)
+    lost = run(tmp, dict(base, _nowalk=["1"], _lostwalk=["2"]))
+    rl = lost.get("r") or {}
+    ql = [q for q in rl.get("qa", []) if q and q.get("module") == "1"]
+    check("... a module with no walk pictures, or a walk judge that brought back nothing, is NOT passed: no fix round for "
+          "it, the operator is told to build and have it reviewed",
+          not any(x.startswith("fix:") for x in lost.get("labels", []))
+          and sorted(w.get("module") for w in rl.get("walk", {}).get("not_passed", [])) == ["1", "2"]
+          and ql and any("WALK M01 NOT PASSED" in x and "no walk for M01" in x and "prepare --stale" in x for x in ql[0].get("for_aleksis", [])),
+          (lost.get("labels"), rl.get("walk"), ql))
+    mods3 = mods + [{"id": 3, "title": "C", "minutes": 60, "theory": 40, "practical": 20}]
+    reb = run(tmp, dict(base, modules=mods3, _approved=["1", "2", "3"], _scene=["3"], _rebuilt3d=["3"]))
+    lr = reb.get("labels", [])
+    check("... a 3D check that rebuilt the module while the judges looked: the walk judge looks once more at what changed",
+          lr.count("walk:3+3d") == 1 and lr.index("walk:3+3d") > lr.index("walk:3") and "walk:1+3d" not in lr
+          and not any(x.startswith("fix:") for x in lr), lr)
 
 
 def main():
@@ -409,6 +491,7 @@ def main():
               and "scene3d_check.py" in pa.get("fixbuild:1", "")
               and all(la.index(x) > la.index("fixbuild:1") for x in ("3d:1+fix", "figshots:1+fix", "qa:1+fix"))
               and la.count("qa:1+fix") == 1 and "fix:2" not in la, la)
+        walk_part(tmp, mods, two, six, allx)
         many = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_figs": ["1"], "_manyfigs": ["1"],
                          "factory": "C:/f/skills"})
         lm = many.get("labels", [])

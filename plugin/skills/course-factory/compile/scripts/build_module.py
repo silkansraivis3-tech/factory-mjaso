@@ -14,9 +14,14 @@ process, the independent ones at once, and the answer is short:
   3  the checks   at the same time: check_script_match.py --part instructor and --part trainee, check_navigation.py,
                   run_audits.py (1280 x 800, 1024 x 768 and any --viewport), then compile_course.py and
                   check_course_package.py (the course's own pages and the classroom's importer)
-  4  the review   when everything passes: review_sheets.mjs photographs every slide, every figure step and every question
-                  (asked, answered wrong, answered right) onto a few sheets - only the screens changed since the last
-                  review - and checks that every question grades right and wrong answers as such (compile GUIDE 2f)
+  4  the review   when everything passes: review_sheets.mjs photographs every question (asked, answered wrong, answered
+                  right) onto a few sheets - only the screens changed since the last review - and checks that every
+                  question grades right and wrong answers as such (compile GUIDE 2f). The sheets are the TASK PAGES' review;
+                  the deck's slides are the walk review's (5), so no slide is judged twice
+  5  the walk     at module clean: walk_review.py verify - every walked slide needs a reviewer's verdict for what it shows
+                  now (compile GUIDE 2i). A build by itself is NOT DONE without it; a module of a parallel build
+                  (--no-course-pages) prints where the walk review stands under MODULE CLEAN and the workflow's walk judge
+                  takes it from there
 
   0  (2.52.0) a build sheet that still has --init-build's blanks (a slide with no picture, a question on no picture, a
                   planned 3D scene not written) builds nothing: one line says what to fill (--draft builds anyway)
@@ -67,6 +72,10 @@ SKILLS = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 FACTORY = os.path.join(SKILLS, "course-factory", "scripts")
 MEASURE = os.path.join(SKILLS, "course-module-ux", "measure", "scripts")
 KIT = os.path.join(SKILLS, "course-visuals", "kit", "scripts")
+# under MODULE CLEAN in a parallel build, when the walk review is still open: who takes it from here
+WALK_NEXT = ("A builder stops here: in a whole-course workflow the walk judge reviews the slides. In one session: walk_review.py "
+             "prepare <course> --module %s --stale, a reviewer that did not build the module on its brief, then walk_review.py "
+             "sign <course> --module %s --review <reviewer.json> --built-by \"<who built it>\" (compile/GUIDE.md 2i)")
 sys.path.insert(0, HERE)
 sys.path.insert(0, FACTORY)
 sys.path.insert(0, KIT)
@@ -1222,8 +1231,9 @@ def main(argv=None):
     ap.add_argument("--no-course-pages", action="store_true", help="a module agent in a parallel build: no compile_course.py")
     ap.add_argument("--no-fix", action="store_true", help="the figure pre-check makes no fix of its own")
     ap.add_argument("--no-review", action="store_true", help="no review sheets after a pass")
-    ap.add_argument("--no-walk", action="store_true", help="2.116.0: no walk review gate (factory tests only) - a real build is not "
-                    "done without it (walk_review.py)")
+    ap.add_argument("--no-walk", action="store_true", help="2.116.0: no walk review gate and no walk pictures - factory tests, and "
+                    "the workflow's QA check (the walk judge reads the builder's walk at the same time). A real build is not done "
+                    "without the walk review (walk_review.py)")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--full", action="store_true", help="never stop after the figures - every stage, every run; the drawing "
@@ -1498,13 +1508,15 @@ def main(argv=None):
     # 4 - the review sheets are made at the same time (2.50.1: they were a third of a passing build), into a folder of
     # their own: they become the review only when everything passes, so a failed build never hides a changed screen
     # 2.63.3: compared with the last REVIEWED sheets, and a screen unchanged since its last picture is not photographed again
+    # --tasks-only: the sheets are the task pages' review - the deck's slides are looked at once, in the walk review
     pending = out_dir + ".pending"
     want_review = not o.no_review and not fails
     if want_review:
         import shutil
         shutil.rmtree(pending, ignore_errors=True)
         jobs["review sheets"] = ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + reviewed_dir(out_dir),
-                                 "--shots=" + os.path.join(logdir, "%s_shots" % m)] + (["--grade-only"] if slots_left else [])
+                                 "--shots=" + os.path.join(logdir, "%s_shots" % m), "--tasks-only"] + (
+                                     ["--grade-only"] if slots_left else [])
     pkg_cmd = [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)]
     ak = next((k for k in jobs if k.startswith("audits")), None)
 
@@ -1611,14 +1623,16 @@ def main(argv=None):
         elif rcode == 0:
             first = rout.strip().splitlines()[0] if rout.strip() else ""
             n = re.search(r"Review sheets: (\d+) of (\d+) screens.*?on (\d+) sheet", first)
-            review = (("VISUAL REVIEW (required, GUIDE 2f): %s of %s screens changed since the last review, on %s sheet(s) in\n  %s\n"
+            review = (("VISUAL REVIEW of the task pages (required, GUIDE 2f): %s of %s task-page screens changed since the last "
+                       "review, on %s sheet(s) in\n  %s\n"
                        "  Give the sheets to ONE review subagent (model haiku or sonnet) with %s - it returns a short verdict;\n"
                        "  then mark them looked at: build_module.py <course> --module %s --reviewed (in a whole-course workflow the "
-                       "QA agent does this review, not the builder)"
+                       "QA agent does this review, not the builder). The deck's slides are not on these sheets: the walk review "
+                       "looks at them (GUIDE 2i)."
                        % (n.group(1), n.group(2), n.group(3), out_dir, os.path.join(SKILLS, "course-factory", "compile", "REVIEW_PROMPT.md"),
                           o.module))
                       if n and n.group(1) != "0" else
-                      "Visual review: no screen changed since the last review - nothing new to look at.")
+                      "Visual review of the task pages: no task-page screen changed since the last review - nothing new to look at.")
         else:
             notes.append("Review sheets not made (%s) - do the visual review by hand (GUIDE 2f)" % (lines_of(rout, 1) or ["?"])[0])
     slowest = write_stages(log, stages, t0, timing)
@@ -1637,21 +1651,18 @@ def main(argv=None):
     for x in notes:
         print(x)
     # 2.116.0 - THE WALK REVIEW GATE: a module whose checks all pass is still not done until an AI reviewer has looked at every
-    # stop of every slide as a trainee does (walk_review.py; compile/GUIDE.md says how the lead session runs it)
-    walk_open = ""
-    if passed and not slots_left and not o.no_walk and os.path.isfile(deck):
-        if MEASURE not in sys.path:
-            sys.path.insert(0, MEASURE)
-        import walk_review
-        w_ok, w_kind, w_msg = walk_review.verify(course, o.module)
-        if not w_ok:
-            walk_open, passed = "walk review %s - %s" % (w_kind, w_msg), False
+    # stop of every slide as a trainee does (walk_review.py; compile/GUIDE.md says how the lead session runs it).
+    # It is reached at MODULE CLEAN too: a module of a parallel build never passes by itself (the course package is judged
+    # after assembly), so there the walk review's state is printed under MODULE CLEAN and neither `passed` nor `fails`
+    # changes - the builder stops at module clean and the workflow's walk judge reviews the slides. A parallel build whose
+    # course package passes too (the course was assembled before) is the same builder's: it prints PASS and the same line
+    walk_open = walk_said = ""
+    module_clean = passed or (o.no_course_pages and fails == ["course package"])
+    if module_clean and not slots_left and not o.no_walk and os.path.isfile(deck):
+        walk_open, walk_said = walk_gate(course, o.module, alone=passed and not o.no_course_pages)
+        if walk_open:
+            passed = False
             fails.append("walk review")
-            try:
-                w_rc, w_lines = walk_review.prepare(course, o.module)
-                walk_open += "\n  " + "\n  ".join(w_lines)
-            except Exception as why:                    # noqa: BLE001 - the sheets are a help; the gate stands
-                walk_open += "\n  (the contact sheets could not be made: %s)" % why
     secs = time.time() - t0
     needs = ""
     if slots_left or os.path.isfile(os.path.join(workspace.claude_path(course, "visuals"), "%s_VISUAL_NEEDS.json" % m)):
@@ -1694,17 +1705,23 @@ def main(argv=None):
             print(gold)
         if review:
             print(review)
+        if walk_said:
+            print(walk_said)
     elif walk_open:
         print("NOT DONE: %s (%.0f s)" % (walk_open, secs))
         print("  Every other check passed. Run the reviewer on the brief (one Sonnet subagent per batch of 3-4 contact sheets, "
-              "returning reviewer JSON - compile/GUIDE.md 2i), then: walk_review.py sign <course> --module %s --review <reviewer.json>; "
-              "fix every fail, build again, walk and review again until verify passes" % o.module)
+              "returning reviewer JSON - compile/GUIDE.md 2i; never the session that built the module), then: walk_review.py sign "
+              "<course> --module %s --review <reviewer.json> --built-by \"<who built it>\". Fix every fail and build again: the "
+              "brief then holds only the slides that changed. Two rounds at most - what still fails after the second is the "
+              "operator's: walk_review.py accept, or reopen" % o.module)
     else:
         print("FAIL %s - %s (%.0f s)" % (m, ", ".join(fails), secs))
         if review and fails == ["course package"]:
             print("MODULE CLEAN - only the course package is left, judged after assembly (compile_course.py, then "
                   "check_course_package.py); the review sheets are promoted:")
             print(review)
+        if walk_said and fails == ["course package"]:
+            print(walk_said)
     if stages:
         print(stage_line(stages))
     if not o.no_fix:                             # 2.72.7: a check (QA's --no-fix) is no build of the builder's
@@ -1714,6 +1731,29 @@ def main(argv=None):
             print(x)
     print("Full log: %s" % log.name)
     return 0 if passed else 1
+
+
+def walk_gate(course, module, alone):
+    """where the walk review of a module that is clean stands -> (open, said).
+    alone (a build by itself that passed every check): `open` says why it is NOT DONE - with the contact sheets and the
+    brief of the slides that still need a verdict - or is '' when the review stands.
+    not alone (a module of a parallel build, at MODULE CLEAN): nothing is open for the build; `said` is the line printed
+    under MODULE CLEAN - the workflow's walk judge takes it from there"""
+    if MEASURE not in sys.path:
+        sys.path.insert(0, MEASURE)
+    import walk_review
+    w_ok, w_kind, w_msg = walk_review.verify(course, module)
+    if not alone:
+        return "", "WALK REVIEW - %s" % (w_msg if w_ok else "%s: %s\n  %s" % (w_kind, w_msg, WALK_NEXT % (module, module)))
+    if w_ok:
+        return "", ""
+    said = "walk review %s - %s" % (w_kind, w_msg)
+    try:
+        w_rc, w_lines = walk_review.prepare(course, module, stale_only=True)
+        said += "\n  " + "\n  ".join(w_lines + ["still open: " + x for x in walk_review.open_fails(course, module)])
+    except Exception as why:                            # noqa: BLE001 - the sheets are a help; the gate stands
+        said += "\n  (the contact sheets could not be made: %s)" % why
+    return said, ""
 
 
 ANSWER_WITHIN = 540     # s: a build still running then goes on by itself - under the shell's 10-minute limit (2.63.3)

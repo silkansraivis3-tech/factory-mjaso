@@ -182,10 +182,15 @@ touched slide** ("walk it like a trainee"), once, by the lead session:
 
 1. `python course-factory\scripts\fix.py check <course> --kind walk --modules N --slides s03,s07` - walks the module at 1280x800
    (`fit_gate.py --walk-dir`, a ~480 px picture of every Next), makes the touched slides' contact sheets and
-   `working_claude\_build\walk\MNN\review_brief.md`, and fails until the reviewer has signed those slides.
-2. Run the reviewer exactly as `compile/GUIDE.md` 2i says: **one Sonnet subagent per batch of 3-4 contact sheets** (several images in
-   one look - never a screenshot at a time in the main session), returning reviewer JSON.
-3. `python course-module-ux\measure\scripts\walk_review.py sign <course> --module N --review <reviewer.json>` (touched slides only
-   are replaced; the rest keep their earlier result), then the same `fix.py check --kind walk` again.
-4. Every fail is fixed and the module walked again until the check passes. `fix.py rebuild`'s upload and `course_portal.py upload`
-   refuse while a built module's walk review is missing, stale or failing.
+   `working_claude\_build\walk\MNN\review_brief.md`, and fails until the reviewer has signed those slides. The walk keeps a hash
+   per slide, so a slide the fix did not change keeps the verdict it had: only the touched ones are stale.
+2. Run the reviewer exactly as `compile/GUIDE.md` 2i says: **one Sonnet subagent per batch of up to 4 contact sheets** (several
+   images in one look - never a screenshot at a time in the main session), returning reviewer JSON. **Never the session or agent
+   that made the fix** - its own signature is refused.
+3. `python course-module-ux\measure\scripts\walk_review.py sign <course> --module N --review <reviewer.json> --built-by "<who made
+   the fix>"` (touched slides only are replaced; the rest keep their earlier result), then the same `fix.py check --kind walk` again.
+4. A fail is fixed and those slides are reviewed **once more - two rounds at most**, a third `sign` is refused. What still fails is
+   listed by the check with its slide and stop, and it is the operator's: accept it as it is (`walk_review.py accept <course>
+   --module N --by "<operator>" --why "<why it may ship>"`, recorded) or have it fixed and open the rounds again (`walk_review.py
+   reopen`). `fix.py rebuild`'s upload and `course_portal.py upload` refuse while a built module's walk review is missing, stale,
+   incomplete or failing with nothing accepted.

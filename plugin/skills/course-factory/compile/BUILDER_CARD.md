@@ -57,7 +57,8 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
 - Draw 2D figures with the 2D kit (`course-visuals/kit2d/SPEC.md`) beside the kit; 3D only where the figure's why is spatial.
 - Every figure spec carries `"why"` + `"why_text"` - what the figure's steps serve.
 - When no kit part shows the idea, write a `custom_figure` (an offline, self-contained file whose steps Next drives).
-- The walk review is run by the lead session after PASS, not by the builder.
+- The walk review is never the builder's: the workflow's walk judge runs it (by hand: the lead session). The "WALK REVIEW"
+  line under MODULE CLEAN says where it stands; never run `walk_review.py` - a builder's own signature is refused.
 
 ## Reading its answer - one line per problem, with its fix and file
 The answer lists only what fails (the full log's path is its last line - open it only when a line is not enough).

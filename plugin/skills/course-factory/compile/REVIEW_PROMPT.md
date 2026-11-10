@@ -5,16 +5,19 @@ nothing, and returns the verdict below. It never drives a browser: `build_module
 (`review_sheets.mjs`) and already checked by script that every question grades a right answer right and a wrong one
 wrong - that part of the old list is done.
 
+**The sheets hold the TASK PAGES only.** The deck's slides are not on them: the walk review (GUIDE 2i) looks at every
+slide at every stop a trainee sees, with its own rubric and its own signature, so no slide is judged twice.
+
 ---
 
-You are reviewing screenshots of a training module for a classroom: an instructor's deck on a projector and trainee
-task pages on a tablet, all at 1280 x 800. Read EVERY `sheet_NN.png` in the folder you were given - read them in
-parallel, several Read calls in one message. Each sheet holds two screens, each under a grey label that names it
-(deck slide and figure step, or task page, question and state). `sheets.json` in the same folder lists them.
+You are reviewing screenshots of the trainee task pages of a training module for a classroom, as a tablet shows them,
+all at 1280 x 800. Read EVERY `sheet_NN.png` in the folder you were given - read them in parallel, several Read calls
+in one message. Each sheet holds two screens, each under a grey label that names it (task page, question and state).
+`sheets.json` in the same folder lists them.
 
-A deck slide whose drawing steps is shown at its last step. Every question is shown twice: answered WRONG and checked,
-then answered RIGHT and checked. The pink dashed boxes on a WRONG screen are NOT part of the page: they show you every
-tap area ("tap N") and drop zone ("zone N") the trainee can use. They are there so you can judge item 3.
+Every question is shown twice: answered WRONG and checked, then answered RIGHT and checked. The pink dashed boxes on a
+WRONG screen are NOT part of the page: they show you every tap area ("tap N") and drop zone ("zone N") the trainee can
+use. They are there so you can judge item 3.
 A photograph or drawing is judged against the words on its own screen (item 6) - the question, the title, the caption.
 
 Look at every screen against this list:
@@ -28,11 +31,11 @@ Look at every screen against this list:
 4. **Says which.** After "answered RIGHT" the screen says it was right; after "answered WRONG" it says it was not and
    shows the right answer.
 5. **Nothing cut off or covered.** No word cut at a screen edge, no part of a drawing under the button bar at the
-   bottom, nothing overlapping the slide's title or footer.
-6. **The picture shows what the words name** (2.63.2). Read the question, the slide's title and its caption, then look
+   bottom, nothing overlapping the page's title or footer.
+6. **The picture shows what the words name** (2.63.2). Read the question, the page's title and its caption, then look
    at the picture beside them: is it the instrument, the part, the place the words name? An oxygen monitor on a %LEL
    question, a portable explosimeter where a fixed detector head is meant, a spectacle blind where a spool piece is
-   asked, a LNG tank on a slide about the bunker line: every automatic check passed these, and only an eye found them.
+   asked, a LNG tank on a question about the bunker line: every automatic check passed these, and only an eye found them.
    A picture of a related thing is not the thing - and on a question it also gives the answer away or sends the trainee
    to the wrong one. When the picture could be either, the caption must say which; with no caption, it is wrong.
 7. **The drawing is physically right and complete** (2.72.0 - IGF 2.71.0: a vent mast drawn inside the hull, a
@@ -54,7 +57,7 @@ IGF M02 s02 went PASS, then four failed builds, for polish):
   covered or unreadable; a tap area on the wrong thing or on empty space; a label or leader pointing at the wrong
   thing; the wrong verdict or no right answer shown; a file path on screen; a picture of a different instrument, part
   or place than the words name (item 6); ANY failure of item 7 - a wrong physical arrangement, a part missing that the
-  slide or a label names, something unconnected or floating, an incomplete figure. BROKEN is fixed before hand-over.
+  page or a label names, something unconnected or floating, an incomplete figure. BROKEN is fixed before hand-over.
 - `POLISH` - right and readable, but could look better: spacing a little tight, a label close to a line but clear,
   balance, alignment; a label a little far from its part, a pipe a few units short that still reads as joined. POLISH
   is listed for the operator, never fixed in the build loop.

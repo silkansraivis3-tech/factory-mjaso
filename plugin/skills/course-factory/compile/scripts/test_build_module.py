@@ -85,6 +85,7 @@ def main():
     long_part()
     short_part()
     streak_part()
+    walk_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
 
@@ -592,6 +593,79 @@ def review_part():
         check("--auto fills the picture slots after a failed build too, not only at PHASE A CLEAN (the factory trial: every "
               "builder lost a run, then filled them by hand)",
               "    if slots_left and o.auto and not o.auto_round:" in src and "if passed and slots_left and o.auto" not in src)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def walk_part():
+    """the walk review gate is reached at MODULE CLEAN: a module of a parallel build (--no-course-pages) never passes by
+    itself, so before this it never came to the gate and every module of a workflow build was refused at upload. A build
+    by itself is NOT DONE without the review; a parallel build still ends on "FAIL MNN - course package" (what the
+    workflow reads as a pass) and says under MODULE CLEAN where the walk review stands. The sheets are the task pages'"""
+    import io
+    import json
+    import shutil
+    import tempfile
+    tmp = tempfile.mkdtemp(prefix="bm_walk_")
+    try:
+        course = os.path.join(tmp, "course")
+        os.makedirs(os.path.join(course, "modules", "module01", "presentation"))
+        deck = os.path.join(course, "modules", "module01", "presentation", "index.html")
+        io.open(deck, "w", encoding="utf-8").write(
+            "<html><body><section id=\"s01\">One</section><section id=\"s02\">Two</section></body></html>")
+        wdir = os.path.join(course, "working_claude", "_build", "walk", "M01")
+        os.makedirs(wdir)
+        io.open(os.path.join(wdir, "walk.json"), "w", encoding="utf-8").write(json.dumps({"viewport": "1280x800", "stops": [
+            {"slide": s, "k": 1, "file": s + "_k1.png", "title": s, "lit": [], "ask": [], "reveal": [], "fig": ""} for s in ("s01", "s02")]}))
+        opened, said = b.walk_gate(course, 1, alone=True)
+        check("a build by itself that passed everything: no walk review -> NOT DONE, with what to review",
+              opened.startswith("walk review missing - walk review missing for M01") and said == "", (opened, said))
+        opened, said = b.walk_gate(course, 1, alone=False)
+        check("a module of a parallel build at MODULE CLEAN: nothing open for the build, the walk review's state is said",
+              opened == "" and said.startswith("WALK REVIEW - missing: walk review missing for M01"), (opened, said))
+        check("... with who takes it from here: the workflow's walk judge, the builder stops, the commands for one session",
+              "A builder stops here" in said and "walk judge" in said and "prepare <course> --module 1 --stale" in said
+              and "--built-by" in said, said)
+        sys.path.insert(0, b.MEASURE)
+        import walk_review
+        rv = os.path.join(tmp, "reviewer.json")
+        io.open(rv, "w", encoding="utf-8").write(json.dumps({"reviewed_by": "walk:1 (workflow walk judge)", "slides": {
+            "s01": {"ok": True, "fails": []}, "s02": {"ok": False, "fails": ["stop 1: the label is cut"]}}}))
+        walk_review.sign(course, 1, rv, "build:1 (workflow builder)")
+        opened, said = b.walk_gate(course, 1, alone=True)
+        check("an open fail: NOT DONE names the slide, its stop and the round", opened.startswith("walk review failing")
+              and "still open: s02 - stop 1: the label is cut" in opened and "round 1 of 2" in opened, opened)
+        io.open(rv, "w", encoding="utf-8").write(json.dumps({"reviewed_by": "walk:1 (workflow walk judge)", "slides": {
+            "s02": {"ok": True, "fails": []}}}))
+        walk_review.sign(course, 1, rv)
+        check("signed and clean: a build by itself passes the gate", b.walk_gate(course, 1, alone=True) == ("", ""))
+        opened, said = b.walk_gate(course, 1, alone=False)
+        check("... and a parallel build says so under MODULE CLEAN", opened == "" and said.startswith("WALK REVIEW - walk review passed for M01 (walk:1"), said)
+        io.open(deck, "w", encoding="utf-8").write(
+            "<html><body><section id=\"s01\">One</section><section id=\"s02\">Two, fixed</section></body></html>")
+        opened, said = b.walk_gate(course, 1, alone=False)
+        check("one slide fixed: only that slide is stale", "WALK REVIEW - stale" in said and "1 of 2 slide(s)" in said and "s02" in said, said)
+        src = io.open(b.__file__, encoding="utf-8").read()
+        check("the gate is reached at module clean - a parallel build whose only open fail is the course package",
+              'module_clean = passed or (o.no_course_pages and fails == ["course package"])' in src
+              and "if module_clean and not slots_left and not o.no_walk and os.path.isfile(deck):" in src
+              and "if passed and not slots_left and not o.no_walk" not in src)
+        gate = src.split("walk_open, walk_said = walk_gate(course, o.module, alone=passed and not o.no_course_pages)")[1].split(
+            "secs = time.time() - t0")[0]
+        check("a parallel build of a course assembled before (its course package passes too) is still the builder's: PASS and "
+              "the WALK REVIEW line, never NOT DONE",
+              "alone=passed and not o.no_course_pages)" in src
+              and "        if review:\n            print(review)\n        if walk_said:\n            print(walk_said)\n    elif walk_open:" in src)
+        check("... and only a build by itself fails on it: a parallel build keeps \"FAIL MNN - course package\" as its last "
+              "verdict (the workflow reads that line as the module's pass)",
+              gate.strip().splitlines() == ["if walk_open:", "            passed = False", '            fails.append("walk review")']
+              and 'print("FAIL %s - %s (%.0f s)" % (m, ", ".join(fails), secs))' in src
+              and 'if walk_said and fails == ["course package"]:' in src, gate)
+        check("the review sheets are the task pages alone - the deck's slides are the walk review's",
+              '"--tasks-only"] + (' in src and "VISUAL REVIEW of the task pages" in src and "the walk review \"\n" in src.replace("'", '"')
+              or ('"--tasks-only"] + (' in src and "VISUAL REVIEW of the task pages" in src and "The deck's slides are not on these sheets" in src))
+        check("--no-walk also keeps the fit walk from writing the walk pictures (the workflow's QA check runs beside the walk judge)",
+              'if v == "1280x800" and not o.no_walk else [])' in src)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

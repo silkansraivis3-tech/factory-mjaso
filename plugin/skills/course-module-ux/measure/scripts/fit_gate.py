@@ -215,6 +215,16 @@ def walk(page, deck, min_shown, shots=None, record=None):
     return found
 
 
+def walked_deck(deck):
+    """what the walk was made of: each slide's hash and the whole deck's, kept beside the pictures so the walk review can
+    tell a picture of an older slide from a picture of this one (walk_review.py)"""
+    try:
+        import walk_review
+        return {"slides": walk_review.slide_hashes(str(deck)), "deck_sha256": walk_review.deck_sha256(str(deck))}
+    except Exception:                                       # noqa: BLE001 - the hashes are a help; the walk stands without them
+        return {}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("deck")
@@ -257,7 +267,8 @@ def main(argv=None):
                 if rec is not None:
                     Path(o.walk_dir).mkdir(parents=True, exist_ok=True)
                     (Path(o.walk_dir) / "walk.json").write_text(
-                        json.dumps({"viewport": "1280x800", "stops": rec}, indent=1, ensure_ascii=False), encoding="utf-8")
+                        json.dumps(dict({"viewport": "1280x800", "stops": rec}, **walked_deck(deck)), indent=1, ensure_ascii=False),
+                        encoding="utf-8")
                 page.close()
             b.close()
     except Exception as err:                                # the browser did not start or the page did not answer
