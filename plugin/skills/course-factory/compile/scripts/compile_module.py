@@ -3222,7 +3222,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if b.get("box") in layout_fit.ORDER or (split is None and fitc["box"] != dflt) \
                 or (grown and split is not None and split > fitc["text"]):
             split = fitc["text"]                            # the picture's room comes first; words past it go in parts
-        part_w = layout_fit.PART_WORDS * layout_fit.BOX[fitc["box"]]["words"] / float(layout_fit.BOX[dflt]["words"])
+        part_w = int(round(layout_fit.PART_WORDS * layout_fit.BOX[fitc["box"]]["words"] / float(layout_fit.BOX[dflt]["words"])))
     if tid == "opening" and variant == "photo":            # the opening's photograph is the screen, the title over it
         comp = "photo"
     # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat. A

@@ -2467,6 +2467,13 @@ def boxes_part(tmp):
     code, out = run(COMPILE, c, "--module", "1", "--draft")
     check("the build sheet's \"box\" wins; a slide asked onto the stage is not told to change its picture",
           'data-box="even"' in section(deck(md), "s05") and "another kind of picture" not in out, out[-600:])
+    build_of(c, lambda s: s["screens"].update(s06={"figure": "assets/fig/busy.svg", "template": "content-in-parts",
+                                                   "box": "picture-wide"}))
+    code, out = run(COMPILE, c, "--module", "1", "--draft")
+    s6 = section(deck(md), "s06")
+    check("content-in-parts beside a box smaller than the default, no \"parts\" ranges: the words are cut in parts (a part's "
+          "words are a whole number), no crash", "Traceback" not in out and 'data-box="picture-wide"' in s6
+          and len(re.findall(r'class="lt-part[ "]', s6)) >= 2, out[-900:])
 
 
 def kit3d_part(tmp):
