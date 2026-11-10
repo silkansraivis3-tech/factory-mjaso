@@ -415,6 +415,16 @@
 
 /* ------------------------------------------------ summary: the same white cards, each a question first; Next or a tap opens it */
 .slide.lt-ask4 .rc-item{position:relative;overflow:hidden;cursor:pointer;transition:box-shadow .5s,transform .5s cubic-bezier(.2,.7,.2,1)}
+/* the number beside the question, not on a line of its own; the closed card's question lies over the place its hidden
+   answer keeps, so a closed card is no taller than an open one - six cards put "Next: the module check" under the deck's
+   chrome at 1280 x 800 and 1024 x 768 when the question stood above the answer's place */
+.slide.lt-ask4 .rc-item{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto;
+  align-content:start;column-gap:.7em}
+.slide.lt-ask4 .rc-item::before{grid-area:1 / 1;align-self:start}
+.slide.lt-ask4 .lt-q2{grid-area:1 / 2 / 4 / 3;align-self:start}
+.slide.lt-ask4 .rc-item.cur .lt-q2,.slide.lt-ask4 .rc-item.lit .lt-q2{grid-area:1 / 2;align-self:center}
+.slide.lt-ask4 .rc-t{grid-area:2 / 1 / 3 / 3}
+.slide.lt-ask4 .rc-d{grid-area:3 / 1 / 4 / 3}
 /* the question, until the card opens; then it stays above the answer, small */
 .lt-ask4 .lt-q2{display:block;color:var(--lt-navy);font-weight:700;font-size:clamp(16px,2.7vmin,30px);line-height:1.25;
   transition:font-size .6s cubic-bezier(.3,.7,.2,1),color .5s,opacity .5s}

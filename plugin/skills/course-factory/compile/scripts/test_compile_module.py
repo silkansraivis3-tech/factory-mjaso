@@ -201,6 +201,24 @@ def recap_part(tmp):
           '<p class="rc-next" data-script-ignore' in r, r)
     code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
     check("... and check_script_match finds exactly the approved words on it", code == 0, out)
+
+    # the largest recap the script allows - six points of 24 words, each with its question - fits the slide, its cards
+    # closed (as the audit sees them) and open, and "Next: the module check" stays clear of the deck's chrome
+    os.makedirs(os.path.join(tmp, "r6"))
+    point = ("ESD - push buttons, blackout, shore link, fusible links and tank alarms start it; it closes the manifold "
+             "valves and trips pumps and compressors.")
+    big = dict(recap, text="\n".join([point] * 6), asks="\n".join(["Name two things that start an ESD and two things it does."] * 6))
+    screens = json.loads(json.dumps(SCREENS))
+    screens.insert([x["id"] for x in screens].index("t02"), big)
+    c, md = new_course(os.path.join(tmp, "r6"), script(screens=screens))
+    run(COMPILE, c, "--module", "1")
+    audits = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "run_audits.py")
+    code, out = run(audits, os.path.join(md, "presentation", "index.html"), "--viewport", "1024x768", "--viewport", "1280x720")
+    if code == 2:
+        print("  (no Chrome or Edge here: the recap's fit was not measured)")
+    else:
+        check("six recap points of 24 words with their questions fit at 1280 x 800, 1024 x 768 and 1280 x 720 (the gas "
+              "trial: every module's recap spilled 15-30 px)", "lt-ask4" in section(deck(md), "s05") and "(s05)" not in out, out[-900:])
     long_layouts_part(tmp)
 
 
