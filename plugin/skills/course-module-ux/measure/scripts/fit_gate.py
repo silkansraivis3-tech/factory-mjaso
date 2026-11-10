@@ -216,12 +216,13 @@ def walk(page, deck, min_shown, shots=None, record=None):
 
 
 def walked_deck(deck):
-    """what the walk was made of: each slide's hash and the whole deck's, kept beside the pictures so the walk review can
-    tell a picture of an older slide from a picture of this one (walk_review.py)"""
+    """what the walk is made of: each slide's fingerprint and the whole deck's, taken BEFORE the first picture and kept
+    beside the pictures - so the walk review tells a picture of an older slide from a picture of this one, and a deck that
+    changed while it was walked is not passed off as walked (walk_review.py). A walk with none cannot be reviewed"""
     try:
         import walk_review
-        return {"slides": walk_review.slide_hashes(str(deck)), "deck_sha256": walk_review.deck_sha256(str(deck))}
-    except Exception:                                       # noqa: BLE001 - the hashes are a help; the walk stands without them
+        return walk_review.walk_stamp(deck)
+    except Exception:                                       # noqa: BLE001 - the fit result stands; prepare asks for a new walk
         return {}
 
 
@@ -263,11 +264,12 @@ def main(argv=None):
                 page = b.new_page(viewport={"width": w, "height": h})
                 page.add_init_script(PROBE)
                 rec = [] if (o.walk_dir and (w, h) == (1280, 800)) else None
+                made_of = walked_deck(deck) if rec is not None else {}
                 res["%dx%d" % (w, h)] = walk(page, deck, o.min_shown, o.walk_dir if rec is not None else None, rec)
                 if rec is not None:
                     Path(o.walk_dir).mkdir(parents=True, exist_ok=True)
                     (Path(o.walk_dir) / "walk.json").write_text(
-                        json.dumps(dict({"viewport": "1280x800", "stops": rec}, **walked_deck(deck)), indent=1, ensure_ascii=False),
+                        json.dumps(dict({"viewport": "1280x800", "stops": rec}, **made_of), indent=1, ensure_ascii=False),
                         encoding="utf-8")
                 page.close()
             b.close()

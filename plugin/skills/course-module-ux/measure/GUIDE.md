@@ -191,11 +191,14 @@ on the machine, in which case the browser console is the only syntax check you h
 
 `python measure/scripts/walk_review.py prepare <course> --module N` walks Start, then Next to the end at
 1280 × 800 and lays every stop of every slide out as a contact sheet for one look (`--stale`: only the
-slides with no verdict for what they show now - the walk keeps a hash per slide, so a one-slide fix makes one
-slide stale); `walk_review.py sign --built-by "<who built it>"` records the reviewer's answer and who
-reviewed, and refuses the builder's own; `walk_review.py verify` exits 0 only when every slide's review
-was made for the slide as it is. Two rounds at most; what still fails the operator accepts on record
-(`walk_review.py accept --by --why`) or has fixed (`reopen`). The build prints `NOT DONE` until it is
+slides with no verdict for what they show now - the walk keeps each slide's fingerprint, the one the audits'
+cache uses (`check_cache.py`: its markup, the module's stylesheet and scripts, the files it names), so a
+one-slide fix makes one slide stale and a changed stylesheet all of them); `walk_review.py sign --built-by
+"<who built it>"` (once more for each fixer) records the reviewer's answer, who reviewed and who built, and
+refuses a builder's or fixer's own, and a slide that is not what its sheet showed; `walk_review.py verify`
+exits 0 only when every slide of the deck was walked and reviewed as it is. Two rounds at most; what still
+fails the operator - never an agent - accepts on record (`walk_review.py accept --by --why`) or has fixed
+(`reopen`). The final assessment is `--module final`. The build prints `NOT DONE` until it is
 signed and fresh (`course-factory` `compile/GUIDE.md` 2i); the whole-course workflow's walk judge runs it.
 Every screen must be actionable without opening anything; the module check is second-to-last and the
 hand-off screen is last.

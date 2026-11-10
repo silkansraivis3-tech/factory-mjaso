@@ -704,8 +704,10 @@ A good custom figure is offered to the kit afterwards (`course-visuals/kit2d/SPE
 (`fit_gate.py --walk-dir`: every Start and every Next, a ~480 px picture of each stop, `working_claude\_build\walk\MNN\walk.json`).
 When every other check passes it prints `NOT DONE: walk review missing/stale/failing/incomplete` until an AI reviewer has looked;
 a module of a parallel build (`--no-course-pages`) prints the same under `MODULE CLEAN` (under `PASS`, when the course was assembled before), as `WALK REVIEW - ...`, and never fails on it. The factory cannot
-call the reviewer. **In the whole-course workflow the walk judge runs it** (`build_course.js`: one reviewer beside QA, its fails in the
-one fix round, one more look at the slides the round changed); **in a build by hand the lead session does:**
+call the reviewer. The final assessment is walked like a module (`--module final`: `walk\FINAL\`, `FINAL_walk_review.json` - the one
+name the build, `walk_review.py` and the portal use). **In the whole-course workflow the walk judge runs it** (`build_course.js`: ONE
+reviewer a module beside QA, reading the sheets in batches of up to 4; its fails in the one fix round, one more look at the slides the
+round changed; one judge for the final after it is built); **in a build by hand the lead session does:**
 1. `python course-module-ux\measure\scripts\walk_review.py prepare <course> --module N --stale` - one contact sheet per slide that
    has no verdict for what it shows now (`walk\MNN\sheets\sNN.png`; the first time that is every slide) and
    `walk\MNN\review_brief.md`: the sheets in batches of up to 4 slides with each slide's stop texts, its figure's why / why_text, its
@@ -714,23 +716,33 @@ one fix round, one more look at the slides the round changed); **in a build by h
    a reason and serves it; 6 the answer / reveal is visible and does not cover the figure; 7 nothing of the factory's on screen - a
    file path, a placeholder, a cut credit; 8 the picture is the thing the words name and a seafarer would not call it wrong).
    (Pillow: `python -m pip install pillow`.)
-2. **One Sonnet subagent per batch** (up to 4 contact sheets - several images in one look, never one screenshot at a time): give it
-   the batch's section of the brief and the sheet files; it returns JSON `{"reviewed_by": "...", "slides": {"s03": {"ok": true,
-   "fails": []}, "s07": {"ok": false, "fails": ["stop 3: the chart is still an empty axis"]}}}`. **Never the agent or session that
-   built the module or made the fix.**
-3. Save each batch's JSON and `walk_review.py sign <course> --module N --review <reviewer.json> --built-by "<who built it>"` (the
-   results merge by slide). It records who reviewed and who built, and refuses a review signed by the builder, by nobody, or of a
-   slide that changed since its pictures were taken.
-4. **Fix every fail in one go, build again, and review once more:** `prepare --stale` then shows only the slides the fix changed
-   (the walk keeps a hash per slide, ignoring build timestamps and comments - a slide nobody touched keeps its verdict) and the
-   ones that failed. **Two rounds at most** - a third `sign` is refused. What still fails after the second is the operator's:
+2. **One Sonnet subagent per batch** (up to 4 contact sheets - several images in one look, never one screenshot at a time; the
+   workflow's one judge a module reads the same batches itself): give it the batch's section of the brief and the sheet files; it
+   returns JSON `{"reviewed_by": "...", "slides": {"s03": {"ok": true, "fails": []}, "s07": {"ok": false, "fails": ["stop 3: the
+   chart is still an empty axis"]}}}` - `ok` a real `true` / `false`: the word `"false"` in quotes, or an `ok` with fails beside it,
+   counts as a fail. **Never the agent or session that built the module or made the fix.**
+3. Save each batch's JSON and `walk_review.py sign <course> --module N --review <reviewer.json> --built-by "<who built it>"`
+   (`--built-by` once more for each agent that fixed it; the results merge by slide). It records who reviewed and everyone who built
+   or fixed, and refuses a review signed by any of them, by nobody, or of a slide that is not what its contact sheet showed - a
+   module built again while the reviewer looked: `prepare --stale` again and review the new sheets. The names are labels the caller
+   gives: the script cannot tell which agent typed them, so the lead session passes the true ones.
+4. **Fix every fail in one go, build again, and review once more:** `prepare --stale` then shows only the slides with no verdict for
+   what they show now - the ones the fix changed. The walk keeps each slide's fingerprint, the one the audits' cache uses: its
+   markup (build timestamps and comments ignored), the module's stylesheet and scripts, the shell, the files it names - a changed
+   `gb_*.js`, kit part or photo makes its slides stale, a slide nothing touched keeps its verdict, and a slide that failed and was
+   not changed keeps its fail and is not shown again. **Two rounds at most** - a third `sign` is refused, and a round is counted for
+   the module, so renaming a slide does not start it over. What still fails after the second is the operator's:
    `walk_review.py verify <course> --module N` lists each one with its slide and stop, and the operator either accepts it -
    `walk_review.py accept <course> --module N --by "<operator>" --why "<why it may ship>" [--slides s04]`, recorded in the signed
-   file and shown by `verify` from then on - or has it fixed and opens one more pair of rounds (`walk_review.py reopen <course>
-   --module N --by "<operator>"`). An accepted slide that changes again is stale again. `--no-walk` leaves the walk pictures alone:
-   the factory's own tests, and a check build that runs beside a reviewer.
-`fix.py upload` and `course_portal.py upload` refuse while a built module's walk review is missing, stale, incomplete or failing
-with nothing accepted.
+   file and shown by `verify`, in the draft's notes and at upload from then on - or has it fixed and opens one more pair of rounds
+   (`walk_review.py reopen <course> --module N --by "<operator>"`). After the second round a changed slide needs `reopen` first:
+   `accept` is refused for a slide that is not the one reviewed. **`accept` and `reopen` are the operator's own**, typed by the
+   operator - no agent runs them, and the file records how each was run (typed in a terminal, or not). An accepted slide that
+   changes again is stale again. `--no-walk` leaves the walk pictures alone: the factory's own tests, and a check build that runs
+   beside a reviewer.
+`fix.py upload` and `course_portal.py upload` refuse while a built module's walk review - or the final's - is missing, stale,
+incomplete or failing with nothing accepted; a slide that was never walked does not pass (`incomplete`), and what the operator
+accepted is listed at upload.
 
 ## 3 · When the look is not enough
 

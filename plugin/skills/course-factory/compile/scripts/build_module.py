@@ -18,8 +18,8 @@ process, the independent ones at once, and the answer is short:
                   right) onto a few sheets - only the screens changed since the last review - and checks that every
                   question grades right and wrong answers as such (compile GUIDE 2f). The sheets are the TASK PAGES' review;
                   the deck's slides are the walk review's (5), so no slide is judged twice
-  5  the walk     at module clean: walk_review.py verify - every walked slide needs a reviewer's verdict for what it shows
-                  now (compile GUIDE 2i). A build by itself is NOT DONE without it; a module of a parallel build
+  5  the walk     at module clean: walk_review.py verify - every slide of the deck needs a reviewer's verdict for what it
+                  shows now (compile GUIDE 2i); the final assessment's deck too. A build by itself is NOT DONE without it; a module of a parallel build
                   (--no-course-pages) prints where the walk review stands under MODULE CLEAN and the workflow's walk judge
                   takes it from there
 
@@ -74,8 +74,9 @@ MEASURE = os.path.join(SKILLS, "course-module-ux", "measure", "scripts")
 KIT = os.path.join(SKILLS, "course-visuals", "kit", "scripts")
 # under MODULE CLEAN in a parallel build, when the walk review is still open: who takes it from here
 WALK_NEXT = ("A builder stops here: in a whole-course workflow the walk judge reviews the slides. In one session: walk_review.py "
-             "prepare <course> --module %s --stale, a reviewer that did not build the module on its brief, then walk_review.py "
-             "sign <course> --module %s --review <reviewer.json> --built-by \"<who built it>\" (compile/GUIDE.md 2i)")
+             "prepare <course> --module %s --stale, a reviewer that did not build or fix the module on its brief, then "
+             "walk_review.py sign <course> --module %s --review <reviewer.json> --built-by \"<who built it>\" (--built-by again "
+             "for each one who fixed it; compile/GUIDE.md 2i)")
 sys.path.insert(0, HERE)
 sys.path.insert(0, FACTORY)
 sys.path.insert(0, KIT)
@@ -1499,9 +1500,7 @@ def main(argv=None):
         # the deck walked with Next to every slide's last step (fit_gate.py, Playwright): the audits measure each slide as
         # it opens, and an answer or a last line that arrives later was never measured - one job a size, side by side
         for v in ["1280x800"] + sizes:
-            jobs["fit %s (every Next)" % v] = [PY, os.path.join(MEASURE, "fit_gate.py"), deck, "--viewport", v] + (
-                # 2.116.0 - the walk review's input: every stop at 1280x800 saved (walk_review.py)
-                ["--walk-dir", os.path.join(logdir, "walk", m)] if v == "1280x800" and not o.no_walk else [])
+            jobs["fit %s (every Next)" % v] = fit_job(course, o.module, deck, v, o.no_walk)
 
     if not o.no_course_pages:
         jobs["course pages (compile_course.py)"] = [PY, os.path.join(HERE, "compile_course.py"), course]
@@ -1514,9 +1513,7 @@ def main(argv=None):
     if want_review:
         import shutil
         shutil.rmtree(pending, ignore_errors=True)
-        jobs["review sheets"] = ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + reviewed_dir(out_dir),
-                                 "--shots=" + os.path.join(logdir, "%s_shots" % m), "--tasks-only"] + (
-                                     ["--grade-only"] if slots_left else [])
+        jobs["review sheets"] = sheets_job(mdir, pending, reviewed_dir(out_dir), os.path.join(logdir, "%s_shots" % m), bool(slots_left))
     pkg_cmd = [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)]
     ak = next((k for k in jobs if k.startswith("audits")), None)
 
@@ -1656,13 +1653,8 @@ def main(argv=None):
     # after assembly), so there the walk review's state is printed under MODULE CLEAN and neither `passed` nor `fails`
     # changes - the builder stops at module clean and the workflow's walk judge reviews the slides. A parallel build whose
     # course package passes too (the course was assembled before) is the same builder's: it prints PASS and the same line
-    walk_open = walk_said = ""
-    module_clean = passed or (o.no_course_pages and fails == ["course package"])
-    if module_clean and not slots_left and not o.no_walk and os.path.isfile(deck):
-        walk_open, walk_said = walk_gate(course, o.module, alone=passed and not o.no_course_pages)
-        if walk_open:
-            passed = False
-            fails.append("walk review")
+    passed, fails, walk_open, walk_said = walk_step(course, o.module, deck, passed, fails, parallel=o.no_course_pages,
+                                                    skip=bool(slots_left) or o.no_walk or o.draft)
     secs = time.time() - t0
     needs = ""
     if slots_left or os.path.isfile(os.path.join(workspace.claude_path(course, "visuals"), "%s_VISUAL_NEEDS.json" % m)):
@@ -1709,9 +1701,10 @@ def main(argv=None):
             print(walk_said)
     elif walk_open:
         print("NOT DONE: %s (%.0f s)" % (walk_open, secs))
-        print("  Every other check passed. Run the reviewer on the brief (one Sonnet subagent per batch of 3-4 contact sheets, "
-              "returning reviewer JSON - compile/GUIDE.md 2i; never the session that built the module), then: walk_review.py sign "
-              "<course> --module %s --review <reviewer.json> --built-by \"<who built it>\". Fix every fail and build again: the "
+        print("  Every other check passed. Run the reviewer on the brief (one Sonnet subagent per batch of up to 4 contact "
+              "sheets, returning reviewer JSON - compile/GUIDE.md 2i; never the session that built or fixed the module), then: "
+              "walk_review.py sign <course> --module %s --review <reviewer.json> --built-by \"<who built it>\" (and --built-by "
+              "again for each one who fixed it). Fix every fail and build again: the "
               "brief then holds only the slides that changed. Two rounds at most - what still fails after the second is the "
               "operator's: walk_review.py accept, or reopen" % o.module)
     else:
@@ -1733,15 +1726,49 @@ def main(argv=None):
     return 0 if passed else 1
 
 
+def walk_review_py():
+    if MEASURE not in sys.path:
+        sys.path.insert(0, MEASURE)
+    import walk_review
+    return walk_review
+
+
+def sheets_job(mdir, pending, base, shots, grade_only=False):
+    """the review sheets -> their command: the task pages alone (--tasks-only) - the deck's slides are looked at once, in
+    the walk review"""
+    return ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + base, "--shots=" + shots,
+            "--tasks-only"] + (["--grade-only"] if grade_only else [])
+
+
+def fit_job(course, module, deck, viewport, no_walk=False):
+    """the fit walk of one size -> its command. At 1280x800 it also saves every stop for the walk review, in the folder
+    walk_review.py reads (the final assessment's is FINAL) - unless --no-walk"""
+    return [PY, os.path.join(MEASURE, "fit_gate.py"), deck, "--viewport", viewport] + (
+        ["--walk-dir", walk_review_py().walk_dir(course, module)] if viewport == "1280x800" and not no_walk else [])
+
+
+def walk_step(course, module, deck, passed, fails, parallel, skip=False):
+    """the walk review gate at module clean -> (passed, fails, open, said).
+    A build by itself that passed every check is NOT DONE while the review is open: passed turns False, "walk review"
+    joins the fails, `open` says why. A module of a parallel build (the course package is judged after assembly) keeps
+    its verdict as it is - "FAIL MNN - course package" is what the workflow reads as its pass - and `said` is the line for
+    under MODULE CLEAN. skip: picture spaces still to fill, a draft, --no-walk - nothing a reviewer should judge yet"""
+    module_clean = passed or (parallel and fails == ["course package"])
+    if not module_clean or skip or not os.path.isfile(deck):
+        return passed, fails, "", ""
+    walk_open, walk_said = walk_gate(course, module, alone=passed and not parallel)
+    if walk_open:
+        return False, fails + ["walk review"], walk_open, walk_said
+    return passed, fails, walk_open, walk_said
+
+
 def walk_gate(course, module, alone):
     """where the walk review of a module that is clean stands -> (open, said).
     alone (a build by itself that passed every check): `open` says why it is NOT DONE - with the contact sheets and the
     brief of the slides that still need a verdict - or is '' when the review stands.
     not alone (a module of a parallel build, at MODULE CLEAN): nothing is open for the build; `said` is the line printed
     under MODULE CLEAN - the workflow's walk judge takes it from there"""
-    if MEASURE not in sys.path:
-        sys.path.insert(0, MEASURE)
-    import walk_review
+    walk_review = walk_review_py()
     w_ok, w_kind, w_msg = walk_review.verify(course, module)
     if not alone:
         return "", "WALK REVIEW - %s" % (w_msg if w_ok else "%s: %s\n  %s" % (w_kind, w_msg, WALK_NEXT % (module, module)))
@@ -1770,7 +1797,7 @@ def running_files(course, module):
 
 def state_key(course, module, args):
     """2.72.3 - everything a build reads and writes, as it is now: the script and build sheet, the module's figures and
-    folder (photos, kit_parts.js, what the last build wrote), its review baseline, the factory's own files, the arguments
+    folder (photos, kit_parts.js, what the last build wrote), its review baseline and walk review, the factory's own files, the arguments
     and the CF_ settings - by name, size and time, so taking it costs a fraction of a second. Taken when a build ends; the
     same key at the next call means nothing changed since that answer (the 2.66 run's builders built again to re-read a
     report they already had)"""
@@ -1789,6 +1816,10 @@ def state_key(course, module, args):
     files = [p["script"], cm.build_path(course, module)] + [os.path.join(course, x) for x in sorted(os.listdir(course))
                                                               if os.path.isfile(os.path.join(course, x))]
     trees = [workspace_figdir(course, module), mdir or "", out_dir, reviewed_dir(out_dir), os.path.dirname(SKILLS)]
+    try:                                                 # the answer says where the walk review stands: a review signed,
+        files.append(walk_review_py().review_file(course, module))      # accepted or reopened since is a change
+    except Exception:                                    # noqa: BLE001 - a module walk_review cannot name has no review
+        pass
     for f in files:
         try:
             st = os.stat(f)

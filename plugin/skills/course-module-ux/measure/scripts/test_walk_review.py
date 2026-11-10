@@ -3,19 +3,23 @@
 
     python test_walk_review.py
 
-Pinned:
-  * prepare makes one contact sheet per walked slide and review_brief.md (batches of at most 4 slides, each slide's stop texts,
-    its figure's why / why_text from the build sheet, the rubric); --slides limits it; --stale shows only the slides with no
-    verdict for what they show now, with what failed last time;
-  * sign writes MNN_walk_review.json: who built, who reviewed, the round, and per slide the verdict with the slide's hash;
-    slides not returned keep their old result; the builder's own signature and a missing --built-by are refused;
-  * one slide, one hash: a fix to one slide makes that slide stale and no other; a change outside the slides makes all stale;
-    a build timestamp or comment change is NOT a change; a review signed before the per-slide hashes still stands for its deck;
-  * two rounds at most: a third sign is refused (exit 3); accept (the operator, never the builder or the reviewer, with a
-    reason) lets the module pass and is void once the slide changes; reopen starts the rounds again;
-  * pictures older than the deck are refused (fit_gate.py writes the slide hashes beside the walk);
-  * the gates: build_module.py (also in a --no-course-pages build), fix.py check --kind walk, course_portal upload.
-No browser needed: the walk's stops are fixture PNGs.
+Every check RUNS the behaviour on a fixture course (a deck with a stylesheet, a script and a photograph beside it). Pinned:
+  * prepare makes one contact sheet per walked slide, their manifest (each sheet's slide fingerprint) and review_brief.md
+    (batches of at most 4 slides, each slide's stop texts, its figure's why / why_text, the rubric); --slides limits it;
+    --stale shows only the slides with no verdict for what they show now, with what failed last time;
+  * one slide, one fingerprint - the audits' own (check_cache.py): a fix to one slide makes that slide stale and no other; a
+    changed stylesheet, script or new file of assets\\ makes them all stale; a replaced photograph the slides that show it;
+  * sign records the fingerprint of the sheet the reviewer SAW: a slide with no sheet, or one that changed (or was walked
+    again) after its sheet was made, is refused; "ok" must be true or false; a verdict that stands is not replaced;
+    the builder's and the fixer's own signature and a missing --built-by are refused;
+  * verify wants every slide of the deck reviewed - also one the walk never reached;
+  * two rounds at most: a third sign is refused (exit 3), also after the failing slide was renamed; accept (the operator,
+    with a reason, recorded with how it was run) lets the module pass and is void once the slide changes; reopen starts the
+    rounds again and lets the open slides be reviewed as they are;
+  * the final assessment is FINAL whether asked for by name or by its folder's number;
+  * a review signed before the fingerprints stands for its deck and no other; a walk with no fingerprints is refused;
+  * the gates: fix.py check --kind walk, course_portal upload (what stops it, and the accepted fails it shows).
+No browser needed: the walk's stops are fixture PNGs (walk() stands in for the build's fit walk).
 """
 from __future__ import annotations
 
@@ -43,32 +47,51 @@ def check(name, ok, detail=""):
 
 
 WORDS = ["One", "Two", "Three", "Four", "Five"]
-DECK = ("<!-- built 2026-11-09T10:11:12 -->\n<html><head><style>.slide{color:navy}</style></head><body>"
-        + "".join("<section class=\"slide\" id=\"s%02d\">%s</section>" % (i, w) for i, w in enumerate(WORDS, 1))
-        + "<script>var deck = 1</script></body></html>")
-BUILDER, REVIEWER, OPERATOR = "build:1 (workflow builder)", "Sonnet subagent", "Aleksis Vejs"
+DECK = ("<html><head><link rel=\"stylesheet\" href=\"../assets/deck.css\"></head><body><main>"
+        + "".join("<section class=\"slide\" id=\"s%02d\">%s%s</section>" % (i, w, "<img src=\"../assets/img/p3.jpg\">" if i == 3 else "")
+                  for i, w in enumerate(WORDS, 1))
+        + "</main><script src=\"../assets/gb_deck.js\"></script></body></html>")
+FINAL_DECK = DECK.replace("id=\"s01\">", "id=\"s01\" data-block=\"FINAL-A\">")
+BUILDER, FIXER, REVIEWER, OPERATOR = "build:1 (workflow builder)", "fix:1 (workflow fixer)", "Sonnet subagent", "Aleksis Vejs"
+ALL = {"s%02d" % i: True for i in range(1, 6)}
+ONE_FAIL = dict(ALL, s04="stop 3: the chart is still an empty axis")
 
 
-def fixture(tmp, name="course", hashes=False):
-    from PIL import Image
-    course = os.path.join(tmp, name)
-    mdir = os.path.join(course, "modules", "module01")
+def add_module(course, n, text=DECK):
+    mdir = os.path.join(course, "modules", "module%02d" % n)
     os.makedirs(os.path.join(mdir, "presentation"))
+    os.makedirs(os.path.join(mdir, "assets", "img"))
+    Path(mdir, "assets", "deck.css").write_text(".slide{color:navy}", encoding="utf-8")
+    Path(mdir, "assets", "gb_deck.js").write_text("var deck = 1", encoding="utf-8")
+    Path(mdir, "assets", "img", "p3.jpg").write_bytes(b"a photograph")
     deck = Path(mdir, "presentation", "index.html")
-    deck.write_text(DECK, encoding="utf-8")
-    wdir = os.path.join(course, "working_claude", "_build", "walk", "M01")
-    os.makedirs(wdir)
+    deck.write_text(text, encoding="utf-8")
+    return deck
+
+
+def walk(course, module=1, skip=()):
+    """what the build's fit walk leaves (fit_gate.py --walk-dir): three stops a slide, and walk.json with each slide's
+    fingerprint as the walk began"""
+    from PIL import Image
+    wdir = wr.walk_dir(course, module)
+    os.makedirs(wdir, exist_ok=True)
+    stamp = wr.walk_stamp(wr.deck_file(course, module))
     stops = []
-    for i in range(1, 6):
+    for i, sid in enumerate(stamp["fingerprints"], 1):
         for k in (1, 2, 3):
-            fname = "s%02d_k%d.png" % (i, k)
+            if sid in skip:
+                continue
+            fname = "%s_k%d.png" % (sid, k)
             Image.new("RGB", (480, 300), (30 * i, 60 * k, 120)).save(os.path.join(wdir, fname))
-            stops.append({"slide": "s%02d" % i, "k": k, "file": fname, "title": "Slide %d" % i, "lit": ["Line %d" % k],
+            stops.append({"slide": sid, "k": k, "file": fname, "title": "Slide %d" % i, "lit": ["Line %d" % k],
                           "ask": [], "reveal": ["The answer"] if k == 3 else [], "fig": ":1:2"})
-    walk = {"viewport": "1280x800", "stops": stops}
-    if hashes:
-        walk.update(slides=wr.slide_hashes(str(deck)), deck_sha256=wr.deck_sha256(str(deck)))
-    Path(wdir, "walk.json").write_text(json.dumps(walk), encoding="utf-8")
+    Path(wdir, "walk.json").write_text(json.dumps(dict({"viewport": "1280x800", "stops": stops}, **stamp)), encoding="utf-8")
+
+
+def fixture(tmp, name="course", skip=()):
+    course = os.path.join(tmp, name)
+    deck = add_module(course, 1)
+    walk(course, 1, skip)
     sdir = os.path.join(course, "working_claude", "script")
     os.makedirs(sdir)
     Path(sdir, "M01.build.json").write_text(json.dumps({"screens": {
@@ -76,37 +99,59 @@ def fixture(tmp, name="course", hashes=False):
     return course, deck
 
 
+def rebuilt(course, deck, text, module=1):
+    """a fix and its build: the deck changes, it is walked again, and the reviewer gets the sheets of what changed"""
+    deck.write_text(text, encoding="utf-8")
+    walk(course, module)
+    return wr.prepare(course, module, stale_only=True)
+
+
 def reviewer(tmp, slides, by=REVIEWER):
-    """a reviewer JSON file: {"s04": "stop 3: ..."} is a fail, {"s01": True} a pass"""
+    """a reviewer JSON file: {"s04": "stop 3: ..."} is a fail, {"s01": True} a pass, a dict is written as it is"""
     p = os.path.join(tmp, "reviewer.json")
     Path(p).write_text(json.dumps({"reviewed_by": by, "slides": {
-        s: {"ok": v is True, "fails": [] if v is True else [v]} for s, v in slides.items()}}), encoding="utf-8")
+        s: v if isinstance(v, dict) else {"ok": v is True, "fails": [] if v is True else [v]} for s, v in slides.items()}}),
+        encoding="utf-8")
     return p
 
 
-def signed(course):
-    return json.loads(Path(wr.review_file(course, 1)).read_text(encoding="utf-8"))
+def signed(course, module=1):
+    return json.loads(Path(wr.review_file(course, module)).read_text(encoding="utf-8"))
+
+
+def raw(course, module=1):
+    p = wr.review_file(course, module)
+    return Path(p).read_text(encoding="utf-8") if os.path.isfile(p) else None
+
+
+def brief_of(course, module=1):
+    return Path(wr.walk_dir(course, module), "review_brief.md").read_text(encoding="utf-8")
 
 
 def quiet(*argv):
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        rc = wr.main(list(argv))
+    buf, stdin = io.StringIO(), sys.stdin
+    sys.stdin = io.StringIO()          # as a session or a script runs it: no terminal
+    try:
+        with contextlib.redirect_stdout(buf):
+            rc = wr.main(list(argv))
+    finally:
+        sys.stdin = stdin
     return rc, buf.getvalue()
 
 
 def first_part(tmp):
-    """prepare, sign, verify - one review, signed in batches"""
+    """prepare, sign, verify - one review, signed in batches; what a verdict is signed for"""
     course, deck = fixture(tmp)
     rc, lines = wr.prepare(course, 1)
     wdir = wr.walk_dir(course, 1)
-    sheets = sorted(os.listdir(os.path.join(wdir, "sheets")))
-    brief = Path(wdir, "review_brief.md").read_text(encoding="utf-8")
+    sheets = sorted(x for x in os.listdir(os.path.join(wdir, "sheets")) if x.endswith(".png"))
+    brief = brief_of(course)
     check("prepare: one contact sheet per slide", rc == 0 and sheets == ["s%02d.png" % i for i in range(1, 6)], (rc, lines, sheets))
     from PIL import Image
     im = Image.open(os.path.join(wdir, "sheets", "s01.png"))
     check("... all its stops in a numbered grid (3 stops, 480 px each, side by side)", im.width >= 3 * 480 and im.height >= 300, im.size)
-    check("... the brief lists the sheets in batches of at most 4 slides", "## Batch 1 - s01, s02, s03, s04" in brief and "## Batch 2 - s05" in brief)
+    check("... the brief lists the sheets in batches of at most 4 slides", "## Batch 1 - s01, s02, s03, s04" in brief and "## Batch 2 - s05" in brief
+          and "2 batch(es) of up to 4 slides" in lines[1], lines)
     check("... each slide's stop texts, the answer on screen and the figure's why / why_text",
           "stop 3: lit: Line 3; answer on screen: The answer" in brief and "Figure why: sequence - The trainee sees the valve close." in brief)
     check("... and the rubric (changes on Next, shows what the line says, nothing empty / hidden / cut / duplicated / contradictory, "
@@ -118,33 +163,42 @@ def first_part(tmp):
           "picture is the thing the words name", "7. Nothing on screen is the factory's" in brief and "8. The picture is the thing the words name" in brief
           and "a seafarer would not call it wrong" in brief and len(wr.RUBRIC) == 8)
     check("... and it tells the reviewer a builder never signs its own walk", "a builder never signs its own walk" in brief)
+    seen = json.loads(Path(wr.manifest_file(course, 1)).read_text(encoding="utf-8"))["slides"]
+    now = wr.fingerprints(str(deck))[1]
+    check("... and the manifest says what each sheet is a picture of: the slide's fingerprint as it was walked",
+          seen == now and len(set(seen.values())) == 5 and all(len(v) == 64 for v in seen.values()), seen)
     rc, _ = wr.prepare(course, 1, ["s02", "s03"])
-    check("prepare --slides: only those slides' sheets are in the brief", rc == 0 and "## Batch 1 - s02, s03" in Path(wdir, "review_brief.md").read_text(encoding="utf-8")
-          and "s01" not in Path(wdir, "review_brief.md").read_text(encoding="utf-8").split("## Batch")[1], rc)
+    check("prepare --slides: only those slides' sheets are in the brief", rc == 0 and "## Batch 1 - s02, s03" in brief_of(course)
+          and "s01" not in brief_of(course).split("## Batch")[1], rc)
     wr.prepare(course, 1)
 
     ok, kind, msg = wr.verify(course, 1)
     check("verify: no review yet -> missing, exit 1", not ok and kind == "missing" and quiet("verify", course, "--module", "1")[0] == 1, msg)
-    rv = reviewer(tmp, {"s01": True, "s02": True, "s03": True, "s04": "stop 3: the chart is still an empty axis"})
-    rc, lines = wr.sign(course, 1, rv)
-    check("sign: refused until it is told who built the module", rc == 2 and "--built-by" in lines[0] and not os.path.isfile(wr.review_file(course, 1)), (rc, lines))
-    for own in (BUILDER, "BUILD:1 - workflow builder"):
+    four = {k: v for k, v in ONE_FAIL.items() if k != "s05"}
+    rc, lines = wr.sign(course, 1, reviewer(tmp, four))
+    check("sign: refused until it is told who built the module", rc == 2 and "--built-by" in lines[0] and raw(course) is None, (rc, lines))
+    for own in (BUILDER, "BUILD:1 - workflow builder", "build 1 workflow-builder agent"):
         rc, lines = wr.sign(course, 1, reviewer(tmp, {"s01": True}, by=own), BUILDER)
-        check("sign: the builder's own signature is refused (%s)" % own, rc == 2 and "never signs its own walk review" in lines[0]
-              and not os.path.isfile(wr.review_file(course, 1)), (rc, lines))
-    rv = reviewer(tmp, {"s01": True, "s02": True, "s03": True, "s04": "stop 3: the chart is still an empty axis"})
-    rc, lines = wr.sign(course, 1, rv, BUILDER)
+        check("sign: the builder's own signature is refused, however it words its name (%s)" % own,
+              rc == 2 and "never signs its own walk review" in lines[0] and raw(course) is None, (rc, lines))
+    for bad in ({"ok": "false"}, {"ok": "true"}, {"ok": 1}, {"fails": []}, {"ok": True, "fails": "none"}):
+        rc, lines = wr.sign(course, 1, reviewer(tmp, {"s01": bad, "s02": True}), BUILDER)
+        check("sign: a verdict that is not a real true or false is refused, nothing written (%s)" % json.dumps(bad),
+              rc == 2 and "s01" in lines[0] and raw(course) is None, (rc, lines))
+    check("sign refuses a file that is no reviewer JSON, and one with no reviewer", wr.sign(course, 1, os.path.join(tmp, "nope.json"), BUILDER)[0] == 2
+          and wr.sign(course, 1, reviewer(tmp, {"s01": True}, by=""), BUILDER)[0] == 2)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, four), BUILDER)
     got = signed(course)
-    check("sign: writes MNN_walk_review.json with the deck hash, reviewer, date and slides",
-          got["reviewed_by"] == "Sonnet subagent" and len(got["deck_sha256"]) == 64 and got["date"] and got["slides"]["s04"]["ok"] is False
+    check("sign: writes MNN_walk_review.json with the deck's fingerprint, reviewer, date and slides",
+          got["reviewed_by"] == "Sonnet subagent" and got["deck"] == wr.fingerprints(str(deck))[0] and got["date"] and got["slides"]["s04"]["ok"] is False
           and rc == 1 and "OPEN FAILS on s04" in lines[0], (rc, lines, got))
-    check("... who built it, the round, and on every slide its own hash, reviewer and round",
-          got["built_by"] == BUILDER and got["rounds"] == 1 and "round 1 of 2" in lines[0]
-          and all(len(v["sha256"]) == 64 and v["reviewed_by"] == REVIEWER and v["round"] == 1 for v in got["slides"].values())
-          and len({v["sha256"] for v in got["slides"].values()}) == 4, (lines, got))
+    check("... who built it, the round, and on every slide the fingerprint of the sheet the reviewer saw, the reviewer and the round",
+          got["built_by"] == BUILDER and got["builders"] == [BUILDER] and got["rounds"] == 1 and "round 1 of 2" in lines[0]
+          and all(v["fingerprint"] == seen[s] and v["reviewed_by"] == REVIEWER and v["round"] == 1 for s, v in got["slides"].items())
+          and len(got["slides"]) == 4, (lines, got))
     check("... and lists every open fail with its slide and stop", "  s04 - stop 3: the chart is still an empty axis" in lines, lines)
     ok, kind, msg = wr.verify(course, 1)
-    check("verify: s05 not reviewed -> incomplete; an open fail on s04 is reported once reviewed", not ok and kind == "incomplete" and "s05" in msg, msg)
+    check("verify: s05 not reviewed -> incomplete", not ok and kind == "incomplete" and "s05" in msg, msg)
     rc, _ = wr.sign(course, 1, reviewer(tmp, {"s05": True}))
     ok, kind, msg = wr.verify(course, 1)
     check("... a second sign keeps the slides the reviewer did not return (and the builder's name); s04 still fails -> failing",
@@ -152,162 +206,310 @@ def first_part(tmp):
     check("... another batch of the same review is the same round", signed(course)["rounds"] == 1 and rc == 1)
     rc, out = quiet("verify", course, "--module", "1")
     check("verify prints the open fails with slide and stop", rc == 1 and "NOT DONE: walk review failing" in out and "  s04 - stop 3: the chart" in out, out)
-    rc, _ = wr.sign(course, 1, reviewer(tmp, {"s04": True}))
+    before = raw(course)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s04": True, "s05": True}, by="another reviewer"))
+    check("a fail is not signed away on the slide as it is: the verdict stands until the slide changes",
+          rc == 2 and "already has a verdict" in lines[0] and raw(course) == before and wr.verify(course, 1)[1] == "failing", (rc, lines))
+    fixed = DECK.replace("Four", "Four, fixed")
+    rc0, lines0 = rebuilt(course, deck, fixed)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s04": True, "s05": True}))
     ok, kind, msg = wr.verify(course, 1)
-    check("every fail fixed and re-reviewed -> verify passes, exit 0", ok and rc == 0 and quiet("verify", course, "--module", "1")[0] == 0, msg)
+    check("the fail fixed, built and re-reviewed -> verify passes, exit 0 (the unchanged slide keeps its verdict)",
+          rc0 == 0 and "## Batch 1 - s04\n" in brief_of(course) and ok and rc == 0 and signed(course)["rounds"] == 2
+          and "s05 kept the verdict it has" in lines[0] and signed(course)["slides"]["s05"]["round"] == 1
+          and quiet("verify", course, "--module", "1")[0] == 0, (lines0, lines, msg))
     rc, lines = wr.prepare(course, 1, stale_only=True)
     check("prepare --stale: nothing to review once every slide has a verdict for what it shows now", rc == 0 and "nothing to review" in lines[0], lines)
 
-    deck.write_text(DECK.replace("2026-11-09T10:11:12", "2026-11-10T08:00:00").replace("<!-- built", "<!-- rebuilt"), encoding="utf-8")
-    check("a rebuild that changes only the build timestamp / comments is the same deck - still verified", wr.verify(course, 1)[0])
-    deck.write_text(DECK.replace("Two", "Two, changed"), encoding="utf-8")
+    assets = deck.parent.parent / "assets"
+    for name, what, new in (("deck.css", "the stylesheet", ".slide{display:none}"), ("gb_deck.js", "a deck script", "var deck = 2")):
+        was = (assets / name).read_text(encoding="utf-8")
+        (assets / name).write_text(new, encoding="utf-8")
+        ok, kind, msg = wr.verify(course, 1)
+        check("%s changes -> every slide is stale" % what, not ok and kind == "stale" and "5 of 5 slide(s)" in msg, msg)
+        (assets / name).write_text(was, encoding="utf-8")
+        check("... and current again once it is as it was", wr.verify(course, 1)[0], wr.verify(course, 1))
+    (assets / "kit_parts.js").write_text("var parts = []", encoding="utf-8")
+    ok, kind, msg = wr.verify(course, 1)
+    check("a new file of assets\\ (kit_parts.js) -> every slide is stale", not ok and kind == "stale" and "5 of 5 slide(s)" in msg, msg)
+    os.remove(assets / "kit_parts.js")
+    (assets / "img" / "p3.jpg").write_bytes(b"another photograph")
+    ok, kind, msg = wr.verify(course, 1)
+    check("a photograph is replaced -> the slide that shows it is stale and no other", not ok and kind == "stale" and "1 of 5 slide(s)" in msg
+          and wr.to_review(course, 1) == ["s03"], msg)
+    (assets / "img" / "p3.jpg").write_bytes(b"a photograph")
+
+    deck.write_text(fixed.replace("Two", "Two, changed"), encoding="utf-8")
     ok, kind, msg = wr.verify(course, 1)
     check("the deck changed after the review -> stale, exit 1", not ok and kind == "stale" and quiet("verify", course, "--module", "1")[0] == 1, msg)
     check("... ONE slide changed -> that slide is stale and no other", "1 of 5 slide(s)" in msg and "s02" in msg and "s01" not in msg and "s03" not in msg
           and wr.to_review(course, 1) == ["s02"], msg)
     rc, lines = wr.prepare(course, 1, stale_only=True)
-    brief = Path(wr.walk_dir(course, 1), "review_brief.md").read_text(encoding="utf-8")
-    check("... and prepare --stale gives the reviewer that slide alone", rc == 0 and "## Batch 1 - s02\n" in brief and "### s01" not in brief
-          and "s02" in lines[0], (lines, brief[-500:]))
-    deck.write_text(DECK.replace("color:navy", "color:red"), encoding="utf-8")
+    check("prepare: the pictures are of an older slide -> refused, build again", rc == 2 and "walked before the deck changed" in lines[0]
+          and "s02" in lines[0] and "build again" in lines[0], (rc, lines))
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s02": True}))
+    check("sign: a verdict on the sheet of an older slide is refused", rc == 2 and "changed after its contact sheet was made" in lines[0], (rc, lines))
+    walk(course)
+    rc, lines = wr.prepare(course, 1, stale_only=True)
+    check("... walked again, prepare --stale gives the reviewer that slide alone", rc == 0 and "## Batch 1 - s02\n" in brief_of(course)
+          and "### s01" not in brief_of(course) and "s02" in lines[0], lines)
+    # the reviewer is looking at the sheets while another step builds the module again
+    deck.write_text(fixed.replace("Two", "Two, changed again by another step"), encoding="utf-8")
+    walk(course)
+    before = raw(course)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s02": True}))
+    check("the module is built again while the reviewer looks: its verdict on the older sheet is refused, nothing written",
+          rc == 2 and "changed after its contact sheet was made" in lines[0] and "s02" in lines[0] and raw(course) == before, (rc, lines))
+    wr.prepare(course, 1, stale_only=True)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s02": True}))
+    check("... the sheets made again and looked at, the verdict is signed for what the reviewer saw", rc == 0 and wr.verify(course, 1)[0]
+          and signed(course)["slides"]["s02"]["fingerprint"] == wr.fingerprints(str(deck))[1]["s02"], (rc, lines))
+
+    course, deck = fixture(tmp, "nosheet")
+    rc, lines = wr.sign(course, 1, reviewer(tmp, ALL), BUILDER)
+    check("sign: a slide no contact sheet was made for is refused - a reviewer signs only what prepare showed it",
+          rc == 2 and "no contact sheet was made for" in lines[0] and raw(course) is None, (rc, lines))
+
+
+def every_slide_part(tmp):
+    """verify wants every slide of the deck, walked or not"""
+    course, deck = fixture(tmp, "unreached", skip=("s05",))
+    rc, lines = wr.prepare(course, 1)
+    check("prepare: a slide the walk did not reach is named, the others get their sheets", rc == 0 and "4 contact sheet(s)" in lines[0]
+          and any("no picture of s05" in x for x in lines), (rc, lines))
+    rc, _ = wr.sign(course, 1, reviewer(tmp, {k: True for k in ALL if k != "s05"}), BUILDER)
     ok, kind, msg = wr.verify(course, 1)
-    check("a change outside the slides (a style, a script) makes every slide stale", not ok and kind == "stale" and "5 of 5 slide(s)" in msg, msg)
-    check("sign refuses a reviewer JSON with no \"ok\" or no reviewer", wr.sign(course, 1, os.path.join(tmp, "nope.json"), BUILDER)[0] == 2
-          and wr.sign(course, 1, reviewer(tmp, {"s01": True}, by=""), BUILDER)[0] == 2)
-    h1, h2 = wr.slide_hashes(str(deck)), None
-    deck.write_text(DECK.replace("color:navy", "color:red").replace("Four", "Four, fixed"), encoding="utf-8")
-    h2 = wr.slide_hashes(str(deck))
-    check("slide_hashes: one hash per <section id>, and only the changed slide's hash moves",
-          sorted(h1) == ["s%02d" % i for i in range(1, 6)] and [s for s in h1 if h1[s] != h2[s]] == ["s04"], (h1, h2))
-    return course, deck
+    check("verify: every walked slide passed, but a slide of the deck was never walked -> not done",
+          rc == 0 and not ok and kind == "incomplete" and "s05" in msg and "no picture" in msg, msg)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s05": True}))
+    check("... and nobody can sign the slide it was not shown", rc == 2 and "no contact sheet" in lines[0], (rc, lines))
+
+    course, deck = fixture(tmp, "inserted")
+    wr.prepare(course, 1)
+    wr.sign(course, 1, reviewer(tmp, ALL), BUILDER)
+    more = DECK.replace("<section class=\"slide\" id=\"s03\">", "<section class=\"slide\" id=\"s06\">New</section><section class=\"slide\" id=\"s03\">")
+    deck.write_text(more, encoding="utf-8")
+    check("a slide added to a signed deck and never walked -> not done", wr.verify(course, 1)[0] is False, wr.verify(course, 1))
+    walk(course)
+    rc, lines = wr.prepare(course, 1, stale_only=True)
+    wr.sign(course, 1, reviewer(tmp, ALL))
+    ok, kind, msg = wr.verify(course, 1)
+    check("... walked, and the old slides signed again: still not done until the new slide is reviewed",
+          rc == 0 and "6 contact sheet(s)" in lines[0] and not ok and kind == "incomplete" and "s06" in msg, (lines, msg))
+    shutil.rmtree(wr.walk_dir(course, 1))
+    check("... and losing the walk's pictures does not pass it", wr.verify(course, 1)[1] == "incomplete", wr.verify(course, 1))
 
 
 def rounds_part(tmp):
     """two rounds at most, the operator's accept, reopen"""
     course, deck = fixture(tmp, "rounds")
-    everything = {"s01": True, "s02": True, "s03": True, "s04": "stop 3: the chart is still an empty axis", "s05": True}
-    rc, _ = wr.sign(course, 1, reviewer(tmp, everything), BUILDER)
-    deck.write_text(DECK.replace("Four", "Four, fixed once"), encoding="utf-8")
-    rc0, lines0 = wr.prepare(course, 1, stale_only=True)
-    brief = Path(wr.walk_dir(course, 1), "review_brief.md").read_text(encoding="utf-8")
+    wr.prepare(course, 1)
+    rc, _ = wr.sign(course, 1, reviewer(tmp, ONE_FAIL), BUILDER)
+    rc0, lines0 = rebuilt(course, deck, DECK.replace("Four", "Four, fixed once"))
+    brief = brief_of(course)
     check("round 2 starts with the fixed slide alone, and the brief says what failed last time",
           rc == 1 and rc0 == 0 and "## Batch 1 - s04\n" in brief and "Failed in the last review" in brief
           and "stop 3: the chart is still an empty axis" in brief.split("### s04")[1], (lines0, brief[-600:]))
-    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s04": "stop 3: the axis has no bars yet"}))
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s04": True}, by=FIXER), [BUILDER, FIXER])
+    check("sign: the one who fixed the slide cannot sign it either", rc == 2 and "never signs its own walk review" in lines[0]
+          and signed(course)["rounds"] == 1, (rc, lines))
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s04": "stop 3: the axis has no bars yet"}), [BUILDER, FIXER])
     got = signed(course)
     check("round 2: still failing -> signed, the last round, the operator's choices printed",
           rc == 1 and got["rounds"] == 2 and got["slides"]["s04"]["round"] == 2 and got["slides"]["s01"]["round"] == 1
           and "round 2 of 2" in lines[0] and "that was the last round" in lines[0]
           and any("walk_review.py accept" in x and "walk_review.py reopen" in x for x in lines)
           and "  s04 - stop 3: the axis has no bars yet" in lines, (rc, lines))
+    check("... and the review names everyone who built or fixed the module", got["builders"] == [BUILDER, FIXER] and got["built_by"] == BUILDER
+          and "built by %s, %s" % (BUILDER, FIXER) in lines[0], got)
     ok, kind, msg = wr.verify(course, 1)
     check("... verify: failing, round 2 of 2, no third", not ok and kind == "failing" and "round 2 of 2, no third" in msg and "accept" in msg, msg)
     check("... open_fails lists what is left with slide and stop", wr.open_fails(course, 1) == ["s04 - stop 3: the axis has no bars yet"], wr.open_fails(course, 1))
+    before = raw(course)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s04": True}, by="another reviewer"))
+    check("the last round's fail cannot be signed away by a new reviewer on the same deck", rc == 2 and "already has a verdict" in lines[0]
+          and raw(course) == before and wr.verify(course, 1)[1] == "failing", (rc, lines))
     round2 = deck.read_text(encoding="utf-8")
-    deck.write_text(DECK.replace("Four", "Four, fixed twice"), encoding="utf-8")
-    before = Path(wr.review_file(course, 1)).read_text(encoding="utf-8")
+    rebuilt(course, deck, DECK.replace("Four", "Four, fixed twice"))
     rc, lines = wr.sign(course, 1, reviewer(tmp, {"s04": True}))
     check("a third round is refused (exit 3) and nothing is written", rc == 3 and "no third" in lines[0] and "s04" in lines[0]
-          and Path(wr.review_file(course, 1)).read_text(encoding="utf-8") == before, (rc, lines))
+          and raw(course) == before, (rc, lines))
+    ok, kind, msg = wr.verify(course, 1)
     rc, lines = wr.accept(course, 1, OPERATOR, "the axis is drawn in the next slide")
     check("accept: refused for a slide that changed after the review", rc == 2 and "changed after the review" in lines[0], (rc, lines))
+    check("... and both it and verify name the way out of a module changed after its last round: reopen",
+          "walk_review.py reopen" in lines[0] and kind == "stale" and "walk_review.py reopen" in msg, (lines, msg))
     deck.write_text(round2, encoding="utf-8")
-    for name, why in ((BUILDER, "ok"), (REVIEWER, "ok"), ("sonnet  SUBAGENT", "ok"), ("", "ok"), (OPERATOR, " ")):
+    for name, why in ((BUILDER, "ok"), (FIXER, "ok"), (REVIEWER, "ok"), ("sonnet  SUBAGENT", "ok"), ("the Sonnet subagent (reviewer)", "ok"),
+                      ("", "ok"), (OPERATOR, " ")):
         rc, lines = wr.accept(course, 1, name, why)
         check("accept: refused for %r / why %r (the operator's own act, with a reason)" % (name, why), rc == 2, (rc, lines))
     rc, lines = wr.accept(course, 1, OPERATOR, "the axis is drawn in the next slide", ["s02"])
     check("accept --slides: nothing open there -> refused", rc == 2 and "no open fail" in lines[0], (rc, lines))
+    check("nothing accepted yet -> nothing to show at the upload", wr.accepted(course, 1) == [], wr.accepted(course, 1))
     rc, out = quiet("accept", course, "--module", "1", "--by", OPERATOR, "--why", "the axis is drawn in the next slide")
     a = signed(course)["slides"]["s04"].get("accepted") or {}
     check("accept: the operator lets the fail stand - recorded on the slide with who, when, why and what",
           rc == 0 and a.get("by") == OPERATOR and a.get("date") and a.get("why") == "the axis is drawn in the next slide"
           and a.get("fails") == ["stop 3: the axis has no bars yet"] and "s04 - stop 3: the axis has no bars yet" in out, (rc, out, a))
+    check("... and how the command was run (here: not typed in a terminal)", a.get("how") == "run by a session or a script", a)
+    check("... an agent's shell has a terminal for its input and is still not the operator typing: its environment says so",
+          wr.how_run({"AI_AGENT": "an agent"}, tty=True) == "run by a session or a script"
+          and wr.how_run({"CLAUDECODE": "1"}, tty=True) == "run by a session or a script"
+          and wr.how_run({}, tty=True) == "typed in a terminal" and wr.how_run({}, tty=False) == "run by a session or a script")
     ok, kind, msg = wr.verify(course, 1)
     check("... and the module passes, saying whose accept it is", ok and "accepted by Aleksis Vejs" in msg and wr.open_fails(course, 1) == [], msg)
-    deck.write_text(DECK.replace("Four", "Four, changed after the accept"), encoding="utf-8")
+    let = wr.accepted(course, 1)
+    check("... accepted() lists the fail with who, when, how and why - what an upload shows",
+          len(let) == 1 and let[0].startswith("s04 - stop 3: the axis has no bars yet - accepted by Aleksis Vejs, ")
+          and let[0].endswith("(run by a session or a script): the axis is drawn in the next slide"), let)
+    rc0, _ = rebuilt(course, deck, DECK.replace("Four", "Four, changed after the accept"))
     ok, kind, msg = wr.verify(course, 1)
-    check("... the accept was for what the reviewer saw: the slide changes -> stale again", not ok and kind == "stale" and "s04" in msg, msg)
+    check("... the accept was for what the reviewer saw: the slide changes -> stale again, and no longer listed as accepted",
+          not ok and kind == "stale" and "s04" in msg and wr.accepted(course, 1) == [], msg)
     rc, lines = wr.sign(course, 1, reviewer(tmp, {"s04": True}))
     got = signed(course)
     check("... and its review is a new first round (nothing was open)", rc == 0 and got["rounds"] == 1 and "accepted" not in got["slides"]["s04"]
           and wr.verify(course, 1)[0], (rc, lines))
 
+    course, deck = fixture(tmp, "renamed")
+    wr.prepare(course, 1)
+    wr.sign(course, 1, reviewer(tmp, ONE_FAIL), BUILDER)
+    rebuilt(course, deck, DECK.replace("Four", "Four, fixed once"))
+    wr.sign(course, 1, reviewer(tmp, {"s04": "stop 3: the axis has no bars yet"}))
+    rebuilt(course, deck, DECK.replace("Four", "Four, fixed twice").replace("id=\"s04\"", "id=\"s09\""))
+    before = raw(course)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s09": True}))
+    check("a failing slide renamed after the last round is still a third round: refused, the old fail named",
+          rc == 3 and "s04 (no longer in the deck)" in lines[0] and raw(course) == before, (rc, lines))
+
+    course, deck = fixture(tmp, "removed")
+    wr.prepare(course, 1)
+    wr.sign(course, 1, reviewer(tmp, ONE_FAIL), BUILDER)
+    rc0, lines0 = rebuilt(course, deck, DECK.replace("<section class=\"slide\" id=\"s04\">Four</section>", ""))
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {k: True for k in ALL if k != "s04"}))
+    got = signed(course)
+    check("a failing slide removed as the fix: the others are reviewed in round 2, its verdict leaves the slides for the history",
+          rc0 == 0 and "4 contact sheet(s)" in lines0[0] and rc == 0 and got["rounds"] == 2 and "s04" not in got["slides"]
+          and [h["slide"] for h in got["history"]] == ["s04"] and wr.verify(course, 1)[0], (rc, lines, got.get("history")))
+
     course, deck = fixture(tmp, "reopen")
-    wr.sign(course, 1, reviewer(tmp, everything), BUILDER)
-    deck.write_text(DECK.replace("Four", "Four, fixed once"), encoding="utf-8")
+    wr.prepare(course, 1)
+    wr.sign(course, 1, reviewer(tmp, ONE_FAIL), BUILDER)
+    rebuilt(course, deck, DECK.replace("Four", "Four, fixed once"))
     wr.sign(course, 1, reviewer(tmp, {"s04": "stop 3: the axis has no bars yet"}))
     check("reopen: refused for the builder", wr.reopen(course, 1, BUILDER)[0] == 2)
     rc, out = quiet("reopen", course, "--module", "1", "--by", OPERATOR)
     got = signed(course)
-    check("reopen: the operator starts the rounds again - recorded", rc == 0 and got["rounds"] == 0 and got["reopened"][0]["by"] == OPERATOR, (rc, out))
-    deck.write_text(DECK.replace("Four", "Four, fixed twice"), encoding="utf-8")
+    check("reopen: the operator starts the rounds again - recorded with who, how and which slides",
+          rc == 0 and got["rounds"] == 0 and got["reopened"][0]["by"] == OPERATOR and got["reopened"][0]["slides"] == ["s04"]
+          and got["reopened"][0]["how"] == "run by a session or a script", (rc, out, got.get("reopened")))
+    rc0, lines0 = wr.prepare(course, 1, stale_only=True)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s04": "stop 3: still no bars", "s05": True}, by="second reviewer"))
+    got = signed(course)
+    check("... the open slide may be reviewed again as it is (and only it): round 1",
+          wr.to_review(course, 1) == [] and rc0 == 0 and "## Batch 1 - s04\n" in brief_of(course) and rc == 1 and got["rounds"] == 1
+          and got["slides"]["s04"]["reviewed_by"] == "second reviewer" and got["slides"]["s05"]["reviewed_by"] == REVIEWER, (lines0, lines))
+    rebuilt(course, deck, DECK.replace("Four", "Four, fixed twice"))
     rc, lines = wr.sign(course, 1, reviewer(tmp, {"s04": True}))
     got = signed(course)
-    check("... the next review is round 1, and the reopening stays on record", rc == 0 and got["rounds"] == 1 and len(got["reopened"]) == 1 and wr.verify(course, 1)[0], (rc, lines))
+    check("... the fix after it is round 2, and the reopening stays on record", rc == 0 and got["rounds"] == 2 and len(got["reopened"]) == 1
+          and wr.verify(course, 1)[0], (rc, lines))
 
 
 def older_part(tmp):
-    """pictures older than the deck; a review signed before the per-slide hashes"""
-    course, deck = fixture(tmp, "older", hashes=True)
-    check("a walk with slide hashes that match the deck: prepare and sign as usual",
-          wr.prepare(course, 1)[0] == 0 and wr.sign(course, 1, reviewer(tmp, {"s%02d" % i: True for i in range(1, 6)}), BUILDER)[0] == 0)
-    deck.write_text(DECK.replace("Three", "Three, changed"), encoding="utf-8")
-    rc, lines = wr.prepare(course, 1, stale_only=True)
-    check("prepare: the pictures are of an older slide -> refused, build again", rc == 2 and "walked before the deck changed" in lines[0] and "s03" in lines[0], (rc, lines))
-    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s03": True}))
-    check("sign: a verdict on pictures of an older slide is refused", rc == 2 and "walked before the deck changed" in lines[0], (rc, lines))
-    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s01": True}))
-    check("... a slide that did not change can still be signed", rc == 0, (rc, lines))
+    """a walk and a review made by an older factory"""
+    course, deck = fixture(tmp, "older")
+    wj = Path(wr.walk_dir(course, 1), "walk.json")
+    old_walk = {k: v for k, v in json.loads(wj.read_text(encoding="utf-8")).items() if k in ("viewport", "stops")}
+    wj.write_text(json.dumps(dict(old_walk, slides={"s01": "x"}, deck_sha256="y")), encoding="utf-8")
+    rc, lines = wr.prepare(course, 1)
+    check("a walk that does not say which deck it was made of (an older factory's) -> prepare refused, build again",
+          rc == 2 and "does not say which deck" in lines[0] and "build again" in lines[0], (rc, lines))
 
     course, deck = fixture(tmp, "legacy")
-    old = {"deck_sha256": wr.deck_sha256(str(deck)), "reviewed_by": "Sonnet subagent", "date": "2026-11-09",
-           "slides": {"s%02d" % i: {"ok": True, "fails": []} for i in range(1, 6)}}
+    wr.prepare(course, 1)
+    old = {"deck_sha256": wr.deck_sha256(str(deck)), "reviewed_by": "Sonnet subagent", "date": "2026-11-09", "built_by": BUILDER,
+           "slides": {"s%02d" % i: {"ok": True, "fails": [], "sha256": "0" * 64} for i in range(1, 5)}}
     Path(wr.review_file(course, 1)).write_text(json.dumps(old), encoding="utf-8")
-    check("a review signed before the per-slide hashes still stands for its deck", wr.verify(course, 1)[0], wr.verify(course, 1))
-    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s01": True}), BUILDER)
+    ok, kind, msg = wr.verify(course, 1)
+    check("a review signed before the fingerprints still stands for its deck (s05 was not in it -> incomplete, not stale)",
+          not ok and kind == "incomplete" and "s05" in msg, msg)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s05": True}))
     got = signed(course)
-    check("... and a later sign gives its kept slides their own hash", rc == 0 and all(len(v.get("sha256", "")) == 64 for v in got["slides"].values()) and wr.verify(course, 1)[0], got)
+    check("... and a later sign gives its kept slides their fingerprint", rc == 0 and wr.verify(course, 1)[0]
+          and all(v.get("fingerprint") == wr.fingerprints(str(deck))[1][s] for s, v in got["slides"].items()), got)
+    old["slides"]["s05"] = {"ok": True, "fails": []}
     Path(wr.review_file(course, 1)).write_text(json.dumps(old), encoding="utf-8")
-    deck.write_text(DECK.replace("Two", "Two, changed"), encoding="utf-8")
+    rebuilt(course, deck, DECK.replace("Two", "Two, changed"))
     ok, kind, msg = wr.verify(course, 1)
-    check("... once its deck changes, every slide of it is stale (it has no hash to tell them apart)", not ok and kind == "stale" and "5 of 5" in msg, msg)
-    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s02": True}), BUILDER)
+    check("... once its deck changes, every slide of it is stale (it recorded nothing to tell them apart)", not ok and kind == "stale" and "5 of 5" in msg, msg)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s02": True}))
     ok, kind, msg = wr.verify(course, 1)
-    check("... and signing one slide does not make the others current", not ok and kind == "stale" and "4 of 5" in msg and "s02" not in msg, msg)
+    check("... and signing one slide does not make the others current", rc == 0 and not ok and kind == "stale" and "4 of 5" in msg and "s02" not in msg, msg)
 
 
-def gates_part(tmp, course, deck):
-    src = Path(HERE.parents[2], "course-factory", "compile", "scripts", "build_module.py").read_text(encoding="utf-8")
-    check("build_module.py: --no-walk for factory tests, the fit walk saves its stops, and a module with no review is NOT DONE",
-          '"--no-walk"' in src and '"--walk-dir"' in src and 'print("NOT DONE: %s' in src and "walk_review.verify(course, module)" in src
-          and "walk_gate(course, o.module, alone=passed)" in src)
-    check("fit_gate.py writes each slide's hash beside the walk", "walk_review.slide_hashes(" in Path(HERE, "fit_gate.py").read_text(encoding="utf-8"))
+def sign_all(tmp, course, module):
+    wr.prepare(course, module)
+    return wr.sign(course, module, reviewer(tmp, ALL), BUILDER)[0]
+
+
+def gates_part(tmp):
+    """the final assessment's one name; fix.py check --kind walk; course_portal upload"""
+    course, deck = fixture(tmp, "gates")
+    final = add_module(course, 2, FINAL_DECK)
+    add_module(course, 3)
+    walk(course, 2)
+    walk(course, 3)
+    check("the final assessment is FINAL by name and by its folder's number: one review file, one walk folder, one deck",
+          wr.canon(course, 2) == "final" and wr.canon(course, "final") == "final" and wr.canon(course, 3) == 3
+          and os.path.basename(wr.review_file(course, 2)) == "FINAL_walk_review.json" and wr.review_file(course, 2) == wr.review_file(course, "final")
+          and wr.walk_dir(course, 2) == wr.walk_dir(course, "final") and os.path.basename(wr.walk_dir(course, 2)) == "FINAL"
+          and os.path.samefile(wr.deck_file(course, "final"), final) and os.path.samefile(wr.deck_file(course, 2), final),
+          (wr.review_file(course, 2), wr.deck_file(course, "final")))
     sys.path.insert(0, str(HERE.parents[2] / "course-factory" / "scripts"))
     import course_portal
     os.environ["CF_FIX_NO_WALK_RUN"] = "1"
     problems = course_portal.walk_problems(course)
-    check("course_portal upload: a built module whose walk review is stale / missing is a blocker", problems and "stale" in problems[0], problems)
-    deck.write_text(DECK, encoding="utf-8")
-    wr.sign(course, 1, reviewer(tmp, {"s%02d" % i: True for i in range(1, 6)}, by="x"))
-    check("... and none once it is signed for this deck", course_portal.walk_problems(course) == [], course_portal.walk_problems(course))
+    check("course_portal upload: every built module with no walk review is a blocker - the final too, once",
+          len(problems) == 3 and all("missing" in x for x in problems) and [x.split(" for ")[1].split(" ")[0] for x in problems] == ["M01", "FINAL", "M03"], problems)
+    rc = sign_all(tmp, course, "final")
+    ok, kind, msg = wr.verify(course, 2)
+    check("the final signed under its name (the build, the workflow) is found by its folder's number (the portal, fix.py)",
+          rc == 0 and ok and "FINAL" in msg, msg)
+    sign_all(tmp, course, 1)
+    sign_all(tmp, course, 3)
+    check("... and nothing stops the upload once every module and the final are signed", course_portal.walk_problems(course) == [], course_portal.walk_problems(course))
+    check("... with nothing accepted to show", course_portal.walk_accepted(course) == [], course_portal.walk_accepted(course))
     import fix
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         code = fix.cmd_check(course, "walk", "1", "s02")
     check("fix.py check --kind walk: passes on a signed module", code == 0 and "walk review passed" in buf.getvalue(), buf.getvalue())
-    deck.write_text(DECK + "<!-- x -->\n<p>new</p>", encoding="utf-8")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        code = fix.cmd_check(course, "walk", "2", None)
+    check("... and on the final assessment, asked for by its folder's number", code == 0 and "walk review passed for FINAL" in buf.getvalue(), buf.getvalue())
+    deck.write_text(DECK.replace("Two", "Two, fixed"), encoding="utf-8")
+    walk(course)
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         code = fix.cmd_check(course, "walk", "1", "s02")
     check("... and fails (with the brief for the reviewer) once a fix changed the deck", code == 1 and "walk review stale" in buf.getvalue()
           and "review_brief.md" in buf.getvalue(), buf.getvalue())
-    check("... telling the fixer to name the builder, that the reviewer is someone else, and that there are two rounds",
-          "--built-by" in buf.getvalue() and "never the session that made the fix" in buf.getvalue() and "Two rounds at most" in buf.getvalue(), buf.getvalue())
-    wr.sign(course, 1, reviewer(tmp, {"s%02d" % i: (True if i != 2 else "stop 1: the new line is cut") for i in range(1, 6)}, by="x"))
+    check("... telling the fixer to name who built and fixed it, that the reviewer is someone else, and that there are two rounds",
+          "--built-by" in buf.getvalue() and "never the session that made the fix" in buf.getvalue() and "Two rounds at most" in buf.getvalue()
+          and "batch of up to 4 contact sheets" in buf.getvalue(), buf.getvalue())
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"s02": "stop 1: the new line is cut"}), FIXER)
     problems = course_portal.walk_problems(course)
-    check("course_portal upload: an open fail stops it, one line a module", len(problems) == 1 and "\n" not in problems[0] and "open fails on s02" in problems[0], problems)
+    check("course_portal upload: an open fail stops it, one line a module", rc == 1 and len(problems) == 1 and "\n" not in problems[0]
+          and "open fails on s02" in problems[0], (lines, problems))
     wr.accept(course, 1, OPERATOR, "the line is read out by the instructor")
     check("... and the operator's accept lets it through", course_portal.walk_problems(course) == [], course_portal.walk_problems(course))
+    let = course_portal.walk_accepted(course)
+    check("... listed for the upload with its module: what goes up with a fail nobody fixed",
+          len(let) == 1 and let[0].startswith("M01 s02 - stop 1: the new line is cut - accepted by Aleksis Vejs")
+          and let[0].endswith("the line is read out by the instructor"), let)
 
 
 def main():
@@ -318,10 +520,11 @@ def main():
         return 0
     tmp = tempfile.mkdtemp(prefix="walk_review_")
     try:
-        course, deck = first_part(tmp)
+        first_part(tmp)
+        every_slide_part(tmp)
         rounds_part(tmp)
         older_part(tmp)
-        gates_part(tmp, course, deck)
+        gates_part(tmp)
     finally:
         os.environ.pop("CF_FIX_NO_WALK_RUN", None)
         shutil.rmtree(tmp, ignore_errors=True)

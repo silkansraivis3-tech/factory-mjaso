@@ -153,13 +153,19 @@ The per-module QA agent must be a **different** agent from the one that built th
 asked to check its own work confirms it.
 
 **The walk judge stands beside QA.** A module is not done, and the portal refuses its upload, until an AI reviewer
-has looked at every slide at every stop a trainee sees (`compile/GUIDE.md` 2i). The workflow runs that itself: one
-reviewer per module - never its builder, whose signature `walk_review.py` refuses - reads the contact sheets, signs,
-and reports the fails with slide and stop. They join the module's ONE fix round; after it the walk judge looks once
-more, only at the slides the round changed (the walk keeps a hash per slide). Two looks, never a third: what still
-fails is on the module's `for_aleksis` with the `walk_review.py accept` command, the module is not failed for it, and
-the run's result names the modules whose upload waits (`walk.not_passed`). So the two reviews do not overlap: the QA
-agent's sheets hold the task pages only, the deck's slides are the walk judge's.
+has looked at every slide at every stop a trainee sees (`compile/GUIDE.md` 2i). The workflow runs that itself: ONE
+reviewer per module - never its builder or a fixer, whose signature `walk_review.py` refuses - reads the contact sheets
+in batches of up to 4, signs, and reports the fails with slide and stop (a session working by hand gives each batch to
+its own Sonnet subagent instead: the same sheets, the same brief). They join the module's ONE fix round; after it the
+walk judge looks once more, only at the slides the round changed (the walk keeps each slide's fingerprint, the audits'
+own), and signs against the builder and every fixer of the round. Two looks, never a third: what still fails is on the
+module's `for_aleksis` with the `walk_review.py accept` command, the module is not failed for it, and the run's result
+names the modules whose upload waits (`walk.not_passed`). The final assessment gets one judge after it is built
+(`walk:final`, `final_walk` in the result) and no fix round. A second run of the workflow over a module that has had
+its two rounds sends no walk fail to a fixer and reviews nothing again: the operator accepts what is left or reopens
+it (`walk_review.py reopen`) - both are the operator's own, never an agent's. A judge that brought back nothing is not
+retried in the run: that module is walked by hand. So the two reviews do not overlap: the QA agent's sheets hold the
+task pages only, the deck's slides are the walk judge's.
 
 ---
 

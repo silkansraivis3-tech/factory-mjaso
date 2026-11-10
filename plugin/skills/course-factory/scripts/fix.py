@@ -606,9 +606,9 @@ def cmd_check(course, kind, modules, slides=None, floor=None):
             lines += ["    " + x for x in said]
             if why_kind == "failing":
                 lines += ["    " + x for x in walk_review.open_fails(course, m, want)]
-            lines.append("    Run the reviewer on that brief (one Sonnet subagent per batch of 3-4 contact sheets, returning reviewer "
-                         "JSON - never the session that made the fix), then: walk_review.py sign <course> --module %d --review "
-                         "<reviewer.json> --built-by \"<who built or fixed it>\", and this check again. Two rounds at most: what "
+            lines.append("    Run the reviewer on that brief (one Sonnet subagent per batch of up to 4 contact sheets, returning "
+                         "reviewer JSON - never the session that made the fix), then: walk_review.py sign <course> --module %d --review "
+                         "<reviewer.json> --built-by \"<who built it>\" --built-by \"<who fixed it>\", and this check again. Two rounds at most: what "
                          "still fails after the second is the operator's (walk_review.py accept / reopen)." % m)
     elif kind == "layout":
         import measure_slides as ms

@@ -69,14 +69,25 @@ const agent = async (prompt, o) => {
     : { figures: [{ slide: 's03', shows: 'a ship side view', seafarer_ok: true, findings: [] }] }
   if (/^walk:/.test(o.label)) {                             // the walk judge: a slide fails, at first (_badwalk) or still (_stillwalk)
     const [wm, wtag] = o.label.slice(5).split('+')
+    const name = wm === 'final' ? 'FINAL' : 'M0' + wm
+    const s04 = [{ slide: 's04', what: 'stop 3: the chart is still an empty axis' }]
     if ((args._lostwalk || []).indexOf(wm) >= 0) return null
     if ((args._nowalk || []).indexOf(wm) >= 0)
-      return { walked: false, ok: false, state: 'walk_review: no walk for M0' + wm + ' in C:/c/working_claude/_build/walk/M0' + wm, fails: [] }
+      return { walked: false, ok: false, state: 'walk_review: no walk for ' + name + ' in C:/c/working_claude/_build/walk/' + name, fails: [] }
+    if ((args._spent || []).indexOf(wm) >= 0)               // a second pass of the workflow: the two rounds are used
+      return wtag
+        ? { walked: true, ok: false, round: 2, fails: [],
+            state: 'NOT DONE: walk review stale for ' + name + ' - 1 of 9 slide(s) changed after the review: s03; build, then walk_review.py '
+              + 'prepare --stale shows the reviewer only those (the two rounds are used: the operator reopens it first - walk_review.py reopen)' }
+        : { walked: true, ok: false, round: 2, fails: s04,
+            state: 'NOT DONE: walk review failing for ' + name + ' - open fails on s04 - round 2 of 2, no third: the operator accepts what is '
+              + 'left or reopens it (walk_review.py accept / reopen)' }
     const bad = (args._stillwalk || []).indexOf(wm) >= 0 || (!wtag && (args._badwalk || []).indexOf(wm) >= 0)
     return bad
-      ? { walked: true, ok: false, round: wtag ? 2 : 1, state: 'NOT DONE: walk review failing for M0' + wm + ' - 1 slide with open fails',
-          fails: [{ slide: 's04', what: 'stop 3: the chart is still an empty axis' }] }
-      : { walked: true, ok: true, round: wtag ? 2 : 1, state: 'OK: walk review passed for M0' + wm, fails: [] }
+      ? { walked: true, ok: false, round: wtag ? 2 : 1, state: 'NOT DONE: walk review failing for ' + name + ' - open fails on s04 - round '
+            + (wtag ? '2 of 2, no third: the operator accepts what is left or reopens it (walk_review.py accept / reopen)' : '1 of 2'),
+          fails: s04 }
+      : { walked: true, ok: true, round: wtag ? 2 : 1, state: 'OK: walk review passed for ' + name, fails: [] }
   }
   if (o.label === 'qa:2') return null                       // the QA agent for module 2 brought back nothing
   if ((args._broken || []).indexOf(o.label.slice(3)) >= 0)  // a QA that found a picture of another thing (2.63.3)
@@ -137,10 +148,15 @@ def walk_part(tmp, mods, clean, qa_broken, all_broken):
     check("the WALK judge: every built module is walked by a reviewer beside QA, after the build - prepare --stale, the "
           "sheets, sign against the builder's name, verify",
           "walk:1" in lc and "walk:2" in lc and lc.index("walk:1") > lc.index("build:1")
-          and all(w in w1 for w in ("You did NOT build this module", "walk_review.py prepare \"C:/c\" --module 1 --stale",
-                                    "review_brief.md", "--built-by \"build:1 (workflow builder)\"",
+          and all(w in w1 for w in ("You did NOT build or fix this module", "walk_review.py prepare \"C:/c\" --module 1 --stale",
+                                    "review_brief.md", "--review <that file> --built-by \"build:1 (workflow builder)\"\n",
+                                    "_build/M01_walk_reviewer.json",
                                     "\"reviewed_by\": \"walk:1 (workflow walk judge)\"", "walk_review.py verify \"C:/c\" --module 1",
                                     "never sign under another name", "you never build and never fix")), (lc, w1[:1500]))
+    check("... ONE judge a module reads the sheets in batches of up to 4; it is never told to wait a minute, is told what "
+          "to do when the deck changed under it, and that accept and reopen are the operator's own",
+          "in batches of up to 4" in w1 and "after a minute" not in w1 and "changed after its contact sheet was made" in w1
+          and "NEVER run walk_review.py accept or reopen" in w1 and "STEP 4 ONLY" not in w1, w1[:3000])
     check("... a clean walk sends nothing back and is not looked at twice; the run says how many were reviewed",
           not any(x.startswith(("fix:", "walk:1+", "walk:2+")) for x in lc)
           and (clean.get("r") or {}).get("walk") == {"reviewed": 2, "not_passed": []}, (lc, (clean.get("r") or {}).get("walk")))
@@ -155,9 +171,16 @@ def walk_part(tmp, mods, clean, qa_broken, all_broken):
           lb.count("fix:1") == 1 and lb.index("fix:1") > lb.index("walk:1") and "(WALK)" in pb.get("fix:1", "")
           and "s04: stop 3: the chart is still an empty axis" in pb.get("fix:1", "") and "never run walk_review.py yourself" in pb.get("fix:1", "")
           and lb.count("walk:1+fix") == 1 and lb.index("walk:1+fix") > lb.index("fix:1") and "qa:1+fix" not in lb
-          and "only the slides the round changed" in pb.get("walk:1+fix", "") and not any(x.startswith(("fix:2", "walk:2+")) for x in lb)
+          and "only the slides it changed" in pb.get("walk:1+fix", "") and not any(x.startswith(("fix:2", "walk:2+")) for x in lb)
           and qb and qb[0].get("walk", {}).get("ok") is True and qb[0]["walk"].get("first_fails")
           and not any("WALK" in x for x in qb[0].get("for_aleksis", [])), (lb, qb))
+    check("... the look after the fix round signs against the builder AND the fixer: a fixer's own signature is refused",
+          "--built-by \"build:1 (workflow builder)\" --built-by \"fix:1 (workflow fixer)\"\n" in pb.get("walk:1+fix", "")
+          and "fix:1" not in pb.get("walk:1", "") and "fix:" not in pb.get("walk:2", ""), pb.get("walk:1+fix", "")[:2500])
+    pa = all_broken.get("prompts", {}).get("walk:1+fix", "")
+    check("... after the 3D + figure + QA round it names each figure fixer, the module fixer and the one build after them",
+          all(("--built-by \"%s\"" % w) in pa for w in ("build:1 (workflow builder)", "fixfig:1:s03 (workflow figure fixer)",
+                                                        "fix:1 (workflow fixer)", "fixbuild:1 (workflow fix build)")), pa[:2500])
     check("... any fix round is followed by the walk judge (a fix changes slides): QA's, and the 3D + figure + QA one",
           qa_broken.get("labels", []).count("walk:1+fix") == 1 and all_broken.get("labels", []).count("walk:1+fix") == 1
           and all_broken["labels"].index("walk:1+fix") > all_broken["labels"].index("fixbuild:1"), all_broken.get("labels"))
@@ -189,14 +212,66 @@ def walk_part(tmp, mods, clean, qa_broken, all_broken):
           "it, the operator is told to build and have it reviewed",
           not any(x.startswith("fix:") for x in lost.get("labels", []))
           and sorted(w.get("module") for w in rl.get("walk", {}).get("not_passed", [])) == ["1", "2"]
-          and ql and any("WALK M01 NOT PASSED" in x and "no walk for M01" in x and "prepare --stale" in x for x in ql[0].get("for_aleksis", [])),
-          (lost.get("labels"), rl.get("walk"), ql))
+          and ql and any("WALK M01 NOT PASSED" in x and "no walk for M01" in x and "prepare --stale" in x for x in ql[0].get("for_aleksis", []))
+          and lost.get("labels", []).count("walk:1") == 1 and lost["labels"].count("walk:2") == 1
+          and "is not retried" in rl.get("next", ""), (lost.get("labels"), rl.get("walk"), ql, rl.get("next")))
     mods3 = mods + [{"id": 3, "title": "C", "minutes": 60, "theory": 40, "practical": 20}]
     reb = run(tmp, dict(base, modules=mods3, _approved=["1", "2", "3"], _scene=["3"], _rebuilt3d=["3"]))
     lr = reb.get("labels", [])
-    check("... a 3D check that rebuilt the module while the judges looked: the walk judge looks once more at what changed",
+    check("... a 3D check that rebuilt the module while the judges looked: the walk judge looks once more at what changed, "
+          "and signs against the builder and the check that rebuilt it",
           lr.count("walk:3+3d") == 1 and lr.index("walk:3+3d") > lr.index("walk:3") and "walk:1+3d" not in lr
-          and not any(x.startswith("fix:") for x in lr), lr)
+          and not any(x.startswith("fix:") for x in lr)
+          and "--built-by \"build:3 (workflow builder)\" --built-by \"3d:3 (workflow 3D check, rebuilt the module)\"\n"
+          in reb.get("prompts", {}).get("walk:3+3d", ""), (lr, reb.get("prompts", {}).get("walk:3+3d", "")[:2500]))
+    # a second pass of the workflow over a module that has had its two rounds: no fixer for a walk fail, no third review
+    used = run(tmp, dict(base, _spent=["1"]))
+    lu = used.get("labels", [])
+    qu = [q for q in (used.get("r") or {}).get("qa", []) if q and q.get("module") == "1"]
+    fu = qu[0].get("for_aleksis", []) if qu else []
+    check("... a module that has HAD its two rounds: its walk fails go to no fixer and it is not looked at again; the "
+          "operator gets the slide, the accept command and the reopen command",
+          not any(x.startswith(("fix:", "fixfig:", "fixbuild:", "walk:1+")) for x in lu)
+          and "WALK s04: stop 3: the chart is still an empty axis" in fu
+          and any("WALK M01 NOT PASSED" in x and "walk_review.py accept \"C:/c\" --module 1 --by" in x
+                  and "walk_review.py reopen \"C:/c\" --module 1 --by" in x for x in fu), (lu, fu))
+    usedqa = run(tmp, dict(base, _spent=["1"], _broken=["1"]))
+    lq, pq = usedqa.get("labels", []), usedqa.get("prompts", {})
+    qq = [q for q in (usedqa.get("r") or {}).get("qa", []) if q and q.get("module") in ("1", "1+fix")]   # the stand-in's QA after the fix
+    fq = [x for x in (qq[0].get("for_aleksis", []) if qq else []) if "WALK" in x]
+    check("... and QA's fix round on such a module carries no walk fail, the judge behind it only reads the state (no sheets, "
+          "no signature), and the operator is told to REOPEN it - accept is refused for a slide that changed",
+          lq.count("fix:1") == 1 and "(WALK)" not in pq.get("fix:1", "") and "empty axis" not in pq.get("fix:1", "")
+          and lq.count("walk:1+fix") == 1 and "STEP 4 ONLY" in pq.get("walk:1+fix", "")
+          and len(fq) == 1 and "walk_review.py reopen \"C:/c\" --module 1 --by" in fq[0] and "accept is refused" in fq[0]
+          and "walk_review.py accept \"C:/c\"" not in fq[0], (lq, fq))
+    # the final assessment: built, then walked by its own judge under the name the portal asks for
+    fin = run(tmp, dict(base, final=True))
+    lf, pf, rf = fin.get("labels", []), fin.get("prompts", {}), fin.get("r") or {}
+    wf = pf.get("walk:final", "")
+    check("the FINAL is walked too: one judge after it is built, under the name the build and the portal use (--module "
+          "final, FINAL), against its builder; the run counts it",
+          lf.count("walk:final") == 1 and lf.index("walk:final") > lf.index("build:final")
+          and lf.index("assemble:course") > lf.index("walk:final")
+          and all(w in wf for w in ("walk_review.py prepare \"C:/c\" --module final --stale", "_build/FINAL_walk_reviewer.json",
+                                    "--module final --review <that file> --built-by \"build:final (workflow builder)\"\n",
+                                    "\"reviewed_by\": \"walk:final (workflow walk judge)\"", "walk_review.py verify \"C:/c\" --module final"))
+          and "never run walk_review.py" in pf.get("build:final", "")
+          and rf.get("walk") == {"reviewed": 3, "not_passed": []}
+          and (rf.get("final_walk") or {}).get("ok") is True and rf["final_walk"].get("for_aleksis") == [], (lf, rf.get("walk"), wf[:2500]))
+    finbad = run(tmp, dict(base, final=True, _stillwalk=["final"]))
+    lfb, rfb = finbad.get("labels", []), finbad.get("r") or {}
+    fwl = (rfb.get("final_walk") or {}).get("for_aleksis", [])
+    check("... a final whose walk fails: no fix round in this workflow - the slide, the stop and the accept command for "
+          "--module final are the operator's list, and the run names it not passed",
+          not any(x.startswith(("fix:", "walk:final+")) for x in lfb)
+          and "WALK s04: stop 3: the chart is still an empty axis" in fwl
+          and any("WALK FINAL NOT PASSED" in x and "walk_review.py accept \"C:/c\" --module final --by" in x for x in fwl)
+          and [w.get("module") for w in rfb.get("walk", {}).get("not_passed", [])] == ["final"]
+          and "WALK REVIEW not passed for module(s) final" in rfb.get("next", ""), (lfb, fwl, rfb.get("walk"), rfb.get("next")))
+    nofin = run(tmp, dict(base))
+    check("... no final asked for: no judge for it", "walk:final" not in nofin.get("labels", [])
+          and (nofin.get("r") or {}).get("final_walk") is None, nofin.get("labels"))
 
 
 def main():

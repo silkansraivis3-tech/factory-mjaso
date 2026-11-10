@@ -109,7 +109,21 @@ def main():
           and (lambda im: im.width <= 480)(__import__("PIL.Image", fromlist=["Image"]).open(Path(wd, k1s[0]["file"]))), k1s[:1])
     check("... with the lit line's text and the figure's signature at each stop",
           all("lit" in s and "fig" in s for s in k1s) and len({s["fig"] for s in k1s}) > 1, k1s[:2])
-    from playwright.sync_api import sync_playwright
+    import walk_review
+    stamp = walk_review.walk_stamp(str(KDECK))
+    check("... and which deck the pictures are of: each slide's fingerprint (the audits' own) and the deck's",
+          wj.get("fingerprints") == stamp["fingerprints"] and set(wj["fingerprints"]) == {s["slide"] for s in stops}
+          and wj.get("deck") == stamp["deck"] and len(wj["deck"]) == 64, {k: v for k, v in wj.items() if k != "stops"})
+    real_stamp, real_walk, order = fit_gate.walked_deck, fit_gate.walk, []
+    try:
+        fit_gate.walked_deck = lambda deck: order.append("stamp") or {"fingerprints": {"k1": "as the walk began"}, "deck": "then"}
+        fit_gate.walk = lambda *a: order.append("walk") or real_walk(*a)
+        cli(str(KDECK), "--viewport", "1280x800", "--walk-dir", wd)
+    finally:
+        fit_gate.walked_deck, fit_gate.walk = real_stamp, real_walk
+    wj = json.loads(Path(wd, "walk.json").read_text(encoding="utf-8"))
+    check("... taken before the walk starts: a deck built again while it is walked is not signed for under its new fingerprint",
+          order == ["stamp", "walk"] and wj.get("fingerprints") == {"k1": "as the walk began"} and wj.get("deck") == "then", (order, wj.get("deck")))
     with browser_slot_page(KDECK) as page:
         seen = []
         page.click("#startBtn")

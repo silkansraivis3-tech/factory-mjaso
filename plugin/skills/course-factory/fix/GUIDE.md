@@ -182,8 +182,9 @@ touched slide** ("walk it like a trainee"), once, by the lead session:
 
 1. `python course-factory\scripts\fix.py check <course> --kind walk --modules N --slides s03,s07` - walks the module at 1280x800
    (`fit_gate.py --walk-dir`, a ~480 px picture of every Next), makes the touched slides' contact sheets and
-   `working_claude\_build\walk\MNN\review_brief.md`, and fails until the reviewer has signed those slides. The walk keeps a hash
-   per slide, so a slide the fix did not change keeps the verdict it had: only the touched ones are stale.
+   `working_claude\_build\walk\MNN\review_brief.md`, and fails until the reviewer has signed those slides. The walk keeps each
+   slide's fingerprint (its markup, the stylesheet and scripts, the files it names), so a slide the fix did not change keeps the
+   verdict it had: only the touched ones are stale - and every slide of a module whose stylesheet or script the fix changed.
 2. Run the reviewer exactly as `compile/GUIDE.md` 2i says: **one Sonnet subagent per batch of up to 4 contact sheets** (several
    images in one look - never a screenshot at a time in the main session), returning reviewer JSON. **Never the session or agent
    that made the fix** - its own signature is refused.

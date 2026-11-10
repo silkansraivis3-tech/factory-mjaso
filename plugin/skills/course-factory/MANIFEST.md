@@ -15,33 +15,52 @@ Audit `_claude/AUDIT_2026-11-10_FACTORY_FLOW.md` section 3, items 1-3: the walk 
 upload, but no workflow build ever ran it, a one-slide fix made every slide stale, and its loop had no end.
 
 - `orchestration/workflows/build_course.js`: a **walk judge** beside the 3D, figure and QA judges (`walk:N`, Sonnet,
-  never the builder). It runs `walk_review.py prepare --stale`, reads the contact sheets, signs against the builder's
-  name and returns `verify`'s answer. Its fails join the module's ONE fix round (`fixAll` "(WALK)", a figure's fixer hears
-  what the walk said of its own slide); after any fix round - or a 3D check that rebuilt - `walk:N+fix` / `walk:N+3d`
-  looks once more, only at the slides that changed. Never a third look: what is left goes to `for_aleksis` with slide,
-  stop and the accept command, the module is not failed for it, and the result carries `walk.not_passed` and says so in
-  `next`. QA's check build runs with `--no-walk` (the walk pictures are the walk judge's while it reads them).
+  never the builder or a fixer; one a module, reading the sheets in batches of up to 4). It runs `walk_review.py prepare
+  --stale`, reads the contact sheets, signs against the builder's name and returns `verify`'s answer. Its fails join the
+  module's ONE fix round (`fixAll` "(WALK)", a figure's fixer hears what the walk said of its own slide); after any fix
+  round - or a 3D check that rebuilt - `walk:N+fix` / `walk:N+3d` looks once more, only at the slides that changed, and
+  signs against the builder AND every agent that changed the module since (`--built-by` for `fix:N`, each `fixfig:N:sNN`,
+  `fixbuild:N`, a rebuilding `3d:N`). Never a third look: what is left goes to `for_aleksis` with slide, stop and the
+  accept command, the module is not failed for it, and the result carries `walk.not_passed` and says so in `next`.
+  **A module that has had its two rounds** (a second run of the workflow) sends no walk fail to a fixer; after another
+  judge's fix round its walk judge only reads the state, and the operator is told to reopen it (accept is refused for a
+  changed slide). **The final assessment is walked**: `walk:final` after `build:final`, `--module final`, `final_walk`
+  in the result, no fix round. The judge is told never to run `accept` / `reopen`, and what to do when the deck changed
+  under it (no "wait a minute"). QA's check build runs with `--no-walk` (the walk pictures are the walk judge's).
 - `compile/scripts/build_module.py`: `walk_gate()`. A module of a parallel build (`--no-course-pages`, "course package"
   the only open fail) reaches the walk and prints `WALK REVIEW - ...` under `MODULE CLEAN` (under `PASS` when the course
   was assembled before) and never fails on it; a build by itself fails on
   "walk review" as before and now prepares only the stale slides' sheets. The review sheets are made with
-  `review_sheets.mjs --tasks-only`.
-- `course-module-ux/measure/scripts/walk_review.py` + `fit_gate.py`: `walk.json` and the signed file carry **a hash per
-  slide**; `verify` kinds are missing / stale / incomplete / failing and name the slides. `prepare --stale` shows only
-  slides with no verdict for what they show now. `sign --built-by` records reviewer and builder and refuses the
-  builder's own signature (exit 2) and a third round (`MAX_ROUNDS = 2`, exit 3). `accept --by --why [--slides]` records
-  the operator's accept of the open fails, `reopen --by` opens two more rounds, `verify` lists open fails with slide and
-  stop. A review signed before this release (one whole-deck hash) stands for the deck it was signed for; a change
-  after it makes every slide stale once.
-- `scripts/fix.py` `check --kind walk`: the same rules, and the open fails printed.
+  `review_sheets.mjs --tasks-only`. The build's "nothing changed since the last answer" reads the walk review too: a
+  review signed, accepted or reopened since that answer is a change, so the old answer is not repeated with a walk
+  line that no longer stands.
+- `course-module-ux/measure/scripts/walk_review.py` + `fit_gate.py`: `walk.json` and the signed file carry **each
+  slide's fingerprint - the one the audits' cache uses** (`check_cache.fingerprints`: the slide's markup, the module's
+  stylesheet and scripts, the shell, the files it names), stamped before the walk starts: a changed `gb_*.js`, kit part
+  or photo makes its slides stale. `verify` kinds are missing / stale / incomplete / failing and name the slides; a
+  slide of the deck that was never walked is `incomplete`, never a pass. `prepare --stale` shows only slides with no
+  verdict for what they show now and records what each sheet showed (`sheets/manifest.json`); **`sign` signs for what
+  the sheets showed** and refuses a slide built again since. `sign --built-by` (repeatable, kept as a list) records the
+  reviewer and everyone who built or fixed, and refuses the signature of any of them (exit 2) and a third round
+  (`MAX_ROUNDS = 2`, exit 3) - the round is the module's, so a round-2 fail is not signed over and a renamed slide does
+  not start again; only a real `true` with no fails is a pass. `accept --by --why [--slides]` records the operator's
+  accept of the open fails (refused for a slide that changed), `reopen --by` opens two more rounds, both recorded with
+  how they were run; `verify` lists open fails with slide and stop. The final assessment has one name everywhere:
+  `--module final`, `walk/FINAL`, `FINAL_walk_review.json`. A review signed before this release (one whole-deck hash)
+  stands for the deck it was signed for; a change after it makes every slide stale once.
+- `scripts/fix.py` `check --kind walk`: the same rules, and the open fails printed. `scripts/course_portal.py`: the
+  upload asks for the final's review under the same name, and lists what the operator accepted.
 - **The sheet review is the task pages'**: `compile/REVIEW_PROMPT.md`, GUIDE Quickstart step 5 and 2f; the deck's slides
   are the walk's (its rubric gained "nothing of the factory's on screen" and "the picture is the thing the words name").
 - Guides: `compile/GUIDE.md` 2i, `fix/GUIDE.md` 4 and 6, `orchestration/GUIDE.md` (flow, Rule 4, the role table),
   `compile/BUILDER_CARD.md`, `course-module-ux/measure/GUIDE.md` 4, `knowledge/fix-rules.json`, law L71's row.
-- Tests: `test_walk_review.py`, `test_build_module.py` (`walk_part`), `test_build_course.py` (`walk_part`).
-- Not done here: the final assessment's deck has no walk judge in the workflow (`build:final`), and its review is filed
-  as `FINAL_walk_review.json` while `course_portal.py` `walk_problems` asks for the module number of its folder (so the
-  upload reads it as missing); the task pages are still not walked (audit section 4, item 5).
+- Tests (they run the behaviour): `test_walk_review.py`, `test_fit_gate.py`, `test_build_module.py` (`walk_part`, the
+  last-answer check in `blanks_part`), `test_build_course.py` (`walk_part`), `test_course_portal.py`, `test_fix.py`.
+- Not done here: who built, fixed, reviewed, accepted or reopened is a label the caller gives - the script cannot tell
+  which agent ran it, so "never an agent" for `accept` / `reopen` is a rule in the prompts and guides, recorded but not
+  enforced; the review sheets (`review_sheets.mjs`) keep their own cache key; a walk fail on a figure slide goes to the
+  module fixer and, for its own slide, the figure's fixer - kept apart by their prompts only; the task pages are still
+  not walked (audit section 4, item 5).
 
 ## 2.120.0 · One rule per subject (2026-11-10)
 
