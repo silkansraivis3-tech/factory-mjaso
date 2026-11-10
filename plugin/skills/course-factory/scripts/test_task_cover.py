@@ -94,6 +94,15 @@ def main():
         check("... and without its mend", done == 0 and "needs its mend" in probs[0], probs)
         done, probs = tc.judge(c, 1, [{"id": "q02", "verdict": "not_covered", "missing": "x", "add": {"slide": "s03", "line": "y"}}])
         check("... a line added to a slide after the task is refused", done == 0 and "before the task" in probs[0], probs)
+        pts = json.loads(json.dumps(SCRIPT))
+        pts["screens"][1]["points"] = "Pressure vessels\nNo secondary barrier"
+        cp = os.path.join(tmp, "points")
+        os.makedirs(os.path.join(cp, "working_claude", "script"))
+        cs.save(cs.paths(cp, 1)["script"], pts)
+        done, probs = tc.judge(cp, 1, [{"id": "q02", "verdict": "not_covered", "missing": "x", "add": {
+            "slide": "s02", "line": "A spaceship's hull hangs on its truss, a long and light frame of welded steel tubes."}}])
+        check("... a line added to a slide of short points that is longer than a point is refused (factory trial M19 s01, s08)",
+              done == 0 and "short points" in probs[0], probs)
         done, probs = tc.judge(c, 1, [
             {"id": "q01", "verdict": "covered", "slides": ["s02"], "quote": ["They need no secondary barrier."]},
             {"id": "q02", "verdict": "not_covered", "missing": "The slides teach car engines and tanks, not what holds a spaceship's hull.",

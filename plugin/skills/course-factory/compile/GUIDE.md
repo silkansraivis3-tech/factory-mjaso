@@ -654,12 +654,14 @@ photo of its own keeps the previous one, and the first photo (`"figure"`, or the
 `"zoom"`; a bad key or a file that is not a photograph is reported.
 
 **Content in parts is the writer's finding, not a layout trick.** A slide with a picture and more than 85 words is
-paged by the compiler into parts with number tabs (1 2 ...); trainees find the switching confusing. The review page
-(`content_script.paged_findings`, rule `v_paged_slide`) lists such a slide as a warning: cut it to 3-4 short lines (by
-proposal - the build never cuts, L61), or keep the parts on purpose with `"parts"` (or
-`"template": "content-in-parts.v1"`) in the build sheet, which also silences the finding. The compile prints the same
-as `WARNING (content in parts)`. The build stops on words only when the fit gate measures them cut off or scrolling;
-a scenario or a worked example over its template is stopped earlier, at the script (`t_overfull`).
+paged by the compiler into parts with number tabs (1 2 ...) - beside a 3D model on a split slide, more than 65 (its
+picture-wide box); trainees find the switching confusing. It is stopped at the script (L61): the script check
+(`content_script.py`, rule `t_over_budget`) makes it a must-fix - split the slide in two, or another slide type - unless
+the script keeps it in parts on purpose (`"in_parts": "<why>"`, at most two in a module, never two in a row). The build
+still pages such a slide, never cuts it, and the compile prints `WARNING (content in parts)` for it
+(`content_script.paged_findings`, rule `v_paged_slide`; `"parts"` or `"template": "content-in-parts.v1"` in the build
+sheet silences that). The build stops on words only when the fit gate measures them cut off or scrolling; a scenario or
+a worked example over its template is stopped at the script too (`t_overfull`).
 
 ## 3 · When the look is not enough
 

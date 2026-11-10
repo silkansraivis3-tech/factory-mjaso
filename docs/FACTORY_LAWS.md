@@ -568,8 +568,14 @@ template and variant, chosen from the approved script and the build sheet or ask
 unsuitable one is a problem. The look is `gb_layouts.css`: brandbook colours only (the reference's amber is Novikontas
 Blue), the official logo file top right (a white plate on dark slides), Raleway bundled for the offline classroom. The
 owner's rules are build problems: 55 / 45 on a split slide (50-60 % text), never three teaching slides in a row without a
-teaching picture, and words that need more room in readable parts - never cut, never smaller type. Past the word
-guideline (`theory-rules.json` "slide") a picture goes beside the words or the slide is shown in steps - a warning, not a stop. → `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui`
+teaching picture, and words never cut, never in smaller type. **The templates are the rule: over a template's measured
+budget (`layout-templates.json` "budgets" - the column beside a picture, narrower beside a 3D model) the script splits
+the slide in two, each with its own picture, or picks another slide type** - never squeezed, never shrunk. The words stay
+compact and the theory stays: every self-check is still fully taught before it. It is a must-fix at the script
+(`content_script.py` `t_over_budget`). Words in readable parts with number tabs are an exception the writer asks for on
+purpose, with why (`"in_parts"`) - at most two in a module, never two in a row. With no picture, past the word guideline
+(`theory-rules.json` "slide") a picture goes beside the words or the slide is shown in steps - a warning, not a stop. →
+`course-factory` (`compile/scripts/compile_module.py`, `scripts/content_script.py`) and `course-module-ui`
 (`knowledge/layout-templates.json`, `templates/gb_layouts.css`), 2.52.0
 
 **L63 · Physical equipment is drawn as it looks on board.** Aleksis, 2026-10-20, approving a plain-vs-realistic mock-up of

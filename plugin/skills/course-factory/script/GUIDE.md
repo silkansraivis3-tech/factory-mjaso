@@ -86,7 +86,7 @@ tablets (L35), and the script says which screen is where:
 
 ```json
 {"module": 1, "title": "<module title, course language>", "course_language": "English",
- "operator_language": "lv", "status": "draft",
+ "operator_language": "en", "status": "draft",
  "operator_facts": [{"fact": "<what the operator said>", "where": "s03", "said": "2026-10-01"}],
  "sources": ["<document, edition: sections or pages>", "…"],
  "screens": [
@@ -188,18 +188,25 @@ tablets (L35), and the script says which screen is where:
   must already be in the slides before it - write the slide that teaches it first, then the question.
   A module with less theory than that has no self-check; its module check covers it.
 - Course text (titles, text, questions, answers, feedback) is in COURSE_LANGUAGE; the notes on the
-  page and in the Word file around it are in the operator's language.
+  page and in the Word file around it are in the operator's language - `"operator_language"` is copied from
+  `architecture.json` `course.operator_language`, never from the example above (`render` says when they differ).
 - **Write to fit the slide's template.** Compact sentences; the theory stays. Each slide is built in one of the
   templates (`course-module-ui/knowledge/blueprints.json`, `layout-templates.json`), and each holds so many words
   (`layout-templates.json` `budgets`). Never cram a slide to fit: when its words are more than its template holds, split
-  it into two slides (the second may carry another photograph or picture), or give it a slide type with more room. A
-  scenario or a worked example beside a picture over its template is a must-fix at render (`t_overfull`, with the split
-  it needs); every other slide the compiler fits by itself - a larger picture box, then its lines in parts. The word
-  guideline (`knowledge/theory-rules.json` `slide`, the one place it is written): about 40 to 120 words on a slide; over
-  about 80 a picture goes beside the words or the slide is shown in steps; over 120 the build shows it in steps by
-  itself. The guideline and the other counts here (notes, words a minute, answers, the task mix) are warnings for the
-  expert. Three checks stay must-fix, because they protect the teaching: enough theory before each self-check, every
-  answer taught before it is asked, three rich + two basic in a self-check of five.
+  it into two slides (the second may carry another photograph, view or 3D view), or give it a slide type with more
+  room (short `"points"`). The word guideline (`knowledge/theory-rules.json` `slide`, the one place it is written):
+  **aim at 40 to 75 words on a slide beside a picture, 40 to 65 beside a 3D model** - the column beside a picture
+  holds 85 words at 1024 x 768, beside a 3D model on a split slide 65. Write it that way from the start; do not write
+  long and cut later. Over the column's budget is a must-fix at render (`t_over_budget`): the build would page the
+  words into number tabs, which trainees find confusing. Split the slide in two, each with its own picture, or move
+  detail the screen does not need to the instructor notes or the handout - and keep on a slide before every task each
+  fact the task asks (the task-cover check reads the slides). A slide you keep in parts on purpose says why:
+  `"in_parts": "<why the words stay together>"` - at most two in a module, never two in a row (`t_parts_many`,
+  `t_parts_in_row`). A scenario or a worked example beside a picture has its own budgets (`t_overfull`, with the split
+  it needs). With no picture, over about 80 words a picture goes beside the words or the slide is shown in steps, over
+  120 the build shows it in steps by itself. The other counts here (notes, words a minute, answers) are warnings for
+  the expert. These checks are must-fix: enough theory before each self-check, every answer taught before it is asked,
+  three rich + two basic in a self-check of five - they protect the teaching - and the template's budget.
 - **Instructor notes are short**: two to four points per slide, one per line starting `- `, 10-50 words -
   what to ask, the one example to give, what to stress. The theory is on the slide. `render` writes them to
   `to_review/M01_INSTRUCTOR_NOTES.md` for the instructor's panel; they are never on a slide.
@@ -321,8 +328,11 @@ parallel) proves every claim in the course's knowledge base: `scripts/fact_check
 source says word for word, the agent judges the rest found / partly / not found from the source passages only, and
 leaves a change list that cuts what no source says and corrects what it says otherwise - proposed with
 `content_script.py propose`, shown like any correction (an unattended build applies it itself, `fixes --apply`, each
-change logged for the expert). Approval is refused while a claim is not judged or one not proved is still in the script
-(a course with no knowledge base is not checked).
+change logged for the expert). A question's answer and the answer a slide reveals to the room's question are never
+changed there - they are listed for the writer, so no question loses its answer. A cut or a correction on a slide
+before a task voids that task's coverage verdict: the apply names the questions to judge again (and a line one relied
+on that is gone), and approval waits for them. Approval is refused while a claim is not judged or one not proved is
+still in the script (a course with no knowledge base is not checked).
 
 ```
 python scripts/content_script.py render <course> --module 1

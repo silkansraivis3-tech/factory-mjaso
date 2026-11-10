@@ -188,6 +188,16 @@ class Index:
         return out
 
 
+CUT_OFF = re.compile(r"(?<![(\w])(?:the|a|an|of|to|in|within|with|without|for|from|by|at|on|into|onto|upon|between|and|or|"
+                     r"but|nor|that|which|whose|than|as|its|their|is|are|was|were|be)\s*[.!?]$")
+
+
+def cut_off(quote):
+    """a source sentence that ends mid-clause ("... should trip the electric motors within.") - the knowledge base may
+    have cut it off, and a slide line proved by it can be a broken sentence. A quoted fragment (no full stop) is not one"""
+    return bool(CUT_OFF.search((quote or "").strip()))
+
+
 def sentences(text):
     return [x.strip() for x in re.split(r"(?<=[.;:!?])\s+|\n+", text or "") if len(x.strip()) > 3]
 
@@ -274,6 +284,10 @@ def judge(course, module, verdicts, index=None):
         if verdict != "found" and not fix:
             probs.append("%s: %s needs its fix - \"cut\", or the corrected words with the quote they come from" % (cid, verdict))
             continue
+        if row["field"] == "points" and fix.lower() != "cut" and cs.wc(fix) > cs.POINT_WORDS:
+            probs.append("%s: a point is %d words or fewer - give the corrected words in short; the quote proves them"
+                         % (cid, cs.POINT_WORDS))
+            continue
         needs_quote = verdict in ("found", "partly") or (fix and fix.lower() != "cut")
         if needs_quote:
             texts = [p["text"] for p in row.get("passages") or []]
@@ -291,13 +305,14 @@ def judge(course, module, verdicts, index=None):
 
 def fixes(course, module):
     """the change list for content_script.py propose: a line judged not found is cut, one judged partly (or not found
-    with sourced words) gets its corrected words. Questions are listed for the person - an answer is never changed here"""
+    with sourced words) gets its corrected words. Questions, and the answer a slide reveals to the room's question, are
+    listed for the person - an answer is never changed here, so a question never loses it"""
     script = cs.load(cs.paths(course, module)["script"])
     st = load_store(course, module)
     by_field, asks = {}, []
     for row in st["claims"].values():
         if row.get("verdict") in ("partly", "not_found") and row.get("fix"):
-            if row["field"] in ("answer", "feedback"):
+            if row["field"] in ("answer", "feedback", "reveal"):
                 asks.append(row)
             else:
                 by_field.setdefault((row["screen"], row["field"]), []).append(row)
@@ -325,11 +340,12 @@ def fixes(course, module):
 
 def status(course, module, script=None):
     """{"claims", "judged", "unchecked": [claim texts], "unproven": [(screen, text, verdict)], "set_aside": [(screen, text,
-    why)]} for the script as it is now - a line set aside as no claim is listed for the person, never held"""
+    why)], "cut_off": [(screen, text, quote)]} for the script as it is now - a line set aside as no claim, and one proved
+    by a source sentence that ends mid-clause, are listed for the person, never held"""
     script = script or cs.load(cs.paths(course, module)["script"])
     st = load_store(course, module)
     have = st.get("claims") or {}
-    out = {"claims": 0, "judged": 0, "unchecked": [], "unproven": [], "set_aside": []}
+    out = {"claims": 0, "judged": 0, "unchecked": [], "unproven": [], "set_aside": [], "cut_off": []}
     for cid, sid, field, n, text in claims_of(script):
         out["claims"] += 1
         row = have.get(cid)
@@ -341,6 +357,8 @@ def status(course, module, script=None):
             out["set_aside"].append((sid, text, row.get("why", "")))
         elif row["verdict"] != "found":
             out["unproven"].append((sid, text, row["verdict"]))
+        elif cut_off(row.get("quote")):
+            out["cut_off"].append((sid, text, row["quote"]))
     return out
 
 
@@ -404,14 +422,31 @@ def main(argv=None):
             if os.path.isfile(cs.paths(course, a.module)["pending"]):
                 print("Stopped - other changes wait to be applied or discarded first")
                 return 1
+            import task_cover
+            before = task_cover.status(course, a.module)
             code = cs.cmd_propose(course, a.module, p, "fact-checker")
             code = code or cs.cmd_apply(course, a.module, True, "fact-checker, unattended - from the course's sources")
-            return code
-        print("%d slide field(s) to correct - shown to the operator first:\n    python %s propose %s --module %s --changes \"%s\" "
-              "--proposed-by \"fact-checker\"" % (len(changes), os.path.join(HERE, "content_script.py"), a.course, a.module, p))
+            after = task_cover.status(course, a.module) if not code else None
+            again = [q for q in (after or {}).get("unjudged", []) if q in before["rows"]]
+            if again:
+                # a cut or a corrected line on a slide before a task voids its coverage verdict: the task-coverage-checker
+                # judges it again before approval, and a line it relied on that is gone is said here
+                print("\nThe task cover of module %s must be judged again - the slides before %d question(s) changed: %s\n"
+                      "    python %s next %s --module %s"
+                      % (a.module, len(again), ", ".join(again), os.path.join(HERE, "task_cover.py"), a.course, a.module))
+                for q in again:
+                    if q in after["lost"]:
+                        print("  %s relied on \"%s\" - no slide before it shows that now: teach it again, or the question "
+                              "changes" % (q, after["lost"][q][0][:100]))
+                code = 1
+        else:
+            code = 0
+            print("%d slide field(s) to correct - shown to the operator first:\n    python %s propose %s --module %s --changes \"%s\" "
+                  "--proposed-by \"fact-checker\"" % (len(changes), os.path.join(HERE, "content_script.py"), a.course, a.module, p))
         for r in asks:
-            print("  question %s - for the person, never changed here: \"%s\" -> %s" % (r["screen"], r["text"], r["fix"]))
-        return 0
+            print("  %s %s - for the person, never changed here: \"%s\" -> %s"
+                  % ("the room's answer on" if r["field"] == "reveal" else "question", r["screen"], r["text"], r["fix"]))
+        return code
     s = status(course, a.module)
     print("Module %s: %d claim(s), %d judged, %d not judged yet, %d not proved (found in no source, or only partly)."
           % (a.module, s["claims"], s["judged"], len(s["unchecked"]), len(s["unproven"])))
