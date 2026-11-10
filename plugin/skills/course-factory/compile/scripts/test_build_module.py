@@ -63,6 +63,21 @@ def main():
     mine = OUT.replace("  - module02/tasks/sc1_a.html has no <title>", "  - module01/presentation/index.html has no data-title")
     check("a module's own finding beside the course-page ones fails it",
           b.own_package_findings(1, mine, "module01")[0] == 1)
+    noisy = OUT.replace("  - module01: 11 drawn", "  - _course_shell/course_map.js is not there - the classroom then takes the order\n"
+                        "  - the classroom's importer: Link outside the package: instructor/module01/presentation/index.html → "
+                        "instructor/module01/START_HERE_EXTENDED.html\n"
+                        "  - module02/tasks/sc1.html makes 2 separate 3D renderers\n"
+                        "  - module01: 11 drawn")
+    code, out, left = b.own_package_findings(1, noisy, "module01")
+    check("the notes are this module's only: a link to START_HERE_EXTENDED.html before compile_course.py writes it, the "
+          "course map and another module's notes are the check's after assembly (the factory trial's builds listed 16-40 of "
+          "them, and its QA read them as the module's)", code == 0 and "real photograph" in out and "START_HERE_EXTENDED" not in out
+          and "course_map" not in out and "module02" not in out, out)
+    code, out, left = b.own_package_findings(1, noisy.replace("  - module01: 11 drawn subjects still need a real photograph\n", ""), "module01")
+    check("... and with none of its own, no notes at all", "Worth a look" not in out, out)
+    code, out, left = b.own_package_findings(1, noisy, "module02")
+    check("... the same for a module that fails on its own finding", code == 1 and "sc1_a.html has no <title>" in out
+          and "3D renderers" in out and "START_HERE_EXTENDED" not in out.split("Worth a look")[-1] and "real photograph" not in out, out)
     check("a passing package and a stop (exit 2) are passed through untouched",
           b.own_package_findings(0, "Ready", "module01") == (0, "Ready", 0)
           and b.own_package_findings(2, "Stopped", "module01") == (2, "Stopped", 0))

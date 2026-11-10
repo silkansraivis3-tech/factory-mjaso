@@ -71,7 +71,10 @@ Every task that closes a GAP is **drafted as an exercise** - the existing exerci
 `_markers`) - rendered to `to_review\exercises\sim_drafts\MNN\<PREFIX>_Exercise_<no>_Trainee_DRAFT.docx` and
 `..._Instructor_DRAFT.docx`. The task names it: `"draft": "<no>"`. An inject inside an existing exercise is drafted as
 that exercise's amended forms, under its own number. The drafts are not the approved exercises: they are not built
-into a module until the course director accepts them, and an approved exercise they would change is named, not edited.
+into a module until the course director accepts them (`sim_coverage.py accept <course> --task <id> --by "<name>"`, in
+their own session - an unattended build never accepts one), and an approved exercise they would change is named, not
+edited. Until then the module's activity screen that names the task holds its minutes, its notes naming the draft
+as awaiting the course director: `check` and the course package check list every such screen as pending.
 Without the org skill installed, the content file is the draft and the review README says the forms are not rendered.
 
 ## 5 · SIM_COVERAGE.md and the review

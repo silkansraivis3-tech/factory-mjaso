@@ -21,7 +21,9 @@ the way the office PC builds. Then it scores what was built and sets the score b
           links, never their targets - makes a new one, and starts Claude Code in it (claude -p, the course-factory
           skill, its "Auto build" rules, NOVIKONTAS_TRIAL=1). Every STOP is signed "Factory trial"; the training app is
           never called; no paid picture is made; nothing is pushed. --plugin-dir builds with a plugin checkout instead of
-          the installed one (a release before it is pushed). The log and the score go to runs\\<date>\\. Then report.
+          the installed one (a release before it is pushed); --modules builds only some of the trial's modules (a retest
+          of two). The log and the score go to runs\\<date>\\ - the log line by line as the run goes (the session's words,
+          each agent it starts, its last answer with its turns, minutes and cost). Then report.
   report  the scorecard of each trial module, and what changed since the last trial:
             built, passed (its last build said PASS or MODULE CLEAN) and that build's verdict; minutes to its first PASS
             (the build's clock, cf_timing.py); slides cut or pictures cropped at 1280 x 800 and at 1024 x 768, every Next
@@ -32,7 +34,9 @@ the way the office PC builds. Then it scores what was built and sets the score b
             not proved in the sources (fact_check.py); old-course findings (order, slides left out, thinner theory); Bloom
             lifts of more than one level; must-fix findings left in the script; how many slide templates and the longest
             run of one; the basic tasks of each self-check and the self-checks off their mix (t_sc_mix); simulator and
-            equipment exercises written. A number that cannot be measured is "-".
+            equipment exercises written, and simulator drafts still awaiting the course director (L66). A number that
+            cannot be measured is "-". A run that ended on Claude's usage limit is scored "stopped: usage limit": its
+            modules are unfinished, not failed.
           --course scores any trial course (its master or course folder) - two trial homes compared; the scorecard is
           saved only where --run says. --against sets it beside that scorecard instead of the last trial's.
   compare two scorecards side by side, and each number that moved said better or worse.
@@ -191,8 +195,65 @@ def prepare_run(home, cfg, modules, plugin_dir=None):
 
 
 def claude_command(prompt, plugin_dir=None):
-    cmd = course_portal.claude_command(prompt)
+    """claude -p as an event stream, so the log is written as the run goes, not only at its end"""
+    cmd = course_portal.claude_command(prompt) + ["--output-format", "stream-json", "--verbose"]
     return cmd + (["--plugin-dir", os.path.abspath(plugin_dir)] if plugin_dir else [])
+
+
+def readable(line):
+    """one line of the stream as the log shows it: the session's own words, one line for each tool it starts (a helper
+    agent by its description), its last answer with its turns, minutes and cost; a helper agent's own events are left out -
+    its report reaches the session. A line that is not an event is kept as it is; None: nothing to show"""
+    try:
+        ev = json.loads(line)
+    except ValueError:
+        return line.rstrip("\r\n") or None
+    if not isinstance(ev, dict) or ev.get("parent_tool_use_id"):
+        return None
+    if ev.get("type") == "assistant":
+        out = []
+        for b in (ev.get("message") or {}).get("content") or []:
+            if b.get("type") == "text" and (b.get("text") or "").strip():
+                out.append(b["text"].strip())
+            elif b.get("type") == "tool_use":
+                i = b.get("input") or {}
+                what = i.get("description") or i.get("command") or i.get("file_path") or i.get("prompt") or ""
+                out.append("  > %s: %s" % (b.get("name"), " ".join(str(what).split())[:160]))
+        return "\n".join(out) or None
+    if ev.get("type") == "result":
+        said = "(the session: %s turns, %d min, $%.0f)" % (ev.get("num_turns", "?"), (ev.get("duration_ms") or 0) // 60000,
+                                                             ev.get("total_cost_usd") or 0)
+        return said + "\n\n" + str(ev.get("result") or ev.get("subtype") or "")
+    return None
+
+
+# the run ended on Claude's usage limit ("You've hit your 5-hour limit"), not on the factory
+LIMIT = re.compile(r"hit your [\w -]*limit|usage limit|limit reached", re.I)
+
+
+def stopped_by(log_text):
+    """"usage limit" when the run's last lines say it ended on Claude's usage limit, else None"""
+    tail = [x for x in (log_text or "").splitlines() if x.strip()][-3:]
+    return "usage limit" if any(LIMIT.search(x) for x in tail) else None
+
+
+def run_claude(cmd, cwd, env, logf, hours=20):
+    """claude -p in the trial course, each line of its stream written to the log as it comes; -> its exit code"""
+    import threading
+    p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+                         errors="replace", env=env)
+    timer = threading.Timer(hours * 3600, p.kill)
+    timer.start()
+    try:
+        with io.open(logf, "w", encoding="utf-8") as out:
+            for line in p.stdout:
+                shown = readable(line)
+                if shown is not None:
+                    out.write(shown + "\n")
+                    out.flush()
+        return p.wait()
+    finally:
+        timer.cancel()
 
 
 # ------------------------------------------------------------------ the scorecard
@@ -418,18 +479,30 @@ def score_module(course, m, no_browser=False):
         row["templates"], row["same_template_in_a_row"] = len(set(tpl)), best
     sim = os.path.join(course, "additional-materials", "simulator-and-equipment")
     row["simulator_exercises"] = sum(1 for _, _, fs in os.walk(sim) for f in fs if re.match(r"%s_A\d+.*_TRAINEE\.pdf$" % mid, f))
+    row["simulator_drafts_pending"] = measured(lambda: sum(1 for p in sim_pending(course) if p["module"] == m))
     return row
+
+
+def sim_pending(course):
+    """the drafted simulator tasks the course director has not accepted (L66, sim_coverage.py) - their minutes sit on a
+    screen with no exercise behind it"""
+    cov = os.path.join(os.path.dirname(HERE), "coverage", "scripts")
+    if cov not in sys.path:
+        sys.path.insert(0, cov)
+    import sim_coverage
+    return sim_coverage.pending(course)
 
 
 LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped",
                    "old_thinner", "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row", "build_minutes",
-                   "off_blueprint_slides", "pictures_pending", "max_words_slide", "slides_over_120_words", "self_checks_off_mix")
+                   "off_blueprint_slides", "pictures_pending", "max_words_slide", "slides_over_120_words", "self_checks_off_mix",
+                   "simulator_drafts_pending")
 # a number that is best inside a band: closer to it is better (L67: 60-80 % of the teaching slides with interactive 3D)
 BANDS = {"interactive_3d_share": (int(round(100 * cs.MEDIA["three_d"]["min_share"])), int(round(100 * cs.MEDIA["three_d"]["max_share"])))}
 SHOWN = ("built", "passed", "build_says", "build_minutes", "cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "off_blueprint_slides",
          "pictures_pending", "interactive_3d_share", "max_words_slide", "slides_over_120_words", "claims", "claims_unproven",
          "claims_unchecked", "old_moved", "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates",
-         "same_template_in_a_row", "self_check_basic_tasks", "self_checks_off_mix", "simulator_exercises")
+         "same_template_in_a_row", "self_check_basic_tasks", "self_checks_off_mix", "simulator_exercises", "simulator_drafts_pending")
 
 
 def compare(now, before):
@@ -464,12 +537,15 @@ def show(card, before=None):
     """the scorecard module by module, beside the one before when there is one, then what moved; -> exit code (1 when a
     number got worse)"""
     print("FACTORY TRIAL - course-factory %s, started %s" % (card.get("plugin"), card.get("started")))
+    stop = card.get("stopped")
+    if stop:
+        print("STOPPED: %s - the run ended before the factory finished; a module that did not pass is unfinished, not failed" % stop)
     old = {r["module"]: r for r in (before or {}).get("modules", [])}
     if before:
         print("  %-24s %-16s %s" % ("", "before %s" % before.get("plugin"), "now %s" % card.get("plugin")))
     for r in card.get("modules", []):
         b = old.get(r["module"])
-        print("\nModule %d" % r["module"])
+        print("\nModule %d%s" % (r["module"], " - stopped: %s, unfinished" % stop if stop and not r.get("passed") else ""))
         for k in SHOWN:
             if k not in r and k not in (b or {}):
                 continue
@@ -481,7 +557,8 @@ def show(card, before=None):
                 print("  %-24s %-16s %s" % (k.replace("_", " "), shown((b or {}).get(k)), shown(r.get(k))))
     moved = compare(card, before)
     if before:
-        print("\nSince course-factory %s:" % before.get("plugin"))
+        print("\nSince course-factory %s%s:" % (before.get("plugin"), " (this run stopped on its %s - a number that got worse may "
+                                                                        "be work it never reached)" % stop if stop else ""))
         for m, k, b, v, how in moved or []:
             print("  M%02d %-24s %s -> %s  %s" % (m, k.replace("_", " "), b, v, how.upper() if how == "worse" else how))
         if not moved:
@@ -525,6 +602,10 @@ def report(home, run_dir=None, no_browser=False, course=None, against=None):
         return 2
     card = {"plugin": mark.get("plugin"), "started": mark.get("started"), "scored": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "course": course, "modules": [score_module(course, m, no_browser) for m in mark.get("modules") or []]}
+    logf = os.path.join(run_dir, "build.log") if run_dir else ""
+    stop = stopped_by(io.open(logf, encoding="utf-8", errors="replace").read()) if os.path.isfile(logf) else None
+    if stop:
+        card["stopped"] = stop
     if run_dir:
         save(os.path.join(run_dir, "scorecard.json"), card)
     before = load(against) if against else None
@@ -601,14 +682,12 @@ def main(argv=None):
         return 0
     env = course_portal.unattended_env(NOVIKONTAS_AUTO_BUILD="1", NOVIKONTAS_TRIAL="1")
     logf = os.path.join(run_dir, "build.log")
-    print("Building the trial (modules %s) - this takes a while; the log: %s" % (", ".join(map(str, mods)), logf))
-    with io.open(logf, "w", encoding="utf-8") as out:
-        r = subprocess.run(cmd, cwd=master, stdout=out, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
-                           env=env, timeout=20 * 3600)
+    print("Building the trial (modules %s) - this takes a while; the log, written as it goes: %s" % (", ".join(map(str, mods)), logf))
+    rc = run_claude(cmd, master, env, logf)
     said = io.open(logf, encoding="utf-8", errors="replace").read()
     print("The build said: %s" % ([x for x in said.strip().splitlines() if x.strip()][-1:] or ["(nothing)"])[0][:200])
     code = report(home, run_dir)
-    return code or (0 if r.returncode == 0 and "TRIAL DONE" in said else 1)
+    return code or (0 if rc == 0 and "TRIAL DONE" in said else 1)
 
 
 if __name__ == "__main__":

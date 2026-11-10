@@ -48,7 +48,8 @@ const agent = async (prompt, o) => {
   if (o.label.startsWith('gate:')) return { open: true, output: 'open', approved: args._approved || ['1', '2'], order: args._order || [],
                                             skill_dir: args._skill_dir }
   if (/^3d:/.test(o.label)) return (args._scene || []).indexOf(o.label.slice(3).split('+')[0]) >= 0
-    ? { has_scene: true, ok: true, shots: ['C:/c/r/s05_step1.png'], scenes: [{ slide: 's05', spec: 's05.kit3d.json' }] }
+    ? { has_scene: true, ok: true, shots: ['C:/c/r/s05_step1.png', 'C:/c/r/s07_step1.png'],
+        scenes: [{ slide: 's05', spec: 's05.kit3d.json' }, { slide: 's07', spec: 's07.kit3d.json' }] }
     : { has_scene: false, ok: true, shots: [] }
   if (/^fix3d:/.test(o.label)) return { has_scene: true, ok: true, shots: ['C:/c/r/s05_step1.png'] }
   if (/^review3d:/.test(o.label)) return (args._bad3d || []).indexOf(o.label.slice(9)) >= 0
@@ -350,6 +351,12 @@ def main():
         check("... a QA whose only BROKEN finding is the approved script's sends nothing back (reported, blocking)",
               not any(x.startswith("fix:") for x in seven.get("labels", [])) and "1" in seven.get("r", {}).get("blocking", []),
               seven.get("labels"))
+        q1p, q2p = p6.get("qa:1", ""), p6.get("qa:1+fix", "")
+        check("QA after the fix round checks that round: its BROKEN findings, the fix build's answer read (never a second build), "
+              "the whole-module questions not asked again",
+              "--no-fix" in q1p and "--no-fix" not in q2p and "M01_answer.txt" in q2p and "do NOT build it again" in q2p
+              and "s03: an oxygen monitor on a %LEL slide" in q2p and "a label could sit closer" not in q2p
+              and "questions no script can" in q1p and "questions no script can" not in q2p and "check_balance" in q2p, q2p[:1500])
         q6 = (six.get("r", {}).get("qa") or [None])[0] or {}
         check("... and the second QA's verdict is the module's (clean after the fix: not blocking), the first one's findings kept",
               "1" not in six.get("r", {}).get("blocking", []) and q6.get("module") == "1+fix"
@@ -394,6 +401,14 @@ def main():
               and "fix3d:3" not in l9 and "a row of buttons" in p9.get("fix:3", "") and "scene3d_check.py" in p9.get("fix:3", "")
               and "do not change anything" in p9.get("3d:3+fix", "")
               and l9.index("3d:3+fix") > l9.index("fix:3") and l9.index("review3d:3+fix") > l9.index("3d:3+fix"), l9)
+        check("after the fix round the 3D reviewer judges only the scenes that had a BROKEN finding, told what they were "
+              "(the trial's re-reviews opened every picture of the module again)",
+              "C:/c/r/s07_step1.png" in p9.get("review3d:3", "") and "C:/c/r/s05_step1.png" in p9.get("review3d:3+fix", "")
+              and "C:/c/r/s07_step1.png" not in p9.get("review3d:3+fix", "") and "a row of buttons" in p9.get("review3d:3+fix", "")
+              and "the others are not" in p9.get("review3d:3+fix", ""), p9.get("review3d:3+fix", "")[:900])
+        check("... and the fixer looks at a scene at most three times, only at the steps its findings name",
+              "THREE looks at a scene" in p9.get("fix:3", "") and "only the steps its findings name" in p9.get("fix:3", ""),
+              p9.get("fix:3", "")[-1500:])
         allx = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods3, "_approved": ["1", "2", "3"],
                          "factory": "C:/f/skills", "_scene": ["1"], "_bad3d": ["1"], "_figs": ["1"], "_badfig": ["1"], "_broken": ["1"]})
         la, pa = allx.get("labels", []), allx.get("prompts", {})
@@ -435,6 +450,11 @@ def main():
               and not any(w in t for t in said.values() for w in ("model haiku", "model `haiku`", "haiku or sonnet",
                                                                   "`haiku` or `sonnet`", "`haiku` subagent"))
               and "subagent (model `opus`" in said["compile/REVIEW_PROMPT.md"], table)
+        auto = said["SKILL.md"].split("## Auto build", 1)[-1].split("\n## ", 1)[0].replace("\r", "")
+        check("... and an Auto build session briefs its helpers from this workflow: builders never ask, one fix round, only "
+              "what was BROKEN judged again, short reports; a simulator draft is never accepted there (the factory trial ran "
+              "out of its usage limit in the fix rounds)", "build_course.js" in auto and "never\n  asks" in auto
+              and "qa(m, first)" in auto and "at most 30 lines" in auto and "A simulator task (L66) is never accepted" in auto, auto)
         many = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_figs": ["1"], "_manyfigs": ["1"],
                          "factory": "C:/f/skills"})
         lm = many.get("labels", [])
@@ -481,6 +501,11 @@ def main():
         # 2.66.0 (Raivis) - a builder reads its instructions by their path, never the whole skill (SKILL.md, 48 KB, the router
         # for every mode); (merge) what it reads is the builder card (2.65.0 / 2.72.x), the GUIDE named for reference
         b1 = pr.get("build:1", "")
+        check("nobody answers a builder: never ask to carry on, build again until PASS, MODULE CLEAN or the build's STOP "
+              "(the trial's M01 builder asked \"carry on?\" after its first working build)",
+              "NOBODY ANSWERS YOU" in b1 and 'Never ask "carry on?"' in b1 and "merely worked is not a stop" in b1
+              and "Nobody answers a builder" in open(os.path.join(HERE, "..", "..", "compile", "BUILDER_CARD.md"), encoding="utf-8").read(),
+              b1[-2500:])
         check("2.66.0: a builder is sent to the builder card by its path - not SKILL.md, not the skill loaded",
               "Do NOT read the course-factory SKILL.md" in b1 and "or load the skill" in b1 and not b1.startswith("Invoke"), b1[:500])
         dflt = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods,

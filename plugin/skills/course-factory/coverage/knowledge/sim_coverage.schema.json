@@ -57,7 +57,9 @@
           "old_task": {"type": "string", "description": "the old course's simulator task it renews, if any"},
           "minutes_from": {"type": "string", "description": "where the minutes come from inside the module's approved hours"},
           "needs": {"type": "string", "description": "what has to be checked on the installation or decided"},
-          "draft": {"type": "string", "description": "the draft exercise's number (29.1); its forms are in to_review\\exercises\\sim_drafts\\MNN\\"}
+          "draft": {"type": "string", "description": "the draft exercise's number (29.1); its forms are in to_review\\exercises\\sim_drafts\\MNN\\"},
+          "accepted_by": {"type": "string", "description": "the course director who accepted the draft (sim_coverage.py accept); until then nothing is built from it"},
+          "accepted": {"type": "string", "description": "the date the draft was accepted"}
         }
       }
     },

@@ -5,6 +5,7 @@
     sim_coverage.py needed <course>                   does L66 apply, and which simulators (coverage/knowledge/simulators.json)
     sim_coverage.py init   <course> [--sims LNG,MeOH] start working_claude\\SIM_COVERAGE.json: one empty row per syllabus item
     sim_coverage.py check  <course>                   exit 0: the map is whole; exit 2: what is missing, in plain words
+    sim_coverage.py accept <course> --task P1 --by "<name>"   the course director accepts a task's draft
 
 WHY
 The advanced courses use the school's physical simulators for their practical tasks as much as possible: every
@@ -23,7 +24,9 @@ WHAT check WANTS (coverage/SIMULATORS.md is the lane)
   - every GAP item is in a proposed task, and every task that carries a GAP item has its draft - the Trainee and the
     Instructor form in to_review\\exercises\\sim_drafts\\MNN\\ - so the instructors review a task, not a list;
   - a task says where its minutes come from inside the module: the hours and the ILOs never change for a simulator task.
-A PARTLY item no task takes up is a note, not a failure: the review page shows it.
+A PARTLY item no task takes up is a note, not a failure: the review page shows it. So is a drafted task the course
+director has not accepted: nothing is built from its draft, and the module's screen that names it holds its minutes
+with no exercise behind it (pending; check_course_package.py says it too).
 
 Standard library only.
 """
@@ -37,7 +40,8 @@ import os
 import re
 import sys
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS = os.path.join(HERE, "..", "..", "scripts")
 sys.path.insert(0, SCRIPTS)
@@ -272,8 +276,59 @@ def check(course):
         s = sum(int(m.get(k) or 0) for m in mods)
         if mods and s != sm.get(tot):
             probs.append("sim_minutes: the modules' %s minutes add up to %d, %s says %s." % (k, s, tot, sm.get(tot)))
+    notes += [pending_line(x) for x in pending(course)]
     summary = {"rows": len(rows), "counts": counts, "tasks": len(tasks), "sim_minutes": (sm.get("now_total"), sm.get("proposed_total"))}
     return probs, notes, summary
+
+
+def pending(course):
+    """[{task, module, minutes, draft, screens}] - every drafted task the course director has not accepted ("accepted_by"):
+    nothing is built from its draft (L66), so the activity screens of its module's script that name it (in a title, the
+    words or the notes) hold its minutes with no exercise behind them"""
+    out = []
+    for t in (_load(path(course)) or {}).get("proposed_tasks") or []:
+        m = MODULE.search(t.get("module") or "")
+        tid = str(t.get("id") or "").strip()
+        if not m or not tid or not (t.get("draft") or "").strip() or (t.get("accepted_by") or "").strip():
+            continue
+        script = _load(workspace.claude_path(course, "script", "M%02d.json" % int(m.group(1)))) or {}
+        named = re.compile(r"(?<![\w-])%s(?![\w-])" % re.escape(tid))
+        screens = [s.get("id") for s in script.get("screens") or []
+                   if (s.get("kind") == "activity" or s.get("track") == "practical" or s.get("practice_minutes"))
+                   and named.search(" ".join(str(s.get(k) or "") for k in ("title", "text", "notes")))]
+        out.append({"task": tid, "module": int(m.group(1)), "minutes": t.get("minutes"), "draft": t["draft"].strip(),
+                    "screens": screens})
+    return out
+
+
+def pending_line(p):
+    held = ("its minutes are held by " + ", ".join(p["screens"])) if p["screens"] else "no screen of its module's script names it"
+    return ("%s (M%02d, %s min) is a draft awaiting the course director - %s, no exercise behind it (L66): "
+            "to_review\\exercises\\sim_drafts\\M%02d\\, draft %s" % (p["task"], p["module"], p["minutes"], held, p["module"], p["draft"]))
+
+
+def accept(course, tid, by):
+    """the course director's acceptance of a task's draft - never an unattended build's"""
+    if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1":
+        return 2, ("Stopped - a simulator draft is accepted by the course director in their own session, never by an "
+                   "unattended build (L66). It stays pending; the course check lists it.")
+    if not (by or "").strip():
+        return 2, "Stopped - say who accepts it: --by \"<the course director's name>\"."
+    p = path(course)
+    data = _load(p)
+    task = next((t for t in (data or {}).get("proposed_tasks") or [] if str(t.get("id")) == tid), None)
+    if task is None:
+        return 2, "Stopped - there is no proposed task %s in working_claude\\SIM_COVERAGE.json." % tid
+    if not (task.get("draft") or "").strip():
+        return 2, "Stopped - task %s has no draft to accept (coverage/SIMULATORS.md §4)." % tid
+    from datetime import date
+    task.update(accepted_by=by.strip(), accepted=date.today().isoformat())
+    with io.open(p, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    m = MODULE.search(task.get("module") or "")
+    return 0, ("Task %s accepted by %s. Its draft %s becomes the module's exercise: its forms in to_review\\exercises\\%s\\ "
+               "(novikontas-practical-exercises), and the screen that holds its minutes says \"exercise\": \"<its number>\"."
+               % (tid, by.strip(), task["draft"], "M%02d" % int(m.group(1)) if m else "MNN"))
 
 
 def init(course, sims):
@@ -313,11 +368,17 @@ def init(course, sims):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("cmd", choices=("needed", "init", "check"))
+    ap.add_argument("cmd", choices=("needed", "init", "check", "accept"))
     ap.add_argument("course")
     ap.add_argument("--sims", help="simulator codes, comma-separated (init)")
+    ap.add_argument("--task", help="the proposed task's id (accept)")
+    ap.add_argument("--by", help="the course director's name (accept)")
     a = ap.parse_args(argv)
     course = workspace.work_folder(a.course, create=False)
+    if a.cmd == "accept":
+        code, msg = accept(course, a.task or "", a.by or "")
+        print(msg)
+        return code
     if a.cmd == "needed":
         n = needed(course)
         print("%s - %s.%s" % ("L66 applies" if n["needed"] else "L66 does not apply", n["why"],

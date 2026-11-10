@@ -355,7 +355,11 @@ build's answer) - never start a second build meanwhile, never edit the build she
 it runs. A module's first build may first wait up to 5 min for another module's first build (one
 at a time on this computer) - that is expected. Never end your turn while a build runs: your report
 is read as the module's result (2.58.0 - the IGF full build: a builder that ended "waiting on the
-build" left Module 15 half-built). Your report's FIRST line is the PASS / FAIL line build_module.py
+build" left Module 15 half-built).
+NOBODY ANSWERS YOU - this run is unattended (NOVIKONTAS_AUTO_BUILD=1: the office PC, a factory trial). Never ask "carry on?",
+"shall I continue?" or for a choice: decide by the card and keep going. A build that merely worked is not a stop: build
+again until PASS, MODULE CLEAN or the build's own "STOP - everything ... 3 builds running". A report at any other point is
+read as a builder that stopped short. Your report's FIRST line is the PASS / FAIL line build_module.py
 printed; its SECOND line the "TIME M0N: ..." line it printed under the PASS, as it is (2.65.0 - the gold
 standard is 30-40 minutes a module, 20 for its fixes).
 
@@ -370,7 +374,11 @@ _visual_briefs/, and keep going.
 
 Report as the card says.`
 
-const qa = (m) => `You did NOT build this module. Check it.
+/* first: the first QA's BROKEN findings - after the one fix round QA checks that round, never the whole module again: the
+   build after the fix has just run every check, so its answer is read, not built a second time, and the questions about
+   the whole module were answered the first time */
+const qa = (m, first) => `You did NOT build this module. ${first ? `It was checked, the BROKEN findings below went to ONE fix
+round, and it was built again. Check THAT ROUND - not the whole module again.` : 'Check it.'}
 
   Module:  ${A.course}/modules/module${two(m)}
   Against: its rows of the ILO map (ilo_map.py show ${A.course} --module ${m.id}) and
@@ -378,13 +386,16 @@ const qa = (m) => `You did NOT build this module. Check it.
   Factory: the skills folder ${A.factory || '(the installed plugin\'s skills/)'} - the checks below live in its
            course-factory/, course-visuals/ and course-module-ux/ folders
 
-Run the deterministic checks in TWO shell calls and READ their output:
+${first ? `Read the build's answer and run ONE shell call of checks:
+  1  do NOT build it again: the build after the fix answered in ${A.course}/working_claude/_build/M${two(m)}_answer.txt
+     (its last line is the full log's path - open the log only for a line the answer does not explain). Anything it
+     reports is a finding.` : `Run the deterministic checks in TWO shell calls and READ their output:
   1  python course-factory/compile/scripts/build_module.py "${A.course}" --module ${m.id} --no-course-pages --no-fix
      - the compile, the drawing check (L54), both script matches, navigation, the audits at
      1280x800, 1024x768 and 1280x720, the importer and the review sheets' grading of every question (right
      and wrong), in one command. It rebuilds from the same approved inputs, so the bytes come out
      the same: anything it reports, or a stop (exit 2), is a finding. Give the shell call 600000 ms;
-     if it answers "STILL BUILDING", run the same command with --wait until it prints its answer.
+     if it answers "STILL BUILDING", run the same command with --wait until it prints its answer.`}
   2  the checks it does not run - ONLY these, because only these can judge ONE module (2.63.2) - chained
      in ONE call, each by the usage line at the top of its file, printing only what fails:
        check_balance on presentation/index.html WITH THIS MODULE'S OWN allocation:
@@ -405,7 +416,11 @@ YOURS: the words, the ILO teaching, the task pages, the photographs and the buil
 projector size, step by step, at the same time as you - how it is drawn, its labels, its parts, whether each step shows
 its title (2.72.7: in the 2.72.5 run ~13-16 of QA's 24 first BROKEN were the figure review's ground, and the fixer read
 each fault twice). A kit figure's drawing is never a finding of yours; a drawing that is not a kit figure still is.
-
+${first ? `
+The BROKEN findings of the first check - say for each whether it is fixed, from the screen, the photo or the check it names
+(open only those); one still there is a finding again, with the same "where":
+${first.map((f) => `  - ${f.where}: ${f.what}`).join('\n')}
+` : `
 Then answer the questions no script can: is every outcome in the ILO map actually
 taught here, or only mentioned? Does each slide's picture earn its place - teach something the text does not?
 Would an instructor who has never seen this module be able to run it from Start and
@@ -415,7 +430,7 @@ and its _photo_meta.json "shows": an oxygen monitor on a %LEL question, a portab
 where a fixed detector head is meant, a spectacle blind where a spool piece is asked - the IGF course passed every
 check with these and they were found only by eye. A picture of a different instrument, part or place than the words
 name is a finding of severity BROKEN (compile/REVIEW_PROMPT.md, item 6, is the same rule for the sheets).
-
+`}
 THE ONE VISUAL REVIEW (2.63.3 - the builder stops at module clean and no longer reviews its own sheets): the
 review sheets of this module are in ${A.course}/working_claude/review/M${two(m)}/ (sheet_01.png ...; sheets.json
 names the screens on each) - the screens changed since the last review, promoted by the build above. Look at
@@ -479,7 +494,9 @@ ${FIG_HOW}
 ${bf.map((f) => `  - ${f.slide}: ${f.what}`).join('\n')}` : ''}${b3.length ? `
 
 3D findings (fix them in the scene's spec, sNN.kit3d.json, or the module's assets/kit3d_parts.js - course-visuals/kit3d/
-SPEC.md, PARTS.md; after your build run python ${KIT3D_SCRIPTS}/scene3d_check.py "${A.course}" --module ${m.id} once):
+SPEC.md, PARTS.md; after your build run python ${KIT3D_SCRIPTS}/scene3d_check.py "${A.course}" --module ${m.id} once). AT MOST
+THREE looks at a scene after a change, each at only the steps its findings name: a scene still wrong after its third is left
+as it is and listed in your report:
 
 ${b3.map((f) => `  - ${f.where}: ${f.what}`).join('\n')}` : ''}${bq.length ? `
 
@@ -645,12 +662,17 @@ scene's spec (or the module's assets/kit3d_parts.js - course-visuals/kit3d/SPEC.
 (foreground; "STILL BUILDING": the same command with --wait), and run scene3d_check.py again - at most two rounds.`}
 ok = true only when its last run's JSON says "ok": true. You never judge the pictures - a reviewer who did not build the
 scene does that. Write only in figures/M${two(m)}/ and modules/module${two(m)}/.${NOTES}`
-const review3d = (m, s) => `You did NOT build this 3D scene. Judge it from its pictures - you change nothing.
+const review3d = (m, s, first) => `You did NOT build this 3D scene. Judge it from its pictures - you change nothing.
 
   Module ${m.id}, course ${A.course}. The scenes: ${JSON.stringify(s.scenes || [])}
   Pictures (one per step, the scene as its slide shows it; open each ONCE, in order):
 ${(s.shots || []).map((p) => `    ${p}`).join('\n')}
-
+${first ? `
+This is the judging after the ONE fix round: only the scenes that had a BROKEN finding are here, the others are not
+judged again. Their BROKEN findings were:
+${first.map((f) => `  - ${f.where}: ${f.what}`).join('\n')}
+Say for each whether it is fixed; a finding still there, or a new one on these scenes, is a finding as below.
+` : ''}
 For each scene read its slide's words first (working_claude/script/M${two(m)}.json, the screen with that id: title, text,
 and the step lines) and the spec's labels and step titles. Then judge each picture:
   1 every label sits ON or right beside the part it names (not in a row of buttons, not over another part's name);
@@ -661,12 +683,27 @@ and the step lines) and the spec's labels and step titles. Then judge each pictu
 A failure of 1-5 that a trainee would misread or not see is BROKEN; worse than it could be is POLISH. "where" = the
 slide id and the picture's file name.`
 const broken3d = (d) => ((d && d.review && d.review.findings) || []).filter((f) => f.severity === 'BROKEN')
-/* the 3D check (a script; it fixes only what the check itself prints) and its reviewer; tag '+fix': after the fix round */
-async function threeD(m, tag) {
+/* the slide ids the findings name ("s05 s05_step1.png" -> s05); null when one names none - then every scene is judged */
+const slidesOf = (fs) => {
+  const ids = fs.map((f) => (/\b([a-z]\d+[a-z]?)\b/i.exec(f.where || '') || [])[1])
+  return ids.every(Boolean) ? [...new Set(ids)] : null
+}
+/* only the pictures and scenes of those slides; every one when no picture is named by them */
+const onlyScenes = (s, ids) => {
+  const mine = (p) => ids.some((id) => { const b = String(p).split(/[\\/]/).pop(); return b.startsWith(id + '_') || b.startsWith(id + '.') })
+  const shots = (s.shots || []).filter(mine)
+  return shots.length ? Object.assign({}, s, { shots, scenes: (s.scenes || []).filter((x) => ids.indexOf(x.slide) >= 0) }) : s
+}
+/* the 3D check (a script; it fixes only what the check itself prints) and its reviewer; tag '+fix': after the fix round, when
+   the reviewer judges again only the scenes that had a BROKEN finding (first) - the trial's re-reviews opened every picture
+   of the module a second time (M08: 43 of them) */
+async function threeD(m, tag, first) {
   const s = await agent(scene3d(m, !!tag), { label: `3d:${m.id}${tag || ''}`, phase: 'Build', schema: SCENE_SCHEMA, ...JUDGEMENT })
   if (!s || !s.has_scene) return null
-  const r = (s.shots || []).length
-    ? await agent(review3d(m, s), { label: `review3d:${m.id}${tag || ''}`, phase: 'Verify', schema: REVIEW3D_SCHEMA, ...JUDGEMENT }) : null
+  const ids = first && slidesOf(first)
+  const judged = ids ? onlyScenes(s, ids) : s
+  const r = (judged.shots || []).length
+    ? await agent(review3d(m, judged, first), { label: `review3d:${m.id}${tag || ''}`, phase: 'Verify', schema: REVIEW3D_SCHEMA, ...JUDGEMENT }) : null
   return { check: s, review: r }
 }
 
@@ -837,9 +874,9 @@ async function oneModule(m) {
       reachedPass = reachedPass || passed(fa)
     }
     const [d3b, fgb, q2] = await Promise.all([
-      b3.length ? threeD(m, '+fix') : null,
+      b3.length ? threeD(m, '+fix', b3) : null,
       bf.length ? figures(m, [...new Set(bf.map((f) => f.slide))].join(',')) : null,
-      bq.length ? agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...JUDGEMENT }) : null])
+      bq.length ? agent(qa(m, bq), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...JUDGEMENT }) : null])
     if (b3.length) d3 = { check: (d3b && d3b.check) || d3a.check, review: (d3b && d3b.review) || d3a.review, first_review: d3a.review.findings }
     /* NOTHING LOOPS (2.72.0, approved by Aleksis): what is still BROKEN after the one fix round goes to the operator's list,
        never back to a builder and never failing the module again */

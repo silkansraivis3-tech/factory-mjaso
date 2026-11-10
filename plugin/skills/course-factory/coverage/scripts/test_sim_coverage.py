@@ -151,6 +151,32 @@ def main():
         check("init never writes over a map", sim_coverage.init(c, [])[0] == 2)
         check("an empty row has no verdict yet", any("no verdict" in p for p in sim_coverage.check(c)[0]))
 
+        print("\n-- a draft nobody accepted: pending, and an unattended build never accepts it")
+        write(os.path.join(adv, "working_claude", "script", "M29.json"), {"module": 29, "screens": [
+            {"id": "s01", "kind": "slide", "title": "Fire at the station", "notes": "P1 practises this later"},
+            {"id": "a01", "kind": "activity", "title": "Simulator exercise P1 - fire at the bunkering station", "minutes": 20}]})
+        pend = sim_coverage.pending(adv)
+        check("a drafted task the course director has not accepted is pending, held by the activity screen that names it "
+              "(the factory trial's M04 and M19 shipped simulator slides with no exercise behind them)",
+              pend == [{"task": "P1", "module": 29, "minutes": 20, "draft": "29.1", "screens": ["a01"]}], pend)
+        probs, notes, _ = sim_coverage.check(adv)
+        check("... check says it as a note, never a failure", probs == []
+              and any("P1 (M29, 20 min) is a draft awaiting the course director" in n and "a01" in n for n in notes), notes)
+        os.environ["NOVIKONTAS_AUTO_BUILD"] = "1"
+        try:
+            code, msg = sim_coverage.accept(adv, "P1", "Factory trial")
+        finally:
+            os.environ.pop("NOVIKONTAS_AUTO_BUILD", None)
+        check("an unattended build never accepts a draft", code == 2 and "course director" in msg
+              and len(sim_coverage.pending(adv)) == 1, msg)
+        check("accepting needs a name and a task with a draft", sim_coverage.accept(adv, "P1", "")[0] == 2
+              and sim_coverage.accept(adv, "P9", "A. Director")[0] == 2)
+        code, msg = sim_coverage.accept(adv, "P1", "A. Director")
+        task = json.load(io.open(sim_coverage.path(adv), encoding="utf-8"))["proposed_tasks"][0]
+        check("the course director's acceptance is recorded on the task, and it is no longer pending",
+              code == 0 and task.get("accepted_by") == "A. Director" and task.get("accepted")
+              and sim_coverage.pending(adv) == [] and "to_review\\exercises\\M29" in msg, (msg, task))
+
         print("\n-- course_gate says it, never stops on it")
         note = course_gate.sim_note(course(tmp, "Advanced k", None))
         check("the gate names L66 on an advanced course with no map", note and "L66" in note, note)

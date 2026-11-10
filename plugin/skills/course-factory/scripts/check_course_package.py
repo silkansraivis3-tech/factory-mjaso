@@ -616,7 +616,19 @@ def check(folder):
         keep, waived = design_choices.split(found, choices, rule, lambda x: True)
         probs += keep
         notes += waived
+    notes += sim_pending(folder, mods)
     return probs, notes, mods
+
+
+def sim_pending(folder, mods):
+    """L66 - a drafted simulator task the course director has not accepted: the module's screen holds its minutes with no
+    exercise behind it. A note, never a stop - the course goes up as a draft and the course director decides"""
+    cov = os.path.join(os.path.dirname(HERE), "coverage", "scripts")
+    if cov not in sys.path:
+        sys.path.insert(0, cov)
+    import sim_coverage
+    return ["module%02d: simulator task %s" % (p["module"], sim_coverage.pending_line(p))
+            for p in sim_coverage.pending(os.path.dirname(folder)) if "module%02d" % p["module"] in mods]
 
 
 def main(argv=None):

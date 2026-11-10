@@ -80,6 +80,8 @@ Anything the table does not cover: `compile/GUIDE.md` - §2 layout, §2b photos 
 pages, §2e drawings - read only that section.
 
 ## Stop
+Nobody answers a builder: never ask whether to carry on and never stop after a build that merely worked - build again
+until one of the stops below. A report at any other point leaves the module unfinished.
 At **PASS**, or **`FAIL MNN - course package`** with **`MODULE CLEAN`** under it (the package is judged after assembly).
 Or when everything the build prints has failed three builds running - the build says **`STOP`**: report it with
 its FAIL line and list what is left. More builds do not move it; a FAIL with what is left listed goes straight to the

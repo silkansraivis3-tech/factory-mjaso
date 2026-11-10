@@ -12,6 +12,7 @@ Also pinned: the vendored importer is byte-identical to the classroom system's, 
 from __future__ import annotations
 
 import io
+import json
 import os
 import shutil
 import subprocess
@@ -154,6 +155,19 @@ def main():
             check("without Node the factory says plainly that the importer did not run", "Node is not installed" in out, out)
         check("... from the course folder and the modules folder too", run(os.path.join(master, "course"))[0] == 0 and run(c)[0] == 0)
 
+        print("\n-- a simulator task whose draft the course director has not accepted (L66)")
+        sim = os.path.join(tmp, "sim", "course")
+        shutil.copytree(c, os.path.join(sim, "modules"))
+        w(os.path.join(sim, "working_claude", "SIM_COVERAGE.json"), json.dumps({"proposed_tasks": [
+            {"id": "SIM-T1", "module": "M01", "minutes": 40, "draft": "S1"}, {"id": "SIM-T2", "module": "M06", "minutes": 25, "draft": "S2"}]}))
+        w(os.path.join(sim, "working_claude", "script", "M01.json"), json.dumps({"module": 1, "screens": [
+            {"id": "a01", "kind": "activity", "title": "Simulator exercise SIM-T1 - loading", "minutes": 40}]}))
+        code, out = run(os.path.join(sim, "modules"), "--no-importer")
+        check("its screen is listed as pending, never a stop; a module not in the package is not (the factory trial: M04 and "
+              "M19 shipped simulator slides with no exercise behind them and no check said so)",
+              code == 0 and "module01: simulator task SIM-T1 (M01, 40 min) is a draft awaiting the course director" in out
+              and "held by a01" in out and "SIM-T2" not in out, out[-900:])
+
         print("\n-- another module's build working beside this check (run_audits.py's page beside a deck)")
         tr = os.path.join(tmp, "transient", "modules")
         shutil.copytree(c, tr)
@@ -286,7 +300,6 @@ def main():
                '{"code":"module01","title":"Gas tankers","entry":"presentation/index.html"}];')
         broken("a course map in another order than the folders, with no order declared",
                lambda b: w(os.path.join(b, "_course_shell", "course_map.js"), rev), "names it in working_claude\\course.build.json \"module_order\"")
-        import json
         b2 = os.path.join(tmp, "order_ok", "modules")
         shutil.copytree(c, b2)
         w(os.path.join(b2, "_course_shell", "course_map.js"), rev)

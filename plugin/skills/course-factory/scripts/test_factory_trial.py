@@ -28,6 +28,7 @@ import io
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -163,6 +164,47 @@ def main():
               (1, "cut_or_cropped_slides", 9, 1, "better") in moved and (1, "claims_unproven", 0, 3, "worse") in moved and len(moved) == 2, moved)
         code, out = cli("status", "--home", home)
         check("status lists the trial and its runs", code == 0 and "run(s)" in out and "modules 1, 4, 8, 19" in out, out)
+
+        print("\n-- the log as the run goes, and a run that ends on the usage limit")
+        cmd = ft.claude_command("p")
+        check("claude -p runs as an event stream", cmd[cmd.index("--output-format") + 1] == "stream-json" and "--verbose" in cmd, cmd)
+        ev = lambda **k: json.dumps(k)
+        shown = [ft.readable(ev(type="assistant", message={"content": [{"type": "text", "text": "The M19 build is running."},
+                                                                         {"type": "tool_use", "name": "Agent", "input": {"description": "QA M19"}}]})),
+                 ft.readable(ev(type="assistant", parent_tool_use_id="t1", message={"content": [{"type": "text", "text": "inside a helper"}]})),
+                 ft.readable(ev(type="user", message={"content": []})),
+                 ft.readable(ev(type="result", num_turns=234, duration_ms=14700000, total_cost_usd=36.4, result="TRIAL STOPPED: x")),
+                 ft.readable("You've hit your 5-hour limit\n")]
+        check("the log shows the session's words, each agent it starts, its last answer with turns, minutes and cost - never a "
+              "helper's own stream", shown[0] == "The M19 build is running.\n  > Agent: QA M19" and shown[1] is None and shown[2] is None
+              and shown[3] == "(the session: 234 turns, 245 min, $36)\n\nTRIAL STOPPED: x" and shown[4] == "You've hit your 5-hour limit", shown)
+        logf = os.path.join(tmp, "live.log")
+        stub = [sys.executable, "-c", "import json, sys, time; print(json.dumps({'type': 'assistant', 'message': {'content': "
+                "[{'type': 'text', 'text': 'first words'}]}})); sys.stdout.flush(); time.sleep(1); "
+                "print('seen' if 'first words' in open(sys.argv[1], encoding='utf-8').read() else 'not yet')", logf]
+        rc = ft.run_claude(stub, tmp, dict(os.environ), logf)
+        check("each line reaches the log while the run is still going (the trial's log was written only at its end)",
+              rc == 0 and io.open(logf, encoding="utf-8").read() == "first words\nseen\n", io.open(logf, encoding="utf-8").read())
+        check("a run whose last lines say Claude's usage limit stopped it", ft.stopped_by("M04 fix round running\nYou've hit your "
+              "5-hour limit · resets 1:50pm (Europe/Riga)\n") == "usage limit" and ft.stopped_by("TRIAL DONE\n") is None)
+        os.environ["NOVIKONTAS_CLAUDE_CMD"] = json.dumps([sys.executable, "-c", "print('TRIAL STOPPED: usage limit reached.'); "
+                                                          "print(\"You've hit your 5-hour limit\")"])
+        code, out = cli("run", "--home", home, "--modules", "1")
+        runs = sorted(os.listdir(os.path.join(home, "runs")))
+        card = json.load(io.open(os.path.join(home, "runs", runs[-1], "scorecard.json"), encoding="utf-8"))
+        check("... is scored \"stopped: usage limit\" - its modules unfinished, not failed (the trial's scorecard read as four "
+              "failed modules)", code == 1 and card.get("stopped") == "usage limit" and "STOPPED: usage limit" in out
+              and "Module 1 - stopped: usage limit, unfinished" in out, out)
+        check("... and the scorecard counts the simulator drafts still awaiting the course director",
+              card["modules"][0].get("simulator_drafts_pending") == 0, card["modules"][0])
+        node = shutil.which("node")
+        if node:
+            core = os.path.join(ft.PLUGIN, "skills", "course-tablet-publisher", "vendor", "package-core.mjs").replace("\\", "/")
+            p = subprocess.run([node, "--input-type=module", "-e", "const m = await import('file:///%s'); console.log(m.slug(%s))"
+                                % (core.lstrip("/"), json.dumps(ft.TITLE))], capture_output=True, text=True)
+            check("the trial's course name makes a classroom course ID with no space (the importer's \"The course ID must be a "
+                  "unique name without spaces\" was COURSE.html not yet written, never the name)",
+                  p.stdout.strip() == "factory-trial", (p.stdout, p.stderr))
 
         print("\n-- the scorecard's numbers, on a small built deck")
         other = os.path.join(tmp, "other home", "run", "FACTORY TRIAL")

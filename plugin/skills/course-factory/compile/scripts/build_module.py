@@ -166,19 +166,24 @@ def own_package_findings(code, out, folder):
     The course's own pages (COURSE.html, course_map.js, every START_HERE*) are written by compile_course.py once every
     module is in, and another module is another agent's - so a finding about either is left to the orchestrator's check
     after assembly, and only this module's own findings fail it. Before, no module in a parallel build could PASS (the
-    start pages are missing until assembly), so none reached its review sheets. Returns (code, out, how many left out)."""
+    start pages are missing until assembly), so none reached its review sheets. The notes are this module's only too: a link
+    to ../START_HERE_EXTENDED.html is the importer's "Link outside the package" until compile_course.py writes that page.
+    Returns (code, out, how many left out)."""
     if code != 1 or "thing(s) to fix" not in out:
         return code, out, 0
     head, rest = out.split("thing(s) to fix", 1)
     body, sep, tail = rest.partition("\nWorth a look")
     items = [x for x in body.splitlines() if x.startswith("  - ")]
     other = re.compile(r"module(?!%s\b)\d\d\b" % re.escape(folder[-2:]))
-    keep = [x for x in items if not COURSE_PAGES.search(x) and not (other.search(x) and folder not in x)]
+    mine = lambda x: not COURSE_PAGES.search(x) and not (other.search(x) and folder not in x)
+    keep = [x for x in items if mine(x)]
     left = len(items) - len(keep)
+    notes = [x for x in tail.splitlines() if not x.startswith("  - ") or mine(x)] if sep else []
+    notes = sep + "\n".join(notes) + "\n" if any(x.startswith("  - ") for x in notes) else ""
     if keep:
-        return 1, out, left
+        return 1, head + "thing(s) to fix" + body + notes, left
     return 0, head.rsplit("\n", 1)[0] + "\nThis module's own package findings: none (%d left to the check after assembly)\n" % left \
-        + (sep + tail if sep else ""), left
+        + notes, left
 
 
 def starter_blanks(course, module):
