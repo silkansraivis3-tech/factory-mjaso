@@ -22,7 +22,8 @@ smoke3d, perf3d and a picture of every step in `working_claude\review\MNN_3d\` -
   each other, a stem, a dot, a control, the Full screen button or the box edge: every frame each label that touches
   something tries other stem lengths, the other side of its point and a sideways shift (the hand-made
   `settleLabels`, IGF slide review 2026-10-22). A label behind the camera or off the picture hides.
-- **A tap on a part** (not a drag): it glows blue, its pill lights, the camera frames it; a second tap, or a tap
+- **A tap on a part** (not a drag): it keeps its own colour, lit from within and more solid if see-through, the other
+  parts step back a little; its pill lights, the camera frames it; a second tap, or a tap
   beside the parts, puts the step's view back. 12 px tolerance; see-through and cut-away pieces let the tap through.
 - **A label is a button for its part** (`data-3d-part`, registered with `GB3D.wire` - 2.63.2): a tap, Enter or
   Space does what a tap on the part does. Outside a deck the kit makes it a button itself.
