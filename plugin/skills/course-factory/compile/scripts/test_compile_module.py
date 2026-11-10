@@ -2769,6 +2769,29 @@ def practical_part(tmp):
     m = re.search(r"practice\s+(\d+) min", p.stdout)
     check("... check_balance counts its 30 minutes as practice", m and int(m.group(1)) >= 30, p.stdout[-600:])
 
+    print("\n-- a room activity's minutes: practice, or theory when the script says the architecture takes them from theory")
+    sv = json.loads(json.dumps(SCREENS))
+    sv[4:4] = [{"id": "a01", "kind": "activity", "title": "Pairs - trace the fuel line", "visual_kind": "none",
+                "text": "In pairs, trace the fuel line on paper.", "minutes": 10},
+               {"id": "a02", "kind": "activity", "title": "Simulator exercise - bunkering", "visual_kind": "none",
+                "text": "On the simulator: bunker the fuel tank.", "minutes": 20, "track": "theory"},
+               {"id": "a03", "kind": "activity", "title": "Trace the vent line", "visual_kind": "schematic",
+                "visual": "General arrangement.", "text": "Trace the vent line on the drawing.", "minutes": 5, "track": "Theory"}]
+    os.makedirs(os.path.join(tmp, "acttrack"))
+    c, md = new_course(os.path.join(tmp, "acttrack"), script(screens=sv))
+    build_of(c, lambda s: s["screens"].update(a03={"figure": "ga.html"}))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    page = deck(md)
+    tracks = {sid: (re.search(r'data-track="(\w+)"', section(page, sid)) or re.search("$^", "")) for sid in ("a01", "a02", "a03")}
+    check("an activity is practice; with \"track\": \"theory\" in the script it is theory - a launch slide and an activity with "
+          "a figure alike", {k: v.group(1) if v else None for k, v in tracks.items()}
+          == {"a01": "practice", "a02": "theory", "a03": "theory"}, {k: section(page, k)[:300] for k in tracks})
+    p = subprocess.run([sys.executable, "-I", os.path.join(SKILL, "hours", "scripts", "check_balance.py"),
+                        os.path.join(md, "presentation", "index.html")], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    m = re.search(r"built\s+theory\s+(\d+) min\s+practice\s+(\d+) min", p.stdout)
+    check("... check_balance counts the 10 practice minutes as practice and the 25 from theory as theory",
+          m and int(m.group(2)) == 10 and int(m.group(1)) >= 25, p.stdout[-600:])
+
 
 def exercise_part(tmp):
     """2.63.2 (owner rule 2026-10-21; IGF 2.63.0 cross-check: the 16 exercises had no slide) - a module with a practical

@@ -2965,6 +2965,13 @@ def active_mins(s):
     return "%g" % cs.minutes(s) if on else "0"
 
 
+def activity_track(s):
+    """the allocation a room activity's minutes are counted in (check_balance.py data-track): practice, unless the script
+    says "track": "theory" - the architecture takes its minutes from the topic's theory (a simulator exercise in a topic
+    the programme gives no practical hours)"""
+    return "theory" if str(s.get("track") or "").strip().lower() == "theory" else "practice"
+
+
 # build-sheet fields that never decide a slide's layout - an edit to them keeps what was measured and built (2.62.1)
 NOT_LAYOUT = ("alt", "labels", "unlabel", "areas", "link_hint", "not_things", "declined_3d", "photo_wanted", "photo_badges")
 
@@ -3079,7 +3086,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         else:
             d["data-link-hint"] = b.get("link_hint") or (lines[0] if lines else "")
         d.update(base)
-        d["data-track"] = "practice" if kind == "activity" else "theory"
+        d["data-track"] = activity_track(s) if kind == "activity" else "theory"
         if kind == "activity" and s.get("practice_minutes"):    # 2.63.2 item 13: an exercise in the practical hours
             d.update({"data-mins": "0", "data-active": "0", "data-practical-mins": "%g" % float(s["practice_minutes"])})
         template_attrs(d, "task-launch", "room" if kind == "activity" else "check" if graded else "tablet")
@@ -3339,7 +3346,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         label = "Practical"
     if act:
         code = (s.get("opens") or "").strip() or sid.upper()
-        d.update({"data-kind": "Task", "data-activity": code, "data-track": "practice", "data-block": "%s · %s" % (m, code),
+        d.update({"data-kind": "Task", "data-activity": code, "data-track": activity_track(s), "data-block": "%s · %s" % (m, code),
                   "data-link-hint": b.get("link_hint") or (lines[0] if lines else "")})
         label = "Task"
     head = '  <div class="slide-kind"><b>%s</b> · %s · %d / %d</div>' % (label, m, n, total)
