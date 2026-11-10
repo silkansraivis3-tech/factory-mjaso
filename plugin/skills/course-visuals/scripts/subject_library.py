@@ -35,6 +35,7 @@ usage or refused; any other code is the library tool's own.
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 import os
 import re
@@ -101,7 +102,14 @@ def parents(cfg: dict, env: dict) -> list[str]:
     raw = (env.get(ENV_PARENTS) or "").strip()
     if raw:
         return [] if _off(raw) else [os.path.expanduser(p.strip()) for p in raw.split(os.pathsep) if p.strip()]
-    return [os.path.expanduser(p) for p in cfg.get("course_libraries", {}).get("default_parents", [])]
+    out = []
+    for p in cfg.get("course_libraries", {}).get("default_parents", []):
+        p = os.path.expanduser(p)
+        if "*" in p:                                    # a shared drive of any name: only the ones that are there
+            out += sorted(x for x in glob.glob(p) if os.path.isdir(x))
+        else:
+            out.append(p)
+    return out
 
 
 def _registry_name(cfg: dict) -> str:

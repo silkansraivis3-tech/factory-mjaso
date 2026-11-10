@@ -81,6 +81,17 @@ def main() -> int:
         with open(os.path.join(gas, "knowledge", "FACTS.md"), "a", encoding="utf-8") as fh:
             fh.write("| Oxygen after inerting | 5 % or less | ICS TSG 6.6.2 | GB M02 | CONFLICT (C2) |\n")
 
+        print("where the parent is looked for")
+        shared = os.path.join(tmp, "Shared drives", "NOVIKONTAS Courses", "Course Libraries")
+        os.makedirs(shared)
+        mine = os.path.join(tmp, "My Drive", "Course Libraries")
+        cfg = {"course_libraries": {"default_parents": [os.path.join(tmp, "Shared drives", "*", "Course Libraries"), mine]}}
+        got = SL.parents(cfg, {})
+        check("a shared drive of any name that holds Course Libraries is read first, a person's own Drive after it",
+              got == [shared, mine], got)
+        os.rmdir(shared)
+        check("... and a shared drive that is not there is not listed", SL.parents(cfg, {}) == [mine], SL.parents(cfg, {}))
+
         print("create")
         e = SL.create("fire-fighting", "NOVIKONTAS Fire Fighting Library", "fire,fire-fighting,extinguisher",
                       "A-VI/3", env=E)

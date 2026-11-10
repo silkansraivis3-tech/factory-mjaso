@@ -5,7 +5,11 @@
   "course_libraries": {
     "_about": "ONE parent folder holds every library: LIBRARIES.json (the registry: id, name, path relative to the parent or absolute, subject words, STCW references, courses, created), 00_READ_ME_FIRST.md, and one folder per library made from source/library_template. 'common' holds what every course shares. subject_library.py ensure makes the parent, the registry and Common the first time; a library in 'libraries' below that is present is listed in the registry by its absolute path and stays where it is.",
     "env": "NOVIKONTAS_COURSE_LIBRARIES",
+    "_default_parents": "Read in this order. A shared drive of any name comes first, so everyone the school has added to it gets the same libraries with nothing to set up; a person's own My Drive after it. A place with * is used only where it exists.",
     "default_parents": [
+      "G:/Shared drives/*/Course Libraries",
+      "~/Library/CloudStorage/GoogleDrive-*/Shared drives/*/Course Libraries",
+      "~/Google Drive/Shared drives/*/Course Libraries",
       "G:/My Drive/Course Libraries",
       "~/Google Drive/My Drive/Course Libraries",
       "~/My Drive/Course Libraries"
