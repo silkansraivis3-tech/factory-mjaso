@@ -210,6 +210,37 @@ try:
     code, out = cli(["spec", cpath, "--parts", pj])
     check("a type a module's kit3d_parts.js defines is accepted", code == 0, (code, out))
 
+    # ... and its states and sub-parts are the ones its define makes (a needle that moves, a stain that grows)
+    pj = write(os.path.join(tmp, "kit3d_parts.js"), """
+  window.KIT3D.define('gauge', function (k, p) {
+    var self = k.cur, id = self.id;
+    k.sub(self.id + '_dial', { pick: true, name: 'Dial' });
+    k.state(self.id + '.needle', 0, function (v) {});
+    k.state(id + '.alarm', 0, function (v) {});
+    (p.sensors || []).forEach(function (sn) { k.sub(sn.id, { pick: true }); });
+  }, { family: 'equipment', at: 'base centre', about: 'a gauge' });
+  KIT3D.define("det_tube", function (k, p) {
+    k.state(k.cur.id + ".stain", 0, function (v) {});
+  }, {"family": "equipment"});
+""")
+    lt = ck.local_types(pj)
+    check("local_types reads each define's states, sub-parts and family",
+          lt.get("gauge", {}).get("states") == ["needle", "alarm"] and lt["gauge"].get("subs") == ["dial"]
+          and lt["gauge"].get("family") == "equipment" and lt.get("det_tube", {}).get("states") == ["stain"], lt)
+    moving = variant(lambda s: s["parts"].extend([
+        {"id": "g", "type": "gauge", "at": [1, 1, 1], "sensors": [{"id": "g_o2"}]},
+        {"id": "dt", "type": "det_tube", "at": [2, 1, 1]}]))
+    moving["labels"] += [{"part": "g_dial", "text": "Dial"}, {"part": "g_o2", "text": "Oxygen sensor"},
+                         {"part": "dt", "text": "Tube", "when": "dt.stain > 0.5"}]
+    moving.setdefault("steps", []).append({"state": {"g.needle": 0.7, "g.alarm": 1, "dt.stain": 1}})
+    mpath = write(os.path.join(tmp, "moving.kit3d.json"), json.dumps(moving))
+    code, out = cli(["spec", mpath, "--parts", pj])
+    check("a module's own part type moves: its states, sub-parts and listed sub-parts are accepted", code == 0, (code, out))
+    moving["steps"][-1]["state"]["g.wobble"] = 1
+    write(mpath, json.dumps(moving))
+    code, out = cli(["spec", mpath, "--parts", pj])
+    check("... a state its define does not make is still refused", code == 1 and "g.wobble" in out, (code, out))
+
     # an unreadable catalogue
     nokit = os.path.join(tmp, "nokit")
     os.makedirs(nokit)

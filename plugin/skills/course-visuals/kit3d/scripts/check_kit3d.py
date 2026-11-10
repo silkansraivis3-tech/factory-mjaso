@@ -30,6 +30,11 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 KIT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CATALOG = re.compile(r"/\*\s*@@CATALOG@@\s*\*/\s*(\{.*?\})\s*/\*\s*@@END@@\s*\*/", re.S)
 DEFINE = re.compile(r"KIT3D\.define\(\s*['\"](\w+)['\"]")
+# inside a module's own define: k.state(self.id + '.open', ...), k.sub(self.id + '_plate', ...), {family: 'equipment'}
+LOCAL_STATE = re.compile(r"\.state\(\s*[\w.]+\s*\+\s*['\"]\.(\w+)['\"]")
+LOCAL_SUB = re.compile(r"\.sub\(\s*[\w.]+\s*\+\s*['\"]_(\w+)['\"]")
+LOCAL_SUB_ANY = re.compile(r"\bk\.sub\(\s*[\w.]+\s*[,)]")
+LOCAL_FAMILY = re.compile(r"['\"]?family['\"]?\s*:\s*['\"](\w+)['\"]")
 # a label's "when": "pipe.cut > 0.5", "!tcs.open", "tcs.open"
 WHEN = re.compile(r"^(!?)\s*([\w.]+)(?:\s*(?:>=|<=|==|>|<)\s*-?\d+(?:\.\d+)?)?$")
 # these tank types draw their liquid (and so its sub-part) only when the part says how full it is
@@ -67,10 +72,25 @@ def read_catalog(kit=KIT):
 
 
 def local_types(parts_js):
-    """a module's kit3d_parts.js adds types; all we can know of them is the name (no states, no sub-parts)"""
-    if parts_js and os.path.isfile(parts_js):
-        return {n: {} for n in DEFINE.findall(read(parts_js))}
-    return {}
+    """a module's kit3d_parts.js adds types: {type: {states, subs, family}} read from each define's own body -
+    k.state(<id> + '.open', ...) is a state, k.sub(<id> + '_plate', ...) a sub-part, {family: '...'} its family"""
+    if not (parts_js and os.path.isfile(parts_js)):
+        return {}
+    src = read(parts_js)
+    found = list(DEFINE.finditer(src))
+    out = {}
+    for i, m in enumerate(found):
+        body = src[m.end():found[i + 1].start() if i + 1 < len(found) else len(src)]
+        entry = out.setdefault(m.group(1), {"states": [], "subs": []})
+        for key, rx in (("states", LOCAL_STATE), ("subs", LOCAL_SUB)):
+            entry[key] += [n for n in rx.findall(body) if n not in entry[key]]
+        # k.sub(sid) with an id of the spec's own: the ids of the part's lists ("sensors": [{"id": ...}])
+        if LOCAL_SUB_ANY.search(body):
+            entry["subs_from"] = sorted(set(entry.get("subs_from", [])) | set(re.findall(r"\bp\.(\w+)", body)))
+        fam = LOCAL_FAMILY.search(body)
+        if fam:
+            entry["family"] = fam.group(1)
+    return out
 
 
 def load_spec(path):
