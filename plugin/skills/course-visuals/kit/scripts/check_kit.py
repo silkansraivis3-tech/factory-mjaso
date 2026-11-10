@@ -353,6 +353,22 @@ def _strings(x):
             yield from _strings(v)
 
 
+STEP_TITLE = re.compile(r"^\d+ · (.*)$")
+
+
+def starter_track(spec, ps):
+    """--init-build's starter step track as it was written: its one part a step track whose every step name is the start
+    of its step's own line (the step's title, "2 · <the line>")"""
+    if len(ps) != 1 or ps[0].get("type") != "step_track":
+        return False
+    names = ps[0].get("steps") or []
+    titles = [STEP_TITLE.match(str(s.get("title") or "")) for s in spec.get("steps") or [] if isinstance(s, dict)]
+    if len(names) < 2 or len(titles) != len(names) or not all(titles):
+        return False
+    norm = lambda x: " ".join(re.findall(r"\w+", str(x).lower()))            # "Term: rest" is the line's "Term - rest"
+    return all(norm(t.group(1)).startswith(norm(n)) or norm(n).startswith(norm(t.group(1))) for n, t in zip(names, titles))
+
+
 def what_it_is(spec, parts):
     """a figure that is not a drawing (PM M01: nine tables, M03 s09 a board of nine readouts), a ship drawn small with
     nothing on it beside an idea (M01 s05), steps that only show words, and characters broken by a wrong encoding"""
@@ -398,6 +414,11 @@ def what_it_is(spec, parts):
         out.append("NO REAL EXAMPLE - an idea drawn only as shapes (%s) turns into arrows and lines: name the real thing(s) it "
                    "is about in \"example\" (\"example\": [\"watch round\", \"ship in dry dock\"]) - the course's photograph of "
                    "each goes beside the drawing, or onto PHOTOS_TO_TAKE.md" % ", ".join(sorted(set(idea))))
+    if starter_track(spec, ps):
+        out.append("STARTER STEP TRACK - --init-build's step track ships unchanged: each step is the start of a slide line cut "
+                   "short (\"%s\") and nothing is drawn - the figure review rates it broken. Draw what the lines are about (a "
+                   "kit part, a new part - PARTS.md, a 2D-kit figure, a photo), or give the track short step names of your own"
+                   % str((ps[0].get("steps") or [""])[0])[:60])
     broken = sorted({s for s in _strings(spec) if MOJIBAKE.search(s)})
     if broken:
         out.append("BROKEN CHARACTERS - %r: the words were read in the wrong encoding (\"Â·\" for \"·\"); "
