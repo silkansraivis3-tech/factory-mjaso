@@ -373,6 +373,44 @@ specs = sorted(glob.glob(os.path.join(KIT, "examples", "*.kit3d.json")))
 p = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_kit3d.py"), "spec"] + specs, capture_output=True, text=True)
 check("check_kit3d.py passes every example (%d)" % len(specs), p.returncode == 0, p.stdout[-400:])
 
+# ---------------------------------------------------------------- the labels in a turn: placed only when something moved
+# (the factory trial's M01 s22 / s27: a membrane tank corner peeled layer by layer, five labels on thin layers - each search
+# for their places took up to 200 ms at 4x CPU, made every 100 ms of a turn: p95 three frames in perf_gate)
+LAYERS = os.path.join(KIT, "examples", "_t_layers.kit3d.json")
+with open(LAYERS, "w", encoding="utf-8") as f:
+    json.dump({"label": "test: a membrane tank corner, layer by layer", "units": "m", "view": {"az": 24, "el": 23},
+               "parts": [{"id": "hull", "type": "hull", "pick": False, "x": [-6, 6], "half": 7, "bottom": 0, "floor": 1.2, "top": 12,
+                          "near": 0.12, "bottom_id": "dbt", "side_id": "ballast"},
+                         {"id": "mt", "type": "tank_prism", "at": [0, 6.4, 0], "size": [10, 8, 10], "kind": "membrane", "fill": 0.5,
+                          "layers": [{"id": "ins2", "name": "Insulation", "t": 0.5, "mat": "insulation"},
+                                     {"id": "sec", "name": "Secondary membrane", "t": 0.05, "mat": "barrier"},
+                                     {"id": "ins1", "name": "Insulation", "t": 0.5, "mat": "insulation"},
+                                     {"id": "prim", "name": "Primary membrane", "t": 0.05, "mat": "membrane"}]}],
+               "labels": [{"part": "prim", "text": "Primary membrane", "up": 56}, {"part": "ins1", "text": "Insulation", "up": 40},
+                          {"part": "sec", "text": "Secondary membrane", "up": -40}, {"part": "ins2", "text": "Insulation", "up": 40},
+                          {"part": "ballast", "text": "Ballast tank", "up": 40}]}, f)
+TURN = ("(function(){var S=k3.scene,places=function(){return S.labels.map(function(l){var r=l.pill.getBoundingClientRect();"
+        "return [l.text,l.shown,Math.round(r.left),Math.round(r.top)];});};"
+        "var p0=places(),az=S.view.az,n=0,k=S.keepOut,searches=0,t0;S.keepOut=function(){n++;return k.apply(S,arguments);};"
+        "S.setCost=50;t0=S.setT;"
+        "for(var i=0;i<20;i++){S.view.az+=0.01;S.frame();if(S.setT!==t0){searches++;t0=S.setT;}}"
+        "var turnReads=n;S.view.az=az;S.frame();S.frame();var p1=places();n=0;"
+        "var tf=S.labels.map(function(l){return l.el.style.transform;}).join();for(var j=0;j<5;j++){S.frame();}"
+        "S.keepOut=k;"
+        "return JSON.stringify({p0:p0,p1:p1,searches:searches,turnReads:turnReads,standReads:n,"
+        "same:tf===S.labels.map(function(l){return l.el.style.transform;}).join()});})()")
+try:
+    r = run([{"url": STUDIO % ("_t_layers", 900, 600), "wait": "window.k3ready", "settle": 800, "probe": TURN}], "--w=900", "--h=600")
+finally:
+    os.remove(LAYERS)
+tn = r[0].get("probe") or {}
+check("in a turn whose label search is slow, the labels follow their points and are not searched again; the page is not "
+      "read for the controls' places", tn.get("searches") == 0 and tn.get("turnReads") == 0, (tn, r[0].get("errors")))
+check("... back at rest, every label is exactly where it stood before the turn",
+      tn.get("p0") and tn.get("p0") == tn.get("p1") and any(x[1] for x in tn.get("p0")), (tn.get("p0"), tn.get("p1")))
+check("... and a standing view drawn again reads nothing and writes nothing for its labels",
+      tn.get("standReads") == 0 and tn.get("same") is True, tn)
+
 srv.shutdown()
 print()
 print("ALL PASS" if not FAILS else "%d FAILED: %s" % (len(FAILS), "; ".join(FAILS)))

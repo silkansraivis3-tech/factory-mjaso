@@ -37,6 +37,7 @@
   var NAVY = '#0A2463', BLUE = '#2EB6F8', AMBER = '#E9A51E';
   var DEG = Math.PI / 180;
   var PIXEL_BUDGET = 2.4e6;           /* 2.70.0 - the most pixels a frame draws (P.size) */
+  var TURN_SEARCH_MS = 8;             /* a label search slower than this waits for the view to stand (P.settle) */
   /* lite light: a device a scene juddered on is remembered, and every scene after builds lite there (P.goLite) */
   var LITE_KEY = 'kit3d.lite';
   function slowDevice(set) {
@@ -1100,7 +1101,7 @@
   /* ======================================================================== labels on the parts */
   P.labelsMake = function () {
     var S = this, defs = (S.spec.labels || []).concat(S.autoLabels);
-    S.labels = [];
+    S.labels = []; S.labKey = S.setKey = null; S.setFull = false;
     defs.forEach(function (ld) {
       var key = ld.part || '', p = S.parts[key], at = ld.at;
       if (!at && p) {
@@ -1155,7 +1156,9 @@
       if (S.cap.textContent !== cap) { S.cap.textContent = cap; }
       if (S.cap.style.display !== (cap ? '' : 'none')) { S.cap.style.display = cap ? '' : 'none'; }
     }
-    S.keepOut();
+    /* the labels are placed only when something on the picture moved - the view, a labelled point, the step, the size,
+       the caption, which labels show: a flow or a pulse that redraws a standing view costs them nothing */
+    var lay = W + 'x' + H + '|' + S.step + '|' + (S.small ? 's' : '') + '|' + (S.cap ? S.cap.textContent : ''), key = lay;
     S.labels.forEach(function (l) {
       var s = S.labelShown(l);
       if (s) {
@@ -1166,8 +1169,18 @@
         if (tmpV.z > 1 || l.sx < 0 || l.sx > W || l.sy < 0 || l.sy > H) { s = false; }
       }
       l.shown = s;
-      setCls(l.el, 'k3-off', !s);
-      if (s) { l.el.style.transform = l.el.style.webkitTransform = 'translate(' + l.sx.toFixed(1) + 'px,' + l.sy.toFixed(1) + 'px)'; }
+      key += s ? '|' + l.text + ':' + l.sx.toFixed(1) + ',' + l.sy.toFixed(1) : '|-';
+    });
+    if (key === S.labKey && S.setFull) { return; }
+    /* the places the pills keep off are read from the page only when the view stands or the slide's layout changed - never
+       in the frames of a turn, where a read after the last frame's writes would lay the page out again */
+    if (lay !== S.labLay || key === S.labKey || !S.res) { S.keepOut(); }
+    S.labLay = lay; S.labKey = key;
+    S.labels.forEach(function (l) {
+      setCls(l.el, 'k3-off', !l.shown);
+      if (!l.shown) { return; }
+      var tf = 'translate(' + l.sx.toFixed(1) + 'px,' + l.sy.toFixed(1) + 'px)';
+      if (l.tf !== tf) { l.el.style.transform = l.el.style.webkitTransform = l.tf = tf; }
     });
     S.settle();
     if (W && H) { S.labelLayer.style.visibility = 'visible'; }
@@ -1217,9 +1230,12 @@
     }
     /* while the view turns, the places are searched again only after 100 ms, or three times as long as the last search took;
        between, each pill keeps its place round its moving point (perf_gate, a turn at 4x: the search was a third to half of
-       every frame, 15 labels 130 ms a search). At rest the full search follows, as before */
+       every frame, 15 labels 130 ms a search). A search that took longer than TURN_SEARCH_MS is not made in a turn at all:
+       crowded labels on a thin layer (the membrane tank's four) took up to 200 ms each, a frame of the turn every 100 ms
+       held for it - p95 three frames in perf_gate. At rest the full search follows, as before */
     var tn = now();
-    if (!still && S.setT && tn - S.setT < Math.max(100, 3 * (S.setCost || 0)) && shown.every(function (l) { return !!l.f; })) {
+    if (!still && S.setT && (tn - S.setT < Math.max(100, 3 * (S.setCost || 0)) || S.setCost > TURN_SEARCH_MS)
+        && shown.every(function (l) { return !!l.f; })) {
       shown.forEach(function (l) { l.up = l.f[0]; l.gap = l.f[1]; l.dx = l.f[2]; l.oy = l.f[3]; });
       S.setFull = false;
       S.schedule();
@@ -1370,18 +1386,20 @@
       if (!changed) { break; }
     }
     }
+    /* a value is written only when it changed: an unchanged write still marks the page for another layout */
+    function put(el, k, v) { if (el.style[k] !== v) { el.style[k] = v; } }
     shown.forEach(function (l) {
       if (l.tag) {
-        l.pill.style.marginLeft = (l.ox + l.dx).toFixed(0) + 'px';
-        l.pill.style.marginTop = l.oy.toFixed(0) + 'px';
+        put(l.pill, 'marginLeft', (l.ox + l.dx).toFixed(0) + 'px');
+        put(l.pill, 'marginTop', l.oy.toFixed(0) + 'px');
         return;
       }
       var cls = l.up ? 'k3-up' : 'k3-down';
       if (l.cls !== cls) { setCls(l.pill, 'k3-up', l.up); setCls(l.pill, 'k3-down', !l.up); l.cls = cls; }
-      l.stem.style.height = l.gap + 'px';
-      l.stem.style.top = (l.up ? -l.gap : 0) + 'px';
-      l.pill.style.top = (l.up ? -l.gap : l.gap) + 'px';
-      l.pill.style.marginLeft = l.dx.toFixed(0) + 'px';
+      put(l.stem, 'height', l.gap + 'px');
+      put(l.stem, 'top', (l.up ? -l.gap : 0) + 'px');
+      put(l.pill, 'top', (l.up ? -l.gap : l.gap) + 'px');
+      put(l.pill, 'marginLeft', l.dx.toFixed(0) + 'px');
     });
     shown.forEach(function (l) { l.f = [l.up, l.gap, l.dx, l.oy]; });
     S.setKey = key; S.setFull = calm;

@@ -258,7 +258,15 @@ async function main() {
       if (!f.button) return f;
       const frames = () => evaluate(`window.__scene3d ? window.__scene3d.frames : 0`);
       await tap(`${S}.querySelector('.gb-fs3d-btn').click()`);
-      await sleep(700);
+      /* the box fills the window and the scene redraws at its size - waited for up to 5 s, not a fixed 0.7 s: in software
+         GL the next slide's scene built ahead holds the page for a second or more (the 2.126.0 trial's M01 s03, "did not
+         fill the window" in one run and not the next) */
+      for (let t = 0; t < 5000; t += 100) {
+        if (await evaluate(`(function(){ var b = document.querySelector('.gb-fs3d-on'), c = b && b.querySelector('canvas');
+          return !!c && c.width >= 0.8 * b.getBoundingClientRect().width * (window.devicePixelRatio || 1); })()`)) break;
+        await sleep(100);
+      }
+      await sleep(200);
       const f0 = await frames();
       await sleep(500);
       f.drew = (await frames()) - f0;
