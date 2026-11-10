@@ -46,10 +46,27 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)) if detail and not ok else ""))
 
 
-def run(*a, cwd=None):
+NO_BUILDER = os.path.join(tempfile.gettempdir(), "kb_no_builder_here")     # the tests never use this computer's own builder
+
+
+def run(*a, cwd=None, builder=NO_BUILDER):
     p = subprocess.run([sys.executable, TOOL] + list(a), capture_output=True, text=True, encoding="utf-8", errors="replace",
-                       cwd=cwd)
+                       cwd=cwd, env=dict(os.environ, NOVIKONTAS_KB_BUILDER=builder))
     return p.returncode, p.stdout + p.stderr
+
+
+FAKE_BUILDER = '''import json, os, sys
+root = sys.argv[sys.argv.index("--cli") + 1]
+if os.path.exists(os.path.join(root, "BREAK")):
+    sys.exit(1)
+kb = os.path.join(root, "KNOWLEDGE_BASE")
+os.makedirs(os.path.join(kb, "sources"), exist_ok=True)
+names = [f for _d, _s, fs in os.walk(root) for f in fs if f.lower().endswith((".pdf", ".pptx"))]
+json.dump({"source_count": len(names), "sources": []}, open(os.path.join(kb, "SOURCE_MANIFEST.json"), "w"))
+logs = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_runtime", "data", "logs")
+os.makedirs(logs, exist_ok=True)
+open(os.path.join(logs, "run_1.log"), "w").write("read %d files\\n" % len(names))
+'''
 
 
 def w(p, s, mode="w"):
@@ -311,8 +328,8 @@ def main():
         os.makedirs(empty)
         code, out = run("find", empty)
         check("none found -> the factory suggests making one, unasked: what, how, and what is lost without it (2.42.0)",
-              code == 1 and "SUGGESTS MAKING A KNOWLEDGE BASE" in out and "Course Source Processor" in out
-              and "the factory has no tool that builds one" in out and "Without it:" in out and "kb_tool.py decision" in out, out)
+              code == 1 and "SUGGESTS MAKING A KNOWLEDGE BASE" in out and "Course KB Builder" in out
+              and "Without it:" in out and "kb_tool.py decision" in out, out)
         os.rmdir(empty); os.rmdir(os.path.dirname(empty))
         check("find wrote nothing anywhere", snapshot(tmp) == before_all)
         chem = os.path.join(tmp, "chem", "chem-advanced")
@@ -344,10 +361,50 @@ def main():
         q = sg.get("question") or {}
         check("--json carries the ready pop-up question, making one first and marked Recommended",
               q.get("header") == "Sources" and len(q.get("options", [])) == 3 and "(Recommended)" in q["options"][0]["label"], q)
-        check("the suggestion says what the operator must run - and never that the factory builds it",
-              "Course Source Processor" in sg.get("text", "") and "has no tool that builds one" in sg.get("text", "")
+        check("with no builder on this computer the suggestion says what it is, where to put it and what to run by hand",
+              "Course KB Builder" in sg.get("text", "") and "was not found on this computer" in sg.get("text", "")
+              and "I will make it" in q["options"][0]["label"] and not sg.get("builder")
               and os.path.join(master, "source_files") in sg.get("text", ""), sg.get("text"))
         check("finding and suggesting wrote nothing", snapshot(os.path.join(tmp, "m")) == before)
+
+        print("\n-- the factory makes the knowledge base itself, with the Course KB Builder")
+        tool = os.path.join(tmp, "tool", "COURSE_KB_BUILDER", "fake_builder.py")
+        w(tool, FAKE_BUILDER)
+        code, out = run("find", master, "--json", builder=tool)
+        sg2 = json.loads(out).get("suggestion") or {}
+        check("with the builder on this computer the suggestion says the factory makes it, and the first answer is 'make it now'",
+              "the factory makes it itself" in sg2.get("text", "") and "kb_tool.py build" in sg2.get("text", "")
+              and "make it now" in sg2["question"]["options"][0]["label"] and sg2.get("builder") == tool, sg2.get("text"))
+        code, out = run("build", master, "--course", master)
+        check("build with no builder stops (exit 3), says what the builder is, and makes nothing",
+              code == 3 and "was not found" in out and snapshot(os.path.join(tmp, "m")) == before, out)
+        bare = os.path.join(tmp, "bare")
+        w(os.path.join(bare, "notes.txt"), "x")
+        code, out = run("build", bare, builder=tool)
+        check("build with nothing to read stops (exit 2)", code == 2 and "nothing to make a knowledge base from" in out, out)
+        made = os.path.join(tmp, "made", "IGF basic")
+        for rel in ("source_files/IGF CODE 2016.pdf", "source_files/Study programme.pdf", "old course/ch1.pptx"):
+            w(os.path.join(made, rel), "x")
+        w(os.path.join(made, "source_files", "BREAK"), "x")
+        code, out = run("build", made, "--course", made, builder=tool)
+        check("a builder that ends with no knowledge base is a stop (exit 5), and no decision is recorded",
+              code == 5 and "left no knowledge base" in out
+              and not os.path.exists(os.path.join(made, "course", "working_claude", "intake.json")), out)
+        os.remove(os.path.join(made, "source_files", "BREAK"))
+        code, out = run("build", made, "--course", made, builder=tool)
+        kb_made = os.path.join(made, "source_files", "KNOWLEDGE_BASE")
+        d = (json.load(io.open(os.path.join(made, "course", "working_claude", "intake.json"), encoding="utf-8"))
+             if os.path.isfile(os.path.join(made, "course", "working_claude", "intake.json")) else {}).get("knowledge_base_decision") or {}
+        check("build runs the builder with no window on source_files, and the knowledge base is there",
+              code == 0 and os.path.isfile(os.path.join(kb_made, "SOURCE_MANIFEST.json")) and "Knowledge base made" in out, out)
+        check("... the decision is recorded as built, with its kind - nothing is asked",
+              d.get("answer") == "built" and d.get("format") == "course_source_processor"
+              and os.path.normcase(d.get("path", "")) == os.path.normcase(kb_made), d)
+        code, out = run("find", made)
+        check("... and find now finds it", code == 0 and "KNOWLEDGE_BASE" in out, out)
+        code, out = run("build", made, "--course", made, builder=tool)
+        check("a second build refreshes it", code == 0 and "Refreshing" in out, out)
+        shutil.rmtree(os.path.join(tmp, "tool")); shutil.rmtree(os.path.join(tmp, "bare")); shutil.rmtree(os.path.join(tmp, "made"))
 
         wc = os.path.join(master, "course")
         code, out = run("decision", master)

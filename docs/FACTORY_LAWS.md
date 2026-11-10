@@ -528,9 +528,10 @@ module again after photos change. → `course-factory` (`compile/`), 2.27.0
 knowledge base only by a follow-up message: *"before creating any module the AI should have already made the ILO
 mapping and suggested for KNOWLEDGE_BASE to be created"*. Before any module's content is written, the course has its
 ILO map (`working_claude/ilo_map.json`), approved on the Stage 2 page, and a recorded knowledge-base decision. When
-there is no knowledge base, the factory suggests making one, unasked - what it is, from which files, how (the Course
-Source Processor; the factory has no builder) and what the course loses - and records yes / built / declined with the
-operator's reason, once. Every Sub-ILO is taught on a slide and checked by a question, and every fact traces to a
+there is no knowledge base, the factory makes one itself, unasked (`kb_tool.py build`: the Course KB Builder found on the
+computer, run with no window on the source files; 2.121.0). Only where the builder is not on the computer does it suggest
+making one - what it is, from which files, how to get the builder and what the course loses - and record yes / built /
+declined with the operator's reason, once. Every Sub-ILO is taught on a slide and checked by a question, and every fact traces to a
 listed source. A script approved before the law keeps its approval; its gaps are reported. → `course-factory`
 (`scripts/ilo_map.py`, `scripts/course_gate.py`, `kb/scripts/kb_tool.py`, `script/GUIDE.md` §0), 2.42.0
 

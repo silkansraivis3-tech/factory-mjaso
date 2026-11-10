@@ -25,8 +25,13 @@ WHAT IT DOES
   find      every knowledge base in the course folder, its sub-folders and one level up - by its
             files, never by its name. Writes nothing. One found: used. Several: a ready question. (2.13.1)
             None: the factory SUGGESTS making one, unasked - what it is, which of the folder's files it would
-            be built from, how (the Course Source Processor - not part of the factory), and what the course
-            loses without it - with a ready pop-up question in --json. (2.42.0)
+            be built from, how (`build`, or by hand where the builder is not on this computer), and what the
+            course loses without it - with a ready pop-up question in --json. (2.42.0)
+  build     makes the knowledge base itself: finds the Course KB Builder on this computer (the owner's
+            program, BUILD_KNOWLEDGE_BASE.exe - the Course Source Processor), runs it with no window on the
+            course's source files, waits, says how many sources it holds and records the decision with --course.
+            A second run reads only what changed. No builder found: exit 3, and `find` says what to tell the
+            operator.
   decision  records the operator's answer in intake.json - yes / built / declined with their reason - so
             it is asked once. Every module waits for it (scripts/course_gate.py). (2.42.0)
   sources   lists every source; groups EXACT duplicates (same file content - cited once, no
@@ -46,7 +51,8 @@ WHAT IT DOES
 
 WHAT IT NEVER DOES
 Write inside the knowledge base (L14). Every write goes to the course folder, and a course folder
-inside the knowledge base is refused. The SEARCH program writes its packs into the knowledge
+inside the knowledge base is refused. `build` starts the builder, and the builder writes its own
+KNOWLEDGE_BASE folder beside the files it read - no source file is changed. The SEARCH program writes its packs into the knowledge
 base's own retrieval/ folder; this one does not.
 Make up a course folder (2.48.1). --course must be an existing master folder or its course/ folder,
 outside the factory and every knowledge base; anything else stops with the folder it should have been.
@@ -61,7 +67,9 @@ import json
 import math
 import os
 import re
+import subprocess
 import sys
+import time
 from collections import Counter, defaultdict
 from datetime import date
 
@@ -707,12 +715,25 @@ def suggestion(folder):
     else:
         lines.append("No source files were found in %s - put the programme, the model course, the codes and the old" % folder)
         lines.append("course into a source_files folder there first.")
-    lines += ["",
-              "How: the factory has no tool that builds one. The Course Source Processor does (Raivis Silkans's tool - it",
-              "is not part of the factory; ask him for it if you do not have it). Run it on this folder:",
-              "    %s" % root,
-              "It writes a KNOWLEDGE_BASE folder there; scanned pages are read by OCR. Then tell me, and I will find it.",
-              "",
+    program = find_builder(folder)
+    if program and total:
+        lines += ["",
+                  "How: the factory makes it itself, with the Course KB Builder found on this computer:",
+                  "    %s" % program,
+                  "    kb_tool.py build \"%s\" --course <course>" % folder,
+                  "No window opens and no source file is changed; it writes a KNOWLEDGE_BASE folder in",
+                  "    %s" % root,
+                  "Scanned pages are read by OCR, a few seconds each - a big scanned book takes a while.",
+                  ""]
+    else:
+        lines += ["",
+                  "How: the Course KB Builder makes one (the folder COURSE_KB_BUILDER with BUILD_KNOWLEDGE_BASE.exe - Raivis",
+                  "Silkans's tool; ask him for it if you do not have it). It was not found on this computer. Put the folder",
+                  "on the Desktop, or name it: kb_tool.py build <folder> --builder <its folder>. Or run it by hand on:",
+                  "    %s" % root,
+                  "It writes a KNOWLEDGE_BASE folder there; scanned pages are read by OCR. Then tell me, and I will find it.",
+                  ""]
+    lines += [
               "Without it: facts are checked by opening whole PDFs instead of searching them, so a slide's facts are",
               "harder to trace to their page; two editions of one book (an old and a new MARPOL) cannot be sorted out",
               "for you; scanned pages with no text cannot be read; and the content scripts rest on fewer sources.",
@@ -724,12 +745,152 @@ def suggestion(folder):
     question = {"header": "Sources", "multiSelect": False,
                 "question": "There is no knowledge base for this course yet. Shall we make one before the modules are planned?",
                 "options": [
-                    {"label": "Yes - I will make it (Recommended)",
-                     "description": "Run the Course Source Processor on %s; tell me when it is done." % root},
+                    ({"label": "Yes - make it now (Recommended)",
+                      "description": "The factory makes it from %s itself; no source file is changed." % root}
+                     if program and total else
+                     {"label": "Yes - I will make it (Recommended)",
+                      "description": "Run the Course KB Builder on %s; tell me when it is done." % root}),
                     {"label": "There is one - I will point to it", "description": "A knowledge base made earlier, in another folder."},
                     {"label": "No - use the source files", "description": "Allowed. Facts are harder to trace to their page; "
                                                                           "the Stage 2 page will show this decision."}]}
-    return {"source_root": root, "files": total, "groups": groups, "text": "\n".join(lines), "question": question}
+    return {"source_root": root, "files": total, "groups": groups, "builder": program, "text": "\n".join(lines),
+            "question": question}
+
+
+# ------------------------------------------------------------------ making one: the Course KB Builder, with no window
+BUILDER_EXE = "BUILD_KNOWLEDGE_BASE.exe"
+BUILDER_DIR = "COURSE_KB_BUILDER"
+
+
+def find_builder(folder, given=None):
+    """The Course KB Builder on this computer - the program that makes a knowledge base - or None. A place that is
+    named (--builder, NOVIKONTAS_KB_BUILDER) is the only one looked in; else beside the folder and up to four
+    folders above it, then the Desktop, Documents and the home folder, one folder deep."""
+    def program(p):
+        p = os.path.abspath(os.path.expanduser(p))
+        if os.path.isdir(p):
+            p = os.path.join(p, BUILDER_EXE)
+        return p if os.path.isfile(p) else None
+
+    named = given or os.environ.get("NOVIKONTAS_KB_BUILDER")
+    if named:
+        return program(named)
+    places = []
+    for i, a in enumerate(ancestors(folder)):
+        if i > 4:
+            break
+        places.append(os.path.join(a, BUILDER_DIR))
+    home = os.path.expanduser("~")
+    for base in (os.path.join(home, "Desktop"), os.path.join(home, "Documents"), home):
+        places.append(os.path.join(base, BUILDER_DIR))
+        if base != home and os.path.isdir(base):
+            try:
+                places += [os.path.join(base, n, BUILDER_DIR) for n in sorted(os.listdir(base))]
+            except OSError:
+                pass
+    for p in places:
+        if os.path.isdir(p) and program(p):
+            return program(p)
+    return None
+
+
+def builder_progress(program, since):
+    """The last line of the progress file the builder is writing beside itself, or ''."""
+    d = os.path.join(os.path.dirname(program), "_runtime", "data", "logs")
+    try:
+        logs = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(".log")]
+        logs = [p for p in logs if os.path.getmtime(p) >= since - 2]
+        if not logs:
+            return ""
+        with io.open(max(logs, key=os.path.getmtime), "r", encoding="utf-8", errors="replace") as f:
+            lines = [x.strip() for x in f.read()[-4000:].splitlines() if x.strip()]
+        return lines[-1].split(" | ", 1)[-1][:160] if lines else ""
+    except OSError:
+        return ""
+
+
+def read_report(kb):
+    """How the builder's own manifest says each source went: (read whole, read with gaps, not read)."""
+    try:
+        rows = load_json(os.path.join(kb, "SOURCE_MANIFEST.json")).get("sources") or []
+    except (OSError, ValueError):
+        return None
+    if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+        return None
+    bad = sum(1 for r in rows if r.get("error") or not str(r.get("status") or "ok").startswith("ok"))
+    gaps = sum(1 for r in rows if not r.get("error") and str(r.get("status") or "") == "ok_with_gaps")
+    return len(rows) - bad - gaps, gaps, bad
+
+
+def cmd_build(folder, course, builder, timeout_min):
+    """Make (or refresh) the knowledge base of a course folder with the Course KB Builder - no window, nothing asked.
+    The builder writes KNOWLEDGE_BASE into the folder it reads; this tool writes only the decision, into the course."""
+    folder = os.path.abspath(folder)
+    if not os.path.isdir(folder):
+        print("Stopped - that folder does not exist:\n    %s" % folder)
+        return 2
+    total, _groups, src_dir = source_files_of(folder)
+    root = src_dir or folder
+    if not total:
+        print("Stopped - there is nothing to make a knowledge base from in\n    %s\n  Put the programme, the model course, "
+              "the codes and the old course into a source_files folder there first." % folder)
+        return 2
+    program = find_builder(folder, builder)
+    if not program:
+        named = builder or os.environ.get("NOVIKONTAS_KB_BUILDER")
+        print("Stopped - the Course KB Builder was not found%s.\n  It is the folder %s with %s in it (Raivis Silkans's tool). "
+              "Put that folder on the Desktop,\n  or name where it is: kb_tool.py build <folder> --builder <its folder>.\n"
+              "  Nothing was made; `kb_tool.py find` prints what to tell the operator."
+              % ((" at\n    %s" % named) if named else " on this computer", BUILDER_DIR, BUILDER_EXE))
+        return 3
+    kb = os.path.join(root, "KNOWLEDGE_BASE")
+    manifest = os.path.join(kb, "SOURCE_MANIFEST.json")
+    had = detect(kb)
+    print("%s the knowledge base from %d file(s) in\n    %s\n  with %s\n  No window opens. Scanned pages take a few "
+          "seconds each; files read before are not read again."
+          % ("Refreshing" if had else "Making", total, root, program))
+    sys.stdout.flush()
+    started = time.time()
+    cmd = ([sys.executable, program] if program.lower().endswith(".py") else [program]) + ["--cli", root]
+    try:
+        p = subprocess.Popen(cmd, cwd=os.path.dirname(program), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
+    except OSError as e:
+        print("Stopped - the builder could not be started: %s\n  Double-click CHECK_THIS_COMPUTER beside it to see why." % e)
+        return 3
+    said, said_at = "", started
+    while p.poll() is None:
+        if time.time() - started > timeout_min * 60:
+            p.kill()
+            print("Stopped after %d min - the builder was still working%s.\n  Run the same command again: files already "
+                  "read are not read again." % (timeout_min, (" (%s)" % said) if said else ""))
+            return 4
+        time.sleep(1)
+        line = builder_progress(program, started)
+        if line and line != said and time.time() - said_at >= 30:
+            print("  ... " + line)
+            sys.stdout.flush()
+            said, said_at = line, time.time()
+    fmt = detect(kb)
+    fresh = fmt and os.path.isfile(manifest) and os.path.getmtime(manifest) >= started - 2
+    if not fmt or (not fresh and p.returncode):
+        last = builder_progress(program, started)
+        print("Stopped - the builder ended (code %s) and %s in\n    %s%s\n  Its own record of the run is in _runtime\\data\\logs "
+              "beside the builder." % (p.returncode, "left the earlier knowledge base untouched" if fmt else "left no knowledge base",
+                                       root, ("\n  Its last line: " + last) if last else ""))
+        return 5
+    s = kb_summary(kb, fmt)
+    rep = read_report(kb)
+    print("\nKnowledge base %s in %d s:\n    %s\n  %s sources%s"
+          % ("made" if not had else ("refreshed" if fresh else "already up to date"), round(time.time() - started), kb,
+             s["sources"] if s["sources"] is not None else "?",
+             (": %d read whole, %d with gaps (a scanned page with no words, a table to check by eye), %d not read.%s"
+              % (rep + ("\n  What to look at is in NEEDS_ATTENTION.md there - tell the operator the numbers."
+                        if rep[1] or rep[2] else "",))) if rep and sum(rep) else "."))
+    if course:
+        return cmd_decision(course, None, kb, None)
+    print("  Record it for the course: kb_tool.py decision <course> --built \"%s\"" % kb)
+    return 0
 
 
 def cmd_decision(course, yes, built, declined):
@@ -869,6 +1030,9 @@ def main(argv=None):
     q = sub.add_parser("search"); q.add_argument("kb"); q.add_argument("query"); q.add_argument("--course", required=True)
     q.add_argument("--top", type=int, default=12); q.add_argument("--all", action="store_true")
     q.add_argument("--stdout", action="store_true", help="print the pack, write nothing at all")
+    b = sub.add_parser("build"); b.add_argument("folder"); b.add_argument("--course")
+    b.add_argument("--builder", metavar="FOLDER", help="where the Course KB Builder is, when it is not found by itself")
+    b.add_argument("--timeout-min", type=int, default=180)
     a = ap.parse_args(argv)
     if getattr(a, "course", None):                 # what the factory writes goes to course\ (L40)
         given = a.course
@@ -887,6 +1051,8 @@ def main(argv=None):
         return cmd_decide(a.course, set(a.keep), set(a.different))
     if a.cmd == "decision":
         return cmd_decision(a.course, a.yes, a.built, a.declined)
+    if a.cmd == "build":
+        return cmd_build(a.folder, a.course, a.builder, a.timeout_min)
     return cmd_search(a.kb, a.query, a.course, a.top, a.all, a.stdout)
 
 

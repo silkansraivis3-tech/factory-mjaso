@@ -7,6 +7,17 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.121.0 · The factory makes the knowledge base itself (2026-11-10)
+
+- `kb/scripts/kb_tool.py build <folder> [--course] [--builder] [--timeout-min]`: `find_builder` (named place, else the
+  course folder's ancestors, Desktop, Documents, home), the builder started as `BUILD_KNOWLEDGE_BASE.exe --cli <source
+  root>` with no window, `builder_progress` (the last line of `_runtime\data\logs`), `read_report` (statuses in the
+  builder's `SOURCE_MANIFEST.json`), then `cmd_decision --built`. Exit 2 nothing to read, 3 no builder, 4 time out,
+  5 the builder left no knowledge base. A builder named with a `.py` file is run with Python (the tests' stand-in).
+- `suggestion()` says the factory makes it where a builder is found, and how to get the builder where it is not.
+- The builder writes `KNOWLEDGE_BASE` inside the folder it reads; `kb_tool.py` itself still writes only into the course.
+- The builder remembers the last folder it was run on (`_runtime\data\last_used.json`): a factory run changes that.
+
 ## 2.120.0 · One rule per subject (2026-11-10)
 
 - The law table in `SKILL.md` wins over every other file; rows L9, L14, L23, L28, L30, L33, L37, L38, L46, L47, L60, L64

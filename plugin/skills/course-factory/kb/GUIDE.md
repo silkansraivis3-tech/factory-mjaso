@@ -31,16 +31,37 @@ It looks in the course folder, every sub-folder and one level up, recognises eac
 its files, never walks inside one, and **writes nothing**. One found: use it. Several: `--json` gives
 a ready pop-up question, "which one is this course's?".
 
-**None found: the factory suggests making one — unasked** (owner, 2026-10-16: *"before creating any
-module the AI should have already ... suggested for KNOWLEDGE_BASE to be created"*). `find` prints the
-suggestion ready to pass on in plain words (L25): what a knowledge base is, which of the folder's files
-it would be built from (programme, model course, codes, old course, `source_files`), how, and what the
-course loses without it; `--json` carries it as `suggestion` with the ready pop-up question.
-**How it is made:** the factory has no tool that builds one — never say or imply it does. The **Course
-Source Processor** (Raivis Silkans's tool, outside the factory) is run on the `source_files` folder and
-writes a `KNOWLEDGE_BASE` folder there. If the operator does not have it, they ask Raivis for it.
+**None found: the factory makes one itself — unasked.**
 
-Record the answer once — no module starts without it (`scripts/course_gate.py`):
+```
+python kb/scripts/kb_tool.py build <course folder> --course <course folder>
+```
+
+It finds the **Course KB Builder** on this computer (the folder `COURSE_KB_BUILDER` with
+`BUILD_KNOWLEDGE_BASE.exe` — Raivis Silkans's Course Source Processor): where `--builder` or
+`NOVIKONTAS_KB_BUILDER` names it, else beside the course folder and up to four folders above it, then the
+Desktop, Documents and the home folder, one folder deep. It runs it with no window on the course's
+`source_files` (and the old course beside it), waits, says how many sources were read whole, with gaps or
+not at all, and records the decision as `built`. No source file is changed: the builder writes its own
+`KNOWLEDGE_BASE` folder beside the files it read, and remembers what it has read, so a second run reads
+only what changed — run it again whenever a source file is added.
+
+- **Start it in the background and go on with the intake.** A scanned book is read by OCR, a few seconds
+  a page; the command prints the builder's progress about every half minute. `--timeout-min` (180) ends
+  a run that takes longer; running it again continues where it stopped.
+- **Tell the operator in one line** that the knowledge base is being made, and when it ends, the numbers
+  it printed. What needs a look is in the knowledge base's own `NEEDS_ATTENTION.md`.
+- Scanned pages are read in English. Latvian scans: the operator double-clicks `READ_LATVIAN_SCANS` beside
+  the builder once; never switch it for them.
+
+**The builder is not on this computer** (`build` exits 3): then the factory suggests making one. `find`
+prints the suggestion ready to pass on in plain words (L25): what a knowledge base is, which of the
+folder's files it would be built from (programme, model course, codes, old course, `source_files`), how
+to get the builder, and what the course loses without it; `--json` carries it as `suggestion` with the
+ready pop-up question. Never say the factory made one when it did not.
+
+Record the answer once — no module starts without it (`scripts/course_gate.py`; `build` records `built`
+itself):
 
 ```
 python kb/scripts/kb_tool.py decision <course folder> --built "<the new KNOWLEDGE_BASE>"
