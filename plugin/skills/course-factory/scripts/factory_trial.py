@@ -23,7 +23,9 @@ the way the office PC builds. Then it scores what was built and sets the score b
           never called; no paid picture is made; nothing is pushed. --plugin-dir builds with a plugin checkout instead of
           the installed one (a release before it is pushed); --modules builds only some of the trial's modules (a retest
           of two). The log and the score go to runs\\<date>\\ - the log line by line as the run goes (the session's words,
-          each agent it starts, its last answer with its turns, minutes and cost). Then report.
+          each agent it starts, the minutes since the start and the cost so far). A run that ends without its last line
+          and not on the usage limit is carried on in the same session (claude -p --resume), up to 3 times, in the same
+          log. Then report.
   report  the scorecard of each trial module, and what changed since the last trial:
             built, passed (its last build said PASS or MODULE CLEAN) and that build's verdict; minutes to its first PASS
             (the build's clock, cf_timing.py); slides cut or pictures cropped at 1280 x 800 and at 1024 x 768, every Next
@@ -196,64 +198,22 @@ def prepare_run(home, cfg, modules, plugin_dir=None):
 
 def claude_command(prompt, plugin_dir=None):
     """claude -p as an event stream, so the log is written as the run goes, not only at its end"""
-    cmd = course_portal.claude_command(prompt) + ["--output-format", "stream-json", "--verbose"]
+    cmd = course_portal.claude_command(prompt) + course_portal.STREAM
     return cmd + (["--plugin-dir", os.path.abspath(plugin_dir)] if plugin_dir else [])
 
 
-def readable(line):
-    """one line of the stream as the log shows it: the session's own words, one line for each tool it starts (a helper
-    agent by its description), its last answer with its turns, minutes and cost; a helper agent's own events are left out -
-    its report reaches the session. A line that is not an event is kept as it is; None: nothing to show"""
-    try:
-        ev = json.loads(line)
-    except ValueError:
-        return line.rstrip("\r\n") or None
-    if not isinstance(ev, dict) or ev.get("parent_tool_use_id"):
-        return None
-    if ev.get("type") == "assistant":
-        out = []
-        for b in (ev.get("message") or {}).get("content") or []:
-            if b.get("type") == "text" and (b.get("text") or "").strip():
-                out.append(b["text"].strip())
-            elif b.get("type") == "tool_use":
-                i = b.get("input") or {}
-                what = i.get("description") or i.get("command") or i.get("file_path") or i.get("prompt") or ""
-                out.append("  > %s: %s" % (b.get("name"), " ".join(str(what).split())[:160]))
-        return "\n".join(out) or None
-    if ev.get("type") == "result":
-        said = "(the session: %s turns, %d min, $%.0f)" % (ev.get("num_turns", "?"), (ev.get("duration_ms") or 0) // 60000,
-                                                             ev.get("total_cost_usd") or 0)
-        return said + "\n\n" + str(ev.get("result") or ev.get("subtype") or "")
-    return None
-
-
-# the run ended on Claude's usage limit ("You've hit your 5-hour limit"), not on the factory
-LIMIT = re.compile(r"hit your [\w -]*limit|usage limit|limit reached", re.I)
-
-
-def stopped_by(log_text):
-    """"usage limit" when the run's last lines say it ended on Claude's usage limit, else None"""
-    tail = [x for x in (log_text or "").splitlines() if x.strip()][-3:]
-    return "usage limit" if any(LIMIT.search(x) for x in tail) else None
+# the log as the run goes, and a run that ends on Claude's usage limit - the same for the auto build (course_portal.py)
+readable, stopped_by = course_portal.readable, course_portal.stopped_by
 
 
 def run_claude(cmd, cwd, env, logf, hours=20):
-    """claude -p in the trial course, each line of its stream written to the log as it comes; -> its exit code"""
-    import threading
-    p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
-                         errors="replace", env=env)
-    timer = threading.Timer(hours * 3600, p.kill)
-    timer.start()
+    """claude -p in the trial course, each line of its stream written to the log as it comes, carried on in the same
+    session when it ends without its last line (course_portal.run_print); -> its exit code"""
     try:
-        with io.open(logf, "w", encoding="utf-8") as out:
-            for line in p.stdout:
-                shown = readable(line)
-                if shown is not None:
-                    out.write(shown + "\n")
-                    out.flush()
-        return p.wait()
-    finally:
-        timer.cancel()
+        return course_portal.run_print(cmd, cwd, env, logf, r"TRIAL (DONE|STOPPED)", hours)
+    except subprocess.TimeoutExpired:
+        io.open(logf, "a", encoding="utf-8").write("TRIAL STOPPED: still running after %d hours\n" % hours)
+        return 1
 
 
 # ------------------------------------------------------------------ the scorecard

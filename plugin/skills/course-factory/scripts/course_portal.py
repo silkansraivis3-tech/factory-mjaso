@@ -55,8 +55,10 @@ import glob
 import io
 import json
 import os
+import re
 import subprocess
 import sys
+import threading
 import time
 import traceback
 import urllib.error
@@ -449,6 +451,109 @@ def claude_command(prompt):
     return base + ["-p", prompt, "--permission-mode", "acceptEdits", "--allowedTools", *ALLOWED, "--disallowedTools", *DENIED]
 
 
+# the log of an unattended run: claude -p as an event stream, so it is written as the run goes, not only at its end
+STREAM = ["--output-format", "stream-json", "--verbose"]
+# the run ended on Claude's usage limit ("You've hit your 5-hour limit"), not on the factory
+LIMIT = re.compile(r"hit your [\w -]*limit|usage limit|limit reached", re.I)
+RESUMES = 3
+CARRY_ON = """The run stopped before its last line, with work unfinished. Carry on in this same session: see where each module
+stands (its last build line in working_claude/_build, the judges' reports, the fix round it is owed), and finish what is
+unfinished by the same rules. A helper agent whose notice said it was waiting on its own background work has stopped - its
+job was not done: give it to a fresh helper on the same model. End with the same one line the first prompt asked for."""
+
+
+def readable(line, seen=None):
+    """one line of the stream as the log shows it: the session's own words, one line for each tool it starts (a helper
+    agent by its description); a helper agent's own events are left out - its report reaches the session. A result ends
+    one of the session's turns; in print mode they all come when the run ends, each with the run's cost so far, so it
+    shows the minutes since the start (seen["start"]) and that cost, and only when one changed or its answer is not in
+    the log yet. A line that is not an event is kept as it is; None: nothing to show"""
+    seen = {} if seen is None else seen
+    said = seen.setdefault("said", set())
+    try:
+        ev = json.loads(line)
+    except ValueError:
+        return line.rstrip("\r\n") or None
+    if not isinstance(ev, dict) or ev.get("parent_tool_use_id"):
+        return None
+    if ev.get("type") == "assistant":
+        out = []
+        for b in (ev.get("message") or {}).get("content") or []:
+            if b.get("type") == "text" and (b.get("text") or "").strip():
+                out.append(b["text"].strip())
+                said.add(b["text"].strip())
+            elif b.get("type") == "tool_use":
+                i = b.get("input") or {}
+                what = i.get("description") or i.get("command") or i.get("file_path") or i.get("prompt") or ""
+                out.append("  > %s: %s" % (b.get("name"), " ".join(str(what).split())[:160]))
+        return "\n".join(out) or None
+    if ev.get("type") == "result":
+        mins, cost = int((time.time() - seen.get("start", time.time())) // 60), ev.get("total_cost_usd") or 0
+        text = str(ev.get("result") or ev.get("subtype") or "").strip()
+        old = text in said
+        if seen.get("min") == mins and seen.get("cost") == round(cost) and (old or not text):
+            return None
+        seen["min"], seen["cost"] = mins, round(cost)
+        said.add(text)
+        head = "(%d min since the start%s)" % (mins, ", $%.0f so far in this claude -p" % cost if cost else "")
+        return head + ("\n\n" + text if text and not old else "")
+    return None
+
+
+def stopped_by(log_text):
+    """"usage limit" when the run's last lines say it ended on Claude's usage limit, else None"""
+    tail = [x for x in (log_text or "").splitlines() if x.strip()][-3:]
+    return "usage limit" if any(LIMIT.search(x) for x in tail) else None
+
+
+def session_of(line):
+    """the session id an event of the stream carries (the init event is the first), else None"""
+    try:
+        ev = json.loads(line)
+    except ValueError:
+        return None
+    return ev.get("session_id") if isinstance(ev, dict) else None
+
+
+def run_print(cmd, cwd, env, logf, last, hours=20, flags=0):
+    """claude -p (cmd, with STREAM) in cwd, each line of its stream written to logf as it comes (readable). In print mode
+    the run ends when the session has nothing running: a helper agent that ended its turn while its own shell work still
+    ran left the session waiting on nothing, and claude -p quit before its last line (the 2.126.0 factory trial). So a run
+    that ends without its last line (the regex `last`) and not on Claude's usage limit is carried on in the same session
+    (--resume <its session id>, CARRY_ON) up to RESUMES times, in the same log, with a line that says so.
+    -> the last exit code; TimeoutExpired once `hours` have gone"""
+    end, seen, first = time.time() + hours * 3600, {"start": time.time()}, list(cmd)
+    with io.open(logf, "w", encoding="utf-8") as out:
+        for k in range(RESUMES + 1):
+            sid, shown = None, []
+            p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+                                 errors="replace", env=env, creationflags=flags)
+            timer = threading.Timer(max(1.0, end - time.time()), p.kill)
+            timer.start()
+            try:
+                for line in p.stdout:
+                    sid = sid or session_of(line)
+                    said = readable(line, seen)
+                    if said is not None:
+                        out.write(said + "\n")
+                        out.flush()
+                        shown.append(said)
+                code = p.wait()
+            finally:
+                timer.cancel()
+            if time.time() >= end:
+                raise subprocess.TimeoutExpired(first, hours * 3600)
+            text = "\n".join(shown)
+            if re.search(last, text) or stopped_by(text) or not sid or k == RESUMES:
+                return code
+            out.write("\n(the run ended without its last line, exit %d - carried on in the same session, %d of %d)\n"
+                      % (code, k + 1, RESUMES))
+            out.flush()
+            i = first.index("-p")
+            cmd = first[:i + 1] + [CARRY_ON, "--resume", sid] + first[i + 2:]
+    return code
+
+
 def modules_folder(course):
     m = os.path.join(course, "modules")
     return m if os.path.isfile(os.path.join(m, "COURSE.html")) else None
@@ -626,15 +731,13 @@ def cmd_watch_once():
         logf = os.path.join(logdir, datetime.now().strftime("%Y%m%d-%H%M") + ".log")
         prompt = AUTO_PROMPT.format(title=nxt.get("title") or cid, course_id=cid, expert=expert)
         env = unattended_env(NOVIKONTAS_AUTO_BUILD="1")
-        with io.open(logf, "w", encoding="utf-8") as out:
-            run = subprocess.run(claude_command(prompt), cwd=workspace.master_of(course), stdout=out, stderr=subprocess.STDOUT,
-                                 text=True, encoding="utf-8", errors="replace", env=env, timeout=20 * 3600,
-                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        rc = run_print(claude_command(prompt) + STREAM, workspace.master_of(course), env, logf, r"AUTO BUILD (DONE|STOPPED)",
+                       flags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         said = io.open(logf, encoding="utf-8", errors="replace").read()
         last = [l for l in said.strip().splitlines() if l.strip()][-1:] or [""]
         pics, other = blockers(course)
-        if run.returncode != 0 or "AUTO BUILD DONE" not in said:
-            why = last[0][:500] if "AUTO BUILD STOPPED" in last[0] else "the build ended without AUTO BUILD DONE (exit %d) - see %s" % (run.returncode, logf)
+        if rc != 0 or "AUTO BUILD DONE" not in said:
+            why = last[0][:500] if "AUTO BUILD STOPPED" in last[0] else "the build ended without AUTO BUILD DONE (exit %d) - see %s" % (rc, logf)
             if other or not pics:                     # a run stopped on pictures alone still goes up, as pictures pending
                 call("build-done", course_id=cid, error=why)
                 _log("%s: stopped - %s" % (cid, why))
