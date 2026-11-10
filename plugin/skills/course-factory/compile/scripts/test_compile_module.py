@@ -395,6 +395,10 @@ REVEAL_SCREENS = [
              "in seconds.\nVenting the cargo to keep the tank pressure is not acceptable except in an emergency.",
      "points": "The pressure is rising\nThe vent mast is there", "ask": "Vote: may the ship vent the vapour to the air?",
      "reveal": "No - the reliquefaction plant keeps the pressure down.", "notes": "- Every trainee votes first.", "minutes": 3},
+    {"id": "s44", "kind": "slide", "title": "Fully pressurised ships - for and against", "visual_kind": "photo", "visual": "A ship.",
+     "active": "explain-then-reveal",
+     "text": "Advantages:\nBuilt of ordinary grades of steel.\nNo reliquefaction plant is needed.\nDisadvantages:\nThe tanks are very heavy.",
+     "ask": "Why is no insulation needed?", "reveal": "The cargo is at ambient temperature.", "notes": "- Pairs first.", "minutes": 3},
 ] + [x for x in SCREENS if x["id"] in ("t01", "q01", "t02", "m01")]
 
 
@@ -403,12 +407,14 @@ def reveal_part(tmp):
     as a worked example does - the script lane allows them there, and the compiler printed them only for a worked example
     (GAS BASIC: 52 slides relabelled); short points with the room's turn show both (M21 s08 lost its points)"""
     print("\n-- explain-then-reveal, predict-then-reveal and points with the room's turn")
+    import compile_module as cm
     os.makedirs(os.path.join(tmp, "rv"))
     sc = script(screens=REVEAL_SCREENS)
     check("the fixture script is valid", not cs.validate(sc), cs.validate(sc))
     c, md = new_course(os.path.join(tmp, "rv"), sc, build=False)
     cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
-        "s43": {"figure": "assets/img/ship.jpg"}, "t01": {"try_tablet": False}}})
+        "s43": {"figure": "assets/img/ship.jpg"}, "s44": {"figure": "assets/img/ship.jpg", "reuse_why": "the same ship, for and against"},
+        "t01": {"try_tablet": False}}})
     code, out = run(COMPILE, c, "--module", "1")
     page = deck(md) if os.path.isfile(os.path.join(md, "presentation", "index.html")) else ""
     check("the fixture deck is built", code in (0, 1) and page, out[-1500:])
@@ -427,11 +433,39 @@ def reveal_part(tmp):
     # it the answer was added under the question and cut on all 37 GAS BASIC reveals at 1280 x 800
     check("the room's question carries class \"ask\" (the stylesheet's hook for the last Next)",
           all('<b class="ask" data-script-field="ask">' in section(page, x) for x in ("s40", "s42", "s43")), p[:1600])
-    check("beside a picture the answer opens over the picture on the last Next (lt-ans-over), its words as approved",
-          '<div class="lt-ans-over" data-script-ignore><p>No - the reliquefaction plant keeps the pressure down.</p></div>' in p, p[:2000])
+    # M01 s05 (the factory trial): the answer over the photograph left a navy box with one sentence and no picture, and the
+    # question card under six lines ran past the slide
+    check("beside a picture the room's question and, on the last Next, its answer go under the picture - never over it",
+          '<div class="lt-ans-under" data-script-ignore><p>No - the reliquefaction plant keeps the pressure down.</p></div>' in p
+          and "lt-ans-over" not in p and re.search(r'<div class="lt-scol">.*?<ol class="lt-work lt-you">\s*<li data-k="2" class="you">', p, re.S),
+          p[:2000])
     css = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_upgrade.css"), encoding="utf-8").read()
     check("... and the stylesheet shows it only on the last Next, the question kept",
-          ".slide[data-last] .lt-ans-over{display:flex" in css and ".slide[data-last] .lt-split:has(.lt-ans-over) .lt-work li.you .ask{display:block}" in css)
+          ".slide[data-last] .lt-ans-under{display:block" in css and ".slide[data-last] .lt-split:has(.lt-ans-under) .lt-work li.you .ask{display:block}" in css)
+    w = section(page, "s44")
+    heads = re.findall(r'<li data-k="(\d)" class="lead head"><div data-script-field="text" data-i="\d"><b>([^<]*)</b>', w)
+    nums = re.findall(r'<span class="n" data-script-ignore>([^<]*)</span>', w)
+    check("a line ending with \":\" that heads a group (\"Advantages:\", \"Disadvantages:\") is a subheading, never a numbered point; "
+          "each group counts from 1", heads == [("0", "Advantages:"), ("3", "Disadvantages:")] and nums == ["1", "2", "1", "?"], (heads, nums, w[:1500]))
+    check("... and in a list of points too: its own line, not point 01",
+          'class="lead head" data-script-field="text" data-i="1">Advantages:' in "".join(cm.words_html(
+              ["Advantages:", "Built of ordinary steel.", "No plant.", "Disadvantages:", "Heavy tanks."])))
+    check("a card laid over the whole picture, or a picture box with nothing but words in it, is a problem of the slide",
+          cm.empty_picture_boxes('<div class="lt-in fill fig"><img src="a.jpg"><div class="lt-ans-over"><p>x</p></div></div>')
+          == ["a card covers the whole picture"]
+          and cm.empty_picture_boxes('<div class="fill fig"><p>The cargo is carried at ambient temperature.</p></div>')
+          == ["a picture box with no picture in it"]
+          and not cm.empty_picture_boxes(section(page, "s43")) and not cm.empty_picture_boxes(w))
+    five = {"kind": "slide", "visual_kind": "photo", "picture": {"kind": "photo"}, "active": "explain-then-reveal",
+            "ask": "Why can a fully pressurised ship be built of ordinary steel?", "reveal": "The cargo is at ambient temperature.",
+            "text": "Advantages:\nBuilt of ordinary grades of steel - the cargo is at ambient temperature and no insulation is needed.\n"
+                    "No reliquefaction plant is required, and operations are simpler.\nDisadvantages:\nThe high design pressure makes "
+                    "the tanks extremely heavy, so the ships tend to be small.\nCylindrical Type C tanks make comparatively poor use of "
+                    "the hull volume."}
+    check("six short lines of a worked example fill its column though their words are under its word budget (M01 s05): "
+          "the script check sees it (t_overfull_rows) - the slide is split; three of them fit",
+          cs.worked_rows(five) and not cs.overfull(five)
+          and not cs.worked_rows(dict(five, text="\n".join(five["text"].split("\n")[:3]))), cs.worked_rows(five))
     code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
     check("... and check_script_match finds every approved word on them - the ask and the reveal too", code == 0, out[-1500:])
 
@@ -3497,7 +3531,8 @@ def main():
         import compile_module as cm
         bl = "\n".join(cm.words_html(["Ways named in the Code:", "• reliquefy", "• burn it", "Venting: not acceptable."]))
         check("a line starting with • becomes a list item (bullet drawn by the list)",
-              '<li data-script-field="text" data-i="2">reliquefy</li>' in bl and "•" not in bl and bl.count('class="lead"') == 2, bl)
+              '<li data-script-field="text" data-i="2">reliquefy</li>' in bl and "•" not in bl and bl.count('class="lead"') == 1
+              and bl.count('class="lead head"') == 1, bl)
         check("over a photograph a • line stays a lead line marked .sub, its heading lines .head - no list on photos",
               '<p class="lead sub" data-script-field="text" data-i="3">the fuels</p>' in s01 and "<ul" not in s01
               and 'class="lead head"' in s01 and 'class="lead"' not in s01, s01)
@@ -3512,11 +3547,11 @@ def main():
               "<b>Gas safe machinery space</b> - a single failure" in tb and "<b>So</b>: two barriers." in tb
               and "<b>" not in cm.marked("Ways named in the IGF Code: reliquefy") and "<b>" not in cm.marked("a fuel tank - with"))
         check("the build sheet's boxes and conclusion: .box, .call - in script order, every box one colour",
-              re.findall(r'class="(box(?: alt)?|call|lead)"', tb) == ["lead", "box", "box", "lead", "call"], tb)
+              re.findall(r'class="(box(?: alt)?|call|lead(?: head)?)"', tb) == ["lead head", "box", "box", "lead", "call"], tb)
         ta = "\n".join(cm.words_html(["Two ways:", "Gas safe - no release.", "ESD-protected - may release."],
                                      emph={"boxes": [2, 3], "box_alt": [3]}))
         check("a .box.alt only where the build sheet names box_alt",
-              re.findall(r'class="(box(?: alt)?|lead)"', ta) == ["lead", "box", "box alt"], ta)
+              re.findall(r'class="(box(?: alt)?|lead(?: head)?)"', ta) == ["lead head", "box", "box alt"], ta)
         bb = "\n".join(cm.words_html(["Two ways:", "• ventilated - fans draw air out", "• inerted - filled with gas"],
                                      emph={"boxes": [2, 3]}))
         check("a • line in a box loses its typed bullet - the box sets it apart, one bullet look per deck",

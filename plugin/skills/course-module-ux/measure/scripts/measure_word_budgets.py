@@ -41,6 +41,8 @@ LAYOUTS = {   # layout -> (the picture, the build-sheet entry)
     "photo-full": ("photo", {"composition": "photo", "dark": True}),
     "photo-framed": ("photo", {"composition": "two-col", "template": "photo-explain", "variant": "split", "dark": True}),
     "parts": ("kit", {"composition": "two-col", "template": "content-in-parts"}),
+    "under-top-tiles": ("tiles", {"composition": "two-col", "variant": "figure-top"}),
+    "parts-under-top-tiles": ("tiles", {"composition": "two-col", "template": "content-in-parts", "variant": "figure-top"}),
 }
 
 
@@ -77,6 +79,13 @@ def measure(tcm, pool, lay, n0):
                             "visual_kind": "photo" if pic == "photo" else "comparison", "text": text_of(pool, n0, 7 * j + 3 * n0),
                             "visual": "A picture.", "notes": "- Say it.", "minutes": 2})
             e = dict(entry, figure=("assets/img/p%02d.jpg" % j) if pic == "photo" else "k.kit.json", declined_3d="flat")
+            if pic == "tiles":           # two wide photographs: a row on top, the words under them
+                e = dict(entry, figure="", tiles=["assets/img/p%02d.jpg" % j, "assets/img/i%02d.jpg" % j], declined_3d="flat")
+                if "template" in e:      # in parts: two parts of about n words each
+                    a = text_of(pool, n0, 7 * j + 3 * n0).split("\n")
+                    b2 = text_of(pool, n0, 7 * j + 3 * n0 + 5).split("\n")
+                    screens[-1]["text"] = "\n".join(a + [x.lstrip("• ") for x in b2[:1]] + b2[1:])
+                    e["parts"] = [[1, len(a)], [len(a) + 1, len(a) + len(b2)]]
             if "inset" in e:
                 e["inset"] = dict(e["inset"], photo="assets/img/i%02d.jpg" % j)
             sheet["screens"][sid] = e

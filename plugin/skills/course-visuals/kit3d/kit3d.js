@@ -1873,7 +1873,11 @@
         });
       }
     }
-    S.onStep = lines;
+    S.onStep = function (n) {
+      lines(n);
+      var hk = (w.GB_HOOKS || {})[id];                 /* the deck re-lights the lines from its one counter */
+      if (hk && hk.sync) { hk.sync(n); }
+    };
     S.at = [].indexOf.call(d.querySelectorAll('.slide'), slide);
     hook(before && before.id, {
       enter: function () {
@@ -1888,6 +1892,7 @@
         }, 120);
       }
     });
+    var other = !!((w.GB_HOOKS || {})[id] || {}).step;     /* the slide's own stops (gb_steps.js) walk it already */
     hook(id, {
       enter: function () {
         clearTimeout(timer);
@@ -1911,6 +1916,15 @@
         return false;
       }
     });
+    /* the deck walks the scene and the slide's lines with one counter (gb_deck.js lockFor), as the 2D kit does: the lines
+       each step after the first lights, the first step's own (line0), and a way to put the scene at a step. Not when
+       another hook already steps the slide */
+    var hk = (w.GB_HOOKS || {})[id], ids = function (st) { return st && st.line != null ? [].concat(st.line).map(Number) : []; };
+    if (hk && S.steps().length > 1 && !other) {
+      hk.line0 = ids(S.steps()[0]);
+      hk.lines = S.steps().slice(1).map(ids);
+      hk.go = function (n, animate) { if (S.live && n !== S.step) { S.goStep(n, !animate); } };
+    }
     /* a line a step lights is also the way to that step (the 2D kit's rule) */
     S.steps().forEach(function (st, i) {
       [].concat(st.line == null ? [] : st.line).forEach(function (k0) {

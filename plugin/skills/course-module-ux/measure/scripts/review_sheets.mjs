@@ -253,6 +253,7 @@ async function deck(tiles) {
       var k=s.querySelector('svg[data-kit]'), f=k&&k.__kit; var all=[].slice.call(document.querySelectorAll('.slide'));
       if (f && f.steps && f.steps()) { try { f.go(f.steps(), true); } catch(e){} }
       var ps=s.querySelectorAll('.lt-part'), on=0; for (var j=0;j<ps.length;j++) if (ps[j].classList.contains('on')) on=j;
+      if (s.getAttribute('data-part-at')) on=+s.getAttribute('data-part-at');   /* a part turning like a page is already the part it turns to */
       var k3=0; [].forEach.call(s.querySelectorAll('[data-kit3d]'),function(e){ if(e.__k3&&e.__k3.steps) k3+=e.__k3.steps(); });
       var src=[].map.call(s.querySelectorAll('script[type="application/json"],img'),function(e){return e.tagName==='IMG'?e.getAttribute('src'):e.textContent;}).join('|');
       return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0,

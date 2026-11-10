@@ -196,37 +196,101 @@ var GBDeck = (function (w, d) {
       }
     }
 
-    /* L61 (2.52.0) - a content-in-parts slide (.lt-part): Next / Back walk its parts first, every part reachable */
-    function setPart(s, j) {
+    /* L61 (2.52.0) - a content-in-parts slide (.lt-part): Next / Back walk its parts first, every part reachable.
+       A part turns like a page of a carousel: its words - and its own picture, when the parts have their own
+       (.lt-pfigs, build sheet "part_figures") - slide out one way, then the next part's slide in from the other; with one
+       picture for the slide the picture stays. The next part is the slide's at once (the walk, the lit lines, a check
+       read it at once); what slides out is a copy of the page that was (.lt-ghost, no ids, no lines, gone when it has
+       moved). Transform and opacity only (nothing is laid out again while it moves, a 3D scene is never moved); at once
+       under prefers-reduced-motion. The part the slide is on is also its data-part-at */
+    var CALM = !!(w.matchMedia && w.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    var TURN = { out: 180, "in": 280, shift: 10 };
+    function ghostOf(el) {
+      var g = el.cloneNode(true);
+      /* the copy holds the page that was and nothing a walk or a check reads as the slide's own: no part, tab or line */
+      each(g.querySelectorAll(".lt-part:not(.on),.lt-pfig:not(.on),.lt-tabs"), function (x) { x.parentNode.removeChild(x); });
+      each(g.querySelectorAll(".lt-part"), function (x) {
+        var on = el.querySelector(".lt-part.on"), c = on ? w.getComputedStyle(on) : null;
+        x.className = x.className.replace(/\blt-part\b/, "lt-was-part");
+        if (c) { x.style.display = c.display; x.style.flexDirection = c.flexDirection; x.style.gap = c.gap; }
+      });
+      each(g.querySelectorAll("[id],[data-i],[data-k],[data-script-field],.cur,.lit"), function (x) {
+        each(["id", "data-i", "data-k", "data-script-field"], function (a) { x.removeAttribute(a); });
+        x.classList.remove("cur", "lit");
+      });
+      g.setAttribute("aria-hidden", "true");
+      g.setAttribute("data-script-ignore", "");
+      g.classList.add("lt-ghost");
+      g.style.position = "absolute"; g.style.margin = "0"; g.style.pointerEvents = "none";
+      g.style.padding = w.getComputedStyle(el).padding; g.style.boxSizing = "border-box";
+      g.style.left = el.offsetLeft + "px"; g.style.top = el.offsetTop + "px";
+      g.style.width = el.offsetWidth + "px"; g.style.height = el.offsetHeight + "px";
+      el.parentNode.insertBefore(g, el);
+      return g;
+    }
+    function partAt(s) {
+      var at = s.getAttribute("data-part-at"), ps = s.querySelectorAll(".lt-part"), k;
+      if (at !== null && at !== "") { return parseInt(at, 10) || 0; }
+      for (k = 0; k < ps.length; k++) { if (ps[k].classList.contains("on")) { return k; } }
+      return 0;
+    }
+    function showPart(s, j) {
       each(s.querySelectorAll(".lt-part"), function (p, k) { p.classList[k === j ? "add" : "remove"]("on"); });
+      each(s.querySelectorAll(".lt-pfigs:not(.lt-ghost) > .lt-pfig"), function (p, k) { p.classList[k === j ? "add" : "remove"]("on"); });
+    }
+    function setPart(s, j, turn) {
+      var was = partAt(s), ps = s.querySelectorAll(".lt-part"), figs = s.querySelector(".lt-pfigs");
+      var copy = ps.length && ps[0].closest ? ps[0].closest(".copy") : null;
+      var pages = (figs ? [figs] : []).concat(copy ? [copy] : []);
+      s.setAttribute("data-part-at", j);
       each(s.querySelectorAll(".lt-tab"), function (t, k) {
         t.classList[k === j ? "add" : "remove"]("on");
         t.setAttribute("aria-pressed", k === j ? "true" : "false");
       });
+      each(s.querySelectorAll(".lt-ghost"), function (g) { g.parentNode.removeChild(g); });
+      each(pages, function (el) { if (el.getAnimations) { each(el.getAnimations(), function (a) { a.cancel(); }); } });
+      if (!turn || was === j || CALM || !pages.length || !pages[0].animate || !s.classList.contains("active")) {
+        showPart(s, j);
+      } else {
+        var dir = j > was ? 1 : -1;
+        var ghosts = [];
+        each(pages, function (el) { ghosts.push(ghostOf(el)); });
+        showPart(s, j);
+        each(ghosts, function (g) {
+          var gone = function () { if (g.parentNode) { g.parentNode.removeChild(g); } };
+          var a = g.animate([{ transform: "translateX(0)", opacity: 1 }, { transform: "translateX(" + (-dir * TURN.shift) + "%)", opacity: 0 }],
+                            { duration: TURN.out, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
+          a.onfinish = gone;
+          setTimeout(gone, TURN.out + 120);           /* a page in the background runs no animation: the copy goes all the same */
+        });
+        each(pages, function (el) {
+          el.animate([{ transform: "translateX(" + (dir * TURN.shift) + "%)", opacity: 0 }, { transform: "translateX(0)", opacity: 1 }],
+                     { duration: TURN["in"], delay: TURN.out, easing: "cubic-bezier(0,0,.2,1)", fill: "backwards" });
+        });
+      }
       if (s === slides[cur]) { navState(); }
     }
     /* Back is off on the first slide and Next on the last - unless the screen still has a step or a part that way.
        2.63.2 (the 2.63.2 full-course run, M08-M10 and M12-M14): the parts were not counted, so on a deck whose LAST slide
        holds parts (the practical slide) Next was off on part 1 and part 2 could not be reached with it */
     function navState() {
-      var s = slides[cur], h = hookFor(cur), ps = s ? s.querySelectorAll(".lt-part") : [], on = 0, k;
-      for (k = 0; k < ps.length; k++) { if (ps[k].classList.contains("on")) { on = k; } }
+      var s = slides[cur], h = hookFor(cur), ps = s ? s.querySelectorAll(".lt-part") : [], on = s ? partAt(s) : 0;
       if (btnPrev) { btnPrev.disabled = (cur === 0) && !(h && h.step) && !(ps.length && on > 0); }
       if (btnNext) { btnNext.disabled = (cur === slides.length - 1) && !(h && h.step) && !(ps.length && on < ps.length - 1); }
     }
     function partStep(dir) {
-      var s = slides[cur], ps = s ? s.querySelectorAll(".lt-part") : [], i = 0, k;
+      var s = slides[cur], ps = s ? s.querySelectorAll(".lt-part") : [], i;
       if (!ps.length) { return false; }
-      for (k = 0; k < ps.length; k++) { if (ps[k].classList.contains("on")) { i = k; } }
+      i = partAt(s);
       if (i + dir < 0 || i + dir >= ps.length) { return false; }
-      setPart(s, i + dir);
+      setPart(s, i + dir, true);
       return true;
     }
     d.addEventListener("click", function (e) {
       var t = e.target && e.target.closest ? e.target.closest(".lt-tab") : null;
       var s = t && t.closest(".slide");
       if (!t || !s) { return; }
-      setPart(s, (parseInt(t.getAttribute("data-part"), 10) || 1) - 1);
+      setPart(s, (parseInt(t.getAttribute("data-part"), 10) || 1) - 1, true);
     });
 
     /* 2.63.3 - ONE counter for a slide's figure steps, its text lines and its parts (Aleksis, the 2.63.2 build: on IGF M06
@@ -241,20 +305,30 @@ var GBDeck = (function (w, d) {
       var s = slides[i], h = hookFor(i);
       if (!s || !h || !h.lines || !h.go) { return null; }
       if (s.__lock && s.__lock.h === h) { return s.__lock; }
-      var nums = [], named = {}, stops = [{ n: 0, line: [] }], k, j;
+      var nums = [], named = {}, stops = [{ n: 0, line: (h.line0 || []).slice() }], k, j, any = false;
       each(s.querySelectorAll("[data-i]"), function (x) {
         var v = parseInt(x.getAttribute("data-i"), 10);
         if (!isNaN(v) && nums.indexOf(v) < 0 && !(x.closest && x.closest("svg"))) { nums.push(v); }
       });
       nums.sort(function (a, b) { return a - b; });
-      each(h.lines, function (ls) { each(ls || [], function (v) { named[v] = 1; }); });
-      var lone = nums.filter(function (v) { return !named[v]; }), at = 0;
-      for (k = 0; k < h.lines.length; k++) {
-        var ls = h.lines[k] || [], first = ls.length ? Math.min.apply(Math, ls) : null;
-        while (first !== null && at < lone.length && lone[at] < first) { stops.push({ n: k, line: [lone[at]] }); at++; }
-        stops.push({ n: k + 1, line: ls.slice() });
+      each([h.line0 || []].concat(h.lines), function (ls) { each(ls || [], function (v) { named[v] = 1; any = true; }); });
+      if (!any && nums.length) {
+        /* steps that name no line (M01 s11: four 3D ships, five lines): the lines walk with the steps, one each Next - the
+           first line with the figure as it opens, the next line with the next step; the longer of the two sets how many
+           stops, the figure staying at its last step or the last line staying lit */
+        stops = [];
+        for (k = 0; k < Math.max(nums.length, h.lines.length + 1); k++) {
+          stops.push({ n: Math.min(k, h.lines.length), line: [nums[Math.min(k, nums.length - 1)]] });
+        }
+      } else {
+        var lone = nums.filter(function (v) { return !named[v]; }), at = 0;
+        for (k = 0; k < h.lines.length; k++) {
+          var ls = h.lines[k] || [], first = ls.length ? Math.min.apply(Math, ls) : null;
+          while (first !== null && at < lone.length && lone[at] < first) { stops.push({ n: k, line: [lone[at]] }); at++; }
+          stops.push({ n: k + 1, line: ls.slice() });
+        }
+        for (j = at; j < lone.length; j++) { stops.push({ n: h.lines.length, line: [lone[j]] }); }
       }
-      for (j = at; j < lone.length; j++) { stops.push({ n: h.lines.length, line: [lone[j]] }); }
       s.__lock = { h: h, stops: stops, pos: 0, busy: false };
       h.sync = function (n) {                           /* the figure stepped by itself (its buttons, a tapped line) */
         var L = s.__lock;
@@ -276,9 +350,9 @@ var GBDeck = (function (w, d) {
       each(curL, function (v) { each(s.querySelectorAll('[data-i="' + v + '"]'), function (x) { x.classList.add("cur"); }); });
       var ln = curL.length ? s.querySelector('[data-i="' + curL[0] + '"]') : null, part = ln && ln.closest ? ln.closest(".lt-part") : null;
       if (!part && !L.pos) { part = s.querySelector(".lt-part"); }
-      if (part && !part.classList.contains("on")) {
+      if (part) {
         var ps = s.querySelectorAll(".lt-part"), k;
-        for (k = 0; k < ps.length; k++) { if (ps[k] === part) { setPart(s, k); } }
+        for (k = 0; k < ps.length; k++) { if (ps[k] === part && partAt(s) !== k) { setPart(s, k, true); } }
       }
     }
     function lockGo(s, L, p, animate) {

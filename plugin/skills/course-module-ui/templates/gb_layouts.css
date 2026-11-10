@@ -139,6 +139,9 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template].dark .copy .statement,.slide[data-template].dark .statement{color:var(--lt-white)}
 .slide[data-template] .copy .lead,.slide[data-template] .lead{font-size:var(--lt-fs-lead);line-height:1.55;color:var(--lt-steel);font-weight:500}
 .slide[data-template].dark .copy .lead{color:var(--lt-dim-d)}
+/* a line that heads a group ("Advantages:") is the subheading of the points under it */
+.slide[data-template] .copy .lead.head{font-weight:700;color:var(--lt-navy)}
+.slide[data-template].dark .copy .lead.head{color:var(--lt-white)}
 .slide[data-template] .copy b,.slide[data-template] .lead b{color:var(--lt-navy)}
 .slide[data-template].dark .copy b{color:var(--lt-white)}
 
@@ -166,6 +169,9 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template].dark .support.seq .n{background:transparent;color:var(--lt-white);border-color:var(--lt-line-d)}
 .slide[data-template] .support.seq li:first-child .n{background:var(--lt-navy);color:var(--lt-white);border-color:var(--lt-navy)}
 .slide[data-template].dark .support.seq li:first-child .n{background:var(--lt-blue);color:var(--lt-navy);border-color:var(--lt-blue)}
+/* a line a figure lights: its number inside the mark, --hl-x from its edge (gb_compose.css) */
+.slide[data-template] .copy .support li[data-i]:not(.box):not(.call){padding-left:calc(min(5vmin,44px) + var(--hl-x))}
+.slide[data-template] .copy .support.seq li[data-i]:not(.box):not(.call){padding-left:calc(min(7vmin,58px) + var(--hl-x))}
 
 /* boxes and the conclusion keep their meaning, in brand colours */
 .slide[data-template] .copy .box{border-left-color:var(--lt-blue);background:var(--lt-box);border-radius:min(1vmin,8px)}
@@ -224,11 +230,41 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .slide-body.two-col.fig-wide.fig-first{
   grid-template-columns:minmax(0,1fr) calc((100% - var(--lt-gap)) * var(--lt-text) / 100);
 }
-.slide[data-template] .slide-body.two-col > .fill{height:100%;max-height:100%}
-.slide[data-template] .slide-body.two-col > .copy{align-self:center}
+.slide[data-template] .slide-body.two-col > .fill,.slide[data-template] .slide-body.two-col > .lt-pfigs{height:100%;max-height:100%}
+/* the words start at the top of their column, level with the picture's top - centred in the height, a short text left a
+   large empty band above its first line (M01 s09) */
+.slide[data-template] .slide-body.two-col > .copy{align-self:start}
 /* a photo under the words takes what they leave (gb_compose.css 2.63.0): the column stretches to the row */
 @media (min-width:901px){.slide[data-template] .slide-body.two-col > .copy:has(> .inset){align-self:stretch}}
 .slide[data-template] .slide-body.two-col.photo-col > .fill.photo-col{border-radius:min(2.2vmin,18px);overflow:hidden;background:none;border:0;padding:0}
+
+/* wide photographs on top (variant figure-top): the photographs in a row across the slide, each box the photograph's own
+   shape (--ar, its width over its height; --sum, the row's) at the largest size the row's height and the slide's width
+   allow - no empty bands above and under a wide photograph in a tall box (M01 s09) - and the words under them */
+.slide[data-template] .slide-body.two-col.fig-top{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;
+  align-items:stretch;gap:min(2.6vmin,22px)}
+.slide[data-template] .slide-body.two-col.fig-top > .fill,.slide[data-template] .slide-body.two-col.fig-top > .lt-pfigs{
+  height:auto;min-height:min(30vmin,240px);background:none;border:0;padding:0;container-type:size}
+.slide[data-template] .slide-body.two-col.fig-top .lt-pfig > .fill{background:none;border:0;padding:0}
+.slide[data-template] .slide-body.two-col.fig-top > .copy{align-self:start;width:100%}
+.slide[data-template] .fig-top .lt-tiles{display:flex;width:100%;height:100%;justify-content:center;align-items:center;
+  gap:min(1.6vmin,12px);--gaps:calc((var(--n) - 1) * min(1.6vmin,12px))}
+.slide[data-template] .fig-top .lt-tile{flex:none;aspect-ratio:var(--ar,1.5);
+  width:min(calc(100cqh * var(--ar,1.5)),calc((100cqw - var(--gaps)) * var(--ar,1.5) / var(--sum,3)))}
+.slide[data-template] .fig-top .lt-tile img{width:100%;height:100%;object-fit:cover}
+.slide[data-template] .fig-top .lt-tile figcaption{position:absolute;left:0;right:0;bottom:0;color:var(--lt-white);
+  background:linear-gradient(transparent,rgba(10,36,99,.82) 40%);padding-top:1.4em}
+.slide[data-template] .fig-top > .fill > img:only-child,.slide[data-template] .fig-top .lt-pfig > .fill > img:only-child{
+  width:min(100cqw,calc(100cqh * var(--ar,1.5)));height:auto;aspect-ratio:var(--ar,1.5);object-fit:cover;margin:0 auto}
+.slide[data-template] .fig-top > .fill:has(> img:only-child){align-items:center}
+/* under the photographs the points sit two a row: the words take the slide's width and half its height */
+.slide[data-template] .fig-top .copy .support{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--lt-gap)}
+
+/* a part's own picture ("part_figures"): every part's picture in one place, the one of the part shown */
+.slide[data-template] .lt-pfigs{display:grid;min-width:0;min-height:0}
+.slide[data-template] .lt-pfigs > .lt-pfig{grid-area:1 / 1;display:flex;min-width:0;min-height:0;visibility:hidden}
+.slide[data-template] .lt-pfigs > .lt-pfig.on{visibility:visible}
+.slide[data-template] .lt-pfig > .fill{flex:1;height:100%;min-height:0}
 
 /* text only (a short slide): one reading column, left-aligned with the title, centred in the height the title leaves -
    a short text pinned to the top leaves the lower half of the screen empty (audit_compose: a cluster, not a composition) */
@@ -341,11 +377,19 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .lt-parts{display:flex;flex-direction:column;gap:min(2.4vmin,20px)}
 .slide[data-template] .lt-part{display:none;flex-direction:column;gap:min(2.4vmin,20px)}
 .slide[data-template] .lt-part.on{display:flex}
-.slide[data-template] .lt-tabs{display:flex;gap:min(1.2vmin,10px);margin-top:min(1.6vmin,14px)}
+.slide[data-template] .lt-tabs{display:flex;gap:min(1.6vmin,14px);margin-top:min(1.6vmin,14px)}
+/* the parts' tabs are a strip at the foot of the slide body, under both columns - the slide's page numbers; a part turns
+   like a page (gb_deck.js) */
+.slide[data-template] .slide-body > .lt-tabs{grid-column:1 / -1;justify-self:center;align-self:center;margin:auto 0 0}
+.slide[data-template] .slide-body.two-col > .lt-tabs{margin-top:calc(-1 * min(2vmin,16px))}
+.slide[data-template] .slide-body.two-col:has(> .lt-tabs){grid-template-rows:minmax(0,1fr) auto}
+/* in parts the photographs keep one size from part to part: the words' row has a share of its own, larger only for a part
+   that needs it */
+.slide[data-template] .slide-body.two-col.fig-top:has(> .lt-tabs){grid-template-rows:minmax(0,1.6fr) minmax(min-content,1fr) auto}
 .slide[data-template] .lt-tab{
-  width:clamp(44px,6vmin,48px);height:clamp(44px,6vmin,48px);   /* 44 px at 1280x720 too (2.69.0) */
+  width:56px;height:56px;flex:none;                                /* L6: a target of 56 px */
   border-radius:50%;border:1px solid var(--lt-ring);background:var(--lt-white);
-  color:var(--lt-navy);font:700 clamp(13px,1.85vmin,20px) "Raleway","Segoe UI",Arial,sans-serif;cursor:pointer;
+  color:var(--lt-navy);font:700 clamp(15px,2.1vmin,20px) "Raleway","Segoe UI",Arial,sans-serif;cursor:pointer;
 }
 .slide[data-template] .lt-tab.on{background:var(--lt-navy);border-color:var(--lt-navy);color:var(--lt-white)}
 .slide[data-template].dark .lt-tab{background:transparent;border-color:var(--lt-line-d);color:var(--lt-white)}
