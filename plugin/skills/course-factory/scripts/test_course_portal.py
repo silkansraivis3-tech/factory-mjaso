@@ -412,11 +412,14 @@ def main():
             os.makedirs(os.path.join(fb, "working_claude", "_build"))
             for m, lines in (("M01", "PASS M01 - figures (40 s)\nFAIL M01 - audits 1280x800 (97 s)"),
                              ("M02", "FAIL M02 - audits (90 s)\nPASS M02 - figures (41 s)"),
-                             ("M03", "FAIL M03 - course package (60 s)")):
+                             ("M03", "FAIL M03 - course package (60 s)"),
+                             ("M04", "FAIL M04 - course package, task pages (60 s)")):
                 io.open(os.path.join(fb, "working_claude", "_build", m + "_answer.txt"), "w", encoding="utf-8").write(lines)
             check("a module whose last build ended on FAIL stops the upload; a later PASS, or only the course package, does not "
-                  "(the first factory trial: four modules ended on FAIL)",
-                  cp.failed_builds(fb) == ["FAIL M01 - audits 1280x800 (97 s) - its last build did not pass"], cp.failed_builds(fb))
+                  "(the first factory trial: four modules ended on FAIL) - the course package and something else does (2.125.0)",
+                  cp.failed_builds(fb) == ["FAIL M01 - audits 1280x800 (97 s) - its last build did not pass",
+                                           "FAIL M04 - course package, task pages (60 s) - its last build did not pass"],
+                  cp.failed_builds(fb))
 
             print("\n-- the scheduled task runs pythonw: no console")
 

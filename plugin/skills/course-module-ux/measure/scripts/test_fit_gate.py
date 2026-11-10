@@ -124,6 +124,23 @@ def main():
     wj = json.loads(Path(wd, "walk.json").read_text(encoding="utf-8"))
     check("... taken before the walk starts: a deck built again while it is walked is not signed for under its new fingerprint",
           order == ["stamp", "walk"] and wj.get("fingerprints") == {"k1": "as the walk began"} and wj.get("deck") == "then", (order, wj.get("deck")))
+    real_shot, shot_n = fit_gate.save_shot, []
+
+    def no_second(page, sid, path):
+        shot_n.append(sid)
+        if len(shot_n) == 2:
+            raise RuntimeError("the browser gave no picture")
+        return real_shot(page, sid, path)
+    try:
+        fit_gate.save_shot = no_second
+        cli(str(KDECK), "--viewport", "1280x800", "--walk-dir", wd)
+    finally:
+        fit_gate.save_shot = real_shot
+    wj = json.loads(Path(wd, "walk.json").read_text(encoding="utf-8"))
+    lost = [s for s in wj["stops"] if not s.get("file")]
+    check("... a stop whose picture could not be taken is recorded with no picture (2.125.0): the walk review refuses "
+          "its slide, the fit walk goes on", len(lost) == 1 and "no picture" in lost[0].get("lost", "")
+          and len(wj["stops"]) == len(stops) and lost[0]["k"] == 2, (lost, len(wj["stops"]), len(stops)))
     with browser_slot_page(KDECK) as page:
         seen = []
         page.click("#startBtn")

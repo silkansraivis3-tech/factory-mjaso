@@ -51,7 +51,7 @@ def _unit_heading(doc, u):
     if u.get("label"):
         h += " - " + u["label"]
     if u.get("method") == "ocr":
-        h += "  (text recovered by OCR)"
+        h += "  (text recovered by OCR, may be incomplete)" if u.get("ocr_low") else "  (text recovered by OCR)"
     return h
 
 
@@ -203,7 +203,8 @@ def _units_for_metadata(doc):
         wc = u.get("word_count")
         if wc and wc[1] < wc[0]:
             d["words_lost"] = wc[2]
-        for k in ("label", "has_speaker_notes", "hidden", "blank", "ocr_language", "ocr_rotation", "ocr_note"):
+        for k in ("label", "has_speaker_notes", "hidden", "blank", "ocr_language", "ocr_rotation", "ocr_note",
+                  "ocr_low", "ocr_cover"):
             if u.get(k):
                 d[k] = u[k]
         out.append(d)
@@ -219,6 +220,7 @@ def metadata(doc):
             "extraction_engine": doc.get("engine") or "", "status": doc["status"], "title": doc.get("title"),
             "author": doc.get("author"), "units_requiring_ocr": textless_pages(doc),
             "units_ocr_failed": doc.get("ocr_failed_pages", []), "units_blank": doc.get("blank_pages", []),
+            "units_ocr_low": doc.get("ocr_low_pages", []),
             "table_count": len(doc["tables"]), "image_count": len(doc["images"]), "table_repair": {},
             "tables_rejected_as_layout": len(doc.get("rejected_tables", [])),
             "rejected_table_pages": [r.get("unit") for r in doc.get("rejected_tables", [])],
@@ -276,6 +278,7 @@ def write_manifest(kb, run, docs, unsupported, source_root):
             "chunk_count": d.get("chunk_count", 0), "status": d["status"], "extraction_engine": d.get("engine") or "",
             "words_on_pages": word_totals(d)[0], "words_kept": word_totals(d)[1],
             "warnings": d["warnings"], "units_requiring_ocr": textless_pages(d),
+            "units_ocr_low": d.get("ocr_low_pages", []),
             "ocr_languages": sorted({u["ocr_language"] for u in d["pages"] if u.get("ocr_language")}),
             "duplicate_of": d.get("duplicate_of"), "duplicate_of_path": d.get("duplicate_of_path") or "",
             "tables_rejected_as_layout": len(d.get("rejected_tables", [])), "rejected_tables": d.get("rejected_tables", []),
@@ -336,11 +339,12 @@ def write_needs_attention(kb, docs, unsupported, missing_models):
     scanned = [d for d in docs if textless_pages(d)]
     ocr_failed = [d for d in docs if d.get("ocr_failed_pages")]
     russian = [d for d in docs if d.get("needs_rus_pages")]
+    low = [d for d in docs if d.get("ocr_low_pages")]
     weak = [(d, t) for d in docs for t in d["tables"] if t["quality"] != QUALITY_GOOD]
     rejected = [d for d in docs if d.get("rejected_tables")]
     copies = [d for d in docs if d.get("duplicate_of")]
     path = os.path.join(kb, "NEEDS_ATTENTION.md")
-    if not (failed or empty or scanned or ocr_failed or weak or rejected or copies or unsupported or russian):
+    if not (failed or empty or scanned or ocr_failed or weak or rejected or copies or unsupported or russian or low):
         if os.path.exists(path):
             os.remove(path)
         return False
@@ -358,6 +362,12 @@ def write_needs_attention(kb, docs, unsupported, missing_models):
               "These pages are photographs of paper and the reader could not turn them into text - usually a very",
               "poor scan or handwriting. Everything else in the document was processed normally.", ""]
         L += ["- **%s** - page(s) %s" % (d["filename"], _pages_list(d["ocr_failed_pages"])) for d in ocr_failed] + [""]
+    if low:
+        L += ["## Scanned pages that may be read incompletely", "",
+              "On these pages much of the print is not under any word the reader found, even after reading the missed",
+              "parts again one by one and the whole page again at a higher resolution. Their text is in the knowledge",
+              "base, but some of it may be missing - check the page itself before relying on what it does not say.", ""]
+        L += ["- **%s** - page(s) %s" % (d["filename"], _pages_list(d["ocr_low_pages"])) for d in low] + [""]
     if russian:
         L += ["## Russian scanned pages not read", "",
               "These scanned pages are in Russian. They are read with the Russian reading model, rus.traineddata,",

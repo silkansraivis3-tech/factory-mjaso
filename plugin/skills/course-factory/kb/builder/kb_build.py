@@ -66,7 +66,7 @@ def new_doc(f, doc_id, slug):
             slug=slug, fmt=f["fmt"], unit_kind={"pdf": "page", "pptx": "slide", "docx": "section", "image": "image",
                                                  "doc": "section", "ppt": "slide"}[f["fmt"]],
             page_count=0, pages=[], tables=[], images=[], engine="", status="ok", title=None, author=None, warnings=[],
-            error=None, ocr_failed_pages=[], rejected_tables=[], duplicate_of=None, duplicate_of_path="",
+            error=None, ocr_failed_pages=[], ocr_low_pages=[], ocr_empty_pages=[], rejected_tables=[], duplicate_of=None, duplicate_of_path="",
             from_cache=False, chunk_count=0, excluded_headers=[], blank_pages=[], needs_rus_pages=[])
     d["scan"], d["ocr"], d["ranges_left"], d["ocr_left"], d["parts"] = {}, {}, 0, 0, []
     return d
@@ -130,7 +130,7 @@ def apply_ocr(d):
     import common
     minimum = common.SETTINGS["min_chars_per_page"]
     by_number = {u["number"]: u for u in d["pages"]}
-    d["ocr_failed_pages"], d["needs_rus_pages"] = [], []
+    d["ocr_failed_pages"], d["needs_rus_pages"], d["ocr_low_pages"], d["ocr_empty_pages"] = [], [], [], []
     recovered = 0
     for key, scan in d["scan"].items():
         u = by_number.get(int(key))
@@ -154,6 +154,13 @@ def apply_ocr(d):
             u.update(text=text, method="ocr", char_count=len(text), textless=False, headings=got["headings"],
                      ocr_language=got["language"])
             u.pop("edge_blocks", None)
+            u.pop("ocr_low", None)
+            if got.get("low"):
+                # much print on the page, few of its squares under a word read: never reported as simply read
+                u["ocr_low"] = True
+                d["ocr_low_pages"].append(u["number"])
+            if got.get("cover") is not None:
+                u["ocr_cover"] = got["cover"]
             if u.get("word_count") and u["word_count"][0]:
                 # the page's own text layer (a stamp, a page number) against what replaces it
                 u["word_count"] = pdf.word_counts(scan["native"], text)
@@ -165,7 +172,11 @@ def apply_ocr(d):
             u.update(textless=False)
         else:
             u.update(text=scan["native"], method="none", char_count=len(scan["native"]), textless=True)
+            if isinstance(got, dict) and got.get("language"):
+                d["ocr_empty_pages"].append(u["number"])     # read, and fewer than 60 characters found
     d["ocr_failed_pages"].sort()
+    d["ocr_low_pages"].sort()
+    d["ocr_empty_pages"].sort()
     d["needs_rus_pages"].sort()
     return recovered
 
@@ -477,6 +488,8 @@ def main(argv=None):
                "ocr_pages_recovered": sum(d.get("recovered", 0) for d in ordered),
                "ocr_pages_read_this_run": counters["ocr_pages"], "ocr_seconds": round(counters["ocr_seconds"], 1),
                "ocr_pages_failed": sum(len(d["ocr_failed_pages"]) for d in ordered),
+               "ocr_pages_low": sum(len(d.get("ocr_low_pages", [])) for d in ordered),
+               "ocr_pages_empty": sum(len(d.get("ocr_empty_pages", [])) for d in ordered),
                "scanned_pages_not_read": scanned_unread, "blank_pages_skipped": sum(len(d["blank_pages"]) for d in ordered),
                "documents_reused_from_cache": counters["reused"], "images_kept": sum(len(d["images"]) for d in ordered),
                "duplicate_files_skipped": len(copies),
@@ -521,8 +534,23 @@ def main(argv=None):
             % (len(short), "; ".join(short[:10])))
     if os.path.exists(os.path.join(out, "NEEDS_ATTENTION.md")):
         say("  What to look at is in NEEDS_ATTENTION.md there.")
+    if run["ocr_pages_low"]:
+        say("  %d scanned page(s) may be read incompletely: much print on the page, few of its words found "
+            "(listed in NEEDS_ATTENTION.md)." % run["ocr_pages_low"])
     if scanned_unread or rus_pages:
-        say("  %d scanned page(s) could not be read%s." % (scanned_unread, (" (%d of them Russian)" % rus_pages) if rus_pages else ""))
+        empty = sum(len(d.get("ocr_empty_pages", [])) for d in ordered)
+        broke = run["ocr_pages_failed"]
+        unread = scanned_unread - empty - broke - rus_pages
+        why = []
+        if empty:
+            why.append("%d read and found to hold fewer than 60 characters (a photograph, a diagram with no words)" % empty)
+        if broke:
+            why.append("%d where the reader failed" % broke)
+        if rus_pages:
+            why.append("%d Russian, with no Russian reading model" % rus_pages)
+        if unread > 0:
+            why.append("%d not read for want of a reading model" % unread)
+        say("  %d scanned page(s) have no text: %s." % (scanned_unread, "; ".join(why)))
         if missing:
             say("  Reading them needs %s - put the file(s) in %s and build again (no network was available to fetch them)."
                 % (" and ".join(missing), ocrmod.local_tessdata()))

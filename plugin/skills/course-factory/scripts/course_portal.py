@@ -500,7 +500,10 @@ def failed_builds(course):
     for ans in sorted(glob.glob(os.path.join(logdir, "*_answer.txt"))):
         said = [x.strip() for x in io.open(ans, encoding="utf-8", errors="replace").read().splitlines()
                 if x.startswith(("PASS ", "FAIL "))]
-        if said and said[-1].startswith("FAIL ") and " - course package" not in said[-1]:
+        # only the course package (a --no-course-pages build: the workflow's pass) is let through - 2.125.0: a build
+        # that also failed something else ("course package, task pages") is a failed build
+        why = said[-1].split(" - ", 1)[-1].split(" (")[0].strip() if said else ""
+        if said and said[-1].startswith("FAIL ") and why != "course package":
             out.append("%s - its last build did not pass" % said[-1][:120])
     return out
 

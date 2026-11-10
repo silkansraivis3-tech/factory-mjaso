@@ -219,24 +219,203 @@ def word_quality(text):
     return good / len(tokens)
 
 
-def _read(page, language, tessdata, dpi):
-    """[[Line]] blocks and plain text of one OCR reading."""
+def grey_copy(page, dpi):
+    """(document, page): the page drawn as one grey picture on an upright page of the same size.
+
+    The OCR reads this copy, never the page itself. Measured on gas-basic's "LNG Shipping Knowledge.pdf" (every page
+    stored turned 270 degrees): read as they are, those pages lose whole paragraphs - page 15 gave 334 characters, its
+    copy 1 849 - and the IMO model course covers read as nothing at all."""
     import pymupdf
-    tp = page.get_textpage_ocr(language=language, dpi=dpi, full=True, tessdata=tessdata)
-    raw = page.get_text("dict", textpage=tp, flags=pymupdf.TEXTFLAGS_DICT & ~pymupdf.TEXT_PRESERVE_IMAGES)
-    blocks, plain = [], []
-    for block in raw.get("blocks", []):
-        if block.get("type") != 0:
-            continue
-        lines = []
-        for line in block.get("lines", []):
-            text = "".join(s.get("text", "") for s in line.get("spans", []))
-            if text.strip():
-                lines.append(Line(text))           # no font sizes: an OCR reading has none worth trusting
-                plain.append(text)
-        if lines:
-            blocks.append(lines)
-    return blocks, "\n".join(plain)
+    pix = page.get_pixmap(dpi=dpi, colorspace=pymupdf.csGRAY, alpha=False)
+    doc = pymupdf.open()
+    copy = doc.new_page(width=page.rect.width, height=page.rect.height)
+    copy.insert_image(copy.rect, pixmap=pix)
+    return doc, copy
+
+
+def _word_lines(words):
+    """Lines from the OCR's words, a line cut where two words stand much further apart than a space: Tesseract joins
+    the lines of two columns that sit level ("the walls of the | Behaviour of CO2")."""
+    import statistics
+    by = {}
+    for w in words:
+        by.setdefault((w[5], w[6]), []).append(w)
+    blocks = {}
+    for key in sorted(by):
+        ws = sorted(by[key], key=lambda w: w[0])
+        height = statistics.median([w[3] - w[1] for w in ws]) or 5.0
+        cur = [ws[0]]
+        runs = []
+        for w in ws[1:]:
+            if w[0] - cur[-1][2] > GAP_CUT * height:
+                runs.append(cur)
+                cur = [w]
+            else:
+                cur.append(w)
+        runs.append(cur)
+        for run in runs:
+            blocks.setdefault(key[0], []).append(Line(" ".join(w[4] for w in run), 0.0, False, min(w[0] for w in run),
+                                                      min(w[1] for w in run), max(w[2] for w in run),
+                                                      max(w[3] for w in run)))
+    return [blocks[k] for k in sorted(blocks)]
+
+
+GAP_CUT = 1.5                    # a gap wider than this many letter heights ends a line
+
+
+def _ocr_words(page, language, tessdata, dpi, clip=None):
+    """The words of one OCR reading of a grey copy of the page (or of one region of it), in page coordinates."""
+    import pymupdf
+    if clip is None:
+        doc, copy = grey_copy(page, dpi)
+        dx = dy = 0.0
+    else:
+        pix = page.get_pixmap(dpi=dpi, colorspace=pymupdf.csGRAY, alpha=False, clip=clip)
+        doc = pymupdf.open()
+        copy = doc.new_page(width=clip.width, height=clip.height)
+        copy.insert_image(copy.rect, pixmap=pix)
+        dx, dy = clip.x0, clip.y0
+    try:
+        tp = copy.get_textpage_ocr(language=language, dpi=dpi, full=True, tessdata=tessdata)
+        words = copy.get_text("words", textpage=tp)
+    finally:
+        doc.close()
+    return [(w[0] + dx, w[1] + dy, w[2] + dx, w[3] + dy) + tuple(w[4:]) for w in words]
+
+
+def _blocks_of(words):
+    """Blocks in reading order: the reading's own, with the blocks read again region by region put where they sit on
+    the page (before the first block that starts below them); a page in columns is read column by column."""
+    from structure import reflow_columns
+    first = [w for w in words if w[5] < 1000]
+    again = [w for w in words if w[5] >= 1000]
+    blocks = _word_lines(first)
+    for extra in _word_lines(again):
+        top = min(l.y0 for l in extra)
+        at = next((i for i, b in enumerate(blocks) if min(l.y0 for l in b) > top), len(blocks))
+        blocks.insert(at, extra)
+    flowed, columns = reflow_columns(blocks)
+    return flowed if columns > 1 else blocks
+
+
+def _read(page, language, tessdata, dpi):
+    """([[Line]] blocks, plain text, words) of one OCR reading of a grey copy of the page, columns read one by one."""
+    words = _ocr_words(page, language, tessdata, dpi)
+    blocks = _blocks_of(words)
+    return blocks, "\n".join(l.text for b in blocks for l in b), words
+
+
+# ------------------------------------------------------------------ is the reading complete? (no reference needed)
+INK_DPI, INK_CELL = 75, 12      # the page drawn at 75 dpi, judged in squares of 12 pixels (about 11.5 points)
+LOW_COVER = 0.40                # a reading whose words cover less of the page's print than this is incomplete
+MIN_PRINT_CELLS = 40            # fewer squares of print than this: too little print to judge
+# ... and fewer characters read than this many per square of print. Measured on gas-basic (1 090 OCR pages): pages
+# under the cover limit that hold 4-37 characters a square were read as fully as the .exe read them (figure-rich
+# pages whose drawings count as print); the readings that lost paragraphs had 0.6-2.9
+LOW_CHARS_PER_CELL = 3.0
+
+
+def print_cells(page):
+    """[(x, y)] of the squares of the page that look like print: some dark, thin strokes (many short dark runs, few
+    long ones). Photographs and solid areas mostly fail the test. Measured: well-read pages have 55-100 % of these
+    squares under a recognised word, the readings that lost paragraphs 0-26 %."""
+    import pymupdf
+    pix = page.get_pixmap(dpi=INK_DPI, colorspace=pymupdf.csGRAY, alpha=False)
+    w, h = pix.width, pix.height
+    b = pix.samples.translate(bytes(1 if v < 140 else 0 for v in range(256)))
+    size, out = INK_CELL, []
+    for cy in range(0, h - size + 1, size):
+        for cx in range(0, w - size + 1, size):
+            dark = short = long_ = 0
+            for y in range(cy, cy + size):
+                row = b[y * w + cx: y * w + cx + size]
+                dark += row.count(1)
+                for run in row.split(b"\x00"):
+                    if run:
+                        if len(run) <= 4:
+                            short += 1
+                        else:
+                            long_ += 1
+            share = dark / float(size * size)
+            if 0.06 <= share <= 0.45 and short >= 8 and long_ <= short // 2:
+                out.append((cx * 72.0 / INK_DPI, cy * 72.0 / INK_DPI))
+    return out
+
+
+def _real_word(w):
+    """A word that reads as one (letters with a vowel, or a number) - noise read off a figure covers nothing."""
+    t = w[4]
+    if re.match(r"^[\(\[]?[\d.,%°/:-]+[\)\]]?[.,;:]?$", t) and sum(ch.isdigit() for ch in t) >= 2:
+        return True
+    m = _TOKEN_OK.match(t)
+    # three letters at least: noise off a picture is mostly one- and two-letter marks ("SO", "aS", "ie")
+    return bool(m and len(m.group(1)) >= 3 and _VOWEL.search(m.group(1)))
+
+
+def _uncovered(cells, words, pad=2.0):
+    side = INK_CELL * 72.0 / INK_DPI
+    words = [w for w in words if _real_word(w)]
+    out = []
+    for x, y in cells:
+        cx, cy = x + side / 2, y + side / 2
+        if not any(w[0] - pad <= cx <= w[2] + pad and w[1] - pad <= cy <= w[3] + pad for w in words):
+            out.append((x, y))
+    return out
+
+
+def _regions(cells):
+    """Rectangles around groups of neighbouring squares (the print a reading missed), biggest first."""
+    import pymupdf
+    side = INK_CELL * 72.0 / INK_DPI
+    left = {(round(x / side), round(y / side)) for x, y in cells}
+    groups = []
+    while left:
+        stack, group = [left.pop()], []
+        while stack:
+            c = stack.pop()
+            group.append(c)
+            for dx in (-2, -1, 0, 1, 2):
+                for dy in (-1, 0, 1):
+                    n = (c[0] + dx, c[1] + dy)
+                    if n in left:
+                        left.remove(n)
+                        stack.append(n)
+        if len(group) >= 6:
+            xs, ys = [g[0] for g in group], [g[1] for g in group]
+            groups.append((len(group), pymupdf.Rect((min(xs) - 1) * side, (min(ys) - 1) * side,
+                                                    (max(xs) + 2) * side, (max(ys) + 2) * side)))
+    return [r for _, r in sorted(groups, key=lambda g: -g[0])][:6]
+
+
+def complete_reading(page, language, tessdata, words, dpi):
+    """(words, cover, print squares): a reading made complete where it can be. The print the words do not cover is
+    read again region by region (each clipped and drawn at 300 dpi), and the new words are added where no word is."""
+    cells = print_cells(page)
+    if len(cells) < MIN_PRINT_CELLS:
+        return words, 1.0, len(cells)
+    missed = _uncovered(cells, words)
+    cover = 1.0 - len(missed) / float(len(cells))
+    if len(missed) >= 6 and cover < 0.9:
+        added = list(words)
+        for k, rect in enumerate(_regions(missed)):
+            rect = rect & page.rect
+            if rect.is_empty or rect.width < 20 or rect.height < 8:
+                continue
+            for w in _ocr_words(page, language, tessdata, max(dpi, 300), clip=rect):
+                cx, cy = (w[0] + w[2]) / 2, (w[1] + w[3]) / 2
+                if not any(o[0] <= cx <= o[2] and o[1] <= cy <= o[3] for o in words):
+                    added.append(w[:5] + (1000 + 100 * k + w[5],) + tuple(w[6:]))
+        missed = _uncovered(cells, added)
+        cover, words = 1.0 - len(missed) / float(len(cells)), added
+    return words, round(cover, 3), len(cells)
+
+
+def _read_full(page, language, tessdata, dpi):
+    """One reading, completed region by region: (blocks, text, words, cover, print squares)."""
+    words = _ocr_words(page, language, tessdata, dpi)
+    words, cover, cells = complete_reading(page, language, tessdata, words, dpi)
+    blocks = _blocks_of(words)
+    return blocks, "\n".join(l.text for b in blocks for l in b), words, cover, cells
 
 
 def first_language(prior, models, forced):
@@ -254,12 +433,15 @@ def first_language(prior, models, forced):
 
 
 def read_scanned_page(page, tessdata, models, prior=None, forced=None, dpi=200):
-    """{blocks, text, language, rotation, quality, note}: the best reading of one scanned page."""
+    """{blocks, text, language, rotation, quality, note, cover, print_cells, low}: the best reading of one scanned
+    page, made complete region by region (complete_reading). low = its words still cover less than LOW_COVER of the
+    page's print, after a second reading at 300 dpi - the page may be read incompletely and is reported so."""
     first = first_language(prior, models, forced)
     if first is None:
-        return {"blocks": [], "text": "", "language": "", "rotation": 0, "quality": 0.0,
+        return {"blocks": [], "text": "", "language": "", "rotation": 0, "quality": 0.0, "cover": 0.0,
+                "print_cells": 0, "low": False,
                 "note": "needs rus.traineddata" if (forced == "rus" or prior == "rus") else "no reading model"}
-    blocks, text = _read(page, first, tessdata, dpi)
+    blocks, text, words = _read(page, first, tessdata, dpi)
     quality, rotation, note = word_quality(text), 0, ""
     if quality < ROTATION_TRY_BELOW and len(text.split()) >= ROTATION_MIN_TOKENS:
         # the turns are tried drawn small (fast); only the winning turn is read again at full size
@@ -273,9 +455,9 @@ def read_scanned_page(page, tessdata, models, prior=None, forced=None, dpi=200):
                     best_q, best_turn = q, turn
             if best_turn and best_q >= quality + 0.15:
                 page.set_rotation((original + best_turn) % 360)
-                b, t = _read(page, first, tessdata, dpi)
+                b, t, w = _read(page, first, tessdata, dpi)
                 if word_quality(t) > quality:
-                    quality, rotation, blocks, text = word_quality(t), best_turn, b, t
+                    quality, rotation, blocks, text, words = word_quality(t), best_turn, b, t, w
                     note = "read turned %d degrees" % rotation
         finally:
             page.set_rotation(original)
@@ -292,7 +474,7 @@ def read_scanned_page(page, tessdata, models, prior=None, forced=None, dpi=200):
             try:
                 if rotation:
                     page.set_rotation((original + rotation) % 360)
-                rb, rt = _read(page, "rus", tessdata, dpi)
+                rb, rt, rw = _read(page, "rus", tessdata, dpi)
             finally:
                 page.set_rotation(original)
             s = langmod.shares(rt)
@@ -302,7 +484,7 @@ def read_scanned_page(page, tessdata, models, prior=None, forced=None, dpi=200):
                     and word_quality(rt) >= max(0.6, quality + 0.1)):
                 found = "rus"
                 if "eng" not in models:
-                    blocks, text, used, quality, want = rb, rt, "rus", word_quality(rt), None
+                    blocks, text, words, used, quality, want = rb, rt, rw, "rus", word_quality(rt), None
                     found = None
         if found == "lav" and first != "lav" and "lav" in models:
             want = "lav"
@@ -320,9 +502,29 @@ def read_scanned_page(page, tessdata, models, prior=None, forced=None, dpi=200):
             try:
                 if rotation:
                     page.set_rotation((original + rotation) % 360)
-                blocks, text = _read(page, want, tessdata, dpi)
+                blocks, text, words = _read(page, want, tessdata, dpi)
             finally:
                 page.set_rotation(original)
             used, quality = want, word_quality(text)
-    return {"blocks": blocks, "text": text, "language": used, "rotation": rotation, "quality": round(quality, 3),
-            "note": note}
+    # complete the reading: the print its words do not cover is read again region by region; still too little
+    # covered, the whole page is read once more at 300 dpi and the better reading kept
+    original = page.rotation
+    try:
+        if rotation:
+            page.set_rotation((original + rotation) % 360)
+        words, cover, cells = complete_reading(page, used, tessdata, words, dpi)
+        read_chars = sum(len(w[4]) for w in words)
+        if cover < LOW_COVER and dpi < 300 and read_chars < LOW_CHARS_PER_CELL * cells:
+            w2 = _ocr_words(page, used, tessdata, 300)
+            w2, c2, _ = complete_reading(page, used, tessdata, w2, 300)
+            if c2 > cover:
+                words, cover = w2, c2
+                note = (note + "; " if note else "") + "read again at 300 dpi"
+    finally:
+        page.set_rotation(original)
+    blocks = _blocks_of(words)
+    text = "\n".join(l.text for b in blocks for l in b)
+    chars = len("".join(text.split()))
+    return {"blocks": blocks, "text": text, "language": used, "rotation": rotation, "quality": round(word_quality(text), 3),
+            "note": note, "cover": cover, "print_cells": cells,
+            "low": cells >= MIN_PRINT_CELLS and cover < LOW_COVER and chars < LOW_CHARS_PER_CELL * cells}

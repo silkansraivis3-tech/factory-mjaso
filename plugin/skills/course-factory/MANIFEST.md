@@ -7,6 +7,18 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.125.0 · Scanned pages read whole; the walk review cannot pass what it was not shown (2026-11-10)
+
+- `kb/builder/ocr.py`: `grey_copy` (moved from `pdf.py`), lines cut at `GAP_CUT`, column reflow, the print-cell coverage
+  check (`INK_DPI`, `INK_CELL`, `LOW_COVER`, `MIN_PRINT_CELLS`, `LOW_CHARS_PER_CELL`), `complete_reading` (uncovered
+  regions again at 300 dpi). `kb_build.py`: `ocr_low_pages`, `ocr_empty_pages`, the run's `ocr_pages_low` /
+  `ocr_pages_empty`; `write.py` lists both in `NEEDS_ATTENTION.md`. `cache.py` `EXTRACT_VERSION = 2`.
+- `scripts/course_portal.py` `failed_builds`: only a fail list that is exactly "course package" is let through.
+- In `course-module-ux/measure/scripts/`: `review_sheets.mjs` (`ids`, `missed` in `tasks.json`; a kept walk needs `ids`),
+  `walk_review.py` (`Deck.unshot`, units with no picture for missed questions), `fit_gate.py` (a failed shot is a stop
+  with no file). Tests: `test_walk_review.py`, `test_fit_gate.py`, `test_course_portal.py`, `test_builder.py`.
+- The measurements and the known gaps are in the release row of `_claude/CONTEXT.md`.
+
 ## 2.123.0 · The factory's own knowledge-base builder (2026-11-10)
 
 - `kb/builder/`: `kb_build.py` (the command, progress lines, build into `KNOWLEDGE_BASE.building` then swap), `discover.py`,

@@ -716,9 +716,42 @@ def tasks_part(tmp):
           rc == 0 and list(wr.task_pages(wr.module_dir(course, "final"))) == ["final"] and not ok and kind == "incomplete"
           and "FINAL" in msg and "task page final" in msg, msg)
     walk_pages(course, "final")
+
+    # 2.125.0 - a walk that broke off: tasks.json names the questions it did not show whole, and they have no picture
+    tj = Path(wr.walk_dir(course, "final"), "tasks.json")
+    whole = json.loads(tj.read_text(encoding="utf-8"))
+    cut = json.loads(json.dumps(whole))
+    cut["pages"]["final"]["questions"] = cut["pages"]["final"]["questions"][:1]
+    cut["pages"]["final"]["ids"] = ["q1", "q2", "q3"]
+    cut["pages"]["final"]["missed"] = [{"id": "q2", "why": "never shown"}]
+    tj.write_text(json.dumps(cut), encoding="utf-8")
+    rc, lines = wr.prepare(course, "final", stale_only=True)
+    check("a walk that broke off: the questions it never showed are named (its own list, and the page's ids) - no "
+          "reviewer can pass them", any("has no picture of final.q2, final.q3" in x for x in lines), lines)
+    rc, lines = wr.sign(course, "final", reviewer(tmp, {"final.q1": True, "final.result": True}))
+    ok, kind, msg = wr.verify(course, "final")
+    check("... and the questions it did show, signed, are not the page reviewed",
+          rc == 0 and not ok and kind == "incomplete" and "final.q2, final.q3" in msg and "no picture" in msg, (lines, msg))
+    rc, lines = wr.sign(course, "final", reviewer(tmp, {"final.q2": True}))
+    check("... a verdict on a question with no picture is refused", rc == 2 and "final.q2" in " ".join(lines), lines)
+    tj.write_text(json.dumps(whole), encoding="utf-8")
     wr.prepare(course, "final", stale_only=True)
-    rc, lines = wr.sign(course, "final", reviewer(tmp, {"final.q1": True, "final.q2": True, "final.result": True}))
+    rc, lines = wr.sign(course, "final", reviewer(tmp, {"final.q2": True}))
     check("... and passes once its questions and last screen are signed", rc == 0 and wr.verify(course, 2)[0], (lines, wr.verify(course, 2)))
+
+    # 2.125.0 - a stop the fit walk could not take a picture of: its slide has no picture
+    wj = Path(wr.walk_dir(course, "final"), "walk.json")
+    kept = wj.read_text(encoding="utf-8")
+    shot = json.loads(kept)
+    sid = shot["stops"][0]["slide"]
+    shot["stops"].append({"slide": sid, "k": 9, "file": "", "lost": "the browser gave no picture"})
+    wj.write_text(json.dumps(shot), encoding="utf-8")
+    d = wr.Deck(course, "final")
+    rc, lines = wr.prepare(course, "final")
+    check("a stop with no picture: its slide is not walked - prepare names it, and a new verdict on it has no sheet",
+          d.unshot == [sid] and sid not in d.stops and sid in d.slides()
+          and any("has no picture of" in x and sid in x for x in lines), (d.unshot, lines))
+    wj.write_text(kept, encoding="utf-8")
 
 
 def main():

@@ -444,16 +444,6 @@ def extract_range(path, first, last, ctx):
     return out
 
 
-def grey_copy(page, dpi):
-    """A one-page document holding the page drawn as a grey picture."""
-    pymupdf = _pymupdf()
-    pix = page.get_pixmap(dpi=dpi, colorspace=pymupdf.csGRAY, alpha=False)
-    doc = pymupdf.open()
-    copy = doc.new_page(width=page.rect.width, height=page.rect.height)
-    copy.insert_image(copy.rect, pixmap=pix)
-    return doc
-
-
 def ocr_page(path, number, tessdata, models, prior, forced, dpi):
     """One scanned page read by OCR: {number, text, headings, language, rotation, quality, note, seconds}."""
     import time
@@ -464,18 +454,10 @@ def ocr_page(path, number, tessdata, models, prior, forced, dpi):
         # No second try at 300 dpi when nothing is found: measured on the IMO model course covers, a photograph read
         # at 300 dpi gives 5 000-7 000 characters of noise (word quality 0.2-0.3) and costs 20-30 s.
         got = ocrmod.read_scanned_page(page, tessdata, set(models), prior=prior, forced=forced, dpi=dpi)
-        if len(got["text"].strip()) < SETTINGS["min_chars_per_page"] and got["language"]:
-            # Some scans come back empty read as they are (the IMO model course covers: 0 characters) and read
-            # well once drawn as a plain grey picture first (140 characters, the cover title; 0.5 s)
-            copy = grey_copy(page, dpi)
-            again = ocrmod.read_scanned_page(copy[0], tessdata, set(models), prior=prior, forced=forced, dpi=dpi)
-            copy.close()
-            if len(again["text"].strip()) > len(got["text"].strip()):
-                got = again
-                got["note"] = (got["note"] + "; " if got["note"] else "") + "read from a grey copy of the page"
     finally:
         doc.close()
     text, headings = build_page_text(got["blocks"], 0.0, [], vocab=hyphen_vocabulary(got["text"]))
     return {"number": number, "text": text, "headings": headings, "language": got["language"],
-            "rotation": got["rotation"], "quality": got["quality"], "note": got["note"],
+            "rotation": got["rotation"], "quality": got["quality"], "note": got["note"], "cover": got.get("cover"),
+            "print_cells": got.get("print_cells"), "low": bool(got.get("low")),
             "seconds": round(time.time() - started, 2)}

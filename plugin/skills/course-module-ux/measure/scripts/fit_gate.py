@@ -174,8 +174,9 @@ def walk(page, deck, min_shown, shots=None, record=None):
                     info = page.evaluate(WALKINFO, r["id"]) or {}
                     if record is not None:
                         record.append(dict(info, slide=r["id"], k=step, file=name))
-                except Exception:          # a shot that could not be taken never fails the fit walk; the review finds the gap
-                    pass
+                except Exception as err:   # a shot that could not be taken never fails the fit walk: the stop is recorded
+                    if record is not None:  # with no picture (2.125.0), and the walk review refuses its slide
+                        record.append({"slide": r["id"], "k": step, "file": "", "lost": str(err)[:160]})
             ks = page.evaluate(KITSTATE, r["id"])
             if ks:
                 seen = states.setdefault(r["id"], {"steps": ks["steps"], "sigs": set(), "stops": 0})

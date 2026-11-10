@@ -15,7 +15,7 @@ import hashlib
 import json
 import os
 
-EXTRACT_VERSION = 1
+EXTRACT_VERSION = 2
 
 
 def cache_root():

@@ -630,7 +630,8 @@ async function tasks(tiles, failures) {
     const was = shotIndex.pages[name];
     if (WALK) {                 // the walk keeps its own pictures: a page walked clean, the same in this script's eyes and the review's
       const old = walkedBefore[pid];
-      if (old && pkey && fp && old.key === pkey && old.fingerprint === fp && picturesOf(old).length
+      /* 2.125.0 - only a walk that says which questions the page has (ids): an older one could have left some out unseen */
+      if (old && pkey && fp && old.key === pkey && old.fingerprint === fp && Array.isArray(old.ids) && picturesOf(old).length
           && picturesOf(old).every(f => existsSync(join(WALK, f)))) {
         walked[pid] = old;
         reused += picturesOf(old).length;
@@ -728,9 +729,22 @@ async function tasks(tiles, failures) {
         }
       }
     }
+    /* 2.125.0 - a question the walk did not show whole (never reached: the walk broke off before it; a picture short;
+       an id that names the same picture files as another's) is named in tasks.json. The review has no picture of it,
+       so no reviewer can pass it, and this run fails */
+    const missed = [];
+    if (WALK) {
+      const names = ids.map(safe);
+      for (const q of [...new Set(ids)]) {
+        const lost = !qs[q] ? ['never shown'] : STATES.filter(([k]) => !qs[q].shots[k]).map(([k]) => 'no picture ' + k);
+        if (names.filter(x => x === safe(q)).length > 1) lost.push('its id names the same pictures as another question\'s');
+        if (lost.length) missed.push({ id: q, why: lost.join(', ') });
+      }
+      if (missed.length) failures.push(`${name}: the walk did not show every question whole - ${missed.map(m => `${m.id} (${m.why})`).join('; ')}`);
+    }
     note('task ' + name, tp, { questions: ids.length, slept: (slept - sp) / 1000, waited: (waited - wp) / 1000 });
     if (WALK) {
-      walked[pid] = { file: rel, fingerprint: fp, key: failures.length === nf ? pkey : '', blind, groups,
+      walked[pid] = { file: rel, fingerprint: fp, key: failures.length === nf ? pkey : '', blind, groups, ids, missed,
         questions: order.map(q => ({ id: q, ask: qs[q].ask || '', mech: qs[q].mech || '', group: qs[q].group || '',
           states: STATES.filter(([k]) => qs[q].shots[k]).map(([k, state]) => ({ state: (blind && STATES_BLIND[k]) || state, file: qs[q].shots[k], said: qs[q].said[k] || '' })) })),
         result };

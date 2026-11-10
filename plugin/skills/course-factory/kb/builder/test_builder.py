@@ -168,6 +168,23 @@ def make_scans_pdf(path, words, lang_words=None, russian=None):
             continue                                         # a blank page: nothing on it at all
         pix = src[i].get_pixmap(dpi=200)
         page.insert_image(page.rect, pixmap=pix, rotate=90 if i == 1 else 0)     # page 2: the scan lies sideways
+    # page 6: a figure, its caption and two paragraphs under it, all one picture
+    p = src.new_page()
+    p.draw_rect(pymupdf.Rect(150, 60, 450, 260), color=(0, 0, 0), fill=(0.6, 0.7, 0.9), width=2)
+    p.draw_circle((300, 160), 60, color=(0, 0, 0), fill=(0.9, 0.5, 0.2))
+    text(p, 150, 280, "Figure 3: The cargo tank and its pump", 10)
+    y = para(p, 320, "First paragraph: the membrane tank is cooled down slowly so that the insulation is not damaged "
+                     "by thermal stress.", 70)
+    para(p, y + 10, "Second paragraph: the vapour return line keeps the tank pressure steady while the cargo is "
+                    "loaded from the terminal.", 70)
+    # page 7: a page full of print set at 45 degrees - ink everywhere, nothing a reader can read
+    p = src.new_page()
+    for k in range(40):
+        p.insert_text((40 + (k % 5) * 110, 60 + (k // 5) * 95), "turned print " * 2, fontsize=10,
+                      morph=(pymupdf.Point(40 + (k % 5) * 110, 60 + (k // 5) * 95), pymupdf.Matrix(45)))
+    for i in (5, 6):
+        page = out.new_page()
+        page.insert_image(page.rect, pixmap=src[i].get_pixmap(dpi=200))
     out.save(path)
 
 
@@ -460,6 +477,14 @@ def main():
                   and "drošības" in md.lower(), u[3])
         else:
             skip("Latvian scan", "lav.traineddata not found")
+        low = md.lower()
+        check("a scanned page with a figure, a caption and two paragraphs: both paragraphs are read",
+              u[6]["method"] == "ocr" and "membrane tank" in low and "vapour return" in low and not u[6].get("ocr_low"), u[6])
+        check("a page of ink that reads as almost nothing is listed, not called read",
+              (u[7].get("ocr_low") or u[7]["textless"]) and "7" in json.dumps(meta.get("units_ocr_low", []) + meta["units_requiring_ocr"]),
+              u[7])
+        na_text = io.open(os.path.join(kb, "NEEDS_ATTENTION.md"), encoding="utf-8").read()
+        check("NEEDS_ATTENTION.md lists that page", "scans.pdf" in na_text and ("incompletely" in na_text or "no selectable" in na_text.lower()))
         if "rus" in models:
             check("a Russian scan is read with the Russian model", u[5].get("ocr_language", "").startswith("rus")
                   and "безопасност" in md.lower(), u[5])
@@ -487,7 +512,8 @@ def main():
     na = os.path.join(bare, "KNOWLEDGE_BASE", "NEEDS_ATTENTION.md")
     check("with no reading models the build still completes", code == 0, out[-500:])
     check("the closing lines say how many pages and which files are needed",
-          "scanned page(s) could not be read" in out and "eng.traineddata" in out and "lav.traineddata" in out, out[-500:])
+          "scanned page(s) have no text" in out and "for want of a reading model" in out and "eng.traineddata" in out
+          and "lav.traineddata" in out, out[-500:])
     check("the unread scanned pages are listed in NEEDS_ATTENTION.md",
           os.path.isfile(na) and "scans.pdf" in io.open(na, encoding="utf-8").read())
 

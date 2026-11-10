@@ -359,8 +359,12 @@ class Deck(object):
         wdir = walk_dir(course, self.module)
         self.walk = load_json(os.path.join(wdir, "walk.json"), {}) or {}
         self.stops = {}
+        # 2.125.0 - a stop whose picture could not be taken (fit_gate.py records it with no file): its slide has no
+        # picture a reviewer can pass it on
+        self.unshot = sorted({s["slide"] for s in self.walk.get("stops", []) if not s.get("file")})
         for s in self.walk.get("stops", []):
-            self.stops.setdefault(s["slide"], []).append(s)
+            if s["slide"] not in self.unshot:
+                self.stops.setdefault(s["slide"], []).append(s)
         self.walked = list(self.stops)                       # the deck's walked slides
         self.pages = task_pages(module_dir(course, self.module))
         self.tasks = (load_json(os.path.join(wdir, "tasks.json"), {}) or {}).get("pages") or {}
@@ -377,6 +381,14 @@ class Deck(object):
                 ask = q["ask"] = re.sub(r"^(\d{1,2})(?=[^\d\s.])", r"\1. ", q.get("ask", ""))   # the number's badge, then the words
                 self.stops[u] = [{"slide": u, "k": k, "file": s["file"], "title": ask, "state": s.get("state", ""),
                                   "said": s.get("said", "")} for k, s in enumerate(q.get("states") or [], 1)]
+            # 2.125.0 - a question the walk did not show whole (review_sheets.mjs names it in "missed"; "ids" is every
+            # question the page has): a unit with no picture - prepare names it, verify fails it
+            shown = {q.get("id", "") for q in page["questions"]}
+            for name in [m.get("id", "") for m in page.get("missed") or []] + [i for i in page.get("ids") or [] if i not in shown]:
+                u = "%s.%s" % (pid, _id(name))
+                self.units[u] = pid
+                self.about.setdefault(u, {"id": name, "ask": ""})
+                self.stops.pop(u, None)
             u = pid + ".result"
             self.units[u], self.about[u] = pid, None
             self.stops[u] = [{"slide": u, "k": k, "file": s["file"], "title": "the last screen", "state": s.get("state", ""),
@@ -403,7 +415,7 @@ class Deck(object):
     def slides(self):
         """the units a review must cover: every slide of the deck (a deck with no slide of its own id: the walked ones)
         and every task page - its questions and its last screen once walked, the page itself until then"""
-        return (self.ids or self.walked) + list(self.units)
+        return (self.ids or self.walked + self.unshot) + list(self.units)
 
     def expand(self, names):
         """a task page named by its id or its file (tasks/x.html, x.html) stands for all of its units"""
