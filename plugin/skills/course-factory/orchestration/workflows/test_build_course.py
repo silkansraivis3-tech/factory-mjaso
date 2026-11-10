@@ -640,6 +640,19 @@ def main():
               "approved modules, and the course's ONE photo pass runs beside it", "phase-a:modules" in lb and "photos:course" in lb
               and lb.index("phase-a:modules") < lb.index("build:1") and op.get("phase-a:modules") == {"model": "sonnet", "effort": "low"}
               and "photo_catalogue.py assign" in pa and "phase_a.py" in pa and "--modules 1" in pa and "--wait" in pa, (lb, pa[-300:]))
+        # the 2.126.0 trial: "M01 3D check" and "M19 build after fixes" sent their commands to the background and ended their
+        # turns - the session had nothing running, claude -p quit, and neither reported
+        long_jobs = dict(pa_=pa, **{k: pa_all for k, pa_all in allx.get("prompts", {}).items()
+                                    if k.split(":", 1)[0] in ("build", "3d", "qa", "fix", "fixbuild", "walk")})
+        fg = "RUN EVERY COMMAND IN THE FOREGROUND"
+        check("every brief that runs a long command - Phase A, the builds, the 3D check, QA, the fix round, the walk - runs it in "
+              "the foreground, never ends its turn while it runs, and answers STILL BUILDING / CHECKING / RUNNING with --wait",
+              len(long_jobs) >= 8 and all(fg in p and "never end your turn while a command you started still runs" in p
+                                          and "STILL CHECKING" in p and "--wait" in p for p in long_jobs.values()),
+              sorted(k for k, p in long_jobs.items() if fg not in p))
+        s3 = allx.get("prompts", {}).get("3d:1", "")
+        check("... the 3D check's own brief: STILL CHECKING is waited for with --wait, and perf_gate's lag is a problem it fixes",
+              '"STILL CHECKING"' in s3 and "--wait" in s3 and "perf_gate" in s3 and '"light": "lite"' in s3, s3[:1200])
         pc_ = ph_run.get("prompts", {}).get("photos:course", "")
         check("... the photo pass works down PHOTOS_TO_FIND.md into photos_found/ with found_for, never a module or a sheet",
               "PHOTOS_TO_FIND.md" in pc_ and "photos_found" in pc_ and '"found_for"' in pc_ and "never a module" in pc_, pc_[-500:])

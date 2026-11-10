@@ -86,6 +86,14 @@ const SKILL = A.factory
   : 'the course-factory skill (Skill tool, name "course-factory")'
 const SCRIPTS = A.factory ? `${A.factory}/course-factory` : '<the course-factory skill folder>'
 const NOTES = A.notes ? `\n\nTHE OPERATOR SAYS, FOR THIS RUN: ${A.notes}` : ''
+/* every brief that runs a long command: the 2.126.0 trial's "M01 3D check" and "M19 build after fixes" sent their commands
+   to the background and ended their turns ("waiting on its own background work") - the session then had nothing running,
+   claude -p quit, and neither ever reported */
+const FOREGROUND = `RUN EVERY COMMAND IN THE FOREGROUND and wait for its last line, with the longest timeout the shell allows
+(600000 ms) - never in the background, and never end your turn while a command you started still runs: your report is
+read as the job's result, and an agent waiting on its own background work has stopped. A long command answers before that
+limit and goes on by itself - "STILL BUILDING", "STILL CHECKING" or "STILL RUNNING": then run the SAME command with --wait,
+again, until it prints its answer.`
 const CARD = A.factory ? `${SCRIPTS}/compile/BUILDER_CARD.md`
   : 'compile/BUILDER_CARD.md in the course-factory skill\'s folder (the Skill tool, name "course-factory", names the folder)'
 const SEED = A.seed_from ? ` --seed-from "${A.seed_from}"` : ''
@@ -320,7 +328,9 @@ const phaseAPrompt = (ids) => `Run, in the FOREGROUND with the longest timeout t
 
 phase_a.py builds every module as far as it goes with no agent and prints one line per module. If it answers STILL
 RUNNING, run  python ${SCRIPTS}/compile/scripts/phase_a.py "${A.course}" --wait  again, until it prints its lines. Never
-start a second run, never edit a file. Report each module's line word for word (modules: [{module, line}]).`
+start a second run, never edit a file. Report each module's line word for word (modules: [{module, line}]).
+
+${FOREGROUND}`
 
 /* an approved module: the mechanical build, on Sonnet (MECHANICAL), in ONE command per round */
 /* 2.71.0 - the builder reads a one-page card (compile/BUILDER_CARD.md: the commands, the fix for each kind of line the
@@ -386,6 +396,8 @@ checked and photographed by the workflow's 3D step after you, and judged by a re
 A slide that has a picture leads with it (L23): the source files and the knowledge base first, then a real photograph, then
 the figure kit. A slide whose words read on their own needs none (L61). An image you cannot produce: its brief in
 _visual_briefs/, and keep going.
+
+${FOREGROUND}
 
 Report as the card says.`
 
@@ -469,7 +481,9 @@ Do not fix anything. Severity is one of three (2.63.3 - the 2.63.2 run's QA used
   INFO    worth knowing, nothing to change
 A BROKEN finding whose fix is in the APPROVED SCRIPT (its words, a screen's kind or minutes - e.g. check_balance counting
 a "Your turn" activity's minutes as practice in a theory-only module) is the operator's: start its "where" with
-"SCRIPT:" - it is reported, never sent back to a builder (who may not change an approved script).`
+"SCRIPT:" - it is reported, never sent back to a builder (who may not change an approved script).
+
+${FOREGROUND}`
 
 /* 2.63.3 - a BROKEN finding of QA sends the module back for ONE fix round, by a builder who fixes exactly those */
 /* 2.72.0 - the second proof run: the three figure fixers ran 58-102 minutes and $50 between them (one 102 min, $33),
@@ -688,15 +702,20 @@ const scene3d = (m, again) => `Run the 3D check of module ${m.id} - one command,
 
     python ${KIT3D_SCRIPTS}/scene3d_check.py "${A.course}" --module ${m.id} --json
 
+"STILL CHECKING" (a check longer than the shell's limit goes on by itself): the same command with --wait, again, until
+it prints its JSON - never in the background, never ending your turn while it runs.
 Exit 2 ("No 3D-kit scene"): has_scene = false, ok = true, shots = [] - and stop.
 Otherwise has_scene = true, shots = every "shots" path in its JSON, scenes = each scene's slide and spec, report = its output.
-${again ? 'This runs after a fix round: do not change anything, only report.' : `If it found problems (a spec check, smoke3d, perf3d or the shots - "problems" in its JSON): fix exactly those in the
-scene's spec (or the module's assets/kit3d_parts.js - course-visuals/kit3d/SPEC.md, PARTS.md), rebuild with
+${again ? 'This runs after a fix round: do not change anything, only report.' : `If it found problems (a spec check, smoke3d, perf3d, perf_gate or the shots - "problems" in its JSON, and the
+deck's "lag"): fix exactly those in the scene's spec (or the module's assets/kit3d_parts.js - course-visuals/kit3d/SPEC.md,
+PARTS.md; a scene whose turn lags: "light": "lite", and leave out the parts its slide does not name), rebuild with
     python ${SCRIPTS}/compile/scripts/build_module.py "${A.course}" --module ${m.id} --no-course-pages
 (foreground; "STILL BUILDING": the same command with --wait), and run scene3d_check.py again - at most two rounds;
 rebuilt = true when you ran that build (the walk judge then looks again at the slides it changed).`}
 ok = true only when its last run's JSON says "ok": true. You never judge the pictures - a reviewer who did not build the
-scene does that. Write only in figures/M${two(m)}/ and modules/module${two(m)}/.${NOTES}`
+scene does that. Write only in figures/M${two(m)}/ and modules/module${two(m)}/.
+
+${FOREGROUND}${NOTES}`
 const review3d = (m, s, first) => `You did NOT build this 3D scene. Judge it from its pictures - you change nothing.
 
   Module ${m.id}, course ${A.course}. The scenes: ${JSON.stringify(s.scenes || [])}
@@ -892,7 +911,9 @@ none and sign nothing: run STEP 4 ONLY and report what it prints (walked = true)
    state = its first line, word for word; ok = that line starts with "OK:"; fails = each line it lists under it
    ("  s04 - stop 3: ..." -> slide "s04", what "stop 3: ..."; "  check.q07 - picture 3: ..." -> slide "check.q07"),
    none when ok; round = the N of "round N of 2" in the sign
-   line or, when nothing was signed now, in verify's line (0 when neither names one).`
+   line or, when nothing was signed now, in verify's line (0 when neither names one).
+
+${FOREGROUND}`
 const walkFails = (w) => ((w && w.fails) || []).filter((f) => f && f.slide)
 /* the module has had its two walk rounds (a second pass of this workflow, or its second look): a fix now could never be
    reviewed - sign refuses a third round, and accept refuses a slide that changed after its review */
@@ -1133,6 +1154,7 @@ of the final's deck at every stop and every question of the assessment's variant
 (a builder's own signature is refused).
 
 You may write only inside the final's module folder and working_claude/script/FINAL.* and working_claude/figures/FINAL/.
+${FOREGROUND}
 Report: FIRST line = the last line build_module.py printed; then how many runs it took.${NOTES}`,
   { label: 'build:final', phase: 'Build', ...MECHANICAL }) : null
 /* the final's deck and its assessment pages are walked like a module's - the portal asks for FINAL_walk_review.json as

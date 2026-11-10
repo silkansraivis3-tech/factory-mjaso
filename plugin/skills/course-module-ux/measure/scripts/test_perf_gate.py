@@ -64,6 +64,20 @@ def main():
     print("-- no deck")
     code, out = cli(str(HERE / "fixtures" / "no_such_deck.html"))
     check("no deck: exit 2, never a pass", code == 2, out)
+
+    print("-- the p95 in whole frames of the screen")
+    o = perf_gate.argparse.Namespace(p95_ms=33, max_ctx=1, max_hidden=10, first_ms=1500, wait_ms=8000)
+    row = lambda sid, med, p95, kind="kit3d": {"id": sid, "index": 1, "kind": kind, "ctx": 1, "first": 60, "med": med,  # noqa: E731
+                                               "p95": p95, "hidden": 0}
+    # the 2.126.0 trial: M01 s02, s04, s06, s23 at 33.4 ms (two 60 Hz frames) failed beside s27 at 49.9 and M19 s11 at 100
+    over = perf_gate.judge([row("s01", 16.7, 16.8, ""), row("s04", 16.7, 33.4), row("s06", 16.7, 33.3), row("s27", 16.7, 49.9),
+                            row("s11", 33.3, 100.0)], o)
+    check("at 60 Hz a p95 of two frames (33.4 ms) keeps up with 33 ms; three (49.9) and six (100, a slide whose median is two) "
+          "do not", [s for s, _ in over] == ["s27", "s11"] and "3.0 frames of 16.7 ms (at most 2: 33 ms)" in over[0][1], over)
+    over = perf_gate.judge([row("s01", 8.3, 8.4, ""), row("a", 8.3, 33.3), row("b", 8.3, 41.7)], o)
+    check("at 120 Hz the same 33 ms is four frames: four keep up, five do not", [s for s, _ in over] == ["b"], over)
+    check("never looser than a frame: 35.5 ms at 60 Hz is over", perf_gate.judge([row("s01", 16.7, 16.7, ""), row("c", 16.7, 35.5)], o),
+          "35.5 passed")
     try:
         import playwright  # noqa: F401
     except ImportError:

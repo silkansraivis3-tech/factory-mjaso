@@ -389,6 +389,22 @@ def main():
                "module01: 5 of the 6 teaching slides are interactive 3D (83 %) - the picture rule (L67) asks 60-80 %")
         broken("nine of ten teaching slides in 3D (90 %)", lambda b: three(b, ["model_3d"] * 9),
                "module01: 9 of the 10 teaching slides are interactive 3D (90 %)")
+        # the 2.126.0 trial scored two slides off their blueprint that the build had passed: the build never judged blueprints
+        b = os.path.join(tmp, "blueprint", "modules")
+        shutil.copytree(c, b)
+        w(os.path.join(b, "module01", "presentation", "index.html"), deck.replace('<section class="slide active" id="s01"',
+          '<section class="slide" id="bp1" data-title="A" data-kind="Theory" data-cue="- x" data-visual="photo" data-template='
+          '"worked-example.v1" data-variant="figure"><p>no picture</p><button><svg></svg></button></section>'
+          '<section class="slide" id="bp2" data-title="B" data-kind="Theory" data-cue="- x" data-visual="comparison" data-template='
+          '"reference-table.v1" data-variant="with-figure"><div class="fill fig kit2d-fig"><div class="kit2d-stage" '
+          'data-kit2d="#k2-bp2"></div></div></section>'
+          '<section class="slide" id="bp3" data-title="C" data-kind="Theory" data-cue="- x" data-visual="photo" data-template='
+          '"made-up.v1" data-variant="x"><img src="../assets/img/a.jpg"></section><section class="slide active" id="s01"'))
+        code, out = run(b, "--no-importer")
+        said = next((x for x in out.splitlines() if "off their blueprint" in x), "")
+        check("a compiled deck's slide off its blueprint stops the course package (the build): a template that needs a picture "
+              "and holds none (a button's symbol is no picture), an unknown template - never a 2D-kit figure's slide",
+              code == 1 and "bp1" in said and "bp3" in said and "bp2" not in said, said or out[-800:])
         b = os.path.join(tmp, "share70", "modules")
         shutil.copytree(c, b)
         three(b, ["model_3d", "model_3d", "photo", "model_3d", "model_3d", "model_3d", "model_3d", "model_3d", "photo"])

@@ -196,7 +196,9 @@ python scripts/perf_gate.py <deck index.html | module folder> [--throttle 4] [--
 Per slide: live WebGL contexts, ms from Next to the slide's first frame, frame time median and p95 while
 the slide is up (a kit3d scene is turned meanwhile), frames drawn by canvases off the slide shown, and
 the JS heap. Fails more than one live context, more than 10 off-screen frames, a 3D slide's p95 over
-33 ms or a first frame over 1.5 s. `--gl gpu` (default) uses this computer's graphics chip - SwiftShader
+33 ms or a first frame over 1.5 s. The p95 is judged in whole frames of the screen (the walk's shortest median is
+one): 33 ms is two frames at 60 Hz, so a p95 of 33.4 ms keeps up and 50 ms (three) does not. The workflow's 3D step
+(`scene3d_check.py`) runs it on every module with a 3D scene and fails a slide over the budget in two walks. `--gl gpu` (default) uses this computer's graphics chip - SwiftShader
 draws a kit3d scene in 300-450 ms a frame on any CPU, so its frame times say nothing about a tablet.
 Exit 0 / 1 / 2 as fit_gate. The test is `scripts/test_perf_gate.py`; `factory_trial.py report` counts
 the slides it fails.

@@ -27,6 +27,9 @@ WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
   the whole course: at most 6000 files and 300 MB of distinct files
   3D (L67): 60-80 % of a presentation's teaching slides are interactive 3D (each .slide says its kind in data-visual); and
     notes from the module's own scripts where a 3D scene would lag on the tablet (knowledge/media-and-tasks.json three_d)
+  blueprints: every slide of a compiled deck (one with data-template) is a known template, version and variant
+    (course-module-ui knowledge/blueprints.json), and one whose template needs a picture holds one - a photo, a drawing, a
+    3D scene or a 2D-kit figure - and no Phase A placeholder (factory_trial.py counts the same slides)
   team tasks (rulebook 4b): a slide with data-mode="team" and its page with task-mode / task-scope metas, both or
     neither; the page listens for gb-team; scope team hands in with scope: 'team'; a sensible data-team-size
   every task page (rulebook of 2026-10-19): never leaves itself - no link to a file, no new window, no navigation of
@@ -97,6 +100,11 @@ TIMEOUT_TRUE = re.compile(r"timeout\s*:\s*(?!false\b)[\w!(]")
 TEAM_SIZE = re.compile(r"^\d+(?:-\d+)?$")
 IMPORTER = os.path.join(SKILLS, "course-tablet-publisher", "vendor", "import_check.mjs")
 MODULE = re.compile(r"^module\d{2}$")
+UI = os.path.join(SKILLS, "course-module-ui", "knowledge")
+# what a slide shows as its picture: a photo or drawing, a 3D scene, a 2D-kit figure (kit2d.js draws it when the page opens)
+PICTURE_TAGS = ("img", "svg", "canvas", "video", "iframe", "object")
+PICTURE_ATTRS = ("data-kit3d", "data-3d", "data-kit2d")
+PLACEHOLDER_SRC = re.compile(r"(?:^|/)_placeholder_[^/]+\.png$")
 DRAFT_MARK = "DRAFT_NOT_PACKAGED.txt"       # written by compile/scripts/compile_module.py --draft
 FINAL_SET = re.compile(r"^F[A-Z]$")           # a final assessment's set: FA, FB ... (2.49.2)
 PLACEHOLDER_MARK = b"novikontas-placeholder"   # 2.73.0 - compile/scripts/placeholder.py's mark in a Phase A placeholder PNG
@@ -128,6 +136,7 @@ class Page(HTMLParser):
         self._style = False
         self.pictures = 0
         self.marked = []      # (tag, attribute, value) of MARKED_ATTRS
+        self._button = 0
 
     def handle_starttag(self, tag, attrs):
         a = {k: (v or "") for k, v in attrs}
@@ -141,10 +150,15 @@ class Page(HTMLParser):
                     self.links.append(v)
         cls = a.get("class", "").split()
         if "slide" in cls:
-            a["_points"] = 0
+            a["_points"] = a["_pictures"] = a["_placeholders"] = 0
             self.slides.append(a)
         if "rc-item" in cls and self.slides:
             self.slides[-1]["_points"] += 1
+        if tag == "button":
+            self._button += 1
+        elif self.slides and not self._button and (tag in PICTURE_TAGS or any(k in a for k in PICTURE_ATTRS)):
+            self.slides[-1]["_pictures"] += 1             # a control's symbol inside a button is not the slide's picture
+            self.slides[-1]["_placeholders"] += bool(PLACEHOLDER_SRC.search(a.get("src", "")))
         if tag in ("img", "svg") and "data-no-zoom" not in a:     # the result ring, a control's symbol: not a picture
             self.pictures += 1
         if a.get("style"):
@@ -157,6 +171,8 @@ class Page(HTMLParser):
             self._style = True
 
     def handle_endtag(self, tag):
+        if tag == "button":
+            self._button = max(0, self._button - 1)
         if tag == "title":
             self._t = False
         if tag == "style":
@@ -189,6 +205,40 @@ def parse(p):
     except Exception:  # noqa: BLE001 - reported, not fatal
         pass
     return pg
+
+
+def blueprints():
+    """({slide blueprint id: the picture slots it needs}, {template: its version}) - course-module-ui knowledge/blueprints.json
+    and layout-templates.json; a mirrored blueprint needs what its base needs"""
+    bp = json.load(io.open(os.path.join(UI, "blueprints.json"), encoding="utf-8"))
+    lt = json.load(io.open(os.path.join(UI, "layout-templates.json"), encoding="utf-8"))
+    base = {b["id"]: b for b in bp["slides"]}
+    need = {}
+    for b in bp["slides"]:
+        fill = b.get("fill") or (base.get(b.get("mirror")) or {}).get("fill") or {}
+        need[b["id"]] = sum(1 for v in fill.values() if v[0] in ("Picture", "3D") or (len(v) > 1 and str(v[1]).startswith("figure")))
+    return need, {k: v.get("version") for k, v in lt["templates"].items()}
+
+
+def off_blueprint(slides):
+    """the ids of the slides that are not a known template, version and variant (template "<id>.v<n>", variant), or whose
+    template needs a picture and that hold none, or a placeholder - each slide {id, template, variant, pictures,
+    placeholders}. The build refuses them (check below) and the factory trial counts them (factory_trial.py)"""
+    need, versions = blueprints()
+    out = []
+    for s in slides:
+        m = re.match(r"^([\w-]+)\.v(\d+)$", s["template"])
+        bid = "%s.%s" % (m.group(1), s["variant"]) if m else ""
+        if not m or versions.get(m.group(1)) != int(m.group(2)) or bid not in need \
+                or (need[bid] and (s["placeholders"] or not s["pictures"])):
+            out.append(s["id"])
+    return out
+
+
+def deck_slides(pg):
+    """a parsed deck's slides as off_blueprint reads them"""
+    return [{"id": s.get("id", ""), "template": s.get("data-template", ""), "variant": s.get("data-variant", ""),
+             "pictures": s["_pictures"], "placeholders": s["_placeholders"]} for s in pg.slides]
 
 
 def three_d_share(slides):
@@ -433,6 +483,15 @@ def check(folder):
                         probs.append("%s sends the room to work but says neither where (data-task-href) nor how (data-link-hint)" % where)
                 elif kind in ("", "Theory") and not s.get("data-cue", "").strip():
                     notes.append("%s has no instructor notes (data-cue) - the instructor's panel shows them" % where)
+            # every slide built on its blueprint (course-module-ui blueprints.json): a known template, version and variant,
+            # and the picture its template needs - the 2.126.0 trial counted two slides off it that the build had passed
+            if any(s.get("data-template") for s in pg.slides):
+                off = off_blueprint(deck_slides(pg))
+                if off:
+                    probs.append("%s: slide(s) %s are off their blueprint - not a known template, version and variant "
+                                 "(course-module-ui knowledge/blueprints.json), or their template needs a picture and they "
+                                 "hold none or a placeholder: give each its picture, or the template's variant without one"
+                                 % (mod, ", ".join(off)))
             # L67, the picture rule - 60-80 % of the teaching slides interactive 3D
             vis = [s.get("data-visual", "").strip() for s in pg.slides if s.get("data-visual", "").strip() not in ("", "none")]
             three, teach = three_d_share(pg.slides)

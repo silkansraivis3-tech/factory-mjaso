@@ -15,7 +15,8 @@ with the CPU slowed (--throttle, 4x by default) and the screen at the tablet's s
   hidden   frames drawn by canvases NOT on the slide shown, in that time - a scene that keeps drawing off screen
   heap     the page's JS heap in MB, after a garbage collection
 
-Fails when a 3D slide's p95 is over --p95-ms (33: under 30 frames a second the turn judders), when more than --max-ctx
+Fails when a 3D slide's p95 is over --p95-ms (33: under 30 frames a second the turn judders - judged in whole frames of
+the screen, so at 60 Hz two frames, 33.4 ms, keep up and three, 50 ms, do not), when more than --max-ctx
 live contexts (1) are held at once, when a slide's first frame takes over --first-ms (1500), or when canvases off screen
 draw more than --max-hidden frames (10) while a slide is up. Only a slide with a scene is judged on its frames; every
 slide is judged on contexts and off-screen drawing.
@@ -43,6 +44,7 @@ import browser_slots  # noqa: E402  - one pool of hidden browsers for the whole 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 MAX_STEPS = 3000
+FRAME_SLACK = 0.05        # a frame's time read from the screen's beat is off by a fraction of a millisecond, never more
 GL_ARGS = {"swiftshader": ["--use-angle=swiftshader", "--use-gl=angle", "--enable-unsafe-swiftshader",
                            "--ignore-gpu-blocklist"],
            "gpu": ["--ignore-gpu-blocklist", "--enable-gpu-rasterization"]}
@@ -177,16 +179,26 @@ def measure(page, cdp, o):
     return rows
 
 
+def vsync(rows):
+    """the screen's frame in ms: a frame is shown only on the screen's beat, so every frame time is a whole number of
+    beats - the shortest median of the walk (60 Hz: 16.7)"""
+    meds = [r["med"] for r in rows if r.get("med")]
+    return min(meds) if meds else 1000.0 / 60
+
+
 def judge(rows, o):
-    """[(slide id, what)] over the budget"""
-    bad = []
+    """[(slide id, what)] over the budget. The p95 is judged in whole frames of the screen: --p95-ms 33 is 30 frames a
+    second, two frames at 60 Hz - a p95 of 33.4 ms is exactly two frames and keeps up; three (50 ms) do not"""
+    bad, beat = [], vsync(rows)
+    most = max(1, int(round(o.p95_ms / beat)))
     for r in rows:
         if r["ctx"] > o.max_ctx:
             bad.append((r["id"], "%d live WebGL contexts (at most %d)" % (r["ctx"], o.max_ctx)))
         if r["hidden"] > o.max_hidden:
             bad.append((r["id"], "%d frames drawn by canvases not on the slide shown (at most %d)" % (r["hidden"], o.max_hidden)))
-        if r["kind"] and r["p95"] is not None and r["p95"] > o.p95_ms:
-            bad.append((r["id"], "p95 frame %.1f ms (at most %d)" % (r["p95"], o.p95_ms)))
+        if r["kind"] and r["p95"] is not None and r["p95"] / beat > most + FRAME_SLACK:
+            bad.append((r["id"], "p95 frame %.1f ms - %.1f frames of %.1f ms (at most %d: %g ms)"
+                        % (r["p95"], r["p95"] / beat, beat, most, o.p95_ms)))
         if r["kind"] and r["first"] is not None and r["first"] > o.first_ms:
             bad.append((r["id"], "first frame %d ms after Next (at most %d)" % (r["first"], o.first_ms)))
         if r["kind"] and r["first"] is None and r["index"] >= 0 and r["index"] < 10 ** 6:

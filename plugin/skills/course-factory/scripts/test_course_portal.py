@@ -307,6 +307,8 @@ def main():
             "json.dump(sys.argv[1:], open(os.path.join(os.environ['STUB_OUT'], 'args.json'), 'w'))\n"
             "open(os.path.join(os.environ['STUB_OUT'], 'cwd.txt'), 'w').write(os.getcwd())\n"
             "if os.environ.get('STUB_FAIL'):\n    print('AUTO BUILD STOPPED: no simulator manual'); sys.exit(0)\n"
+            "if os.environ.get('STUB_QUIT') and '--resume' not in sys.argv:\n"
+            "    print(json.dumps({'type': 'system', 'subtype': 'init', 'session_id': 'auto-1'})); print('Waiting.'); sys.exit(0)\n"
             "os.makedirs('modules', exist_ok=True); open('modules/COURSE.html', 'w').write('<title>GAS BASIC 3</title>')\n"
             "print('working...'); print('AUTO BUILD DONE')\n")
         imp = os.path.join(tmp, "stub_import.py")
@@ -345,6 +347,16 @@ def main():
             logs = os.listdir(os.path.join(c, "auto_build")) if os.path.isdir(os.path.join(c, "auto_build")) else \
                 os.listdir(os.path.join(c, "working_claude", "auto_build"))
             check("the run's words are kept in the course's auto_build log", logs, logs)
+            check("... written as the run goes: claude -p as an event stream",
+                  args[args.index("--output-format") + 1] == "stream-json" and "--verbose" in args, args)
+            os.environ["STUB_QUIT"] = "1"
+            queue[0]["stage"] = "build_requested"
+            code = cp.cmd_watch_once()
+            args = json.load(io.open(os.path.join(tmp, "args.json"), encoding="utf-8"))
+            check("a run that quits without its last line is carried on in the same session and goes up (the factory trial's "
+                  "claude -p quit while its helpers' 3D checks ran)", code == 0 and srv.done is None
+                  and args[args.index("--resume") + 1] == "auto-1" and args[1] == cp.CARRY_ON, (code, srv.done, args[:4]))
+            del os.environ["STUB_QUIT"]
             os.environ["STUB_FAIL"] = "1"
             queue[0]["stage"] = "build_requested"
             cp.cmd_watch_once()

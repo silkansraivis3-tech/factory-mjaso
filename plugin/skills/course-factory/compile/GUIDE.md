@@ -98,8 +98,9 @@
 - **The whole-course workflow** builds the modules biggest first (`scripts/build_order.py`: screens, drawn figures, 3D
   scenes from the approved scripts, seeded ones counted less) in a rolling pool of `wave` at a time; its builder reads
   `compile/BUILDER_CARD.md`, not this guide. A module with a 3D-kit scene gets the 3D step after its build:
-  `course-visuals/kit3d/scripts/scene3d_check.py <course> --module N` (spec check, smoke3d, perf3d, a picture of every
-  step in `working_claude\review\MNN_3d\`), then a reviewer who did not build the scene judges the pictures. The 3D
+  `course-visuals/kit3d/scripts/scene3d_check.py <course> --module N` (spec check, smoke3d, perf3d, perf_gate's walk - a
+  scene that lags in two walks fails the step - and a picture of every step in `working_claude\review\MNN_3d\`; longer
+  than 9 minutes it says STILL CHECKING and is waited for with `--wait`), then a reviewer who did not build the scene judges the pictures. The 3D
   step, the figure step and QA judge the built module at the same time, and ONE fix round takes every BROKEN finding
   of the three (two builds, at most six studio runs a figure); then only what was BROKEN is judged again.
 - **Figure fits**: the COLUMN re-fit tries one width at a time and stops at the first clean fit, and measures a figure

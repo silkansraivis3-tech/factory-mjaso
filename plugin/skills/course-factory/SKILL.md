@@ -300,6 +300,14 @@ A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobod
   asks and builds to PASS, MODULE CLEAN or the build's STOP; ONE fix round; after it only what was BROKEN is judged again
   (`qa(m, first)`, the 3D reviewer on those scenes' pictures alone). Ask each for a report of at most 30 lines, the rest in
   a file: every report stays in your context to the end of the run.
+- Every brief that runs a long command (Phase A, a build, the 3D check, `scene3d_check.py`, `smoke3d.py`, QA, the walk)
+  carries `build_course.js`'s `FOREGROUND`: each command in the foreground, never in the background, and the helper never
+  ends its turn while a command it started still runs; a long one answers `STILL BUILDING` / `STILL CHECKING` /
+  `STILL RUNNING` and is run again with `--wait` until it answers.
+- A helper whose notice says it **is waiting on its own background work has stopped** - its job is not done: carry it on
+  (a fresh helper on the same model with the same brief, or the `--wait` yourself). Never end a turn with no helper
+  running while a module is unfinished: in print mode `claude -p` then quits before its last line (the runner carries the
+  session on with `--resume`, but every quit loses the helpers' running work).
 - End with one line: `AUTO BUILD DONE`, `AUTO BUILD DONE - PICTURES PENDING: <n>` or `AUTO BUILD STOPPED: <why>`.
 
 **After an attended session** the course goes up unasked: `course_portal.py upload --course <course>` is the last step

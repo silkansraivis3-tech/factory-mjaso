@@ -10,12 +10,19 @@ builder's own judgement. One command, in this order, each part judged as the bui
 
   1 SPEC     check_kit3d.py spec on every *.kit3d.json the module's build sheet names (with assets/kit3d_parts.js)
   2 SMOKE    smoke3d.py on the built deck's slides that show them - loads, draws, stays quiet
-  3 PERF     perf3d.mjs at 4x CPU, the warm first frame against the 1,000 ms budget (--no-perf skips it)
+  3 PERF     perf3d.mjs at 4x CPU, the warm first frame against the 1,000 ms budget, then perf_gate.py: the deck walked
+             with Next at 4x CPU and every slide timed - a scene whose turn lags (a p95 over two frames at 60 Hz) in two
+             walks, or a deck that keeps contexts or draws off screen, is a problem here, so a module whose 3D lags does
+             not pass its 3D step (--no-perf skips both)
   4 SHOTS    shot3d.mjs: the scene at each of its steps (it opens on the first), in a box of the slide's size, PNG files in
              --out (default working_claude\\review\\MNN_3d\\) - what the reviewer looks at
 
 Prints one block per scene and the PNG paths; with --json the same as data. Exit 0 every scene passed 1-3 (the pictures
 are for the review), 1 a check failed, 2 nothing to check (no 3D-kit scene in the build sheet) or bad input.
+
+Like build_module.py, the check runs as its own process and answers within 9 minutes, under the shell's 10-minute limit;
+a check still going then says STILL CHECKING (exit 3) and goes on by itself: the same command with --wait waits for it
+and prints its answer. Never send it to the background, never end a turn while it runs.
 """
 from __future__ import annotations
 
@@ -31,6 +38,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +51,7 @@ import workspace  # noqa: E402
 
 PY = sys.executable
 SPEC = ".kit3d.json"
+ANSWER_WITHIN = 540     # s: a check still running then goes on by itself, as a build does
 
 
 def scenes(course, module):
@@ -169,6 +178,35 @@ def perf_over(line):
     return bool(re.search(r"\b(FAIL|over)\b", line, re.I))
 
 
+def lag_said(text):
+    """{slide id: [what]} - the slides perf_gate.py names over its budget ("  s27  p95 frame 49.9 ms - ...")"""
+    out = {}
+    for x in text.splitlines():
+        m = re.match(r"^  (\S+)  (\S.*)$", x)
+        if m:
+            out.setdefault(m.group(1), []).append(m.group(2).strip())
+    return out
+
+
+def lagging(deck):
+    """{slide id: [what]} - the slides perf_gate.py finds over its budget in two walks of the deck: a slide over it in the
+    first walk counts when the second walk finds it over again (a busy computer slows a few frames of one walk on a slide
+    it picks by chance - the 2.126.0 trial's M01 deck walked twice on one computer: s22 over the first time, s26 alone
+    the second). {} within the budget, or when it could not be measured (no Playwright or no browser)"""
+    first = {}
+    for k in range(2):
+        code, text = run([PY, os.path.join(MEASURE, "perf_gate.py"), deck], 900)
+        said = lag_said(text) if code == 1 else {}
+        if code == 1 and not said:
+            said = {"(deck)": [(text.strip().splitlines() or ["failed"])[-1]]}
+        if k:
+            return {sid: xs for sid, xs in said.items() if sid in first}
+        if not said:
+            return {}
+        first = said
+    return {}
+
+
 def check(course, module, out=None, size=(720, 450), perf=True):
     """{"scenes": [...], "ok": bool} or None when the module has no 3D-kit scene"""
     specs = scenes(course, module)
@@ -183,6 +221,7 @@ def check(course, module, out=None, size=(720, 450), perf=True):
     shutil.rmtree(out, ignore_errors=True)
     os.makedirs(out, exist_ok=True)
     res = {sid: {"slide": sid, "spec": sp, "problems": []} for sid, sp in specs}
+    lag = []
     # 1 the specs
     cmd = [PY, os.path.join(HERE, "check_kit3d.py"), "spec"] + [sp for _, sp in specs] + (["--parts", parts] if parts else [])
     code, text = run(cmd, 120)
@@ -211,6 +250,11 @@ def check(course, module, out=None, size=(720, 450), perf=True):
                 res[sid]["perf"] = line
                 if code == 1 and perf_over(line):
                     res[sid]["problems"].append("perf3d: " + line)
+        if perf:
+            over = lagging(deck)
+            for sid in res:
+                res[sid]["problems"] += ["perf_gate: " + x for x in over.pop(sid, [])]
+            lag = ["perf_gate %s: %s" % (sid, x) for sid, xs in over.items() for x in xs]
     else:
         for sid in res:
             res[sid]["problems"].append("the deck is not built yet (%s) - build_module.py first" % deck)
@@ -220,7 +264,7 @@ def check(course, module, out=None, size=(720, 450), perf=True):
         if err:
             res[sid]["problems"].append("shots: " + err)
     rows = [res[sid] for sid, _ in specs]
-    return {"module": mid, "out": out, "scenes": rows, "ok": not any(r["problems"] for r in rows)}
+    return {"module": mid, "out": out, "scenes": rows, "lag": lag, "ok": not any(r["problems"] for r in rows) and not lag}
 
 
 def report(r):
@@ -232,9 +276,83 @@ def report(r):
                 lines.append("      %s: %s" % (k, s[k]))
         lines += ["      - " + p for p in s["problems"]]
         lines += ["      picture: " + p for p in s.get("shots") or []]
+    lines += ["  the deck: " + x for x in r.get("lag") or []]
     lines.append("3D: every scene loads, draws and is in time - now the separate visual review" if r["ok"] else
                  "3D: problems above - fix them in the spec (or kit3d_parts.js), rebuild, run this again")
     return "\n".join(lines)
+
+
+def running_files(course, module):
+    """(its record, its answer) in working_claude\\review - where the check that said STILL CHECKING is found again"""
+    mid = "M%02d" % int(module)
+    return workspace.claude_path(course, "review", mid + "_3d_running.json"), workspace.claude_path(course, "review", mid + "_3d_answer.txt")
+
+
+def entry(argv=None):
+    """the check as its own process: its answer within ANSWER_WITHIN s, else STILL CHECKING (exit 3) while it goes on;
+    --wait: wait (again) for it. A check of the module already running is waited for, never started twice"""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if "-h" in argv or "--help" in argv:
+        return main(argv)
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("course")
+    ap.add_argument("--module", required=True)
+    known, _ = ap.parse_known_args(argv)
+    try:
+        m = int(known.module)
+        rec_path, ans_path = running_files(workspace.work_folder(known.course, create=False), m)
+    except Exception:                                    # noqa: BLE001 - main says what is wrong with the course or module
+        return main([a for a in argv if a != "--wait"])
+    import browser_slots
+    try:
+        within = float(os.environ.get("CF_3D_ANSWER_WITHIN") or ANSWER_WITHIN)
+    except ValueError:
+        within = ANSWER_WITHIN
+    try:
+        rec = json.load(io.open(rec_path, encoding="utf-8"))
+    except (OSError, ValueError):
+        rec = {}
+    running = rec.get("exit") is None and browser_slots.alive(int(rec.get("pid") or 0))
+    wait = "--wait" in argv
+    if wait and not rec:
+        print("No 3D check of M%02d to wait for - run scene3d_check.py without --wait" % m)
+        return 1
+    if running and not wait:
+        print("A 3D check of M%02d is already running (started %.0f s ago) - waiting for it instead of starting another."
+              % (m, time.time() - rec.get("started", time.time())))
+    elif not wait:
+        os.makedirs(os.path.dirname(rec_path), exist_ok=True)
+        io.open(rec_path, "w", encoding="utf-8").write(json.dumps({"started": time.time()}))
+        fh = io.open(ans_path, "w", encoding="utf-8")
+        flags = (subprocess.CREATE_NEW_PROCESS_GROUP | 0x08000000) if os.name == "nt" else 0    # its own group, no window
+        p = subprocess.Popen([PY, os.path.abspath(__file__)] + [a for a in argv if a != "--wait"], stdout=fh,
+                             stderr=subprocess.STDOUT, env=dict(os.environ, PYTHONIOENCODING="utf-8", CF_3D_RUNNING=rec_path),
+                             creationflags=flags, **({} if os.name == "nt" else {"start_new_session": True}))
+        fh.close()
+        try:                                             # its PID, keeping an "exit" a very short check has written already
+            rec = json.load(io.open(rec_path, encoding="utf-8"))
+        except (OSError, ValueError):
+            rec = {"started": time.time()}
+        rec["pid"] = p.pid
+        io.open(rec_path, "w", encoding="utf-8").write(json.dumps(rec))
+    t0 = time.time()
+    while True:
+        try:
+            rec = json.load(io.open(rec_path, encoding="utf-8"))
+        except (OSError, ValueError):                    # being written this instant
+            rec = None
+        if rec is not None and (rec.get("exit") is not None or not browser_slots.alive(int(rec.get("pid") or 0))):
+            sys.stdout.write(io.open(ans_path, encoding="utf-8", errors="replace").read() if os.path.isfile(ans_path) else "")
+            if rec.get("exit") is None:
+                print("The 3D check of M%02d ended without its answer (stopped from outside?) - run it again" % m)
+                return 1
+            return int(rec["exit"])
+        if time.time() - t0 >= within:
+            print("STILL CHECKING M%02d - the 3D check goes on by itself. Run the same command with --wait: it waits up to %.0f s "
+                  "more and prints its answer. Never send it to the background, never end your turn while it runs." % (m, within))
+            return 3
+        time.sleep(1)
 
 
 def main(argv=None):
@@ -245,6 +363,7 @@ def main(argv=None):
     ap.add_argument("--size", default="720x450", help="the scene's box, WxH (a two-column slide's at 1280 x 800)")
     ap.add_argument("--no-perf", action="store_true")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--wait", action="store_true", help="wait for this module's check that said STILL CHECKING")
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     course = workspace.work_folder(o.course, create=False)
@@ -258,4 +377,23 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    if os.environ.get("CF_3D_RUNNING"):                  # the check itself, started by entry(): its exit goes in the record
+        _rec = os.environ["CF_3D_RUNNING"]
+        try:
+            time.sleep(float(os.environ.get("CF_3D_TEST_SLEEP") or 0))      # test_scene3d_check.py: a check that takes long
+            _code = main()
+        except SystemExit as _e:
+            _code = _e.code if isinstance(_e.code, int) else 1
+        except BaseException:                            # noqa: BLE001 - said in the answer file, then the record
+            import traceback
+            traceback.print_exc()
+            _code = 1
+        sys.stdout.flush()
+        try:
+            _r = json.load(io.open(_rec, encoding="utf-8"))
+        except (OSError, ValueError):
+            _r = {}
+        _r["exit"] = _code
+        io.open(_rec, "w", encoding="utf-8").write(json.dumps(_r))
+        sys.exit(_code)
+    sys.exit(entry())

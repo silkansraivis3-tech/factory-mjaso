@@ -169,15 +169,27 @@ def main():
         cmd = ft.claude_command("p")
         check("claude -p runs as an event stream", cmd[cmd.index("--output-format") + 1] == "stream-json" and "--verbose" in cmd, cmd)
         ev = lambda **k: json.dumps(k)
+        import time
+        seen = {"start": time.time() - 245 * 60}
         shown = [ft.readable(ev(type="assistant", message={"content": [{"type": "text", "text": "The M19 build is running."},
-                                                                         {"type": "tool_use", "name": "Agent", "input": {"description": "QA M19"}}]})),
-                 ft.readable(ev(type="assistant", parent_tool_use_id="t1", message={"content": [{"type": "text", "text": "inside a helper"}]})),
-                 ft.readable(ev(type="user", message={"content": []})),
-                 ft.readable(ev(type="result", num_turns=234, duration_ms=14700000, total_cost_usd=36.4, result="TRIAL STOPPED: x")),
-                 ft.readable("You've hit your 5-hour limit\n")]
-        check("the log shows the session's words, each agent it starts, its last answer with turns, minutes and cost - never a "
+                                                                         {"type": "tool_use", "name": "Agent", "input": {"description": "QA M19"}}]}), seen),
+                 ft.readable(ev(type="assistant", parent_tool_use_id="t1", message={"content": [{"type": "text", "text": "inside a helper"}]}), seen),
+                 ft.readable(ev(type="user", message={"content": []}), seen),
+                 ft.readable(ev(type="result", num_turns=234, duration_ms=14700000, total_cost_usd=36.4, result="TRIAL STOPPED: x"), seen),
+                 ft.readable("You've hit your 5-hour limit\n", seen)]
+        check("the log shows the session's words, each agent it starts, the minutes since the start and the cost so far - never a "
               "helper's own stream", shown[0] == "The M19 build is running.\n  > Agent: QA M19" and shown[1] is None and shown[2] is None
-              and shown[3] == "(the session: 234 turns, 245 min, $36)\n\nTRIAL STOPPED: x" and shown[4] == "You've hit your 5-hour limit", shown)
+              and shown[3] == "(245 min since the start, $36 so far in this claude -p)\n\nTRIAL STOPPED: x"
+              and shown[4] == "You've hit your 5-hour limit", shown)
+        # print mode sends every turn's result when the run ends, each with that run's cost: the 2.126.0 trial's log said
+        # "(the session: 2 turns, 0 min, $61)" 36 times over 2.7 hours - the minutes of one turn and the same cost
+        late = [ft.readable(ev(type="result", num_turns=2, duration_ms=9000, total_cost_usd=36.4, result=r), seen)
+                for r in ("The M19 build is running.", "TRIAL STOPPED: x", "")]
+        check("... the results that come together at the end show nothing new: no line for a turn's own minutes, the same cost "
+              "or an answer the log already has", late == [None, None, None], late)
+        check("... a result whose answer the log has not shown yet shows it, under the minutes since the start",
+              ft.readable(ev(type="result", total_cost_usd=36.4, result="Module 1 passes."), seen)
+              == "(245 min since the start, $36 so far in this claude -p)\n\nModule 1 passes.")
         logf = os.path.join(tmp, "live.log")
         stub = [sys.executable, "-c", "import json, sys, time; print(json.dumps({'type': 'assistant', 'message': {'content': "
                 "[{'type': 'text', 'text': 'first words'}]}})); sys.stdout.flush(); time.sleep(1); "
@@ -185,6 +197,55 @@ def main():
         rc = ft.run_claude(stub, tmp, dict(os.environ), logf)
         check("each line reaches the log while the run is still going (the trial's log was written only at its end)",
               rc == 0 and io.open(logf, encoding="utf-8").read() == "first words\nseen\n", io.open(logf, encoding="utf-8").read())
+
+        # the 2.126.0 trial: two helpers ended their turns while their own 3D checks still ran, the session had nothing
+        # running and claude -p quit at 18:26 without TRIAL DONE / TRIAL STOPPED - M19's post-fix build and M01's fix round lost
+        fake = os.path.join(tmp, "fake_claude.py")
+        io.open(fake, "w", encoding="utf-8").write(
+            "import json, os, sys\n"
+            "a = sys.argv[1:]\n"
+            "io = open(os.environ['FAKE_CALLS'], 'a', encoding='utf-8'); io.write(json.dumps(a) + '\\n'); io.close()\n"
+            "sid = a[a.index('--resume') + 1] if '--resume' in a else 'sess-1'\n"
+            "say = lambda t: print(json.dumps({'type': 'assistant', 'session_id': sid, 'message': {'content': [{'type': 'text', 'text': t}]}}))\n"
+            "print(json.dumps({'type': 'system', 'subtype': 'init', 'session_id': sid}))\n"
+            "mode = os.environ['FAKE_MODE']\n"
+            "if mode == 'limit':\n    say(\"You've hit your 5-hour limit\")\n"
+            "elif mode == 'quits' and '--resume' in a:\n    say('Module 19 passes.'); say('TRIAL DONE')\n"
+            "else:\n    say('Both 3D checks are still running. Waiting.')\n"
+            "print(json.dumps({'type': 'result', 'session_id': sid, 'total_cost_usd': 61.1, 'result': 'Waiting.'}))\n")
+        calls = os.path.join(tmp, "calls.jsonl")
+        base = [sys.executable, fake, "-p", "the trial prompt", "--permission-mode", "acceptEdits"]
+
+        def resumed_run(mode):
+            if os.path.isfile(calls):
+                os.remove(calls)
+            rc = ft.run_claude(base, tmp, dict(os.environ, FAKE_CALLS=calls, FAKE_MODE=mode), logf)
+            return rc, [json.loads(x) for x in io.open(calls, encoding="utf-8")], io.open(logf, encoding="utf-8").read()
+        rc, argv, log = resumed_run("quits")
+        check("a run that quits without its last line is carried on in the same session (--resume <its id from the stream>), "
+              "with a short carry-on prompt and the same flags, in the same log, said in a line",
+              rc == 0 and len(argv) == 2 and argv[0] == base[2:] and argv[1][:2] == ["-p", ft.course_portal.CARRY_ON]
+              and argv[1][2:4] == ["--resume", "sess-1"] and argv[1][4:] == base[4:]
+              and "carried on in the same session, 1 of 3" in log and log.rstrip().endswith("TRIAL DONE")
+              and log.index("Waiting.") < log.index("carried on") < log.index("Module 19 passes."), (argv, log))
+        check("... the carry-on prompt says that a helper waiting on its own background work has stopped, and to end with the "
+              "same one line", "waiting on its own background work has stopped" in ft.course_portal.CARRY_ON.replace("\n", " ")
+              and "same one line" in ft.course_portal.CARRY_ON)
+        rc, argv, log = resumed_run("never")
+        check("... at most 3 times: then it stops as it is", len(argv) == 4 and log.count("carried on in the same session") == 3
+              and "3 of 3" in log, (len(argv), log))
+        rc, argv, log = resumed_run("limit")
+        check("... never after Claude's usage limit (it is scored as such)", len(argv) == 1 and "carried on" not in log, (argv, log))
+        os.environ["NOVIKONTAS_CLAUDE_CMD"] = json.dumps([sys.executable, fake])
+        os.environ.update(FAKE_CALLS=calls, FAKE_MODE="quits")
+        os.remove(calls)
+        code, out = cli("run", "--home", home, "--modules", "1")
+        runs = sorted(os.listdir(os.path.join(home, "runs")))
+        log = io.open(os.path.join(home, "runs", runs[-1], "build.log"), encoding="utf-8").read()
+        check("factory_trial.py run carries the session on and ends on its line", "carried on in the same session, 1 of 3" in log
+              and "The build said: TRIAL DONE" in out and len(io.open(calls, encoding="utf-8").readlines()) == 2, (out, log))
+        for k in ("NOVIKONTAS_CLAUDE_CMD", "FAKE_CALLS", "FAKE_MODE"):
+            os.environ.pop(k, None)
         check("a run whose last lines say Claude's usage limit stopped it", ft.stopped_by("M04 fix round running\nYou've hit your "
               "5-hour limit · resets 1:50pm (Europe/Riga)\n") == "usage limit" and ft.stopped_by("TRIAL DONE\n") is None)
         os.environ["NOVIKONTAS_CLAUDE_CMD"] = json.dumps([sys.executable, "-c", "print('TRIAL STOPPED: usage limit reached.'); "
@@ -222,6 +283,21 @@ def main():
         off = ft.off_blueprint(list(slides.values()))
         check("off its blueprint: an unknown template, a template's wrong version, a picture slot with a placeholder or no "
               "picture - and nothing else", off == ["s02", "s03", "s04", "s05"], off)
+        # the 2.126.0 trial scored M01 s28 and s28b off their blueprint: each holds a 2D-kit figure, which kit2d.js draws when
+        # the page opens - the scorecard saw no picture in the page as written, and the build never judged blueprints
+        k2 = ('<section class="slide" id="s28" data-kind="Theory" data-visual="comparison" data-template="worked-example.v1" '
+              'data-variant="figure"><h2>Which tanks need a secondary barrier</h2><div class="lt-scol"><div class="lt-in fill fig '
+              'kit2d-fig" data-script-ignore><div class="kit2d-stage" data-kit2d="#k2-s28"></div><script type="application/json" '
+              'id="k2-s28">{"parts":[{"id":"N1","type":"node"}]}</script></div></div></section>')
+        bare = k2.replace('<div class="kit2d-stage" data-kit2d="#k2-s28"></div>', "")
+        import check_course_package as ccp
+        k2deck = os.path.join(tmp, "k2deck.html")
+        offs = []
+        for page in (k2, bare):
+            io.open(k2deck, "w", encoding="utf-8").write("<!doctype html><html><body>%s</body></html>" % page)
+            offs.append((ft.off_blueprint(ft.scan_deck(k2deck)), ccp.off_blueprint(ccp.deck_slides(ccp.parse(k2deck)))))
+        check("a 2D-kit figure is the picture its template needs - for the scorecard and for the build's course package check "
+              "alike; the same slide with no figure is off its blueprint for both", offs == [([], []), (["s28"], ["s28"])], offs)
         check("interactive 3D counted as the course package counts it (L67): 1 of the 6 teaching slides", ft.three_d_share(deck) == 17)
         build = os.path.join(oc, "working_claude", "_build")
         io.open(os.path.join(build, "M01_answer.txt"), "w", encoding="utf-8").write(
