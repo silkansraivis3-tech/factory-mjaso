@@ -186,6 +186,10 @@ def judge(course, module, verdicts):
                 if target.get("choices") or target.get("claim"):
                     probs.append("%s: %s is a scenario or a claim to vote on - add the line to a plain theory slide" % (qid, sid))
                     continue
+                if target.get("points") and cs.wc(line) > cs.POINT_WORDS:
+                    probs.append("%s: %s is a slide of short points - the line to add is a point, %d words or fewer"
+                                 % (qid, sid, cs.POINT_WORDS))
+                    continue
                 row["add"] = {"slide": sid, "line": line}
             if change:
                 row["question"] = change
@@ -224,16 +228,20 @@ def fixes(course, module):
 
 def status(course, module, script=None):
     """{"started": the module has verdicts, "questions", "judged", "unjudged": [ids], "open": [(id, verdict, missing)],
-    "rows": {id: verdict row, for the questions as they are now}}"""
+    "rows": {id: verdict row, for the questions as they are now}, "lost": {id: the quotes a covered verdict relied on that
+    the slides before it no longer show - a line cut or changed since it was judged}}"""
     script = script or cs.load(cs.paths(course, module)["script"])
     st = load_store(course, module)
     have = (st or {}).get("questions") or {}
-    out = {"started": st is not None, "questions": 0, "judged": 0, "unjudged": [], "open": [], "rows": {}}
-    for qid, (h, _, _, _) in current(script).items():
+    out = {"started": st is not None, "questions": 0, "judged": 0, "unjudged": [], "open": [], "rows": {}, "lost": {}}
+    for qid, (h, _, slides, _) in current(script).items():
         out["questions"] += 1
         row = have.get(qid)
         if not row or row.get("hash") != h:
             out["unjudged"].append(qid)
+            gone = [x for x in (row or {}).get("quote") or [] if row.get("verdict") == "covered" and not quote_on(x, slides)]
+            if gone:
+                out["lost"][qid] = gone
             continue
         out["judged"] += 1
         out["rows"][qid] = row

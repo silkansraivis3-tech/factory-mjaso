@@ -284,7 +284,8 @@ A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobod
   build plan question takes its first option.
 - Never ask: a question goes to `working_claude/OPEN_EXPERT_QUESTIONS.md` with the choice made, and the build goes on.
 - Each script, before approval: the `task-coverage-checker`, then the `fact-checker`, each ending `fixes --apply`; a
-  question listed for the person goes to `OPEN_EXPERT_QUESTIONS.md`.
+  question listed for the person goes to `OPEN_EXPERT_QUESTIONS.md`. When the fact-checker's apply says the task cover
+  must be judged again (its cuts changed the slides before a task), the `task-coverage-checker` runs on the module again.
 - No paid pictures. Free sources first — Wikimedia Commons, DVIDS, USCG, NOAA, the old course, the knowledge base (the
   `visual-sourcer`; small ones enlarged) — then Nano Banana in the Gemini app if a signed-in browser is there
   (`gemini-browser`). `picture_briefs.py queue` / `place`. An unfilled space keeps its brief and does not stop the build.

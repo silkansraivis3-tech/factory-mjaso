@@ -147,6 +147,7 @@ TASK_SLIDE_FIELDS = ("title", "text", "notes", "minutes")
 # has are its boxes, and every one is approved like its text
 SLIDE_EXTRA = ("points", "asks", "claim", "claim_is", "ask", "choices", "why", "right", "reveal", "drill", "seconds")
 TASK_SLIDE_EXTRA = ("before",)
+POINT_WORDS = 14                                          # a short point, on a slide of "points"
 DRILLS = ("quick-fire", "say-it", "find-it")
 FAIL, NOTE = slide_text.FAIL, slide_text.NOTE
 
@@ -856,8 +857,9 @@ def shape_problems(script):
                 pts = L("points")
                 if not 2 <= len(pts) <= 6:
                     probs.append("%s: \"points\" are 2-6 short points, one a line - it has %d" % (sid, len(pts)))
-                if any(wc(x) > 14 for x in pts):
-                    probs.append("%s: a point is short - 14 words or fewer; the full words stay in the text, for the instructor" % sid)
+                if any(wc(x) > POINT_WORDS for x in pts):
+                    probs.append("%s: a point is short - %d words or fewer; the full words stay in the text, for the instructor"
+                                 % (sid, POINT_WORDS))
                 if wc(*pts) >= wc(s.get("text", "")):
                     probs.append("%s: the points say as much as the text - they are the short version of it" % sid)
                 if (s.get("visual_kind") or "none") == "none":
@@ -1055,6 +1057,39 @@ def overfull(s):
     return [(p, w, most) for p, w, most in parts if w > most]
 
 
+def side_budget(s):
+    """the words the column beside this slide's picture holds on a 1024 x 768 tablet (layout-templates.json): beside a 3D
+    model on a split slide, the widest column that still leaves the model its share of the width ("boxes" three_d); beside
+    any other picture, the measured "budgets" beside_picture. None: no picture beside the words"""
+    kind = picture_of(s)["kind"]
+    if kind in ("", "none"):
+        return None
+    BX = LAYOUT_RULES["boxes"]
+    if kind == "3d" and s.get("layout") not in ("visual_wide", "visual_full"):
+        return max(BX[b]["words"] for b in BX["order"] if round(1 - BX[b]["text"], 3) >= BX["three_d"])
+    return LAYOUT_RULES["budgets"]["beside_picture"]
+
+
+def over_budget(s):
+    """(its words, the most its column holds) of a teaching slide with more words than the column beside its picture holds -
+    the compiler would page them into number tabs (content-in-parts) - or None. A slide of its own template (true or false,
+    scenario, short points, worked example, drill: overfull), numbered steps and a table are laid out by their own templates"""
+    if s.get("kind") != "slide" or s.get("recap") or shaped_kind(s):
+        return None
+    most, lines = side_budget(s), lines_of(s.get("text"))
+    w = wc(" ".join(lines))
+    if most is None or w <= most:
+        return None
+    if len(lines) >= 2 and (sum(1 for x in lines if STEP_LINE.match(x)) >= len(lines) - 1 or sum(1 for x in lines if " | " in x) >= 2):
+        return None
+    return w, most
+
+
+def in_parts(s):
+    """the writer keeps this slide's words in parts on purpose, and says why: "in_parts": "<why>" """
+    return bool(str(s.get("in_parts") or "").strip())
+
+
 def theory_check(script):
     """Everything L36 asks, as findings shown at the top of the review page. Also returns, for every
     question, the slide(s) that teach its answer - the page shows them beside the question."""
@@ -1079,10 +1114,15 @@ def theory_check(script):
         if not s.get("active"):              # L49: the density is of PLAIN theory; an active slide's minutes are what the trainees do
             th_words += w_slide + w_notes
             th_min += minutes(s)
+        over = over_budget(s)
         if s.get("recap"):
             pass                              # L51: a recap is short on purpose - recap_findings checks its points
         elif w_floor < R["slide"]["min_words"]:
             add(s["id"], "text", NOTE, "t_thin_slide", w=w_floor, min=R["slide"]["min_words"])
+        elif over and not in_parts(s):        # L61: over its template's measured budget the slide is split, never paged
+            add(s["id"], "text", FAIL, "t_over_budget", w=over[0], max=over[1],
+                pic=T(script, "t_pic_3d" if picture_of(s)["kind"] == "3d" else "t_pic_other"))
+            found[-1]["fix"] = T(script, "t_fix_over_budget", most=R["slide"]["in_parts_max"])
         elif w_lines > R["slide"]["steps_from"]:
             add(s["id"], "text", NOTE, "t_long_slide", w=w_lines, max=R["slide"]["steps_from"])
         elif w_lines > R["slide"]["picture_from"] and picture_of(s)["kind"] in ("", "none"):
@@ -1096,6 +1136,14 @@ def theory_check(script):
             add(s["id"], "notes", NOTE, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
         elif w_notes > R["notes"]["max_words"]:
             add(s["id"], "notes", NOTE, "t_long_notes", w=w_notes, max=R["notes"]["max_words"])
+    # the slides kept in parts on purpose: a few in a module, never two in a row
+    kept = [i for i, s in enumerate(screens) if in_parts(s) and over_budget(s)]
+    if len(kept) > R["slide"]["in_parts_max"]:
+        add(None, "", FAIL, "t_parts_many", n=len(kept), sids=", ".join(screens[i]["id"] for i in kept),
+            most=R["slide"]["in_parts_max"])
+    for a, b in zip(kept, kept[1:]):
+        if b == a + 1:
+            add(screens[b]["id"], "text", FAIL, "t_parts_in_row", prev=screens[a]["id"])
     if th_min and not final:
         rate = th_words / th_min
         if rate < R["module"]["min_words_per_theory_minute"]:
@@ -1343,7 +1391,7 @@ def paged_words(s, b=None):
     more than PARTS_FROM words becomes content-in-parts with numbered tabs), or 0: no picture, few words, a list of steps or a
     table (own templates), or the build sheet asks for / names a layout. Never cuts a word (L61) - it is the writer's finding"""
     b = b or {}
-    if s.get("kind") != "slide" or s.get("recap") or b.get("parts") or b.get("template"):
+    if s.get("kind") != "slide" or s.get("recap") or b.get("parts") or b.get("template") or in_parts(s):
         return 0
     if picture_of(s)["kind"] == "none":
         return 0
@@ -1405,6 +1453,12 @@ def build_findings(course, script):
                               (s.get("title") or "" for s in script["screens"] if s.get("id") == best[0]), ""),
                               why=best[1] or T(script, "v_3d_why_planned")), "fix": ""})
     return found
+
+
+def review_build_findings(course, script, th_found):
+    """build_findings for the review page: a slide the theory check already asks to split (t_over_budget) is said once"""
+    split = {f["screen"] for f in th_found if f["rule"] == "t_over_budget"}
+    return [f for f in build_findings(course, script) if not (f["rule"] == "v_paged_slide" and f["screen"] in split)]
 
 
 def media_findings(script):
@@ -1718,7 +1772,7 @@ def ship_findings(course, script):
 # ------------------------------------------------------------------ a retrofit keeps the old course
 # a course rebuilt from an old one: the new module follows the old course's order, keeps every slide that taught
 # something, and carries at least as much theory - the old order was good and only its Bloom level needed lifting
-OLD_REF = re.compile(r"([^;]+?\.pptx)\s*,?\s*slides?\s+([0-9][0-9\s,\-\u2013]*(?:\s*and\s*[0-9]+)*)", re.I)
+OLD_REF = re.compile(r"([^;]+?\.pptx)\s*,?\s*slides?\s+([0-9][0-9\s,\-\u2013]*(?:\s*and\s*[0-9][0-9\s,\-\u2013]*)*)", re.I)
 OLD_RULES = {"back": 2, "content_words": 20, "thin_fail": 0.6, "thin_note": 0.8, "new_share": 0.3, "min_old_words": 200}
 
 
@@ -1918,6 +1972,9 @@ def proof_findings(course, script):
     for sid, text, verdict in st["unproven"]:
         found.append({"where": place(script, sid), "screen": sid, "field": "", "level": FAIL, "rule": "c_unproven",
                       "detail": T(script, "c_unproven", text=text[:120], verdict=verdict.replace("_", " ")), "fix": ""})
+    for sid, text, quote in st.get("cut_off", []):
+        found.append({"where": place(script, sid), "screen": sid, "field": "", "level": NOTE, "rule": "c_cut_quote",
+                      "detail": T(script, "c_cut_quote", text=text[:120], quote=quote[-80:]), "fix": ""})
     return found
 
 
@@ -1935,7 +1992,8 @@ def task_cover_findings(course, script):
         return [{"where": T(script, "s_the_module"), "screen": "", "field": "", "level": NOTE, "rule": "t_task_cover_not_run",
                  "detail": T(script, "t_task_cover_not_run", m=script.get("module")), "fix": ""}]
     found = [{"where": place(script, q), "screen": q, "field": "question", "level": FAIL, "rule": "t_task_not_covered",
-              "detail": T(script, "t_task_unjudged", m=script.get("module")), "fix": ""} for q in st["unjudged"]]
+              "detail": T(script, "t_task_lost", quote=st["lost"][q][0][:120], m=script.get("module")) if q in st.get("lost", {})
+              else T(script, "t_task_unjudged", m=script.get("module")), "fix": ""} for q in st["unjudged"]]
     for q, verdict, missing in st["open"]:
         found.append({"where": place(script, q), "screen": q, "field": "question", "level": FAIL, "rule": "t_task_not_covered",
                       "detail": T(script, "t_task_not_covered", verdict=verdict.replace("_", " "), missing=missing[:160]), "fix": ""})
@@ -2434,7 +2492,7 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             e(T(script, "s_theory_title")), e(T(script, "s_theory_intro")), "".join(row(f) for f in th_found)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_theory_clean")))
-    bf = build_findings(course, script)
+    bf = review_build_findings(course, script, th_found)
     no3d = [f for f in bf if f["rule"] == "v_3d_none_built"]       # L60 - said where it is seen first, never a block
     if no3d:
         o.append('<div class="card hot"><h3>%s</h3><p>%s</p></div>' % (e(T(script, "s_3d_title")), e(no3d[0]["detail"])))
@@ -2593,7 +2651,7 @@ def build_docx(course, script):
         for f in facts:
             body.append(_para("• " + f.get("fact", ""), lang=cl))
     th_found, taught_on = theory_findings(script)
-    for head, found in (("s_theory_title", th_found), ("s_media_title", media_findings(script) + build_findings(course, script)),
+    for head, found in (("s_theory_title", th_found), ("s_media_title", media_findings(script) + review_build_findings(course, script, th_found)),
                         ("s_textcheck_title", text_findings(script)), ("s_ilo_title", ilo_findings(course, script))):
         if found:
             label(T(script, head), style="Heading1")
@@ -2805,8 +2863,9 @@ def changed_words(old, new):
 
 SCREEN_WORDS = {"slide": "slide", "task-slide": "task slide", "activity": "activity slide", "self-check": "self-check question",
                 "module-check": "module check question", "final": "final assessment question"}
-SCRIPT_FIELD_WORDS = {"minutes_allocated": "minutes allocated", "pass_mark": "pass mark", "operator_facts": "operator facts"}
-SCRIPT_FIELDS = ("title", "minutes_allocated", "sources", "pass_mark", "operator_facts")   # the top-level fields a change may touch
+SCRIPT_FIELD_WORDS = {"minutes_allocated": "minutes allocated", "pass_mark": "pass mark", "operator_facts": "operator facts",
+                      "dropped_old": "old slides dropped"}
+SCRIPT_FIELDS = ("title", "minutes_allocated", "sources", "pass_mark", "operator_facts", "dropped_old")   # the top-level fields a change may touch
 NEW_PROBLEMS = "after these changes the script would have: "
 
 
@@ -2962,8 +3021,12 @@ def check_script_field(name, v):
         if not num or v < 0:
             raise Stop("minutes_allocated must be a number, not %r" % (v,))
         return v
-    if name in ("sources", "operator_facts") and not isinstance(v, list):
+    if name in ("sources", "operator_facts", "dropped_old") and not isinstance(v, list):
         raise Stop("%s must be a list, not %r" % (name, v))
+    if name == "dropped_old" and not all(isinstance(d, dict) and old_refs(as_text(d.get("from"))) and str(d.get("why") or "").strip()
+                                         for d in v):
+        raise Stop("dropped_old is a list of {\"from\": \"<deck>.pptx, slide 27\", \"why\": \"...\"} - each old slide named with its deck, "
+                   "and why it is dropped")
     if name == "title" and not (isinstance(v, str) and v.strip()):
         raise Stop("title must be text, not %r" % (v,))
     return v
@@ -3309,6 +3372,11 @@ def render(course, module, quiet=False):
               % (p["review"], p["docx"], p["notes_md"]))
         if probs:
             print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
+        ap = workspace.claude_path(course, "architecture.json")
+        want = ((load(ap) if os.path.isfile(ap) else {}).get("course") or {}).get("operator_language")
+        if want and want != script.get("operator_language", "en"):
+            print("\nNote: the script's \"operator_language\" is \"%s\", the course's is \"%s\" (architecture.json) - the review "
+                  "page and its findings are written in the script's; set it to \"%s\"." % (script.get("operator_language", "en"), want, want))
         th, _ = theory_findings(script)
         for head, found in (("The theory check", th), ("The pictures-and-tasks check", media_findings(script)),
                             ("The text check", text_findings(script)), ("The ILO map and sources check", ilo_findings(course, script)),

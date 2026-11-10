@@ -16,6 +16,7 @@ Pinned:
 """
 from __future__ import annotations
 
+import contextlib
 import io
 import json
 import os
@@ -166,6 +167,37 @@ def main():
         changes, asks = fc.fixes(c, 1)
         check("a question's answer or feedback is never changed by fixes, only listed for the person",
               not any(x["screen"] == "q01" for x in changes) and asks and asks[0]["screen"] == "q01", (changes, asks))
+        rv = [cid for cid, r in fc.load_store(c, 1)["claims"].items() if r["field"] == "reveal"]
+        fc.judge(c, 1, [{"id": rv[0], "verdict": "not_found", "fix": "cut"}])
+        changes, asks = fc.fixes(c, 1)
+        check("... nor the answer a slide reveals to the room's question - the ask would lose it (factory trial M08 s15)",
+              not any(x["field"] == "reveal" for x in changes) and any(r["field"] == "reveal" and r["screen"] == "s02" for r in asks),
+              (changes, asks))
+        fc.judge(c, 1, [{"id": rv[0], "verdict": "found", "quote": "needs a reliquefaction plant", "source": "Handout.pdf p.6"}])
+        st = fc.load_store(c, 1)
+        st["claims"]["pt"] = {"screen": "s01", "field": "points", "line": 1, "text": "Type C - about 18 bar"}
+        fc.save_store(c, 1, st)
+        done, probs = fc.judge(c, 1, [{"id": "pt", "verdict": "partly", "quote": "Type C tanks are pressure vessels designed for about 18 bar gauge",
+                                       "source": "Handout.pdf p.5", "fix": "Type C tanks are pressure vessels designed for about 18 bar gauge, "
+                                       "and they need no secondary barrier."}])
+        check("a correction of a short point that is no longer short is refused - the point is rewritten short",
+              done == 0 and "%d words or fewer" % cs.POINT_WORDS in probs[0], probs)
+        st = fc.load_store(c, 1)
+        del st["claims"]["pt"]
+        fc.save_store(c, 1, st)
+        check("a source sentence that ends mid-clause is known (the knowledge base cut it off), a whole one is not",
+              fc.cut_off("In addition, loss of over-pressure in the motor room should trip the electric motors within.")
+              and not fc.cut_off("They need no secondary barrier.") and not fc.cut_off("Ammonia attacks copper and zinc."))
+        st = fc.load_store(c, 1)
+        eighteen = next(cid for cid, r in st["claims"].items() if r["text"].startswith("Type C tanks are pressure vessels"))
+        kept_quote = st["claims"][eighteen]["quote"]
+        st["claims"][eighteen]["quote"] = "Type C tanks are pressure vessels designed for about 18 bar gauge within."
+        fc.save_store(c, 1, st)
+        f = [x for x in cs.proof_findings(c, cs.load(cs.paths(c, 1)["script"])) if x["rule"] == "c_cut_quote"]
+        check("... a slide line proved by one is listed for the person - a note, never a stop",
+              [(x["screen"], x["level"]) for x in f] == [("s01", cs.NOTE)], f)
+        st["claims"][eighteen]["quote"] = kept_quote
+        fc.save_store(c, 1, st)
         work = cs.load(cs.paths(c, 1)["script"])
         work["screens"][0]["text"] += "\nThe example ship A carries 3,500 m3 of LPG at sea."
         cs.save(cs.paths(c, 1)["script"], work)
@@ -183,15 +215,27 @@ def main():
         fc.judge(c, 1, [{"id": forty, "verdict": "not_found", "fix": "cut"}])
         buf_code = fc.main(["fixes", c, "--module", "1", "--apply"])
         check("attended, fixes --apply is refused: the operator sees the changes first", buf_code == 2)
+        import task_cover
+        h = task_cover.current(cs.load(cs.paths(c, 1)["script"]))["q01"][0]
+        task_cover.save_store(c, 1, {"module": "1", "questions": {"q01": {"hash": h, "verdict": "covered", "slides": ["s01"],
+                                                                         "quote": ["designed for about 40 bar gauge"], "by": "test"}}})
         os.environ["NOVIKONTAS_AUTO_BUILD"] = "1"
+        out = io.StringIO()
         try:
-            code = fc.main(["fixes", c, "--module", "1", "--apply"])
+            with contextlib.redirect_stdout(out):
+                code = fc.main(["fixes", c, "--module", "1", "--apply"])
         finally:
             del os.environ["NOVIKONTAS_AUTO_BUILD"]
+        out = out.getvalue()
         after = cs.load(cs.paths(c, 1)["script"])
-        check("an unattended build applies the cuts itself (nobody there to say yes)", code == 0
+        check("an unattended build applies the cuts itself (nobody there to say yes)", code == 1
               and "40 bar" not in after["screens"][0]["text"] and "18 bar" in after["screens"][0]["text"]
               and not os.path.isfile(cs.paths(c, 1)["pending"]), after["screens"][0])
+        check("... and says the task cover must be judged again, naming the line a covered question relied on (factory trial "
+              "M04 s04, M01 s15) - exit 1", "must be judged again" in out and "q01 relied on \"designed for about 40 bar gauge\"" in out, out)
+        f = cs.task_cover_findings(c, after)
+        check("... a must-fix until it is judged again, which says what is gone",
+              [(x["screen"], x["level"]) for x in f] == [("q01", cs.FAIL)] and "40 bar" in f[0]["detail"], f)
         check("... and every finding is said in Latvian and Russian too",
               all(cs.LABELS[lang].get(k) for lang in ("lv", "ru") for k in ("c_unchecked", "c_unproven")))
     finally:

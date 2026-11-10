@@ -84,10 +84,21 @@ def main():
         check("... a step back of up to two slides (one slide joining two old ones) is not a move",
               not [r for r in rules(c, joined) if r[0] == "o_moved"], rules(c, joined))
 
+        got = cs.old_refs("%s, slides 106 and 110-111 - kept; %s, slides 3, 5-6 and 8 and 10-12" % (DECK, DECK))
+        check("a range after \"and\" keeps its end: \"slides 106 and 110-111\" is 106, 110 and 111",
+              list(got.values()) == [[106, 110, 111, 3, 5, 6, 8, 10, 11, 12]], got)
         dropped = copy.deepcopy(base)
         dropped["screens"][2]["from_old"] = "%s, slide 5 - kept" % DECK
         check("an old slide that taught something and no module cites is a must-fix", ("o_dropped", cs.FAIL, "") in rules(c, dropped)
               and any("slide 4" in f["detail"] for f in cs.old_course_findings(c, dropped)), rules(c, dropped))
+        _, work = cs.build_changes(dropped, [{"script_field": "dropped_old", "new": [{"from": "%s, slide 4" % DECK, "why": "Repeated on slide 5."}]}])
+        check("... propose can list it in dropped_old, as the must-fix says", not [r for r in rules(c, work) if r[0] == "o_dropped"], rules(c, work))
+        try:
+            cs.build_changes(dropped, [{"script_field": "dropped_old", "new": [{"from": "slide 4"}]}])
+            stopped = False
+        except cs.Stop:
+            stopped = True
+        check("... and a dropped_old entry without its deck's slide or its why is refused", stopped)
         dropped["dropped_old"] = [{"from": "%s, slide 4" % DECK, "why": "Repeated on slide 5."}]
         check("... unless dropped_old says why", not [r for r in rules(c, dropped) if r[0] == "o_dropped"], rules(c, dropped))
         other = {"module": 2, "screens": [slide("s01", long_, "slide 4")]}

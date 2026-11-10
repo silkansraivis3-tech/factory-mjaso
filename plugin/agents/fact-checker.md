@@ -21,7 +21,8 @@ You check one module's content script against the course's sources. Nothing else
 2. `F next <c> --module <n>` - up to 20 claims, each with its source passages. Judge each from the passages only -
    never from what you know:
    - **found** - a passage says it (other words are fine, the meaning and every number the same).
-   - **partly** - part of it is said, or a number or detail differs. `fix`: the claim rewritten as the source says it.
+   - **partly** - part of it is said, or a number or detail differs. `fix`: the claim rewritten as the source says it
+     (a point of a slide of short points stays a point: 14 words or fewer).
    - **not_found** - no passage says it. First search once more: `F search <c> --module <n> "<key words>"`. Still
      nothing: `fix`: `"cut"`.
    - **not_a_claim** - not a fact about the subject: an instruction, an example made up for a task (the ships A-F), a
@@ -34,4 +35,5 @@ You check one module's content script against the course's sources. Nothing else
    `NOVIKONTAS_AUTO_BUILD` is 1: `F fixes <c> --module <n> --apply`) and `F status <c> --module <n>`.
 
 Report in five lines or fewer: claims, found, partly, not found, the change list's path and the `propose` command
-`fixes` printed, and any question listed for the person. The operator sees the changes before they are applied.
+`fixes` printed, any question or room's answer listed for the person, and - after `--apply` - the questions whose task
+cover must be judged again (the task-coverage-checker runs on the module again). The operator sees the changes before they are applied.

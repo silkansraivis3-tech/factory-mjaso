@@ -24,8 +24,12 @@ You check one module's questions against the slides taught before them. Nothing 
      `quote`: the line(s) that teach it, copied from `shows` or `picture`.
    - **partly** - the topic is taught but a fact or step the task needs is missing, or only the notes say it.
    - **not_covered** - the slides teach another topic, or nothing the task needs.
+   Read each question's answer as its type writes it. In a `line_up`, the `TAG: name = open | shut` lines are the
+   valves **as the trainee finds them** - the start state, not the answer: the answer is what the trainee changes to
+   send the cargo from the goal's source to its destination and keep out what `keep out` names. A valve given shut on
+   the path to open is the task, never an inverted key.
    Partly and not_covered carry `missing` (what the trainee was not given) and `add`: `{"slide", "line"}` - one line
-   for a plain theory slide before the task, in the words a source says (`F search <c> --module <n> "<key words>"`
+   for a plain theory slide before the task (on a slide of short points, a point of 14 words or fewer), in the words a source says (`F search <c> --module <n> "<key words>"`
    when the course has a knowledge base). Only when no slide before it can hold it, or the question asks beyond its
    outcome, `question`: how to change the question, for the person.
 2. Write the batch as a JSON list `[{"id", "verdict", "slides", "quote", "missing", "add", "question"}]` to a file in

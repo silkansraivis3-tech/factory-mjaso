@@ -54,13 +54,14 @@ import gate_fixture  # noqa: E402
 LV, EN = cs.LABELS["lv"], cs.LABELS["en"]
 PASS, FAIL = [], []
 
-S01_TEXT = ("Liquefied gases are carried as liquids only because the ship keeps them cold, under pressure, or both.\n"
+S01_TEXT = ("Liquefied gases stay liquid only because the ship keeps them cold, under pressure, or both.\n"
             "LNG is mostly methane and boils at about -162 °C at atmospheric pressure, so it is carried fully refrigerated.\n"
             "Propane boils at -42 °C and butane at -0.5 °C; small ships carry them fully pressurised at ambient temperature.\n"
-            "If the containment fails, the liquid boils off at once and forms a heavy, cold vapour cloud that can burn, explode or displace oxygen.\n"
-            "Tanks, pipes, valves, gas detection and emergency shutdown all exist to keep the cargo liquid and inside its containment.")
+            "If the containment fails, the liquid boils off into a heavy, cold cloud that can burn or displace oxygen.\n"
+            "Tanks, pipes, valves and gas detection keep the cargo liquid and contained.")
 S01_NOTES = ("- Ask who has sailed on a gas tanker, and with which cargo.\n"
              "- Ask: what happens to liquid at -162 °C on a warm steel deck?\n"
+             "- Add: the cloud can also explode; the emergency shutdown stops the transfer.\n"
              "- Stress: boil-off never stops; it is managed.")
 S02_TEXT = ("Fully pressurised ships carry LPG and ammonia at ambient temperature in pressure vessels designed for about 18 bar; most are under 5,000 m³.\n"
             "Semi-pressurised, semi-refrigerated ships cool the cargo and hold it at about 5 to 7 bar, down to about -48 °C, or -104 °C for ethylene.\n"
@@ -69,14 +70,16 @@ S02_TEXT = ("Fully pressurised ships carry LPG and ammonia at ambient temperatur
 S02_NOTES = ("- Draw the propane pressure-temperature line; mark the three ship types on it.\n"
              "- Ask which type suits a short coastal trade, and which an ocean voyage.\n"
              "- Point out the ethylene carrier.")
-S03_TEXT = ("The IGC Code names four cargo containment systems.\n"
-            "Independent type A tanks are prismatic, built for less than 0.7 bar, and need a full secondary barrier.\n"
-            "Independent type B tanks - spherical Moss tanks or prismatic SPB tanks - are designed in such detail that a partial secondary barrier is enough.\n"
-            "Independent type C tanks are pressure vessels, cylindrical or bilobe, and need no secondary barrier at all.\n"
+S03_TEXT = ("The IGC Code names four containment systems.\n"
+            "Type A tanks are prismatic, built for under 0.7 bar, and need a full secondary barrier.\n"
+            "Independent type B tanks - spherical Moss or prismatic SPB - are designed in such detail that a partial secondary barrier is enough.\n"
+            "Type C tanks are pressure vessels, cylindrical or bilobe, and need no secondary barrier.\n"
             "Membrane tanks are thin metal barriers that rely on the hull, through the insulation, for their strength, and need a full secondary barrier.")
 S03_NOTES = ("- Let the room name each tank type on the model first.\n"
              "- Ask: why does a pressure vessel need no secondary barrier?\n"
              "- Stress: how likely a leak is decides the barrier.")
+
+MORE = "The duty officer reads the cargo's pressure and temperature every hour and writes both in the cargo log."
 
 RECAP_TEXT = ("Kept liquid - cold, under pressure, or both\n"
               "Three ship types - fully pressurised, semi-refrigerated, fully refrigerated\n"
@@ -96,7 +99,8 @@ SCRIPT = {
          "visual": "Photograph of a membrane LNG carrier alongside", "picture": {"kind": "photo", "aspect": "4:3", "shows": "A membrane LNG carrier alongside"}, "notes": S01_NOTES, "minutes": 5},
         {"id": "s02", "sub_ilo": "1.1", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "model_3d",
          "visual": "3D model of a semi-refrigerated tank - turn it and cut it open to see its insulation and its cooling coil",
-         "picture": {"kind": "3d", "aspect": "4:3", "shows": "A semi-refrigerated tank, cut open"}, "notes": S02_NOTES, "minutes": 5},
+         "picture": {"kind": "3d", "aspect": "4:3", "shows": "A semi-refrigerated tank, cut open"}, "notes": S02_NOTES, "minutes": 5,
+         "in_parts": "the three ship types, one a part, beside the tank they share"},
         {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - keeping the cargo liquid",
          "text": "A short self-check opens on your tablet now: three questions on why gas is carried cold or under pressure.",
          "notes": "Press OPEN TASK. Give three minutes and watch who hesitates.", "minutes": 3},
@@ -233,6 +237,63 @@ def groups_part():
     check("the Word file marks each question's group too", sum("Only for: Ship navigators" in x for x in labels) == 3, labels[-12:])
 
 
+def budget_part():
+    """L61: the template is the rule - over the column beside its picture a slide is split, never paged into number tabs"""
+    print("\n-- the template is the rule: over its measured budget a slide is split (L61)")
+    B, BX = cs.LAYOUT_RULES["budgets"], cs.LAYOUT_RULES["boxes"]
+    over = copy.deepcopy(SCRIPT)
+    screen(over, "s01")["text"] += "\n" + MORE
+    f = [x for x in cs.theory_findings(over)[0] if x["rule"] == "t_over_budget"]
+    check("a slide over the column beside its photograph (budgets beside_picture) is a must-fix that names the budget and the split",
+          [(x["screen"], x["level"]) for x in f] == [("s01", cs.FAIL)] and "holds %d" % B["beside_picture"] in f[0]["detail"]
+          and "two slides" in f[0]["fix"] and "in_parts" in f[0]["fix"], f)
+    check("... it blocks approval", [x["rule"] for x in cs.blocking(cs.all_findings(over))] == ["t_over_budget"], cs.blocking(cs.all_findings(over)))
+    tmp = tempfile.mkdtemp()
+    try:
+        en = dict(over, operator_language="en")
+        page = cs.render_html(tmp, en)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    check("... the review page says it once - not again as a slide paged into number tabs",
+          page.count("the build would page them into number tabs") == 1 and "so it will show in" not in page)
+    three = copy.deepcopy(SCRIPT)
+    screen(three, "s02").pop("in_parts")
+    f = [x for x in cs.theory_findings(three)[0] if x["rule"] == "t_over_budget"]
+    narrow = max(BX[b]["words"] for b in BX["order"] if round(1 - BX[b]["text"], 3) >= BX["three_d"])
+    check("beside a 3D model on a split slide the column is the one its box leaves the model (%d words, boxes three_d)" % narrow,
+          [x["screen"] for x in f] == ["s02"] and "holds %d" % narrow in f[0]["detail"] and narrow < B["beside_picture"], f)
+    check("... a 3D model across the slide (visual_wide) has the full column: s03, at %d words, fits" % cs.wc(S03_TEXT),
+          cs.over_budget(screen(SCRIPT, "s03")) is None and cs.side_budget(screen(SCRIPT, "s03")) == B["beside_picture"])
+    own = copy.deepcopy(three)
+    screen(own, "s02")["text"] = "\n".join("%d %s" % (i, "word " * 25) for i in range(1, 5))
+    check("numbered steps are laid out by their own template - not asked to split", cs.over_budget(screen(own, "s02")) is None)
+    screen(own, "s02").update(text=S02_TEXT, points="Fully pressurised - about 18 bar\nSemi-refrigerated - cooled, 5 to 7 bar\nFully refrigerated - near atmospheric")
+    check("... nor a slide of short points (its own template)", cs.over_budget(screen(own, "s02")) is None)
+    screen(own, "s02").update(visual_kind="none", picture={"kind": "none"})
+    screen(own, "s02").pop("points")
+    check("... nor a slide with no picture beside its words (steps_from says when it is shown in steps)", cs.over_budget(screen(own, "s02")) is None)
+
+    row = copy.deepcopy(SCRIPT)
+    screen(row, "s01").update(text=S01_TEXT + "\n" + MORE, in_parts="each risk on its own")
+    f = cs.theory_findings(row)[0]
+    check("kept in parts on purpose, with why: no split asked - but two slides in parts in a row are a must-fix",
+          not [x for x in f if x["rule"] == "t_over_budget"]
+          and [(x["screen"], x["level"]) for x in f if x["rule"] == "t_parts_in_row"] == [("s02", cs.FAIL)], [x["rule"] for x in f])
+    apart = copy.deepcopy(SCRIPT)
+    screen(apart, "s03").update(text=S03_TEXT + "\n" + MORE, in_parts="the four systems side by side")
+    f = cs.theory_findings(apart)[0]
+    check("... two in a module, not next to each other, pass", not cs.blocking(f), [x["rule"] for x in f])
+    many = copy.deepcopy(apart)
+    screen(many, "s01").update(text=S01_TEXT + "\n" + MORE, in_parts="each risk on its own")
+    f = cs.theory_findings(many)[0]
+    check("... more than %d in a module is a must-fix that names them" % cs.RULES["slide"]["in_parts_max"],
+          [(x["rule"], x["level"]) for x in f if x["rule"] == "t_parts_many"] == [("t_parts_many", cs.FAIL)]
+          and "s01, s02, s03" in next(x["detail"] for x in f if x["rule"] == "t_parts_many"), [x["rule"] for x in f])
+    check("... and a slide marked in parts that fits its column is not counted",
+          not [x for x in cs.theory_findings(dict(SCRIPT, screens=[dict(x, in_parts="why") if x["id"] in ("s01", "s03") else x
+                                                                   for x in SCRIPT["screens"]]))[0] if x["rule"].startswith("t_parts")])
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="cs_")
     try:
@@ -242,6 +303,8 @@ def main():
         p = cs.paths(c, 1)
         page = io.open(p["review"], encoding="utf-8").read()
         check("render writes the review page and the Word file, with no problems", code == 0 and os.path.isfile(p["docx"]) and "problems" not in out, out)
+        check("... and says when the script's operator language is not the course's (architecture.json) - the findings would be in it",
+              '"operator_language" is "lv", the course\'s is "en"' in out, out)
         check("the page is in the operator's language, the course text marked English",
               '<html lang="lv">' in page and '<span class="verb" lang="en">Four containment systems</span>' in page)
         # P2: render keeps the file's own indent and rewrites it only when something changed
@@ -277,14 +340,17 @@ def main():
         check("the module in numbers: minutes against the programme's, words per theory minute",
               lv("s_sum_alloc", a="23") in page and lv("s_sum_title") in page)
         check("a clean module: the theory check found nothing", lv("s_theory_clean") in page and lv("s_textcheck_clean") in page)
-        # 2.109.0 (F1): the three long fixture slides (90-99 words beside a picture) would be paged with number tabs - the
-        # review page says so, and nothing else is found
-        paged = cs.paged_findings(SCRIPT)
-        check("... and the pictures-and-tasks check found only the slides that would be paged into number tabs (F1, 2.109.0) - a warning",
-              [f["screen"] for f in paged] == ["s01", "s02", "s03"] and all(f["level"] == cs.NOTE for f in paged)
-              and not cs.media_findings(SCRIPT) and lv("s_media_clean") not in page)
+        # F1: the fixture's slides fit the column beside their picture, and the one kept in parts says why ("in_parts")
+        check("... and the pictures-and-tasks check found nothing either", not cs.media_findings(SCRIPT) and not cs.paged_findings(SCRIPT)
+              and lv("s_media_clean") in page)
+        long3 = copy.deepcopy(SCRIPT)
+        for x in ("s01", "s03"):
+            screen(long3, x)["text"] += "\n" + MORE
+        paged = cs.paged_findings(long3)
+        check("F1: a slide over the column beside its picture is still listed as paged into number tabs, for the build - a warning",
+              [f["screen"] for f in paged] == ["s01", "s03"] and all(f["level"] == cs.NOTE for f in paged), paged)
         check("F1: the same slides with the build sheet's \"parts\" are not found",
-              not cs.paged_findings(SCRIPT, {"screens": {x: {"parts": [[1, 2], [3, 9]]} for x in ("s01", "s02", "s03")}}))
+              not cs.paged_findings(long3, {"screens": {x: {"parts": [[1, 2], [3, 9]]} for x in ("s01", "s03")}}))
         check("operator-stated facts listed once - from the script and from FEEDBACK_LOG.md",
               "left console" in page and "tested to 7 bar" in page and page.count(lv("s_facts_title")) == 1)
         doc = zipfile.ZipFile(p["docx"]).read("word/document.xml").decode("utf-8")
@@ -319,10 +385,11 @@ def main():
         check("90 words and no picture: over %d a picture or steps - a warning" % cs.RULES["slide"]["picture_from"],
               f and f[0]["level"] == cs.NOTE, rules_of(dense))
         long_ = copy.deepcopy(SCRIPT)
-        screen(long_, "s03")["text"] = S03_TEXT + "\n" + S01_TEXT
+        screen(long_, "s03").update(text=S03_TEXT + "\n" + S01_TEXT, visual_kind="none", picture={"kind": "none"})
         f = [x for x in cs.theory_findings(long_)[0] if x["rule"] == "t_long_slide"]
-        check("a slide over %d words is a warning that the build shows it in steps, not a must-fix" % cs.RULES["slide"]["steps_from"],
+        check("a slide with no picture over %d words is a warning that the build shows it in steps, not a must-fix" % cs.RULES["slide"]["steps_from"],
               f and f[0]["level"] == cs.NOTE and "steps" in cs.LABELS["en"]["t_long_slide"], f)
+        budget_part()
         slow = copy.deepcopy(SCRIPT)
         screen(slow, "s03")["minutes"] = 25
         check("a module whose words do not fill its minutes is found - a warning",
