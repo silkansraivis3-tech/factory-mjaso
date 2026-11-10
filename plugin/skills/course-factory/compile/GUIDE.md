@@ -196,6 +196,7 @@ logo top right, Raleway bundled. What the compiler chooses on its own:
 | a picture beside more than 60 words | `reading-with-figure` - or `long-explanation` when the picture is 3D |
 | a picture beside more than 85 words | `reading-with-figure`, the words whole (never paged by the factory - the script splits the slide, `t_over_budget`, L61); `content-in-parts` (the lines in order, in parts of about 75 words, a tab each) only when the script keeps it in parts on purpose (`"in_parts"`) or the build sheet asks for it (`"parts"`) |
 | no picture and more than 120 words (the word guideline's `steps_from`), or `"parts"` in its build sheet | `explain-figure` `text-only`, its lines in the same parts: shown in steps |
+| wide photographs - every tile, or the one photograph of a photo column, at least `top_aspect` (1.25) times as wide as high, read from the file - and words that fit under them (`under_top_row`) | the `figure-top` variant of `explain-figure`, `reading-with-figure` or `content-in-parts`: the photographs in a row across the slide, each box its own shape, the words under them, their points two a row. A tall or square photograph stays beside the words; `"variant"` in the build sheet decides it either way |
 
 **Word budgets (measured at 1024 x 768 with these templates and the larger logo - `layout-templates.json`
 `budgets`):** beside a picture 85 words, with a photo under the words 70, beside a photo column 85, under a photograph
@@ -220,6 +221,14 @@ own words, `script/GUIDE.md` §1; `compare-two` needs `"blocks": [[1, 2], [3, 4]
 and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `"split": 0.5`-`0.6` (the text's share),
 `"box"` (the picture's box, below), `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.
+
+**Parts turn like pages.** The parts' number tabs are a strip at the foot of the slide body (56 px targets); Next, Back and
+a tab turn the part like a page of a carousel - the words slide out and the next part's slide in (`gb_deck.js`, transform
+and opacity only, at once under reduced motion). `"part_figures"` gives each part its own picture, in the order of the
+parts: `[null, "assets/img/b.jpg", ["assets/img/c.jpg", "assets/img/d.jpg"], "s07b.kit.json"]` - a photograph or a
+figure spec as `"figure"` takes it, a list of photographs as `"tiles"` takes them, `null` the slide's own picture. With
+part pictures the picture turns with its words; with one picture it stays and only the words turn. A part's picture is
+never a 3D model (one 3D scene a slide) - the slide's 3D scene is its `"figure"`.
 
 **A repeat of a look is a note (L62).** The compiler never builds a slide another way to avoid a repeat; a repeat, or more
 than a fifth of slides on the dark ground, is a `Note:` line, never a problem. A slide whose OWN layout does not fit (the

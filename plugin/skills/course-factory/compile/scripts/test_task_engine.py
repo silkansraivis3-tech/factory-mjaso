@@ -1713,8 +1713,11 @@ def patterns_part(exe, tmp):
             check("d) %s: the five-card recap is on the slide" % tag, False, rc)
         lit, tight = r.get("lit") or [], r.get("tight") or []
         plain = [x for x in lit if not x["box"] and x["tag"] != "li"]
-        check("e) %s: a line a figure lights has 10 px inside on both sides (at rest) - and a bullet line 10 px on the right" % tag,
-              plain and all(x["pl"] == 10 and x["pr"] == 10 for x in plain) and all(x["pr"] == 10 for x in lit if x["tag"] == "li" and not x["box"]), lit)
+        gap = round(min(0.014 * min(size), 12), 2)          # gb_compose.css --hl-x: the mark's gap beside the words
+        check("e) %s: a line a figure lights has the same gap inside on both sides (at rest, --hl-x, %g px) - and a bullet line "
+              "on the right, its bullet that far inside the mark on the left" % (tag, gap),
+              plain and all(round(x["pl"], 2) == gap and round(x["pr"], 2) == gap for x in plain)
+              and all(round(x["pr"], 2) == gap and x["pl"] > gap for x in lit if x["tag"] == "li" and not x["box"]), lit)
         check("e) %s: `.copy.tight` opts the slide out - no inner padding" % tag,
               plain and all(x["pl"] == 0 and x["pr"] == 0 for x in tight if not x["box"] and x["tag"] != "li"), tight)
 

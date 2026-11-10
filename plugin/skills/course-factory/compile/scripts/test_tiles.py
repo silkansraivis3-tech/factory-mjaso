@@ -62,7 +62,7 @@ def main():
         code, out = run(tc.COMPILE, c, "--module", "1")
         deck = io.open(os.path.join(md, "presentation", "index.html"), encoding="utf-8").read()
         sec = re.search(r'<section [^>]*data-script="%s".*?</section>' % sid, deck, re.S).group(0)
-        tiles = re.findall(r'<figure class="lt-tile" data-zoom="button">.*?</figure>', sec, re.S)
+        tiles = re.findall(r'<figure class="lt-tile" data-zoom="button"[^>]*>.*?</figure>', sec, re.S)
         check("\"tiles\": the compiler builds the slide's picture - four photographs, each opening full screen", len(tiles) == 4, sec[:900])
         check("... each with its own record full screen (what it shows, its credit) and its caption when one is given",
               all('data-about="Picture t' in x and "data-credit=" in x for x in tiles) and "<figcaption>The shipper&#x27;s SDS</figcaption>" in sec,
@@ -137,6 +137,54 @@ def main():
               sheet3[shot])
         check("... and a fresh module is not 'seeded' from the sheet just written (the course is its own predecessor only for "
               "a module it built before)", "seeded from the predecessor" not in out, out[-600:])
+
+        print("\n-- wide photographs on top, the words under them; the parts' tabs at the foot; each part's own picture")
+        os.makedirs(os.path.join(tmp, "d"))
+        c4, md4 = tc.new_course(os.path.join(tmp, "d"), tc.script(screens=tc.SCREENS))
+        sc4 = tc.cs.load(os.path.join(c4, "working_claude", "script", "M01.json"))
+        short = next(x["id"] for x in sc4["screens"] if x["kind"] == "slide" and len(tc.cs.lines_of(x.get("text"))) >= 2
+                     and tc.cs.wc(x.get("text")) <= cm.BUDGETS["under_top_row"] and not tc.cs.shaped_kind(x))
+        photos(md4, ["w1.png", "w2.png", "w3.png"])                       # 1800 x 1200: wide
+        for n in ("h1.png", "h2.png"):                                    # 1000 x 1600: tall
+            io.open(os.path.join(md4, "assets", "img", n), "wb").write(tc.png(1000, 1600, (90, 90, 150)))
+        meta = tc.cs.load(os.path.join(md4, "assets", "img", "_photo_meta.json"))
+        meta.update({n: dict(meta["w1.png"], description="Picture %s." % n, url_or_origin="https://example.org/" + n) for n in ("h1.png", "h2.png")})
+        tc.cs.save(os.path.join(md4, "assets", "img", "_photo_meta.json"), meta)
+
+        def built(entry):
+            tc.build_of(c4, lambda b: b["screens"].update({short: dict({"composition": "two-col"}, **entry)}))
+            code_, out_ = run(tc.COMPILE, c4, "--module", "1")
+            page_ = io.open(os.path.join(md4, "presentation", "index.html"), encoding="utf-8").read()
+            return re.search(r'<section [^>]*data-script="%s".*?</section>' % short, page_, re.S).group(0), out_
+
+        sec, out = built({"tiles": ["assets/img/w1.png", "assets/img/w2.png"]})
+        check("two wide photographs (M01 s09) go in a row on top, the words under them: figure-top, each box the photograph's "
+              "own shape (--ar) - never a tall box with empty bands", 'data-variant="figure-top"' in sec and "slide-body two-col fig-top" in sec
+              and sec.count('style="--ar:1.500"') == 2 and "--sum:3.000" in sec
+              and sec.find('class="fill fig lt-light lt-tiles-fig"') < sec.find('<div class="copy">'), sec[:900])
+        sec, out = built({"tiles": ["assets/img/h1.png", "assets/img/h2.png"]})
+        check("... tall photographs stay beside the words", 'data-variant="figure-top"' not in sec and "fig-top" not in sec, sec[:600])
+        sec, out = built({"tiles": ["assets/img/w1.png", "assets/img/w2.png"], "variant": "figure-right"})
+        check("... and a build sheet's own variant decides it", "fig-top" not in sec, sec[:600])
+        n_lines = len(tc.cs.lines_of(next(x for x in sc4["screens"] if x["id"] == short).get("text")))
+        sec, out = built({"tiles": ["assets/img/w1.png", "assets/img/w2.png"], "template": "content-in-parts",
+                          "parts": [[1, 1], [2, n_lines]], "part_figures": [None, ["assets/img/w3.png"]]})
+        check("the parts' tabs are a strip at the foot of the slide body, after the words and the picture - not under the words",
+              re.search(r'</div>\s*<div class="lt-tabs"><button type="button" class="lt-tab on" data-part="1"[^>]*>1</button>'
+                        r'<button type="button" class="lt-tab" data-part="2"[^>]*>2</button></div>\s*</div>\s*</section>', sec), sec[-700:])
+        check("\"part_figures\": each part its own picture, the slide's own for a part given null - the one of the part shown on",
+              re.search(r'<div class="lt-pfigs"><div class="lt-pfig on" data-part="1"><div class="fill fig[^"]*lt-tiles-fig".*?w1\.png.*?w2\.png.*?'
+                        r'<div class="lt-pfig" data-part="2"><div class="fill fig[^"]*lt-tiles-fig".*?w3\.png', sec, re.S), sec[:1500])
+        sec, out = built({"tiles": ["assets/img/w1.png", "assets/img/w2.png"], "template": "content-in-parts",
+                          "parts": [[1, 1], [2, n_lines]], "part_figures": ["assets/img/w3.png"]})
+        check("... one for each part, or the build says so", "\"part_figures\" gives one picture for each of the slide's 2 parts" in out, out[-600:])
+        sec, out = built({"tiles": ["assets/img/w1.png", "assets/img/w2.png"], "template": "content-in-parts",
+                          "parts": [[1, 1], [2, n_lines]], "part_figures": [None, "x.kit3d.json"]})
+        check("... and a part's picture is never a 3D model (one 3D scene a slide)", "part 2 is a 3D model" in out, out[-600:])
+        deck_js = io.open(os.path.join(md4, "assets", "gb_deck.js"), encoding="utf-8").read()
+        check("a part turns like a page: the words - and the part's own picture - slide out and the next part's in, transform and "
+              "opacity only, at once under reduced motion (gb_deck.js)", "prefers-reduced-motion: reduce" in deck_js
+              and 'transform: "translateX(" + (-dir * TURN.shift) + "%)"' in deck_js and ".lt-pfigs:not(.lt-ghost) > .lt-pfig" in deck_js)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n" + "=" * 72 + "\n%d passed, %d failed" % (len(PASS), len(FAIL)))

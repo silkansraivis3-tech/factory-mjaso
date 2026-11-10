@@ -228,6 +228,30 @@ check("in a deck: Next after the last step turns the slide", d == "s3", d)
 check("in a deck: Back returns to the scene", e.get("active") == "s2", e)
 check("in a deck: no page error", not any(x.get("errors") for x in r), [x.get("errors") for x in r])
 
+# ---------------------------------------------------------------- steps that name no line: the lines walk with them (M01 s11)
+NOLINES = BASE + "course-visuals/kit3d/scripts/fixtures/deck_kit3d_nolines.html"
+LIT = J % ("(function(){return {active:document.querySelector('.slide.active').id,step:%s.info().step,"
+           "cur:[].map.call(document.querySelectorAll('#s2 [data-i].cur'),function(x){return x.getAttribute('data-i')}),"
+           "lit:[].map.call(document.querySelectorAll('#s2 [data-i].lit'),function(x){return x.getAttribute('data-i')})}})()" % API)
+r = run([
+    {"url": NOLINES, "wait": "document.getElementById('startBtn')", "do": ["document.getElementById('startBtn').click()"], "settle": 1500,
+     "probe": J % "document.querySelector('.slide.active').id"},
+    {"do": "document.getElementById('btnNext').click()", "settle": 1200, "probe": LIT},
+    {"do": "document.getElementById('btnNext').click()", "settle": 1300, "probe": LIT},
+    {"do": "document.getElementById('btnNext').click()", "settle": 1300, "probe": LIT},
+    {"do": "document.getElementById('btnPrev').click()", "settle": 1300, "probe": LIT},
+    {"do": ["document.getElementById('btnNext').click()", "document.getElementById('btnNext').click()"], "settle": 900,
+     "probe": J % "document.querySelector('.slide.active').id"},
+], "--w=1280", "--h=800")
+a, b, c, d, e = (x.get("probe") or {} for x in r[1:])
+check("steps that name no line: the slide opens with its first line lit and the scene at its first step",
+      a.get("active") == "s2" and a.get("step") == 0 and a.get("cur") == ["1"], a)
+check("... each Next walks the scene one step and the lit line one line (the lines before it marked as read)",
+      b.get("step") == 1 and b.get("cur") == ["2"] and b.get("lit") == ["1"] and c.get("step") == 2 and c.get("cur") == ["3"], (b, c))
+check("... Back walks both back", d.get("step") == 1 and d.get("cur") == ["2"], d)
+check("... and Next after the last of them turns the slide", e == "s3", e)
+check("... no page error", not any(x.get("errors") for x in r), [x.get("errors") for x in r])
+
 # ---------------------------------------------------------------- many scenes in a deck: ONE WebGL context, memory given back
 MANY = BASE + "course-visuals/kit3d/scripts/fixtures/deck_kit3d_many.html"
 MP = J % ("(function(){var o={active:document.querySelector('.slide.active').id,canvases:document.querySelectorAll('canvas').length,"

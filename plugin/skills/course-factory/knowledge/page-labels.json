@@ -260,6 +260,7 @@
     "c_unproven": "\"{text}\" is {verdict} in the course's sources - cut it or correct it (fact_check.py fixes, then content_script.py propose).",
     "t_long_answer": "the answer the slide opens has {w} words - keep it to {max} (two or three sentences); what is more is theory: teach it on a slide before.",
     "t_overfull": "{part} has {w} words beside the picture - its template, {tpl}, holds {max} on a 1024 x 768 tablet and has no parts, so the words would be cut or scroll. Split it into two slides.",
+    "t_overfull_rows": "its {n} lines are cards that fill about {h} px of the {max} px the column beside the picture has on a 1024 x 768 tablet - its template, {tpl}, has no parts, so the last of them would be cut. Split it into two slides.",
     "t_fix_scenario": "split into two slides - the situation on a slide of its own (it may keep the picture, or carry another photograph), then the question, the choices and their whys on the next; or teach part of it on the slide before",
     "t_fix_worked": "split into two slides - the first steps on one (with the picture), the rest and the room's question on the next (it may carry its own picture); or teach part of it on the slide before",
     "t_part_situation": "the situation",

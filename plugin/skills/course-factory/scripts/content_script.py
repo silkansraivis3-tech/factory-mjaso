@@ -1057,6 +1057,29 @@ def overfull(s):
     return [(p, w, most) for p, w, most in parts if w > most]
 
 
+HEAD_WORDS = 6
+
+
+def head_lines(lines):
+    """the positions of the lines that head a group - a short line ending with ":" and a line after it ("Advantages:",
+    "Disadvantages:"): a subheading, never a numbered point or a point of the list"""
+    return {j for j, x in enumerate(lines)
+            if j < len(lines) - 1 and x.rstrip().endswith(":") and wc(x) <= HEAD_WORDS}
+
+
+def worked_rows(s):
+    """(the height its steps take, the height the column has), in px at 1024 x 768, of a worked example beside a picture
+    whose steps do not fit its column - or None. Each line is a card, so the words alone do not say it: six short lines can
+    fill the column that 85 words in three lines leave half empty (M01 s05). layout-templates.json budgets worked_column"""
+    if s.get("kind") != "slide" or picture_of(s)["kind"] in ("", "none") or shaped_kind(s) != "worked-example":
+        return None
+    C, lines = LAYOUT_RULES["budgets"]["worked_column"], lines_of(s.get("text"))
+    heads = head_lines(lines)
+    h = sum(C["head"] if j in heads else C["card"] + C["row"] * max(1, -(-wc(x) // C["row_words"]))
+            for j, x in enumerate(lines)) + C["gap"] * max(0, len(lines) - 1)
+    return (h, C["px"]) if h > C["px"] else None
+
+
 def side_budget(s):
     """the words the column beside this slide's picture holds on a 1024 x 768 tablet (layout-templates.json): beside a 3D
     model on a split slide, the widest column that still leaves the model its share of the width ("boxes" three_d); beside
@@ -1132,6 +1155,11 @@ def theory_check(script):
             add(s["id"], "text", FAIL, "t_overfull", part=T(script, part), w=w, max=most,
                 tpl="%s (%s)" % (tid, LAYOUT_RULES["templates"][tid]["name"]))
             found[-1]["fix"] = T(script, "t_fix_scenario" if part != "t_part_steps" else "t_fix_worked")
+        rows = None if overfull(s) else worked_rows(s)
+        if rows:
+            add(s["id"], "text", FAIL, "t_overfull_rows", n=len(lines_of(s.get("text"))), h=rows[0], max=rows[1],
+                tpl="worked-example (%s)" % LAYOUT_RULES["templates"]["worked-example"]["name"])
+            found[-1]["fix"] = T(script, "t_fix_worked")
         if w_notes < R["notes"]["min_words"]:
             add(s["id"], "notes", NOTE, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
         elif w_notes > R["notes"]["max_words"]:

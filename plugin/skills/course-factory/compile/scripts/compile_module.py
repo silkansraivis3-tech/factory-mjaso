@@ -187,6 +187,8 @@ def word_budget(tid, variant, inset=False):
                 "column": (BUDGETS["photo_column"], "beside a photo column")}.get(variant)
     if tid == "figure-stage" and variant == "figure-top":
         return BUDGETS["under_top_photo"], "under a photograph across the slide"
+    if variant == "figure-top":
+        return BUDGETS["under_top_row"], "under the photographs on top" if tid != "content-in-parts" else "in a part under the photographs on top"
     if tid == "content-in-parts":
         return BUDGETS["part"], "in a part"
     if tid in ("explain-figure", "reading-with-figure", "long-explanation", "procedure", "three-content-blocks") and variant != "text-only":
@@ -382,6 +384,9 @@ def marked(x, bold=True):
     return e(x)
 
 
+head_lines = cs.head_lines          # a short line ending with ":" heads a group: a subheading, never a numbered point
+
+
 HOOK_ATTR = re.compile(r"^data-[a-z0-9-]+$")
 
 
@@ -459,7 +464,7 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
     # a first line is the headline only when it is short - a long opening paragraph set as a headline fills the column
     plain = (first_statement and not bullets and not seq and not boxes and not group_of
              and cs.wc(lines[0]) <= STATEMENT_MAX_WORDS)
-    roles = []
+    roles, heads = [], head_lines([x for _, x in pairs])
     for n, (i, x) in enumerate(pairs):
         if i in group_of:
             roles.append(("group", i, x))
@@ -470,6 +475,8 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
             alt = i in (alts or ())
             # a box sets its line apart already - a typed "•" in it is a second bullet look (IGF M03, 2026-10-19)
             roles.append(("box alt" if alt else "box", i, x.lstrip("•").strip()))
+        elif n in heads:
+            roles.append(("lead head", i, x))
         elif x.startswith("•"):
             roles.append(("li", i, x.lstrip("•").strip()))
         elif seq and STEP_NUM.match(x):
@@ -770,6 +777,49 @@ def hint_ignored(page):
                         else "<%s data-script-ignore%s>" % (m.group(1), m.group(2)), page)
 
 
+TOP_ASPECT, TOP_ROW = LAYOUTS["boxes"]["top_aspect"], LAYOUTS["boxes"]["top_row_aspect"]
+
+
+def photo_aspect(mdir, rel):
+    """a photograph's width over its height, read from the file itself - None when it cannot be read"""
+    rel = str(rel or "").replace("\\", "/")
+    p = os.path.join(mdir, rel)
+    if not os.path.isfile(p) and rel.startswith("assets/img/"):
+        p = img_file(mdir, rel[len("assets/img/"):])
+    try:
+        from PIL import Image
+        with Image.open(p) as im:
+            w, h = im.size
+        return w / float(h) if h else None
+    except Exception:                                  # noqa: BLE001 - an SVG, a missing or broken file: no shape
+        return None
+
+
+def tile_photos(b):
+    """the photographs of the build sheet's "tiles", in order"""
+    return [str((t if isinstance(t, str) else (t or {}).get("photo")) or "") for t in b.get("tiles") or []]
+
+
+def wide_pictures(mdir, b, is_photo):
+    """True when the slide's pictures are photographs and every one is wide - TOP_ASPECT or more times as wide as high (the
+    tiles, or the one photograph): they go in a row on top, the words under them. A tall or square one stays beside, and so
+    do more than one row holds at a readable height (together wider than TOP_ROW times their height)"""
+    rels = tile_photos(b) if b.get("tiles") else [b.get("figure")] if is_photo else []
+    asp = [photo_aspect(mdir, r) for r in rels]
+    return bool(asp) and all(x and x >= TOP_ASPECT for x in asp) and sum(asp) <= TOP_ROW
+
+
+TOP_TEMPLATES = ("explain-figure", "reading-with-figure", "content-in-parts")
+
+
+def top_words(tid, lines, b):
+    """the words under a row of pictures on top: the slide's, or its largest part's"""
+    if tid != "content-in-parts":
+        return cs.wc(" ".join(lines))
+    ranges = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
+    return max([cs.wc(" ".join(lines[i - 1] for i in ix)) for ix in auto_parts(lines, ranges)] or [0])
+
+
 def tiles_figure(mdir, s, b, probs, where):
     """2.67.0 - "tiles": several photographs on one slide, each opening full screen with its own record (gb_zoom, L51 / L56):
     ["assets/img/a.jpg", {"photo": "assets/img/b.jpg", "caption": "The shipper's SDS"}]; "tiles_as": "strips" stacks them
@@ -777,6 +827,7 @@ def tiles_figure(mdir, s, b, probs, where):
     hand-wrote five fragments of tiles and strips (about 8 of its 11 minutes)"""
     strips = b.get("tiles_as") == "strips"
     out, credits = [], []
+    asum = 0.0
     for k, t in enumerate(b.get("tiles") or [], 1):
         t = {"photo": t} if isinstance(t, str) else dict(t or {})
         rel = str(t.get("photo") or "").replace("\\", "/")
@@ -791,13 +842,16 @@ def tiles_figure(mdir, s, b, probs, where):
         if meta.get("attribution_required") and not credit:
             probs.append("%s: the photograph %s needs a credit line, and its _photo_meta.json record gives none" % (where, rel))
         credits.append(credit)
-        out.append('<figure class="lt-tile" data-zoom="button">%s<img src="../%s" alt="%s"%s>%s</figure>'
-                   % ('<b class="lt-n">%d</b>' % k if strips else "", a(rel), a(alt), photo_panel(meta, credit, rel, probs, where, mdir),
+        ar = photo_aspect(mdir, rel)          # the photograph's own shape: a row of tiles on top keeps it (gb_layouts.css .fig-top)
+        asum += ar or 1.5
+        out.append('<figure class="lt-tile" data-zoom="button"%s>%s<img src="../%s" alt="%s"%s>%s</figure>'
+                   % (' style="--ar:%.3f"' % ar if ar else "", '<b class="lt-n">%d</b>' % k if strips else "", a(rel), a(alt),
+                      photo_panel(meta, credit, rel, probs, where, mdir),
                       "<figcaption>%s</figcaption>" % html.escape(cap) if cap else ""))
     if not out:
         return "", "", False
-    page = ('<div class="fill fig lt-light lt-tiles-fig" data-script-ignore><div class="%s" style="--n:%d">%s</div></div>'
-            % ("lt-strips" if strips else "lt-tiles", len(out), "".join(out)))
+    page = ('<div class="fill fig lt-light lt-tiles-fig" data-script-ignore><div class="%s" style="--n:%d;--sum:%.3f">%s</div></div>'
+            % ("lt-strips" if strips else "lt-tiles", len(out), asum, "".join(out)))
     return page, b.get("credit") or fragment_credit(page, credits), False
 
 
@@ -2503,18 +2557,53 @@ def text_steps(s, b, lines):
 
 
 def parts_html(lines, parts, emph):
-    """content-in-parts: every part on the slide, the first shown; Next walks them (gb_deck.js), the numbered tabs too"""
+    """content-in-parts: every part on the slide, the first shown; Next walks them (gb_deck.js), the numbered tabs too
+    (parts_tabs - at the foot of the slide body, not under the words)"""
     out = ['<div class="lt-parts" data-parts="%d">' % len(parts)]
     for k, ix in enumerate(parts, 1):
         words = words_html([lines[i - 1] for i in ix], first_statement=(k == 1), emph=emph, idx=ix)
         out.append('  <div class="lt-part%s" data-part="%d">' % (" on" if k == 1 else "", k))
         out += ["    " + y for y in words]
         out.append("  </div>")
-    out.append('  <div class="lt-tabs">%s</div>' % "".join(
-        '<button type="button" class="lt-tab%s" data-part="%d" aria-label="Part %d of %d">%d</button>'
-        % (" on" if k == 1 else "", k, k, len(parts), k) for k in range(1, len(parts) + 1)))
     out.append("</div>")
     return out
+
+
+def parts_tabs(n):
+    """the parts' numbered tabs, a strip at the foot of the slide body: a tap turns to that part, as Next does (gb_deck.js)"""
+    return '<div class="lt-tabs">%s</div>' % "".join(
+        '<button type="button" class="lt-tab%s" data-part="%d" aria-label="Part %d of %d">%d</button>'
+        % (" on" if k == 1 else "", k, k, n, k) for k in range(1, n + 1))
+
+
+def part_boxes(mdir, figdir, s, b, n, box, probs, where):
+    """"part_figures": each part's own picture, in the order of the parts - a photograph or a figure spec as "figure" takes
+    it, a list of photographs as "tiles" takes them, or null for the slide's own picture. Turning to a part turns its
+    picture with its words (gb_deck.js). One 3D scene a slide (one WebGL context): a part's picture is never a 3D model"""
+    pf = b.get("part_figures")
+    if not pf:
+        return box
+    if not isinstance(pf, list) or len(pf) != n:
+        probs.append("%s: \"part_figures\" gives one picture for each of the slide's %d parts, in order (null keeps the slide's "
+                     "own picture for that part)" % (where, n))
+        return box
+    out = []
+    for k, x in enumerate(pf, 1):
+        one = box
+        if x:
+            sub = dict(b, figure="", tiles=None)
+            if isinstance(x, list) or isinstance(x, dict) and x.get("tiles"):
+                sub["tiles"] = x if isinstance(x, list) else x["tiles"]
+            else:
+                sub["figure"] = str(x.get("figure") if isinstance(x, dict) else x)
+            if str(sub["figure"]).endswith(".kit3d.json"):
+                probs.append("%s: \"part_figures\" part %d is a 3D model - one 3D scene a slide: make it the slide's \"figure\", "
+                             "or give the part a photograph or a drawing" % (where, k))
+            else:
+                f, _, _ = figure_html(mdir, figdir, s, sub, probs, where)
+                one = fill(f) if f else box
+        out.append('<div class="lt-pfig%s" data-part="%d">%s</div>' % (" on" if k == 1 else "", k, one))
+    return '<div class="lt-pfigs">%s</div>' % "".join(out)
 
 
 def table_html(lines, idx=None):
@@ -2546,7 +2635,7 @@ def shape_of(tid, variant, left=False):
         return "text"
     if tid == "photo-explain" and variant in ("full", "split"):
         return "photo-full" if variant == "full" else "photo-framed"
-    if tid == "figure-stage":
+    if tid == "figure-stage" or variant == "figure-top":
         return "picture-top"
     return "picture-left" if left or variant == "figure-left" else "picture-right"
 
@@ -2933,20 +3022,43 @@ def room_turn(s, k):
             % (k, e(s.get("ask")), "".join('<span class="ans" data-script-field="reveal">%s</span>' % e(x) for x in cs.lines_of(s.get("reveal")))))
 
 
-def answer_over(side, s):
-    """the room's answer over the picture on the last Next: beside the words, the picture's column is the slide's largest
-    room. The answer stays in the list too, for the word check; on screen the question stays and the answer opens over
-    the picture, so the steps above keep their place (GAS BASIC: 37 of 37 answers cut at 1280 x 800 when the answer was
-    added under them)"""
+def answer_over(side, s, you=""):
+    """the room's question (you: its card) and, on the last Next, its answer in the picture's column, under the picture:
+    beside the words it is the slide's largest room, and the steps keep the whole height of theirs (M01 s05: six lines and
+    the question card under them ran 39 px past the slide at 1280 x 800). The answer stays in the question's card too, for
+    the word check; on screen the question stays and the answer opens in a card under it (GAS BASIC: 37 of 37 answers cut
+    at 1280 x 800 when the answer was added under the steps). Never over the picture: a card over a photograph left a navy
+    box with one sentence and no picture (M01 s05) - a drawing shows the answer's step, a photograph stays in sight"""
     if not side or not (s.get("ask") and s.get("reveal")):
         return side
-    if re.search(r'\bdata-kit(?:2d|3d)?[="]', side):      # 2.115.0 - the drawing shows the answer's step; the answer's words open
-        card = '<div class="lt-ans-under" data-script-ignore>%s</div>' % "".join(      # in a card under it, never over it
-            "<p>%s</p>" % e(x) for x in cs.lines_of(s.get("reveal")))
-        return '<div class="lt-scol">%s%s</div>' % (side, card)
-    i = side.rfind("</")
-    panel = '<div class="lt-ans-over" data-script-ignore>%s</div>' % "".join("<p>%s</p>" % e(x) for x in cs.lines_of(s.get("reveal")))
-    return side[:i] + panel + side[i:]
+    card = '<div class="lt-ans-under" data-script-ignore>%s</div>' % "".join(
+        "<p>%s</p>" % e(x) for x in cs.lines_of(s.get("reveal")))
+    return '<div class="lt-scol">%s%s%s</div>' % (side, '<ol class="lt-work lt-you">%s\n      </ol>' % you if you else "", card)
+
+
+WORDS_ONLY = {"p", "span", "b", "i", "em", "strong", "br", "small"}
+COVERS_PICTURE = re.compile(r'class="[^"]*\blt-ans-over\b')
+
+
+def empty_picture_boxes(slide):
+    """the picture boxes of a built slide that show no picture: a box with nothing in it but words, or a card laid over the
+    whole picture (M01 s05: the answer over the photograph - the box showed one sentence on navy and no picture). A box
+    holding a picture, a drawing, a scene or the module's own interactive figure (buttons, a table) is not empty"""
+    out = []
+    if COVERS_PICTURE.search(slide):
+        out.append("a card covers the whole picture")
+    for m in re.finditer(r'<div class="(?:lt-in )?fill fig\b[^"]*"[^>]*>', slide):
+        depth, j = 1, len(slide)
+        for t in re.finditer(r"<(/?)div\b[^>]*>", slide[m.end():]):
+            depth += -1 if t.group(1) else 1
+            if depth == 0:
+                j = m.end() + t.start()
+                break
+        inner = slide[m.end():j]
+        tags = {t.lower() for t in re.findall(r"<([a-zA-Z][\w-]*)", inner)}
+        if tags <= WORDS_ONLY and not re.search(r"\bdata-(?:kit|kit2d|kit3d|3d|lt-scene|stage)\b", inner):
+            out.append("a picture box with no picture in it")
+    return out
 
 
 def img_tag(fig):
@@ -2977,9 +3089,12 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         pts = "".join('\n        <li data-k="%d" data-script-field="points">%s</li>' % (j, marked(x)) for j, x in enumerate(lt("points")))
         you = ""
         if s.get("ask") and s.get("reveal"):        # the points, then the room's turn under them
-            you = '<ol class="lt-work">%s\n      </ol>' % room_turn(s, len(lt("points")))
+            you = room_turn(s, len(lt("points")))
             d["data-stops"] = str(len(lt("points")) + 2)
-            side = answer_over(side, s)
+            if fig:
+                side, you = answer_over(side, s, you), ""
+            else:
+                you = '<ol class="lt-work">%s\n      </ol>' % you
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-in" style="--i:0"><ul class="lt-points">%s\n      </ul>%s</div>%s</div>'
                 % ("42fr 58fr" if fig else "1fr", pts, you, "\n    " + side if fig else ""))
 
@@ -3024,15 +3139,23 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         # 2.109.0 (F3) - the intro line of a predict- / explain-then-reveal slide is a lead, not step 1; and when the task is to
         # find the ORDER, its items are lettered A, B, C - a number would give the answer away (Aigars, PM M02 s02)
         lead, letters = worked_lead(s, b, lines), worked_letters(s, b, lines)
+        heads, nums, k = head_lines(lines), {}, 0       # a line that heads a group is its subheading; each group counts from 1
+        for j in range(len(lines)):
+            if j in heads:
+                k = 0
+            elif j >= lead:
+                k += 1
+                nums[j] = k
         steps = "".join('\n        <li data-k="%d"%s>%s<div data-script-field="text" data-i="%d">%s</div></li>'
-                        % (j, ' class="lead"' if j < lead else "",
-                           '<span class="n" data-script-ignore>%s</span>' % (
-                               "" if j < lead else chr(65 + j - lead) if letters else j + 1 - lead) if j >= lead else "",
+                        % (j, ' class="lead head"' if j in heads else ' class="lead"' if j < lead else "",
+                           '<span class="n" data-script-ignore>%s</span>' % (chr(64 + nums[j]) if letters else nums[j])
+                           if j in nums else "",
                            j + 1, joined(cells(x), ("b", "span")) if " | " in x else "<b>%s</b>" % e(x)) for j, x in enumerate(lines))
         you = room_turn(s, len(lines))
         d["data-stops"] = str(len(lines) + 2)
         variant = "figure" if fig else "text-only"
-        side = answer_over(side, s)
+        if fig:
+            side, you = answer_over(side, s, you), ""
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
                 % ("56fr 44fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
 
@@ -3430,6 +3553,16 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     in_parts = False                       # 2.116.0: never automatic (wants_parts / the box's parts are gone)
     tid, variant = pick_template(s, b, comp, is_photo, bool(fig), lines, split_photo, photo_col, probs, where, in_parts)
     nwords_all = cs.wc(" ".join(lines))
+    # wide photographs - every tile, or the one photograph of a photo column - go in a row on top, each box their own shape,
+    # the words under them while they fit there (M01 s09: two wide photographs in tall boxes beside the words, white bands
+    # above and under each). A build sheet's "variant" decides it either way, and its photo column ("composition") keeps it
+    top = comp in ("two-col", "wide-left", "wide-right") and tid in TOP_TEMPLATES and bool(fig) and (
+        "figure-top" in (variant, b.get("variant")) or not b.get("variant") and own_comp not in ("wide-left", "wide-right")
+        and (b.get("tiles") or photo_col)
+        and wide_pictures(mdir, b, is_photo)
+        and top_words(tid, lines, b) <= BUDGETS["under_top_row"])
+    if top:
+        variant, fitc = "figure-top", None
     if kind == "slide" and not fig and not s.get("recap") and nwords_all > PICTURE_FROM:
         note_once("Note: %s - %d words and no picture beside them: over %d words a picture goes beside the words, or the slide "
                   "is shown in steps (theory-rules.json \"slide\"; past %d it is, by itself)" % (where, nwords_all, PICTURE_FROM, STEPS_FROM))
@@ -3561,7 +3694,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     d.update(base)
     if b.get("photo_badges") is False:          # 2.63.2: a part's camera badge is recommended, a builder may turn it off
         d["data-photo-badges"] = "off"
-    template_attrs(d, tid, variant, split)
+    template_attrs(d, tid, variant, None if top else split)
     if fitc and fitc["box"] and TEMPLATE_COMPOSITION.get(tid) == "two-col" and variant != "text-only":
         d["data-box"] = fitc["box"] if (split or layout_fit.BOX[layout_fit.BOX["default"]]["text"]) == fitc["text"] else "own"
     if varied:              # built another way for L62: build_module.py measures it out if the audit finds it does not fit
@@ -3650,8 +3783,13 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if comp in ("two-col", "wide-left", "wide-right"):
         # a drawing, an animation or a 3D model gets the wider column (owner, 2026-10-15: bigger pictures)
         cls = "two-col " + (comp if comp != "two-col" else "fig-wide")
-        box = box_of(fig)
-        if photo_col:                      # the photograph is cropped to its column, which has the slide's height
+        box, tabs = box_of(fig), ""
+        if top:                            # wide photographs in a row on top, the words under them
+            cls = "two-col fig-top"
+            ar = None if b.get("tiles") else photo_aspect(mdir, b.get("figure"))
+            if ar:                         # the one photograph's box takes its shape
+                box = box.replace('class="fill fig', 'style="--ar:%.3f" class="fill fig' % ar, 1)
+        elif photo_col:                    # the photograph is cropped to its column, which has the slide's height
             box = box.replace('class="fill fig"', 'class="fill fig photo-col"', 1)
             cls += " photo-col"
             if credit_html:                # 2.60.0 - its credit is a strip at the column's foot, under the photo: the photo
@@ -3666,7 +3804,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             if ranges and sum(hi - lo + 1 for lo, hi in ranges) != len(lines):
                 probs.append("%s: \"parts\" leave out some lines - every approved line is in a part (L61)" % where)
                 ranges = None
-            reading = copy(parts_html(lines, auto_parts(lines, ranges, part_w), emph), 4)
+            parts = auto_parts(lines, ranges, part_w)
+            reading = copy(parts_html(lines, parts, emph), 4)
+            box, tabs = part_boxes(mdir, figdir, s, b, len(parts), box, probs, where), parts_tabs(len(parts))
         elif tid == "reference-table":
             reading = copy(table_html(lines), 4)
         else:
@@ -3675,12 +3815,14 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         # shows it in its first screen. On a landscape screen gb_compose.css (.dom-fig) puts the words back first, so the
         # template's text column (gb_layouts.css, L61) holds the words - the projector picture is unchanged
         cols = [box, reading]
-        if b.get("figure_first"):          # the drawing on the left, the words on the right
+        if top:
+            pass
+        elif b.get("figure_first"):        # the drawing on the left, the words on the right
             cls = cls.replace("fig-wide", "fig-wide fig-first") if "fig-wide" in cls else cls + " fig-first"
         else:
             cls += " dom-fig"
-        return ('<section %s>\n%s\n  %s\n  <div class="slide-body %s">\n    %s\n    %s\n  </div>%s\n</section>'
-                % (attrs(d), head, h2, cls, cols[0], cols[1], credit_html))
+        return ('<section %s>\n%s\n  %s\n  <div class="slide-body %s">\n    %s\n    %s%s\n  </div>%s\n</section>'
+                % (attrs(d), head, h2, cls, cols[0], cols[1], "\n    " + tabs if tabs else "", credit_html))
     if comp == "compare":
         fig_b, credit_b, _ = figure_html(mdir, figdir, s, dict(b, figure=b.get("figure_b")), probs, where)
         rs = line_ranges(b.get("blocks"), len(lines), 2)
@@ -3708,15 +3850,16 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if sb:
             return '<section %s>\n%s\n  %s\n  %s%s\n</section>' % (attrs(d), head, h2, sb, credit_html)
     figure = (box_of(fig) + "\n    ") if fig else ""      # 2.54.0 (L23): first in the markup, placed under the words by CSS
-    words = words_html(lines, emph=emph)
+    words, tabs = words_html(lines, emph=emph), ""
     if not fig and tid in ("explain-figure", "procedure") and text_steps(s, b, lines):
         ranges = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
         if ranges and sum(hi - lo + 1 for lo, hi in ranges) != len(lines):
             probs.append("%s: \"parts\" leave out some lines - every approved line is in a part (L61)" % where)
             ranges = None
-        words = parts_html(lines, auto_parts(lines, ranges), emph)
-    return ('<section %s>\n%s\n  %s\n  <div class="slide-body%s">\n    %s%s\n  </div>%s\n</section>'
-            % (attrs(d), head, h2, " dom-fig" if fig else "", figure, copy(words, 4), credit_html))
+        parts = auto_parts(lines, ranges)
+        words, tabs = parts_html(lines, parts, emph), parts_tabs(len(parts))
+    return ('<section %s>\n%s\n  %s\n  <div class="slide-body%s">\n    %s%s%s\n  </div>%s\n</section>'
+            % (attrs(d), head, h2, " dom-fig" if fig else "", figure, copy(words, 4), "\n    " + tabs if tabs else "", credit_html))
 
 
 # ------------------------------------------------------------------ the page
@@ -5218,6 +5361,9 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
                              "quoted regulation shown whole" % (cs.place(script, s["id"]), s["id"], why))
             else:
                 page = still_slide(page)
+        for why in empty_picture_boxes(page):    # a picture box shows a picture, at every step
+            probs.append("%s (%s): %s - give the box its picture (build sheet \"figure\"), or build the slide with no picture box "
+                         "(no \"figure\": its words read on their own)" % (cs.place(script, s["id"]), s["id"], why))
         slides.append(mark_slot(page, s["id"]))
         if chosen is not None and s["kind"] == "slide" and not s.get("recap"):    # 2.62.1: kept for the next compile
             chosen[s["id"]] = {"words": words_key(s, b), "key": list(layout_key(slides[-1]))}

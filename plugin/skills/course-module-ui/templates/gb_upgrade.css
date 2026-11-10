@@ -669,6 +669,8 @@
 .slide .lt-split > .lt-scol{display:flex;flex-direction:column;gap:min(2.2vmin,18px);min-height:0;min-width:0}
 .slide .lt-split > .lt-scol > .fig{flex:1 1 0;min-height:min(16vh,120px)}
 .lt-scol > .lt-sit{flex:none}
+/* the room's question under the picture, its answer under the question on the last Next */
+.slide .lt-split > .lt-scol > .lt-you{flex:none}
 .slide.lt-drill .lt-alarm > img{object-position:0 0}
 .lt-sit{margin:0;font-size:var(--lt-fs-lead);line-height:1.35;color:var(--lt-dim-d);font-weight:600}
 /* a line a stepping figure selects must look selected (the audit's "selected line looks unselected", PM M02 s10) */
@@ -772,6 +774,12 @@
 /* 2.109.0 (F3) - an intro line of a reveal slide is a lead, not a numbered step */
 .lt-work li.lead{display:block}
 .lt-work li.lead b{font-weight:600;color:var(--lt-dim-d)}
+/* a line that heads a group ("Advantages:") is the subheading of the points under it: no card, no number */
+.slide .lt-work li.head,.slide:not(.dark):not(.photo) .lt-work li.head{background:none;border-color:transparent;box-shadow:none;transform:none;
+  padding-top:min(1vmin,8px);padding-bottom:0}
+.slide .lt-work li.head b,.slide:not(.dark):not(.photo) .lt-work li.head b{font-weight:700;color:var(--lt-navy)}
+.slide.dark .lt-work li.head b{color:var(--lt-white)}
+.slide .lt-work li.head.cur,.slide:not(.dark):not(.photo) .lt-work li.head.cur{box-shadow:inset min(.5vmin,4px) 0 var(--lt-blue)}
 
 /* 2.109.0 (F5) - a carousel of photographs: stacked in the frame, the line's photo fades in (opacity only, L65); the one
    showing opens full screen on a tap (gb_zoom), the others do not take the tap */
