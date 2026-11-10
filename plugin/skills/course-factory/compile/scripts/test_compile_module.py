@@ -3399,7 +3399,11 @@ def main():
         check("a credit names the work, the author, the source, the licence and the change (CC BY-SA)",
               cm.credit_line(meta) == "Photo: MF Bergensfjord filling LNG in Arsvågen · Tholme · Wikimedia Commons · CC BY-SA 4.0 · resized",
               cm.credit_line(meta))
-        few = [f for f in cs.media_findings(script()) if f["rule"] == "v_few_photos"]
+        us = {k: v for k, v in meta.items() if k not in ("licence", "attribution_required")}
+        us["license"] = "CC BY-SA 4.0"
+        check("... a record that writes it \"license\" has the same credit (the gas trial's M01 s01 shipped with none)",
+              cm.credit_line(us) == cm.credit_line(meta), cm.credit_line(us))
+        few =[f for f in cs.media_findings(script()) if f["rule"] == "v_few_photos"]
         more = json.loads(json.dumps(SCREENS))
         more[1]["visual"] = "Thermometer scale; a real photo of a bunker station beside it."
         check("L52: fewer than half the teaching slides with a real photograph -> a suggestion; a real photo beside a drawing counts",

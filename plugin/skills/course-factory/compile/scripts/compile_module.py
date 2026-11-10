@@ -568,9 +568,10 @@ def credit_line(meta, with_title=True):
     stored size is not the original's. A generated picture has none."""
     if is_generated(meta):
         return ""
-    if named_clearance(meta) and not meta.get("licence") and (meta.get("source_work") or meta.get("credit")):
+    lic = (meta or {}).get("licence") or (meta or {}).get("license")       # a record written either way
+    if named_clearance(meta) and not lic and (meta.get("source_work") or meta.get("credit")):
         return "Source: " + (meta.get("credit") or meta.get("source_work"))   # 2.63.2: a cleared book figure - its book, edition, page
-    if not meta or not (meta.get("attribution_required") or meta.get("licence")):
+    if not meta or not (meta.get("attribution_required") or lic):
         return ""
     author = re.split(r"\s*[(,]", meta.get("author") or "")[0].strip()
     title = meta.get("title") or ""
@@ -582,7 +583,7 @@ def credit_line(meta, with_title=True):
         title = unquote(m.group(1)).replace("_", " ").strip()
     o, st = str(meta.get("orig_size") or ""), str(meta.get("stored_size") or "")
     changed = meta.get("modification") or ("resized" if "resized" in st or (o and st and o.split()[0] != st.split()[0]) else "")
-    parts = [x for x in (title, author, meta.get("source"), meta.get("licence"), changed) if x]
+    parts = [x for x in (title, author, meta.get("source"), lic, changed) if x]
     return "Photo: " + " · ".join(parts) if parts else ""
 
 

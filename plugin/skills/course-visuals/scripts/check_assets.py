@@ -272,6 +272,10 @@ def check_folder(folder: str) -> None:
                     meta.get("author") or meta.get("attribution_required")):
                 warn(where, "ATTRIBUTION_REQUIRED with no author recorded",
                      "the credit line has to say something")
+            lic = str(meta.get("licence") or meta.get("license") or "")    # a record written either way
+            if rs != "ATTRIBUTION_REQUIRED" and re.match(r"\s*CC[ -]BY\b", lic, re.I) and not meta.get("author"):
+                warn(where, f'licence "{lic}" asks for a credit, and no author is recorded',
+                     "the credit line has to say something")
 
             vv = str(meta.get("visually_verified", ""))
             if vv:
