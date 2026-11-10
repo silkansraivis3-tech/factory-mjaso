@@ -1,6 +1,6 @@
 # NOVIKONTAS Course Factory — read me first
 
-**`course-factory` 2.119.0 + `nano-banana` 1.4.0 · Phase 5 in progress (2026-11-09).**
+**`course-factory` 2.120.0 + `nano-banana` 1.4.1 · Phase 5 in progress (2026-11-10).**
 The current state, step by step: [`_claude/CONTEXT.md`](_claude/CONTEXT.md).
 The current plan and the owner's decisions: [`docs/PHASE5_GAP_REPORT.md`](docs/PHASE5_GAP_REPORT.md).
 
@@ -21,8 +21,8 @@ Phases 4B–4C and 2.4–2.10 added the composition system, RETROFIT mode, PREVI
 PUBLISH, the slide-text and plain-language checks, the parallel build and the `nano-banana`
 picture plugin. Phase 5 turns the factory into the owner's six-stage production process.
 
-**Still to build:** `course-evidence`, the `evidence-retriever` agent, the deterministic hooks,
-and the canonical shared-engine set in `resources/engines/`.
+**Still to build:** `course-evidence`, the `evidence-retriever` agent, more hooks (only L40's exists,
+`plugin/hooks/`), and the canonical shared-engine set in `resources/engines/`.
 
 ---
 
@@ -51,8 +51,8 @@ giving L12 and L13 a real enforcing skill.
 
 The [13-template preview library](design/course-layout-templates/README.md) and its
 [Claude implementation brief](docs/LAYOUT_TEMPLATE_IMPLEMENTATION.md) are ready as a design handoff.
-The selected dense split is 55% text / 45% visual, with shorter sample copy and an adjacent teaching
-visual. This is a reference-only addition; it does not change the compiler or release version.
+The selected dense split is 55% text / 45% visual, with shorter sample copy. These layout rules were
+loosened in 2.118.0. This is a reference-only addition; it does not change the compiler or release version.
 
 ## Read in this order
 
@@ -64,7 +64,7 @@ visual. This is a reference-only addition; it does not change the compiler or re
 | 4 | [`docs/GOLDEN_COURSE_EXTRACTION.md`](docs/GOLDEN_COURSE_EXTRACTION.md) | What GAS BASIC is, how it was produced, which parts are reusable and which are not. |
 | 5 | [`docs/ANDROID_INTEGRATION_CONTRACT.md`](docs/ANDROID_INTEGRATION_CONTRACT.md) | What a generated course must satisfy to work inside the app. Read directly from the Kotlin, not from documentation. |
 | 6 | [`docs/FACTORY_RULE_CLASSIFICATION.md`](docs/FACTORY_RULE_CLASSIFICATION.md) | Every rule sorted into law / skill / agent / hook / component / reference / Android / specific / discard, plus eight named contradictions. |
-| — | [`docs/FACTORY_LAWS.md`](docs/FACTORY_LAWS.md) | The global laws L1–L25, each naming the skill that enforces it. Documentation — the skill is what enforces. |
+| — | [`docs/FACTORY_LAWS.md`](docs/FACTORY_LAWS.md) | The global laws L1–L71, each naming the skill that enforces it. Documentation — the skill is what enforces. |
 | — | [`docs/PHASE2_MIGRATION_REPORT.md`](docs/PHASE2_MIGRATION_REPORT.md) | History: what was migrated in Phase 2, from which commit, and how it was validated. |
 
 ---
@@ -76,19 +76,20 @@ They come from `course-factory` v1.3.0, built during GAS BASIC production: fifte
 (eleven of them checks and gates), five in-page measurement probes, and a publisher with an
 eight-check gate. They produced a 43-academic-hour accredited course running on two Android
 terminals with zero dead links, zero dead ends, 64/64 programme topics and 266/266 IMO model-course
-outcomes. Every rule in them is the scar tissue of a specific recorded failure. **Do not simplify,
-reword or tidy one** — if it looks arbitrary, find out what it cost before touching it.
+outcomes. Every rule in them is the scar tissue of a specific recorded failure. Before removing or
+loosening a rule, find the failure that produced it (CONTEXT, FEEDBACK_LOG). A rule with no recorded
+failure, or one a later owner decision contradicts, may be merged, shortened or removed.
 
 **2 · Two of the four holes are now closed.**
 `course-visuals` owns **what representation teaches a concept** and the **asset pipeline** — the two
 gaps that produced generic AI course graphics, and the reason this project was started. Still open:
 **general evidence retrieval** (the existing one is GAS-BASIC-only) and **deterministic protection**
-(most laws still depend on the model remembering them).
+(most laws are now script checks that stop the build; only L40 has a hook).
 
 **3 · One Android constraint changes what a course may contain, and it is not written down anywhere
 else.** The app's WebView answers **403 to every host except the classroom backend**, only navigates
 to `.html`, ignores `target="_blank"` and `window.open`, and drives the hardware Back button by
-clicking an element the page must provide. The shipped course loads its brand typeface from Google
+clicking an element the page must provide. (GAS BASIC, 2026-09; new courses bundle Raleway, L61) The shipped course loads its brand typeface from Google
 Fonts on roughly 105 pages — on the tablet that request is blocked by the app itself and the typeface
 never loads. See [`docs/ANDROID_INTEGRATION_CONTRACT.md`](docs/ANDROID_INTEGRATION_CONTRACT.md) §3.
 

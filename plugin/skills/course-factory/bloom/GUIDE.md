@@ -3,7 +3,8 @@
 Read this lane when an ILO, a Sub-ILO or a task is written, judged or upgraded — at the Stage 2
 architecture, the Stage 3 content script, and in RETROFIT when an old course is assessed.
 The data is `knowledge/bloom.json`; the report is `scripts/bloom_map.py`. This file is the judgement
-the lists cannot make. In 2.25.0 every Bloom finding is a **suggestion** — shown, never blocking.
+the lists cannot make. The Bloom card on the review pages is a **suggestion** — shown, never blocking; the experts'
+documents (§5) are a gate.
 
 **Why (owner, 2026-10-15):** on paper and in Google Classroom the tasks were almost all *Remember*.
 The tablet lets a trainee operate, find and decide. The factory's job is to use that — to lift the

@@ -347,20 +347,18 @@ RUN build_module.py IN THE FOREGROUND and wait for its last line; give the shell
 timeout it allows (600000 ms). A build that runs longer answers "STILL BUILDING" before that
 limit and goes on by itself: then run the SAME command with --wait (again, until it prints the
 build's answer) - never start a second build meanwhile, never edit the build sheet or a figure while
-it runs. A module's first build may first wait up to 5 min for another module's first build (one
+it runs. A module's first build may first wait up to 45 min for another module's first build (one
 at a time on this computer) - that is expected. Never end your turn while a build runs: your report
 is read as the module's result (2.58.0 - the IGF full build: a builder that ended "waiting on the
 build" left Module 15 half-built). Your report's FIRST line is the PASS / FAIL line build_module.py
 printed; its SECOND line the "TIME M0N: ..." line it printed under the PASS, as it is (2.65.0 - the gold
 standard is 30-40 minutes a module, 20 for its fixes).
 
-L60: when the build prints "RECOMMENDED (L60)", build the scene on the slide it names (a 3D-kit spec, sNN.kit3d.json) - or,
-only when the subject has no shape, inside or layout in space to show, or a photo is wanted there, write the reason at the
-TOP of the build sheet, "declined_3d": "builder: <the reason>". Never leave it unanswered. A 3D-kit scene is checked and
-photographed by the workflow's 3D step after you, and judged by a reviewer who did not build it.
+3D only where the script plans it and the figure's why is spatial (L46, L60): no scene is added unasked. A 3D-kit scene is
+checked and photographed by the workflow's 3D step after you, and judged by a reviewer who did not build it.
 
-Every TOPIC screen leads with a picture (L23): the source files and the knowledge base first, then a real photograph, then
-the figure kit. visual_kind "none" is how a screen honestly needs none. An image you cannot produce: its brief in
+A slide that has a picture leads with it (L23): the source files and the knowledge base first, then a real photograph, then
+the figure kit. A slide whose words read on their own needs none (L61). An image you cannot produce: its brief in
 _visual_briefs/, and keep going.
 
 Report as the card says.`
@@ -921,7 +919,7 @@ could not answer:
   * nothing at RIGHTS_REVIEW_REQUIRED, no honesty marker on a course-facing page
 
 Report. Do not fix.`,
-  { label: 'crosscheck:course', phase: 'Cross-check', schema: QA_SCHEMA }
+  { label: 'crosscheck:course', phase: 'Cross-check', schema: QA_SCHEMA, ...MECHANICAL }
 )
 
 /* a module whose build or QA brought back nothing is not verified - it blocks, it is never counted as clean */

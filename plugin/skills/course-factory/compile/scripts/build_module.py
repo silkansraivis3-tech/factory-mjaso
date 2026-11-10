@@ -1697,7 +1697,7 @@ def main(argv=None):
     elif walk_open:
         print("NOT DONE: %s (%.0f s)" % (walk_open, secs))
         print("  Every other check passed. Run the reviewer on the brief (one Sonnet subagent per batch of 3-4 contact sheets, "
-              "returning reviewer JSON - compile/GUIDE.md 2h), then: walk_review.py sign <course> --module %s --review <reviewer.json>; "
+              "returning reviewer JSON - compile/GUIDE.md 2i), then: walk_review.py sign <course> --module %s --review <reviewer.json>; "
               "fix every fail, build again, walk and review again until verify passes" % o.module)
     else:
         print("FAIL %s - %s (%.0f s)" % (m, ", ".join(fails), secs))

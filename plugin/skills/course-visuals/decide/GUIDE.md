@@ -115,14 +115,15 @@ record the marker, and design the screen so the figure can drop in later without
 | what no camera can see | **cutaway or authored drawing**, declared as a drawing on its face |
 | a relationship between two quantities | **sourced chart**, interpolation marked |
 | element count or per-frame maths that genuinely defeats SVG | **canvas**, and accept the cost |
+| an authored figure with topology, labels, state, flow or sequence | **the kits first** (`course-visuals/SKILL.md`, level 4): kit, 2D kit, 3D kit; a custom figure when none shows it |
 
-**Inline SVG is the default for authored figures** because it is themeable, annotatable,
+**Inline SVG is the default for hand-written figures** because it is themeable, annotatable,
 translatable, diffable and visible to every check in this factory. A PNG of a diagram is none of
 those.
 
-**Canvas is a signal to re-read the need.** The reference course, eight modules of technical
-teaching material, uses canvas in **zero** teaching visuals. If you are reaching for it, check you
-have not over-specified the figure.
+**Canvas is a signal to re-read the need.** Hand-written 2D uses canvas only where SVG genuinely fails; 3D is the
+3D kit, which draws to a WebGL canvas. If you are reaching for a canvas by hand, check you have not
+over-specified the figure.
 
 ---
 
@@ -138,8 +139,10 @@ a new asset.
 **Not required for:** a single labelled photograph, a plain-text screen, a figure being reused
 unchanged from the factory library.
 
-The storyboard is approved before implementation. Changing a row is free; rebuilding six figures is
-not — the same economics as the screen inventory in `course-module-ux`.
+The storyboard is written before implementation. When the module is compiled from an approved content script it
+is printed for the record and the build goes on - no stop; wait for approval only for a hand-built module with
+no approved script. Changing a row is free; rebuilding six figures is not — the same economics as the screen
+inventory in `course-module-ux`.
 
 ### Variety, checked at storyboard time
 
@@ -157,4 +160,4 @@ different shapes and should not look alike.
 - Every animation has its four answers and a declared category
 - Every asset has a pipeline level and, where already known, a rights state
 - Concepts decided as **plain text** are recorded as decisions, not omitted
-- The storyboard is approved before any figure is implemented
+- The storyboard exists before any figure is implemented (approved first only for a hand-built module with no approved script)

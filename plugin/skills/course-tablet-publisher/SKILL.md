@@ -1,9 +1,10 @@
 ---
 name: course-tablet-publisher
 description: >
-  Publish a finished course onto the NOVIKONTAS tablet platform - the trainee (Training)
-  and instructor (Trainer) Android terminals - and into the shared GitHub repository.
-  Trigger on: publish this course / publish to the tablet system / add this course to the
+  Get a finished course onto the NOVIKONTAS classroom (admin panel + upload, L45) after
+  check_course_package.py; the legacy branch-and-pull-request flow is only for the app's own
+  files or when the owner asks. Covers the trainee (Training) and instructor (Trainer)
+  Android terminals. Trigger on: publish this course / publish to the tablet system / add this course to the
   Android training platform / sync with the trainee tablets or the instructor app /
   prepare tablet content / package the finished module or course / add a new NOVIKONTAS
   course / update an existing course in the shared platform / prepare for the
@@ -12,7 +13,7 @@ description: >
   or assessments and the next step is getting them onto the tablets. It sorts every file
   into trainee / instructor / shared / internal, refuses to publish if instructor-only
   material, a credential, a developer address or a missing asset would ship, registers
-  the course, and publishes on a branch for review. Course-agnostic; GAS BASIC is only
+  the course, and (legacy flow) publishes on a branch for review. Course-agnostic; GAS BASIC is only
   the reference. NOT a course designer - never rewrites ILOs, content, answers or
   maritime facts (course-factory, novikontas-*), never redesigns screens
   (course-module-ux, course-task-ux).

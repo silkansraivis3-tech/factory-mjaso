@@ -187,11 +187,14 @@ and killed an entire script while the page still looked fine; a missing comma in
 object literal silently disabled **every button** on two task pages. `node` may not be installed
 on the machine, in which case the browser console is the only syntax check you have.
 
-### 4 · The Next-to-the-end walk, by hand
+### 4 · The walk review
 
-Open the module page, press Start, and press Next to the end. It is one page, so this is a
-minute's work and it is the acceptance criterion. Every screen must be actionable without
-opening anything, and the last one must be the module check.
+`python measure/scripts/walk_review.py prepare <course> --module N` walks Start, then Next to the end at
+1280 × 800 and lays every stop of every slide out as a contact sheet for one look; `walk_review.py sign`
+records the reviewer's answer and `walk_review.py verify` exits 0 only when the review was made for this
+deck. The build prints `NOT DONE` until it is signed and fresh (`course-factory` `compile/GUIDE.md` 2i).
+Every screen must be actionable without opening anything; the module check is second-to-last and the
+hand-off screen is last.
 
 ---
 

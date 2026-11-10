@@ -152,29 +152,18 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 
   Each template's slots and what fills them, in one line: `course-module-ui/knowledge/blueprints.json`.
   A picture and a short explanation, two pictures, numbered steps and three parts of one system keep the templates
-  they had (`compile/GUIDE.md` §2, §2h). Never the same look twice in a row (L62) - two claims or two scenarios side
-  by side are a problem; 60-80 % of the slides with interactive 3D; no flat drawings (L67). A drill comes after the
+  they had (`compile/GUIDE.md` §2, §2h). A drill comes after the
   module's last teaching slide; minutes are the module's as before (L1). `content_script.py` checks each shape
   (`shape_problems`). Beside a picture a scenario's situation holds 60 words and its question, choices and whys 85;
   a worked example's lines and question 85 (`theory-rules.json` `beside_picture`, `t_overfull`) - an active slide's
   question, choices, whys and answer count toward its 50 words, so trim the situation, not the teaching.
-- **3D and AI pictures - planned unasked (2.49.0, operator 2026-10-16: "make it so they add 3D + AI generated photos
-  when needed").** Before the review page is shown, plan them yourself - the operator never has to ask:
-  - **3D:** where a slide's lesson is a shape, an inside or a layout in space (a tank and its barriers, a space and
-    what is around it, a pipe between its valves), set its `visual_kind` to `model_3d` and describe the scene in
-    `visual`. 60-80 % of the teaching slides are interactive 3D (L67) - a procedure becomes the place it is done in, an
-    idea becomes a scene that shows it; the rest a static 3D render or a photograph; never a real photo replaced, full quality.
+- **3D and AI pictures.**
+  - **3D** only where the figure's why is spatial - a shape, an inside or a layout in space (a tank and its barriers, a
+    space and what is around it, a pipe between its valves); set the slide's `visual_kind` to `model_3d` and describe the
+    scene in `visual`. A 3D model of a flat idea is a must-fix; the factory picks no scene unasked.
   - **AI picture:** where a slide sets a scene or a situation that no real photograph shows (people at work, an
-    operation, an incident) - `ai_illustration`; (2.73.2) equipment too, first generated, then fixed. Planning it is
-    free; the pictures are made within the course's one approved budget (nano-banana, L47).
-  - The review page names what you left out as proposals (`v_3d_propose`, `v_ai_propose`): the slide and the words
-    that made it. Each one the operator keeps goes into the script (propose / apply); each one they strike goes into
-    the script's `"declined"`, outside the approved words, so it is never proposed again:
-    `"declined": {"3d": {"s06": "operator: the comparison drawing is enough"}, "ai": {}}`.
-  - A 3D proposal needs the shape in the slide's **title or planned picture** (two fit words at least), not only
-    in its text, and none of: a sequence, a document or an idea there (steps, procedure, report, permit,
-    checklist, model, layers of protection, "in turn"), a flow or process animation, a generated picture, or a
-    worked example whose text is a list (2.49.2, `knowledge/media-and-tasks.json` `three_d`).
+    operation, an incident) - `ai_illustration`. It sets a scene only; the pictures are made within the course's one
+    approved budget (nano-banana, L47).
 - **Bloom (L48, 2.25.0).** A question says which Sub-ILO it checks (`"sub_ilo": "1.2"` - expected on every
   question since 2.42.0, §0), and - only when
   it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
@@ -214,8 +203,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   `interactive_diagram`, `model_3d`, `model_3d_scan`, `model_3d_licensed`, `video_real`,
   `video_generated`, `ai_illustration` — or `none`, only on the closing summary. Pick it from what the
   slide must teach (`course-visuals`, `decide/knowledge/learning-needs.json`): what moves or changes state
-  is animated; what has an inside is a cutaway or a 3D model; what must be recognised on board is the course's own
-  photograph (reused, enlarged) or a photorealistic generated one - never a photo to take (L33, owner 2026-10-28).
+  is animated; what has an inside is a cutaway or a 3D model; what a trainee must recognise on board is a real photograph
+  (the course's own, reused, enlarged) or a drawing, never a generated picture; a real photo still missing is listed in
+  `PHOTOS_TO_TAKE.md` - a list, never a stop (L33).
 - `"from_old"` (L41; on every slide of a course rebuilt from an old one) — where in the old course the slide comes
   from and what changed: *"1. Liquefied Gas tankers.pptx, slides 37-40 - the photographs became a 3D model"*, the deck's
   file name and its slide numbers as written there. Shown on the review page and read by the order check.
@@ -237,9 +227,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   phase needs no agent (placeholders of this shape, compile/GUIDE.md 2g), and the course photo catalogue matches photos
   to it by `shows`. Must fix: an unknown kind, a kind the visual does not need, a photo or figure with no aspect, nothing
   it must show. A script from before 2.73.0 is read from `visual_kind` and `visual` (a reminder, never a block).
-- **The words a layout holds are a must-fix here (2.73.0)**, not a build-time note: beside a picture a slide's lines go
-  into parts of at most 75 words (1024 x 768, layout-templates.json "budgets"); the build can put lines in parts but never
-  cut one, so a single line over 75 words must be split in the script.
+- **The words a layout holds are a must-fix here**, not a build-time note: beside a picture a slide holds at most 85 words
+  (1024 x 768, layout-templates.json "budgets"; `compile/GUIDE.md` §2). The factory never pages or cuts words, so the writer
+  shortens them or gives the slide `"parts"` in the script.
 - **The course's ship (2.73.0).** STANDARDS.md may carry a `## Ship profile` section - `- Pump arrangement: deepwell pumps`,
   `- Not on board: pump room, cargo pump room` - and render then says (a note) every screen that names what the course's
   ship does not have (chem advanced: four scripts written in parallel set scenes in a "pump room" on a deepwell-pump ship).
@@ -247,11 +237,8 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 - **No quota** (2.18.1): wherever a picture, an animation or a realistic 3D illustration can show what the slide
   teaches, put it in. A slide with none, a long module where nothing moves, few kinds of picture - these come
   back as suggestions, never blocks; nothing is added only for variety (L13).
-- **3D: 60-80 % of the teaching slides, at full quality** (L67 replaces L46's cap of half). Between 60 and 80 % of the
-  presentation's teaching slides are `model_3d`, `model_3d_scan` or `model_3d_licensed` (must fix once a module has 3
-  teaching slides; the operator may keep another share as a design choice). The rest are a static 3D render or a
-  photograph, never the figure kit's flat drawing. Each 3D model is a main picture: true proportions, real materials,
-  labels, a cut-open view where the inside is taught. The built slide carries the kind as `data-visual="model_3d"`, so the finished deck is counted too.
+- **3D: only where the figure's why is spatial, at full quality** (L46, L67) - no share and no cap. Each 3D model is a main
+  picture: true proportions, real materials, labels, a cut-open view where the inside is taught. The built slide carries the kind as `data-visual="model_3d"`, so the finished deck is counted too.
 
 On every **task question**, `"mechanic"` is how the trainee answers. `single_choice`, `multi_select`
 (`"correct": "A, C"`) and `read_instrument` use `options` + `correct`; the rest use `"answer"` — one box,
@@ -282,7 +269,7 @@ one line per item, `*` marking what is right:
 
 **Part A, then Part B (owner, 2026-10-28 - 2.74.0).** Write each self-check as Part A - quick questions that check what
 was taught (Bloom 1-2), at least one of them on a Sub-ILO from an earlier block - then Part B: one harder task the
-trainee works out alone (Bloom 3+). Every question gets a `"brief"`: one short line said when the answer is wrong - why
+trainee works out alone (Bloom 3+). A self-check has at most 2 basic tasks, the rest rich - 3 + 2 of five; a set whose subject has nothing to tap or operate says why in "basic_why" and the rule is a note. Every question gets a `"brief"`: one short line said when the answer is wrong - why
 it is not right, never which answer is ("That is the boiling point of another cargo.", not "It is -42 °C."). The right
 answer is shown in the debrief, where the class checks it together. Add `"confidence": true` to a Part A choice to ask
 how sure the trainee is. The ten interactive types, how each looks on the tablet and an example of each:
@@ -428,7 +415,7 @@ apply), or, if the operator has read it and wants the words as they are (L26), a
 ## 5 · Building from it, and proving it
 
 **The deck is compiled, not typed** (2.25.0): `compile/GUIDE.md`. The marks below are what the compiler
-writes; they are listed here for a module still built by hand.
+writes.
 
 The screen inventory is **derived from the approved script** — not a separate approval. Every screen
 built from it carries its id, and every approved text its field:

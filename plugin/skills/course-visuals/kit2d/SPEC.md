@@ -119,7 +119,7 @@ A part the kit does not have yet is made in `kit2d.js` with `KIT2D.define(type, 
 by class from `kit2d.css`, its words through `f.label`, its solids and lines registered (`f.solid`, `f.line`) so labels
 keep clear, and a card in `demos.html` that `KIT2D.audit` passes at every step.
 
-## Why every figure carries a reason, and custom figures (2.116.0)
+## Why every figure carries a reason, and custom figures
 
 Operator Aleksis Vējs, 2026-11-09, after the Project Management review: *"draw the drawings 2d kit and 3d with a reason, dont
 just put it in just because"*. Every spec carries `"why"` (`mechanism`, `sequence`, `comparison`, `quantity-change`, `spatial`,

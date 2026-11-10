@@ -55,8 +55,9 @@ Allowed answer mechanics:
 reporting what you did or saw is the point of the exercise. Nowhere else. If it is allowed,
 §5 becomes mandatory.
 
-**One Submit per part.** A part is submitted on its own. Correct items lock and grey out with
-an explanation of *why* they are correct; wrong items get a hint and another attempt. The
+**One Check per part.** A part is checked on its own. Until Check a trainee can change any answer; at Check the
+part locks. Inside the classroom frame there is no second attempt - a wrong item says *Not right*, its brief
+reason, and that it is taken up in the debrief. Outside the frame (revision) a retry is allowed. The
 reasoning lives in the task, which is why the deck needs no answers slide.
 
 ---
@@ -257,7 +258,7 @@ heuristic; the record sheet is the authority.
 
 ## 11 · Measurable floor — verify, do not assume
 
-At the target viewport (**800 × 1280 portrait** for the reference build), on every task
+At the target viewport (**1280 × 800 landscape**, the classroom tablet), on every task
 screen:
 
 | | Requirement |
@@ -301,7 +302,7 @@ and misleading everywhere else. Believing it produced **12 false findings on one
 stylesheet, every one of which measured fine in the browser.**
 
 `scripts/check_task_pages.py --only floor` does this resolution and names the binding dial in
-every finding. `--viewport WxH` defaults to `800x1280`; a different device passes its own,
+every finding. `--viewport WxH` defaults to `1280x800`; a different device passes its own,
 because the floor is re-measured, not inherited. Anything the resolver cannot evaluate
 statically — `em`, `%`, `calc()`, `var()` — it reports **not at all** rather than guessing,
 which is the right trade when the browser is the authority.
@@ -427,8 +428,8 @@ disagreed with the trainee's.
 count, pass mark, attempts, minutes — is **derived from the task page or not stated at all**.
 When you must state it in prose:
 
-- state it as the proportion the standard actually is, with the count after it
-  ("75 % of the check, currently 8 of 10"), so the next added question does not create a lie;
+- state the count read from the page ("10 questions"), so the next added question does not create a lie; a
+  self-check or module check shows a score and no pass mark;
 - grep the number across **every** tree before believing it is only in one place. It took six
   files to correct one figure;
 - and check the attempt policy the same way. A "try again" button is the page's answer to that

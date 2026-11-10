@@ -16,7 +16,7 @@ description: >
 
 # Realistic visuals — let the image model paint, and Claude run the job
 
-**v2 · plugin `nano-banana` 1.2.0 - ask first, every picture costs money**
+**v2 - a yes first, every picture costs money**
 
 When somebody asks for a realistic or 3D picture, a language model's reflex is to draw one in SVG:
 a gradient, some rounded boxes, a glow, a drop shadow. That is not a render, and everybody can see
@@ -38,7 +38,13 @@ Tools (MCP server `nano-banana`):
 
 Every generation is billed to the NOVIKONTAS Google account: **about €0.10 a picture**, and a video clip
 costs much more. Four colleagues redoing pictures 10-15 times each use the budget up fast, and most redos
-come from a vague first description. So **nothing is generated automatically.** The order is always:
+come from a vague first description. So **nothing is generated without a yes.** One rule everywhere: in a course
+build the operator's one yes at Stage 2 sets the picture budget (count and euros) and covers paid generation inside
+it; the free Gemini-app route (`gemini-browser`) needs no yes per picture. Outside a course build, the person
+describes each paid picture and says yes to it. The count and cost are reported every time; nothing is generated
+past the budget without a new yes. The tool itself still refuses without `approved_by_user` and stops at the
+spending cap. Equipment a trainee must recognise is a real photograph or a drawing, never a generated picture; a
+generated picture sets a scene only. The order outside a course build is:
 
 1. **Find the places first.** Go through the deck or module and list every place where a generated picture
    really helps: a realistic scene that no real photograph shows, and that is not a schematic (§1). For each
@@ -63,8 +69,9 @@ come from a vague first description. So **nothing is generated automatically.** 
 3. **Write the prompt from their answers (§2) and show it** in one block, with the aspect ratio and the file it
    is saved to. Ask: *"Generate this one picture (about €0.10)?"*
 4. **Generate only after a clear yes, and only once.** Pass their own words in `approved_by_user`; the tool
-   refuses to run without them. Never write that field yourself, and never reuse an earlier yes for another
-   picture or a redo. (1.3.1) Where the client offers a confirmation dialog (MCP elicitation) the person
+   refuses to run without them. Never write that field yourself. In a course build the words are the operator's
+   Stage 2 yes to the picture budget, and the picture must fall inside it; never reuse one picture's yes for a redo
+   or for a picture outside the budget. (1.3.1) Where the client offers a confirmation dialog (MCP elicitation) the person
    confirms there too; a decline is final - do not retry. A **spending cap** (EUR 5 a day, EUR 50 a month on
    this computer by default) refuses with how to raise it: tell the person, never raise it yourself. A video
    whose status check fails comes back `running` with its `operation` - collect it with `get_video`; the
@@ -146,8 +153,9 @@ pipeline, and its laws still apply:
 
 - levels 1–3 (project files → factory library → a real licensed photo on the internet) come first —
   a real photograph of the real equipment beats any render;
-- **no generation for safety-critical equipment the trainee must recognise in real life** — get a
-  real photograph;
+- **no generation for safety-critical equipment the trainee must recognise in real life** — equipment a trainee
+  must recognise is a real photograph or a drawing, never a generated picture; a generated picture sets a scene
+  only. A real photo still missing is listed in `PHOTOS_TO_TAKE.md` - a list, never a stop and never a question to the operator;
 - the `GENERATED_ASSET_BRIEF.md` brief in `course-visuals` **is** the prompt source: turn its
   sections into the prompt below, and check the result against its §7 *forbidden inaccuracies*;
 - animation must teach (`course-visuals` L13): what changes, why, what to notice, what is

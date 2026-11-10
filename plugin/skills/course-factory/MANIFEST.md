@@ -7,6 +7,22 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.120.0 · One rule per subject (2026-11-10)
+
+- The law table in `SKILL.md` wins over every other file; rows L9, L14, L23, L28, L30, L33, L37, L38, L46, L47, L60, L64
+  reworded, the 2.118.0 changes tagged 2.118.0 (they said 2.116.0), the reply rules cut to one paragraph.
+- Leftovers of the rules 2.118.0 removed are taken out of `docs/FACTORY_LAWS.md`, `references/laws-in-full.md`,
+  `references/owner-decisions.md`, the compile / script / fix / hours / bloom / orchestration / instructor-led guides,
+  `compile/BUILDER_CARD.md`, `plugin/agents/fact-checker.md`, the five screen skills, `visual-sourcer.md` and the
+  nano-banana skills (1.4.1). Text only there: no script's behaviour is described differently from what it does.
+- `scripts/content_script.py` `t_sc_mix`: a note when the task slide that opens the set carries `"basic_why"`, still a
+  must-fix without it (`knowledge/theory-rules.json` `_rich`, `page-labels.json`).
+- `course-visuals/scripts/check_visual_first.py`: a compiled slide (`data-template`) with no figure is a note; a hand-built
+  screen still fails or declares `data-novisual`.
+- `orchestration/workflows/build_course.js`: the cross-check on Sonnet (`MECHANICAL`), the builder prompt without the L60
+  answer and the picture on every topic screen, the cold-build wait 45 min.
+- Open rulings and the speed, cost and quality proposals: `_claude/AUDIT_2026-11-10_FACTORY_FLOW.md`.
+
 ## 2.119.0 · The classroom files the tablet app imports (2026-11-09)
 
 - `scripts/classroom_files.py` writes `modules\classroom\prepare.json` and `modules\classroom\forms\<CODE>.json` from the

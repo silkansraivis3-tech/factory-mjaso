@@ -1,7 +1,6 @@
 # The course-factory laws, in full
 
-*Moved here word for word from `course-factory/SKILL.md` in 2.11.0 (Phase 5, step 11) so the
-skill file every session reads stays light. Nothing was deleted or reworded. SKILL.md keeps each law's operative rule; read this when a law is in question, when an operator's request seems to collide with one, or before changing one.*
+*SKILL.md keeps each law's operative rule; this file holds the reasons and the owner's words for some laws. Read it when a law is in question, when an operator's request seems to collide with one, or before changing one. The reasons for L52-L67 and L70 are in `owner-decisions.md`.*
 
 ---
 
@@ -162,8 +161,7 @@ it opens the platform file, and records the approver in the commit.
 
 ### L19 · COURSE_LANGUAGE is declared, and the operator's language is not it
 
-Mandatory in **plan** and **retrofit** alike. Detect it from the authoritative course-facing
-material, state it back in one line, and lock it.
+Mandatory in **plan** and **retrofit** alike.
 
 Course-facing — slides, tasks, handout, assessment, feedback, instructor cues, practical cards,
 START_HERE, the run script — stays in COURSE_LANGUAGE unless translation is **explicitly**
@@ -176,8 +174,8 @@ destroys it, and it happens one screen at a time. `retrofit/scripts/check_langua
 drift check.
 
 *Owner, 2026-09-30 (2.18.0): **every Novikontas course is in English.** COURSE_LANGUAGE is English -
-never asked at intake, never detected as anything else. The programme is still quoted word for word in
-its own language (a Latvian programme stays Latvian where it is quoted), and the operator's review pages,
+never asked at intake, never detected as anything else. The programme stays in its own language in the programme file and on the review pages; the course quotes it in
+English (`text_en` / `topic_en`). The operator's review pages,
 chat and notes still follow the operator.*
 
 ---
@@ -253,7 +251,7 @@ as a Sub-ILO under it"* — not a refusal, and not an essay.
 
 **The design** — how the course looks and behaves on the screen: the brand's colours, typeface and logo use, the
 shell and its components, layouts and slide modes, animation, the recap slide and the picture viewer (L51), text
-size and free space (L50), the 3D share (L46). The list, each with the risk to say, is `knowledge/design-rules.json`.
+size and space (L53). The list, each with the risk to say, is `knowledge/design-rules.json`.
 Here the person decides:
 
 1. Nothing conflicts → do it. No question.
@@ -285,21 +283,16 @@ verdict.)*
 
 *Revised by the owner, 2026-09-30 (2.17.0): the tests are on the **trainee tablet only**, never inside the
 slides (L35); a self-check **does** show the trainee a score — "it's for himself"; the module check does too.
-Neither counts. The table below is the 2.12.0 text; where it says otherwise, this note wins.*
+Neither counts.*
 
-| Level | Where | Graded |
-|---|---|---|
-| Self-check | inside the presentation, after key concepts *(2.17.0: on the trainee tablet, opened by the instructor after the theory it tests — L35, L36)* | no |
-| Module check | the end of every module | **no** — a self-check that the module was understood |
-| Final assessment | the end of the course | **yes** — the only graded test |
+Self-check: on the trainee tablet, opened by the instructor after the theory it tests (L35, L36), not graded. Module
+check: the end of every module, not graded. Final assessment: the end of the course, the only graded test.
 
-One task per screen, large touch targets, Next → Next, clear feedback on every self-check; no score
-shown on an ungraded check unless the score itself helps the trainee learn. *(2.17.0, owner: it does —
-every self-check and module check ends on the trainee's own score.)* The ungraded module
+One task per screen, large touch targets, Next → Next, clear feedback on every self-check; every self-check and module
+check ends on the trainee's own score. The ungraded module
 check **still waits for the instructor's unlock**. The instructor's screen shows *done / not done*
-and the result as information — never pass or fail, never red. The tablet app's own web files
-colour a check red today; the factory writes the exact change list and the owner applies it (L21).
-→ built out in `course-task-ux` (Phase 5 step 6).
+and the result as information — never pass or fail, never red.
+→ built out in `course-task-ux`.
 
 **L28 · Who the course is for, and what the school has.** *(Intake: `knowledge/intake.json`; the
 effects of each type: `knowledge/course-type.json`.)*
@@ -322,7 +315,7 @@ and explain their actions in real situations. What a new entrant gets more of is
 theory numbers are the same for both course types (`knowledge/course-type.json` → `_professional_names`).*
 
 Every instrument and simulator the IMO model course lists for the course is **assumed available at
-Novikontas**. Practical tasks are designed for it; the factory does not ask whether the school has it.
+Novikontas**. Practical tasks are designed for it; the factory does not ask whether the school has it - for simulator tasks, which simulators the school has comes from `coverage/knowledge/simulators.json` (L66).
 → built out at intake (step 2) and in the build (step 7).
 
 **L29 · The words are approved before the HTML.**
@@ -405,8 +398,9 @@ download all images needed."*
 
 - **Every picture in the knowledge base and in the old course may be used as it is** - photographs, drawings,
   textbook and publisher figures, the old decks' pictures (`old_course.py images` copies them out, slide by slide).
-  Nothing is redrawn only to avoid using it, and nothing from these two is held back for its licence. Its source is
-  still credited on the slide where a credit is known ("after <book>, fig. N"), and listed in `factory-notes.md`,
+  Nothing is redrawn only to avoid using it. Novikontas's own pictures in the knowledge base and old course are usable as
+  they are; a source-book figure is used only after a named person clears it (L52). Its source is credited in the
+  full-screen view and on the credits page (L56), and listed in `factory-notes.md`,
   so the owner can see what came from where. This replaces the 2.12.0 rule that textbook figures are redrawn and
   that ICS/SIGTTO figures marked *not cleared* stay out.
 - **When a picture the slide needs is in neither, the factory searches the internet and downloads it** - real
@@ -414,30 +408,14 @@ download all images needed."*
   technical body ...; never SEO farms or scraped image sites). It is downloaded into the course work folder, never
   hot-linked (the tablet is offline, L6), with its page, licence and date beside it. A licence that is unclear is put
   on the owner's licence list - it does not stop the build.
-- **The downloads are confirmed once, as a list.** Per module, one pop-up shows every file to download - what it
-  shows, the site, the size - and on the operator's yes all of them are downloaded. Nothing is downloaded unseen.
+- **Free-licensed pictures are downloaded and listed.** Free-licensed pictures (Wikimedia Commons, public-domain
+  agencies, maker press kits) are downloaded into the course folder with their record and listed in the module's
+  report; only an unclear licence or a paid source is asked about.
 - What stays: equipment a trainee must recognise is never an AI image (Q3); the real thing - a found or downloaded
   photograph, a scan, or a photo to take at Novikontas.
 
-*The 2.12.0 text, kept as it was:*
-
 Sourcing order: knowledge base → old course → source files → internet (real photographs,
-legitimate schematics) → authored → generated. Legitimate schematics and example pictures from the
-knowledge base or the old course are **kept and used** where they teach well, not redrawn for the
-sake of it.
-
-- Novikontas's own material — old courses, own manuals, own photographs — is used freely.
-- A textbook or publisher figure is **redrawn** as Novikontas's own drawing, **technically
-  identical to the original — never simplified**, credited *"after <book>"*, and listed in
-  `factory-notes.md` so the owner can check the licence with management. If Novikontas is licensed,
-  the original replaces the redraw.
-- ICS/SIGTTO figures marked *not cleared for issue or publication* stay out.
-- Equipment the trainee must recognise in real life — markings, controls, valves, PPE — is **never**
-  an AI image: use an accurate schematic, and add the item to the **"photos to take at Novikontas"**
-  list, because the school has the equipment.
-- AI illustrations, labelled *"AI-generated illustration"*, are for general context images only.
-
-Never stop at "I can't make this picture": find it, generate it where that is allowed, or finish
+legitimate schematics) → authored → generated. Never stop at "I can't make this picture": find it, generate it where that is allowed, or finish
 everything else and leave the ready-to-run handoff (L23). → built out in `course-visuals` (step 8).
 
 ---
@@ -478,8 +456,7 @@ or back to all module tasks."*
   count. The instructor sees done / not done and the result as information, never pass/fail, never red.
   The final assessment is the only graded test.
 - This supersedes the trainee-side task list, "module tasks" page and task-to-task navigation in
-  `course-task-ux` §3; those rulings are marked there. The tablet app's web files do not work this way
-  yet: the factory writes the exact change list and the owner applies it (L21, Q1) - step 6.
+  `course-task-ux` §3; those rulings are marked there.
 - → `scripts/content_script.py` (task slides, the two parts of the review), `knowledge/theory-rules.json`
   (`tablets`), `scripts/make_architecture_page.py`.
 
@@ -510,8 +487,7 @@ the instructor's panel, not in the slides."* Two to four short points per slide 
 example to give, what to stress. The theory itself is on the slide. `content_script.py render` writes
 `instructor_notes/M01_INSTRUCTOR_NOTES.md` from the script - one section per slide, the OPEN TASK prompt at every task -
 for the instructor's panel; the publisher treats `*_INSTRUCTOR_NOTES.md` as instructor-only, and the word-for-word
-check fails a slide that carries the notes. The density floor became 25 words a theory minute and the block before a
-self-check 250 words, because the long notes no longer count towards them.
+check fails a slide that carries the notes. The density floor became 25 words a theory minute, because the long notes no longer count towards them.
 
 ### Added by the owner after reviewing the rebuilt example pages (2026-09-30, 2.18.0)
 
@@ -523,12 +499,10 @@ used."*
   photograph to take at Novikontas, technical drawing, schematic, cutaway, chart, comparison, step animation, flow
   animation, process animation, interactive diagram, 3D model, 3D scan, licensed 3D model, real video, AI video,
   AI illustration), **what it shows and why**, and the **layout** (text left and picture right; picture wide; picture
-  full). The review page draws that place on the slide. Only the closing summary may have none.
-- A module with 40 minutes of theory or more has at least one visual that moves, turns or can be explored; a module
-  with six slides or more uses at least three kinds.
+  full). The review page draws that place on the slide.
 - **Who makes it** is said for every one: the factory itself (SVG, HTML/JS animation, interactive diagrams, three.js
   3D from geometry - all bundled, offline); the image and video generator (nano-banana: Gemini images, Veo video -
-  context only, labelled, never equipment a trainee must recognise, L33); the sources; **Novikontas** (a photograph,
+  context only, recorded as generated (L56), never equipment a trainee must recognise, L33); the sources; **Novikontas** (a photograph,
   a short film, or a 3D scan of the real equipment with a free phone app - Polycam, KIRI Engine, RealityScan -
   exported as .glb); or **outside help** (a manufacturer's CAD file, a licensed model, a 3D artist; AI image-to-3D
   services such as Meshy, Tripo or Rodin through their own API key, for context objects only). What Novikontas or
@@ -561,7 +535,6 @@ picture, an animation or a realistic 3D illustration has to show what is being t
 picture, a long module where nothing moves, few kinds of picture - these are **suggestions** on the review pages, never
 blocks. A picture that is named must still say what it shows, and nothing is added only for variety (L13). The task
 rules of L38 stay rules; the final assessment follows the programme's own format and none of them applies to it.
-*(Owner, 2026-10-07, 2.22.0: 3D is now capped at half of a module's pictures, and only where it makes sense - L46.)*
 
 **L39 · Who tests where: colleagues in a browser, the owner on the tablet, at the end.**
 *"The real tablet test will be at the end, because only I can do that for now; my colleagues will not be able to.
@@ -627,18 +600,7 @@ numbers: `knowledge/media-and-tasks.json` → `trainee_tablet_experience`. Built
 start are inside each module folder; there is a START HERE HTML where it opens the presentation straight away, but the
 extended start has fast access with buttons for all tasks, the module plan, the presentation and so on."*
 
-```
-    course\modules\
-        M01_Gas_tankers\
-            START_HERE.html            opens the presentation straight away
-            START_HERE_EXTENDED.html   a button for: the presentation, every task, the module plan,
-                                       the instructor notes, the practical cards, the handout pages
-            presentation\             the module's one-page presentation
-            tasks\                    every task of the module (self-checks, module check, practicals)
-            instructor\               the module plan, M01_INSTRUCTOR_NOTES.md, the practical cards
-            assets\                   every picture, 3D model, film, style and script the module uses
-        M02_...\  ...  M23_Final_assessment\
-```
+The live folder tree is the one under L45 (`course\modules\module01\` ...).
 
 - **Self-contained.** Every file a module uses is inside its own folder - styles, scripts, fonts, pictures, 3D models
   and films are copied in, even when another module has the same one. Nothing reaches outside the module folder,
@@ -737,7 +699,7 @@ slide, and every result reaches the instructor and the admin panel."*
   no back button and the classroom shows the answers in the debrief; a task moves only between its own steps and
   never sends the frame to another file or opens a window. `check_course_package.py` refuses both.
 
-**L46 · 3D where it makes sense - at most half of a module's pictures - and smooth on the tablet.** *(Its share is L67's since 2.110.0: 60-80 % interactive 3D; the cap of half is gone.)*
+**L46 · 3D where it makes sense - and smooth on the tablet.** *(2.118.0: no share and no cap - 3D only where its why is spatial.)*
 *"Now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it
 makes sense. And it lags a little in these 3D models, maybe optimisation can be considered - but mainly I love these 3D
 models, just cut it a little."* - the owner, 2026-10-07, after the pilot's first modules (in Module 2, nineteen of twenty
@@ -745,16 +707,12 @@ figures were 3D). And the same day: *"I also don't need you to cut the quality o
 about 50% of the presentation is the max that can be 3D models, but also don't cut quality, and put it only on slides
 where it makes sense, not only because you can."*
 
-- **At most half.** At most half of the presentation's teaching slides are 3D - a factory model, a scan or a licensed
-  model. Counted once a module has two 3D slides or more. A must-fix in the content script (`v_3d_share`) and in the built
-  deck, where every `.slide` carries `data-visual` with its approved kind; the architecture page counts the plan
-  (`p_3d_many`). More than two 3D slides in a row is a suggestion.
 - **Only where it makes sense.** 3D is for equipment and structures whose shape, inside or arrangement in space is what is
   taught - tanks and containment, hull sections and spaces, pumps, compressors, valves, manifolds, piping, the
   reliquefaction plant, an enclosed space - and for what the trainee must later recognise or operate on board. Not for
   charts, curves, tables and matrices, symbols and documents, ideas such as Swiss cheese or the steps of a risk
   assessment, or decoration. A 3D slide whose description sounds flat gets a suggestion (`v_3d_flat`).
-- **The cap is on how many, never on how good.** Every 3D model that stays is made at full quality, with the care of a
+- **Quality is never cut.** Every 3D model that stays is made at full quality, with the care of a
   main picture: true proportions, real materials, soft light and shadows, clear labels, a cut-open view where the
   inside is taught, a starting view that already shows the point.
 - **Smooth on the tablet - without a lesser look.** The speed comes from how the scenes run, not from fewer details:
@@ -767,7 +725,7 @@ where it makes sense, not only because you can."*
   `check_course_package.py` notes what it can read in the module's own scripts.
 - The numbers are `knowledge/media-and-tasks.json` → `three_d`. Building the scenes is Phase 5 step 9.
 
-**L47 · A generated picture is made only after the person described it and said yes.**
+**L47 · A generated picture is made only within the budget the person said yes to.**
 *"It costs approx 0.10 euro per generation, and if there are 4 developers, and they use fixes and redoings of these
 pictures like 10-15x, it's already all billing gone. So ... you don't automatically connect to Nano Banana and do all
 images: you first find places where these images can be placed ... and then you ask for each place ... 'In slide 3, I
@@ -777,13 +735,11 @@ explaining in detail what you want to see.' This will reduce failed attempts and
 - **Places first.** The factory lists every place a generated picture fits - the content script's AI illustrations and
   AI videos (`scripts/picture_briefs.py list`), and any other place a realistic picture would truly help - and lets
   the person strike any.
-- **One place at a time, the person describes it.** Eight plain questions (`knowledge/media-and-tasks.json` →
-  `generation_brief`): the main thing; what must be visible; from where we look; where and when; photo or 3D look; what
-  must not be in it; where the slide's text goes; a reference photo. Each comes with a suggestion from the slide, so the
-  person only corrects.
-- **The prompt is shown, and only a yes generates - once.** The nano-banana tools (1.2.0) refuse to run without the
-  person's own words in `approved_by_user`; a redo is a new paid picture and needs a new yes; an edit of the good picture
-  is preferred to a new one; no draft-then-final. The `image-director` agent makes approved pictures only, each once.
+- **A generated picture only within the budget the operator said yes to:** one yes per course at Stage 2, with the
+  count and the euros (`intake.json` `picture_budget`, 2.73.2). Each place keeps its brief (`picture_briefs.py`); the
+  count and cost are reported every time; nothing is generated past the budget without a new yes, and a redo counts
+  against it. Outside a course build (a single deck or picture) the person still describes each picture and says yes to
+  it (`nano-banana`).
 - **What it cost is said every time.** Each picture is logged on the computer (`~/.config/nano-banana/usage.jsonl`) and
   per module (`working_claude/picture_briefs/M01.json`); each result says the count and the estimate (about €0.10 a
   picture, `NANO_BANANA_EUR_PER_IMAGE`); a video clip costs much more and says so.
@@ -800,7 +756,7 @@ explaining in detail what you want to see.' This will reduce failed attempts and
   least half), every question below its Sub-ILO, every Sub-ILO the module check does not reach.
 - **With the way up.** Each gap names the tablet task types that would lift it - operate the panel, set the value,
   read the instrument for *Apply*; find the hazards, a scenario for *Analyse*; choose-and-justify for *Evaluate*.
-  *Create* is reached by no task type yet - said plainly; new task types for it are a later step.
+  *Create* is reached by the build-the-plan task when it is written for a situation (2.28.0).
 - **Within the other laws.** Main ILOs stay verbatim (L2) - a weak verb there is only noted. A Sub-ILO with a weak
   verb (know, understand) is re-expressed with a verb that can be watched, and the operator approves it. Difficulty
   is not level: an obscure fact is still *Remember*.
@@ -874,17 +830,16 @@ explaining in detail what you want to see.' This will reduce failed attempts and
 - **One check.** `fix.py check --kind words` (`check_script_match.py` and `check_slide_text.py` on the touched
   modules) | `layout` (the touched modules measured: nothing off the screen, no text under the floor, before → after
   for the swept slides) | `package` (`check_course_package.py`). Run once, by whoever made the fix, and its numbers
-  reported.
+  reported. After any fix the walk review runs on the touched slides (2.118.0).
 - **Never in a fix.** A QA agent after the fixer; re-measuring slides that were not touched; two screen sizes unless
   the operator asked about the projector; a contact sheet of every slide; a whole-course QA; re-reading the whole
   factory; more than 2 agents at once - agents only for hand work in more than 3 modules.
 - **Said once, kept for good.** A course-wide wish said once becomes a numbered standard in
   `course\working_claude\STANDARDS.md` (`fix.py standard --add "..." --said "<operator's words>"`); builders build new
   modules to it and fixes keep it - it is never repaired again.
-- **The course's own numbers.** `knowledge/fix-rules.json` is the authority: ink at least 45 % of a teaching slide,
-  empty below the content at most 25 %, text at least 16 px, overflow tolerated up to 8 px - from GAS ADVANCED's own
-  QUALITY_BAR and its standard S9.
-- **Quality kept where it belongs.** The full sign-off - the 14 checks in `SKILL.md` *Verify before reporting done* -
+- **The course's own numbers.** `knowledge/fix-rules.json` holds the course's numbers: text at least 16 px, overflow
+  up to 8 px; ink 45 % and empty-below 25 % are notes (2.118.0) - from GAS ADVANCED's own QUALITY_BAR and its standard S9.
+- **Quality kept where it belongs.** The full sign-off - the sign-off in `SKILL.md` *Verify before reporting done* -
   stays for builds, retrofits and handover.
 
 **L51 · Every picture opens full screen, and every module closes with the same recap.**
@@ -916,7 +871,7 @@ to take away from this module, and all modules should be same closing slide desi
 
 ## L68 - the Instructor-Led Course Development Guideline (2.97.0)
 
-**L68 · Every instructor-led module meets the Instructor-Led Course Development Guideline.** The guideline's twelve rules, its TLA pool and its review checklist are `course-factory/knowledge/instructor-led.json`; it adds no parallel set of documents - it sets what the factory's outputs contain - and four paper items. **Active** means every trainee commits to an output (a written answer, a card vote, a tablet answer, a pair answer, a performed step); the instructor taking three or four answers from the room is passive (R4, L5 sharpened). **Passive** theory runs at most 15 minutes, then a trainee output (R5), and is at most 20 % of the theory minutes or justified in one line, which the reviewer may reject (R6, L49 made a review item). Every drill, simulator run and team scenario runs brief (3-5 min), show on first exposure, do, debrief (15-20 min for a team, 5-10 alone) inside its own minutes (R8, L1 kept); the recorded run is a later run under a changed condition after at least two practice runs (R9); the instructor watches and stays quiet, the stop word on the pre-brief card (R10); a recorded run is assessed on a form of 8-12 critical steps with a stop criterion, a global rating and Yes / Not yet (R12). Per course, the factory writes `working_claude/instructor_led.json` - the outcome register's task type, must-know and evidence per Sub-ILO, each practical's cycle and cards, the final's must-pass questions, the employer sheet, the one-line justifications - and the operator approves it. Main ILOs, hours and facts are never changed by it (L1, L2, L4). Course documents claim behaviour change, never accident reduction. Not yet the factory's: the final test on the trainees' phones, the assessment form filled on the instructor's tablet and a must-pass question failing a candidate (the training app's), and the guideline's ban on decorative photographs against L52 and L67 (a decision).
+**L68 · Every instructor-led module meets the Instructor-Led Course Development Guideline.** The guideline's twelve rules, its TLA pool and its review checklist are `course-factory/knowledge/instructor-led.json`; it adds no parallel set of documents - it sets what the factory's outputs contain - and four paper items. **Active** means every trainee commits to an output (a written answer, a card vote, a tablet answer, a pair answer, a performed step); the instructor taking three or four answers from the room is passive (R4, L5 sharpened). **Passive** theory runs at most 15 minutes, then a trainee output (R5), and is at most 20 % of the theory minutes or justified in one line, which the reviewer may reject (R6, L49 made a review item). Every drill, simulator run and team scenario runs brief (3-5 min), show on first exposure, do, debrief (15-20 min for a team, 5-10 alone) inside its own minutes (R8, L1 kept); the recorded run is a later run under a changed condition after at least two practice runs (R9); the instructor watches and stays quiet, the stop word on the pre-brief card (R10); a recorded run is assessed on a form of 8-12 critical steps with a stop criterion, a global rating and Yes / Not yet (R12). Per course, the factory writes `working_claude/instructor_led.json` - the outcome register's task type, must-know and evidence per Sub-ILO, each practical's cycle and cards, the final's must-pass questions, the employer sheet, the one-line justifications - and the operator approves it. Main ILOs, hours and facts are never changed by it (L1, L2, L4). Course documents claim behaviour change, never accident reduction. Not yet the factory's: the final test on the trainees' phones, the assessment form filled on the instructor's tablet and a must-pass question failing a candidate (the training app's), and the guideline's ban on decorative photographs against L52 (a decision).
 
 → `course-factory` (`instructor-led/GUIDE.md`, `scripts/instructor_led.py` check, `compile/scripts/module_plan.py` the passive share, the cycle rows and the register's columns, `compile/scripts/additional_materials.py` the practical kit), 2.97.0 
 The rules, limits, TLA pool and checklist are data in `knowledge/instructor-led.json`; how the course's file is written and checked is `instructor-led/GUIDE.md`. The guideline's own freeze rule holds for the factory too: a limit moves only when a real module fails without the change.

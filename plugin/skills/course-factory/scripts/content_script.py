@@ -1106,7 +1106,9 @@ def theory_check(script):
                 basic = sum(1 for q in st["questions"] if MEDIA["mechanics"].get(mech(q), {}).get("family") in RS["basic_families"])
                 need = min(RS["rich_min"], max(0, n - RS["basic_max"]))
                 if basic > RS["basic_max"] or rich < need:
-                    add(s["id"], "", FAIL, "t_sc_mix", set=set_name(script, st), b=basic, r=rich, q=n, lo=need)
+                    # a subject with nothing to tap or operate says so on the task slide ("basic_why"): then a note
+                    add(s["id"], "", NOTE if str(s.get("basic_why") or "").strip() else FAIL, "t_sc_mix",
+                        set=set_name(script, st), b=basic, r=rich, q=n, lo=need)
                 # 2.74.0 (owner, 2026-10-28) - a self-check is Part A, checking what was taught before it in the module (Bloom
                 # 1-2), then Part B, a harder task the trainee solves alone (Bloom 3 or higher). Suggestions, never blocking.
                 lv = [bloom_map.task_level(mech(q), q.get("bloom"))["level"] for q in st["questions"]]

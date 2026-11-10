@@ -25,8 +25,7 @@
       and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
       (2.65.0, L64) It starts with the PRE-CHECK (compile/scripts/precheck.py - a second, from the files alone): a picture
       the sheet names that is not there, an unknown template or variant, a photograph under 800 px (unless its
-      _photo_meta.json record says why in "low_resolution_ok"), more than 60 words with no picture, three teaching
-      slides in a row without one - "FAIL M01 - nothing built: the pre-check found ..." and nothing is built until it is
+      _photo_meta.json record says why in "low_resolution_ok") - "FAIL M01 - nothing built: the pre-check found ..." and nothing is built until it is
       fixed. Run it alone any time: python compile/scripts/precheck.py <course> --module 1. Under the first PASS: "TIME
       M01: <n> min from its starter build sheet to its first PASS" against the gold standard, 30-40 min a module.
       A module ALREADY BUILT is rebuilt as a fix, not here: scripts/fix.py rebuild <course> --modules 1 (fix/GUIDE.md 3b).
@@ -128,8 +127,9 @@ python compile/scripts/compile_module.py <course> --module 1 --init-build   once
                                                                             rule, pass mark from the course's other sheets; a foot;
                                                                             an entry per tap / label question)
 python compile/scripts/compile_module.py <course> --module 1                build (again after every change)
-python scripts/check_script_match.py <course> --module 1 --part instructor  the words are the approved ones
 ```
+
+`build_module.py` (the Quickstart) checks that the words are the approved ones (`check_script_match.py`) as part of its one run.
 
 **The module's design files (2.49.2).** Both `--init-build` and every compile first check the module's design files
 (style files, engines, `kit.js` ...) against the factory's with `design_system.py`'s own check, and **say what they did**,
@@ -163,9 +163,9 @@ python compile/scripts/compile_course.py <course>                 COURSE.html, _
 python scripts/check_course_package.py <course>\modules           the classroom's own importer
 ```
 
-Then the usual checks: `check_navigation.py`, `check_course_package.py`, and in the browser the
-`audit_deck.js`, `audit_collide.js` and `audit_compose.js` probes — the compiler does not prove a layout
-fits, the audits do. The drawing check (`audit_drawing.js`) is the one the build runs itself (§2e).
+The navigation check, the course-package check and the layout audits (`audit_deck.js`, `audit_collide.js`,
+`audit_compose.js`, and the drawing check `audit_drawing.js`, §2e) are run by `build_module.py`; the compiler does not
+prove a layout fits, the audits do.
 
 ## 1 · What goes where
 
@@ -213,24 +213,10 @@ and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `
 `"box"` (the picture's box, below), `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.
 
-**2.116.0 (operator Aleksis Vējs, 2026-11-09): this is now a NOTE.** The compiler never builds a slide another way to avoid a
-repeat and `build_module.py` never settles one (`compile_module.LAYOUT_FLIP` is off; `CF_LAYOUT_FLIP=1` only for the
-factory's own tests); a repeat, or more than a fifth of slides on the dark ground, is a `Note:` line, never a problem.
-The paragraph below describes the old machinery.
-
-**Never the same look twice in a row (L62, 2.53.0) - and 80 / 20 light (owner, 2.62.1).** A slide's look is its shape
-and its ground. When a slide would look like the one before it, the compiler builds it another way that holds the same
-words and picture: the picture on the other side, or a photograph across the top with the words in two columns under it
-(`figure-stage` `figure-top`, up to 70 words); a slide on the dark ground may also be the photograph framed on it (up
-to 50 words). The ground is never changed to vary: at least 80 % of a module's slides are light (task launches, the
-module check and the recap too, unless the sheet says `"dark": true`); more than a fifth on the Navy ground or framed
-on it is a build problem - a full-screen photograph does not count. It also avoids the looks of the three slides before
-it when it can. A build sheet's own layout is
-kept wherever it does not repeat. A slide built another way carries `data-varied`; when the audit finds it does not fit
-there (2.62.0), `build_module.py` builds it its next way at once - the line `LAYOUT - ... built again their next way` -
-and keeps that in `_build\MNN_layout_avoid.json` while the slide's words and build-sheet entry are unchanged. Never pin
-a layout by hand for that. A slide whose OWN layout does not fit either (the larger logo can cost a long title its
-first line beside it) is yours: give it `"parts"` or a shorter picture column, as for any slide that spills. A photograph under
+**A repeat of a look is a note (L62).** The compiler never builds a slide another way to avoid a repeat; a repeat, or more
+than a fifth of slides on the dark ground, is a `Note:` line, never a problem. A slide whose OWN layout does not fit (the
+larger logo can cost a long title its first line beside it) is yours: give it `"parts"` or a shorter picture column, as for
+any slide that spills. A photograph under
 1600 px on its long side is enlarged once (Lanczos, a light sharpening, at most four times; the original kept in
 `working_claude/photo_originals/M01/`); under 800 px it is listed - a larger original is still the real fix.
 
@@ -239,7 +225,7 @@ first line beside it) is yours: give it `"parts"` or a shorter picture column, a
 `picture-large` 65 %. The compiler counts what the picture shows at once - a kit drawing's labelled parts, a 3D scene's
 labels, an SVG's words, a photograph's spots - and gives it the box those names need (up to 6 any box, 7-10 even,
 11-15 picture-wide, 16-22 picture-large, 23 or more the whole slide; a 3D model picture-wide at least), the words what
-is left, in parts when they do not fit. Growing is worth it while it costs the words at most one part more than the
+is left. Growing is worth it while it costs the words at most one part more than the
 even box; past that, or when the picture needs the whole slide and the words are more than 45, the compile stops on
 the slide: make it another kind of picture - in steps (a few names a step), a 3D model whose names show on tap, the
 picture on a slide of its own (`"composition": "stage"`), or fewer names. Each such slide carries `data-box`. When the
@@ -248,9 +234,8 @@ build's layout solver gives it the next larger box (`settled: ... its picture ne
 compile/scripts/layout_fit.py <figure> --words N` says what a figure gets before a build.
 
 **The owner's rules, checked at every build:** a split slide is 55 / 45 by default (50-60 % text when the picture is
-simple, never 80 / 20); more than 60 words always has a picture beside it; never three teaching slides in a row without
-a teaching picture (a task launch and the recap neither count nor break the run); approved words are never cut,
-summarised or set smaller - when they need more room they go into parts.
+simple, never 80 / 20); approved words are never cut, summarised or set smaller, and the factory never pages them - when
+they need more room the writer shortens them or gives the slide `"parts"`.
 
 | In the script, or in the delivery file | On the screen |
 |---|---|
@@ -279,13 +264,14 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 - **No empty space.** A drawing, animation or 3D model gets the wider column (`fig-wide`) and the column's
   height; words are at reading size (`.copy`). Before showing a deck: `audit_compose.js` (every screen composed,
   none weak), `audit_deck.js` (no spill, no overfill, no tiny labels), `audit_collide.js` - at 1280 × 800 and
-  1024 × 768. A label inside a drawing below 12.5 px on screen is fixed in the drawing.
+  1024 × 768. Two floors: a label inside a drawing below 12.5 px on screen is fixed in the drawing; body text is at least 16 px.
 - **Every drawing whole and clean (L54).** Also `audit_drawing.js`: no part pokes out of the hull, tank, room or box
   it sits in (draw the room along a sloping stern, or clip it), nothing is cut off at the drawing's frame, every label
   keeps 4 px clear of other shapes, lines and labels. A crossing that is meant is marked in the drawing:
   `data-may-cross`, `data-no-contain`, `data-may-overlap`. Every compiled deck also loads `gb_fit.js`, which widens a
   frame a drawing still reaches past and names it in the console - fix the drawing, then compile again.
-- **Figures from the figure kit (L55).** `"s14": {"figure": "s14.kit.json", "dark": true}` - the spec lives in
+- **Figures from the figure kit first; a custom figure is allowed (L55).** When no kit part shows the idea well, see §2i for
+  `"custom_figure"`. `"s14": {"figure": "s14.kit.json", "dark": true}` - the spec lives in
   `working_claude\figures\M02\` like any drawing source. The compiler puts it into the page as data with the deck's own
   step buttons (`.mediabar`: previous, next, replay), and loads `kit.css` and `kit.js` (installed by `design_system.py`
   like `gb_deck.js`) and, when the course made parts of its own, `assets\kit_parts.js` after them. Each spec step lights
@@ -312,8 +298,9 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   `description` in `_photo_meta.json` (write it for the trainee when the photo comes in; a photo without one is reported
   at build). A full-screen photo slide opens on a tap of its bare picture and has the ⤢ button. A generated picture
   (`"generated": true` in its record) gets no credit line and no label on screen, and is never an L57 thumbnail.
-- **A drawing carries the real photos of what it shows (L57) - nothing to ask for.** The compiler takes the real things a
-  drawn slide names - the term before " - " in its lines (with the kit figure's step number) and the drawing's own labels -
+- **A drawing carries the real photos of what it shows (L57) - when its build-sheet entry says `"photo_row": true` or its
+  why is `real-thing-recognition`; never unasked.** The compiler then takes the real things the drawn slide names - the term
+  before " - " in its lines (with the kit figure's step number) and the drawing's own labels -
   and puts the matching photos in a row under the drawing (`.photo-strip`, at most four), each opening in the panel.
   Matched by `"shows"` in `_photo_meta.json`: give every photo the plain names of what it really shows, e.g.
   `"shows": ["bunkering station", "LNG bunker hose"]`. A photo of another module is copied in with `copied_from`; one
@@ -328,10 +315,11 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   off the list altogether - `"no_photo"` keeps it listed.
 - **A planned photo that does not exist (2.49.0).** The build names every photo slide with no picture file. Find the
   real one first (project, factory library, a free licence - `course-visuals`). If none exists and the slide only sets
-  the scene, propose an AI picture unasked - `nano-banana:realistic-visuals`: describe it, show the prompt and the
-  price, make it within the course's approved picture budget (2.73.2: one yes per course), record it `"generated": true`
-  in `_photo_meta.json`. (2.73.2, owner 2026-10-28) Equipment too - first generated, then fixed; nobody is asked to
-  take a photo, and the course's own small pictures are reused, enlarged by the build (Real-ESRGAN).
+  the scene, an AI picture may be made - `nano-banana:realistic-visuals`: describe it, show the prompt and the
+  price, make it within the course's approved picture budget (one yes per course), record it `"generated": true`
+  in `_photo_meta.json`. A generated picture sets a scene only: equipment a trainee must recognise is a real photograph or
+  a drawing, never a generated picture. A real photo still missing is listed in `PHOTOS_TO_TAKE.md` - a list, never a stop
+  and never a question to the operator. The course's own small pictures are reused, enlarged by the build (Real-ESRGAN).
 - **A 2D figure - drawn with the 2D kit (2.113.0).** A graph, an object in motion or a concept is a short JSON spec,
   `working_claude\figures\MNN\sNN.kit2d.json` (`course-visuals\kit2d\SPEC.md` is the format; `demos.html` and `pm.html`
   show every part), named as the slide's `"figure": "sNN.kit2d.json"`. The compile ships `kit2d.js` and `kit2d.css`; the
@@ -398,25 +386,17 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   uses the factory's classes (`fill fig`, `[data-stage]`); a class of the module's own (`m02-3d-col`, `cards4`,
   `m04-3d`) needs a rule in the module's stylesheet or a query in its script - a class nothing styles or finds is a
   defect in `audit_ui.py` / `check_task_pages.py`. Layout goes in the stylesheet, never in a `style=""` attribute.
-  **2.116.0 (operator, 2026-11-09: "draw the drawings 2d kit and 3d with a reason, dont just put it in just because"): the
-  factory no longer picks a scene unasked, and the RECOMMENDED block and its review-page card are gone; 3D only where the
-  slide's `why` is `spatial` (section 2i). What follows describes a `model_3d` slide the script plans itself.**
+  **3D only where the figure's `why` is `spatial` (section 2i); the factory picks no scene unasked.**
   `--init-build` gives a `model_3d` slide a starter scene entry: its figure (`s05.kit3d.json` - nothing goes into `"scripts"`), a
   `"_figure"` note on how to build it, and writes the starter spec itself (a label, metres, a view, parts guessed from the
   slide's words and laid side by side, each with a label, and a `"_todo"` to place them as on board - never overwritten).
   It also writes the slide's 2D starter spec (`sNN.kit.json`, 2.50.6), named in the entry's `"_2d"` note but not in
   `"figure"`: to keep a 2D figure, point `"figure"` at it and write
   `"declined_3d"` - then edit the starter, never write a spec from nothing (M01 benchmark run 5, s05).
-  A script with no `model_3d` slide gets the same entry on its best slide, unasked (`content_script.best_3d`: a shape,
-  an inside or a layout in space; never a real photo's slide), with a `"_3d"` note saying why. **A photograph wanted
-  is never turned 3D (2.63.2):** `"photo_wanted": "<who asked, why>"` - on a build sheet screen, a script screen, or the
-  script's top-level `"photo_wanted": {"s07": "..."}` (outside the approved screens, like `"declined"`) - takes the slide
-  out of the pick and out of the RECOMMENDED block's candidates (the next one is named, or none), and is the reason a
-  planned 3D slide may carry its photo (IGF M02 s07 became a scene in the 2.62.0 build, the very slide where the
-  instructors asked for a photo). A module built with no
-  scene gets a RECOMMENDED block in the build and its own card on the review page, naming the best candidate - never a
-  block: the operator declines with their reason, `"declined_3d"` at the TOP of the build sheet, and it is not
-  proposed again. A 3D slide whose
+  **A photograph wanted is never turned 3D:** `"photo_wanted": "<who asked, why>"` - on a build sheet screen, a script
+  screen, or the script's top-level `"photo_wanted": {"s07": "..."}` (outside the approved screens, like `"declined"`) - is
+  the reason a planned 3D slide may carry its photo. `"declined_3d"` at the TOP of the build sheet is an optional note.
+  A 3D slide whose
   figure is not a scene (a 2D kit figure, an `.svg`, a photo - anything but a `.kit3d.json` spec or an `.html` figure holding a `[data-stage]`,
   `data-3d`, `data-scene` or a `<canvas>`) is a must-fix in the build and a note on the script's review page:
   "asks for a 3D scene; it has a 2D figure". To keep the 2D figure, write the operator's reason in the slide's entry,
@@ -428,10 +408,10 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   with its record, to `assets\img\_unused\` (skipped by the classroom); name it in the build sheet again and it comes
   back. `used_in` in `_photo_meta.json` is written by the build. A tap / spot / label / read-the-instrument question whose
   subject a real photo of the module shows is listed after the build with the build-sheet line - a note.
-- **Every photograph once in the whole course (L58).** No photo is shown on two screens - in this module or any other;
-  a copy under another name is the same photo (same `url_or_origin`, or the same bytes). A thumbnail takes a different
-  photo or none; a photo you placed (picture, inset, photo in a drawing) that is already shown is reported - choose a
-  different one or none (the earlier module keeps it). After photos change, build every module again.
+- **Every photograph once in the whole course (L58).** A photograph shows on one screen; a repeat, in this module or any
+  other, carries `"reuse_why"` in its slide's entry. A copy under another name is the same photo (same `url_or_origin`, or
+  the same bytes). A thumbnail takes a different photo or none; a photo you placed (picture, inset, photo in a drawing)
+  that is already shown is reported - choose a different one, none, or give the `"reuse_why"` (the earlier module keeps it). After photos change, build every module again.
 
 ## 2c · More build-sheet choices (2.25.3, proved on the pilot's Module 2)
 

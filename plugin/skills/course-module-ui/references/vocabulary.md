@@ -30,7 +30,7 @@ The few classes of its own, all written by the compiler:
 
 | Class | What it is |
 |---|---|
-| `.lt-parts` · `.lt-part` · `.lt-part.on` · `.lt-tabs` · `.lt-tab` | content-in-parts: the parts of one slide, the one shown, its numbered tabs (`gb_deck.js` walks them with Next / Back) |
+| `.lt-parts` · `.lt-part` · `.lt-part.on` · `.lt-tabs` · `.lt-tab` | content-in-parts: the parts of one slide, the one shown, its numbered tabs (`gb_deck.js` walks them with Next / Back); written only when the script asks for parts |
 | `.lt-tiles-fig` · `.lt-tiles` · `.lt-strips` · `.lt-tile` · `.lt-n` | 2.67.0 "tiles": several photographs on one slide, each opens full screen; "strips": cuts of one document, numbered (the compiler builds them - `tiles_figure`) |
 | `.lt-table` · `.lt-sep` | reference-table: one row a line; the hidden ` \| ` that keeps the row the approved line |
 | `.lt-block` | three-content-blocks: one numbered block of lines |
@@ -38,18 +38,17 @@ The few classes of its own, all written by the compiler:
 | `.lt-light` | a figure panel in Light Grey for a drawing made for a white page (`"panel": "light"`); the panel is Navy otherwise |
 | `.kit-screen` | the figure kit's own screen (course-visuals/kit) - transparent inside the Navy panel, so the drawing sits on the panel |
 
-L62 (2.53.0): the compiler varies the look of neighbouring slides - the picture's side (`fig-first`), the ground
-(`dark`), and for a photograph the `figure-stage` variant `figure-top` (the photograph across the slide, the words in
-two columns under it) or `photo-explain` `split`. The official logo is drawn larger, its own clear space running into
+L62: a repeat of the look of neighbouring slides is a note; the compiler does not flip layouts. The build sheet may
+choose the picture's side (`fig-first`), the ground (`dark`), and for a photograph the `figure-stage` variant
+`figure-top` (the photograph across the slide, the words in two columns under it) or `photo-explain` `split`. The official logo is drawn larger, its own clear space running into
 the margin; a light panel stays white with dark words on a dark slide.
 
 ## 0b · The upgraded templates (owner, 2026-11-03, 2.88.0, `gb_upgrade.css` + `gb_steps.js` + `gb_scene.js`)
 
 The same frame as §0 - top line, logo, title, bottom line, type - with a better body. The reference is
 `design/slide-templates/` (28 live slides, open `presentation/index.html`). A picture is a figure drawn **with a reason**
-(2.116.0, operator 2026-11-09: 2D kit, 3D or a custom figure where its `why` says so - mechanism, sequence, comparison,
-quantity-change, spatial, real-thing-recognition, still), or a photograph; the old "never a flat line drawing" (owner,
-2026-11-03) and the 60-80 % 3D share are gone. Next walks a slide's stops with `gb_steps.js`: a stop is
+(2D kit, 3D or a custom figure where its `why` says so - mechanism, sequence, comparison,
+quantity-change, spatial, real-thing-recognition, still), or a photograph; 3D follows the why and has no share (L67). Next walks a slide's stops with `gb_steps.js`: a stop is
 every `[data-stop]` in order, or the elements sharing `data-k` (`data-k="0 2"` = shown at both); the stop now gets `.cur`,
 the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` when the marks do not give the count.
 
@@ -81,12 +80,12 @@ the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` 
 
 ## 1 · Screen compositions — put ONE on `.slide-body` (`gb_compose.css`)
 
-Pick the composition the **content** needs. Never the same one three screens running out of habit.
+Pick the composition the **content** needs. The same one three screens running out of habit is a note to reconsider, never a failure.
 
 | Class on `.slide-body` | Use it for | Inside it |
 |---|---|---|
 | `opener` (+ `mid` to centre) | module cover, day or block opener, a question left hanging | `.tagline` (small caps line), `h2`, `.q` (the question or sub-line) |
-| *(none — ordinary flow)* | lead → cards → takeaway. If you reach for it twice running, stop | `.lead`, `.cards`, blocks from §3 |
+| *(none — ordinary flow)* | lead → cards → takeaway. Three times running is a note to reconsider | `.lead`, `.cards`, blocks from §3 |
 | `two-col` (+ `wide-left` / `wide-right`) | an explanation beside a visual — the most useful one | text column, and `.fill` holding the `svg` / `img` / `canvas` |
 | `stage` | one dominant teaching visual, as large as the screen allows | the figure (`svg`, `.fill`, or `[data-stage]`), a `.cap`, a `.mediabar` |
 | `activity` (slide is `.slide.dark.activity`) | announcing a task, drill or practical — **nothing clickable** | `.act-code` (the code, huge), `.act-title`, `.act-inst`, `.act-steps` of `.act-step` (with `.s` label), `.act-note`, `.act-now` (the "open task N on your tablet" line, `code` for the code) |
@@ -149,7 +148,7 @@ Compiled slides (2.25.1, §13b — written by `course-factory/compile/`, usable 
 | `.meta` (of `span`s) | small facts in a row: duration, group size, equipment |
 | `.steps` (an `ol`, `strong` for the step name) | a numbered procedure |
 | `.num` | a number or code set in the mono face, lined up |
-| `.tbl` / `table` inside `.scroll` | a table; `.scroll` lets a wide table scroll in its own box instead of the page |
+| `.tbl` / `table` (inside `.scroll` on a task or document page only) | a table; on a task or document page `.scroll` lets a wide table scroll in its own box. On a slide a wide table is laid out again - fewer columns, a split, or the rest in the notes (no scrollbar on a slide) |
 | `svg.fig` | a framed inline drawing |
 | `.cap` | a caption under a figure |
 | `.src` / `.srcline` | the source line — small, faint, at the bottom |

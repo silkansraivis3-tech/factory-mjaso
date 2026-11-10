@@ -64,8 +64,8 @@ font-size: clamp(12.5px, 1.5vmin, 15px);    /* small print */
 
 **The clamp floor is 12.5px and that is not arbitrary** — it is the minimum text size in
 `course-module-ux`'s `floor.json`. A clamp that floors lower ships a screen that fails the
-audit on a small viewport. Scale on `vmin`, not `vw`: the deck is driven on a 1366×768
-projector and an 800×1280 tablet in portrait, and `vw` collapses the type on the tablet.
+audit on a small viewport. Scale on `vmin`, not `vw`: the deck is driven on a 1280×800
+tablet (1024×768 stated) and a 1920×1080 classroom screen, and `vw` collapses the type on the tablet.
 
 ## Cards
 

@@ -1,7 +1,6 @@
 # Routing notes
 
-*Moved here word for word from `course-factory/SKILL.md` in 2.11.0 (Phase 5, step 11) so the
-skill file every session reads stays light. Nothing was deleted or reworded. What the orchestration and coverage lanes are for, and why the visual layer is routed to course-module-ui. Read it when choosing orchestrate or audit mode, or at build step 8.*
+*What the orchestration and coverage lanes are for, and why the visual layer is routed to course-module-ui. Read it when choosing orchestrate or audit mode, or at build step 8.*
 
 *Since 2.11.1 "paste" below means `course-module-ui/scripts/design_system.py install`: the style
 files are copied by the script and never read; `course-module-ui/references/vocabulary.md` is what

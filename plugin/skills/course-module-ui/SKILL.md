@@ -115,14 +115,14 @@ The owner approved a new body for every L61 template, and six new ones, in the t
 (top line, the logo 48 px from the top and the right, title, bottom line, Raleway). What is new:
 
 - **Pictures.** Live 3D (`gb_scene.js`, a course's scenes registered on `LTStage.scenes`), a static 3D render of the
-  same scenes, a 2D-kit or custom figure, or a photograph - **each drawn with a reason** (its `why`, 2.116.0: the old
-  "never the flat line drawing as the illustration" is gone; a 3D model of a flat idea is what is refused).
+  same scenes, a 2D-kit or custom figure, or a photograph - **each drawn with a reason** (its `why`, L67: a 3D model of a flat idea
+  is what is refused).
 - **Colours.** Blue is the one accent; dark slides and photographs on Navy `#0A2463`, never Pitch Black; the NA pattern
   only behind opening, task, check and summary slides and the start screen (`gb_layouts.css`, its last block).
 - **Motion.** Every upgraded slide has stops that Next walks (`gb_steps.js`); parts rise in reading order on entry;
   everything settles for reduced motion.
-- **The mix.** 60-80 % of a module's slides step through 3D; the rest may be static 3D. Neighbouring slides change
-  ground (light / Navy) and kind of activity.
+- **The mix.** 3D only where the slide's why is `spatial` (L67). Neighbouring slides may change ground (light / Navy)
+  and kind of activity - a note when they repeat, never a flip (L62).
 - **Room activity.** The summary asks each card as a question first (the instructor notes say to ask the room); a
   "before the self-check" list; quick drills (say it, quick fire, find it - 20 to 60 s, the answer shows itself when the
   clock ends) before the module check in every second or third module, never every module.
@@ -132,8 +132,7 @@ The owner approved a new body for every L61 template, and six new ones, in the t
 
 Every class is in `references/vocabulary.md` §0b. `gb_upgrade.css` and `gb_steps.js` load in every compiled deck; since
 2.89.0 the compiler writes the summary, the task slide, step boxes, compare boxes, the two-column figure and photo spots
-and zoom (`course-factory/compile/GUIDE.md` §2h). The content script carrying the new words (summary questions, drills,
-the self-check list, short points with full notes) is the next step.
+and zoom (`course-factory/compile/GUIDE.md` §2h).
 
 ## Where to look
 
@@ -157,7 +156,7 @@ composition on the slide body:
 | composition | when | what it does |
 |---|---|---|
 | `opener` | a cover, a day opener, a question left hanging | one statement, vertically centred, deliberately spare |
-| *(none)* | lead → cards → takeaway | the ordinary flow. If you reach for it twice running, stop |
+| *(none)* | lead → cards → takeaway | the ordinary flow. The same composition three times running is a note to reconsider, never a failure and never fixed by adding filler |
 | `two-col` (+`wide-left`/`wide-right`) | explanation beside a visual | the single most useful one; it is what stops a figure being adrift in a wide screen |
 | `stage` | one dominant teaching visual | the drawing is `flex:1` and eats every pixel the caption and controls leave |
 | `activity` | announcing a task, drill or practical | centred, the code set large, **nothing clickable** |
@@ -217,7 +216,7 @@ Fixtures for the last two are in `scripts/fixtures/`. Run them if you change the
 | Hours, ILOs, build order | `course-factory` |
 
 `novikontas-brandbook` owns the company's identity — Raleway, the logo, the corporate palette.
-This skill owns what that becomes on a projected 1366×768 screen and an 800×1280 tablet. Where
+This skill owns what that becomes on the 1280 × 800 tablet and the classroom screen (`course-module-ux` `measure/knowledge/floor.json` → viewports). Where
 they overlap, the brandbook wins on brand colour and typeface; this skill wins on everything
 the brandbook has no opinion about, which is most of a deck.
 

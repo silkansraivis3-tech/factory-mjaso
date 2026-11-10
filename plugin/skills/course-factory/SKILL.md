@@ -23,19 +23,15 @@ routes; it writes no screens, tasks or content itself.
 
 ## Every reply to the operator — human, in three parts (L25)
 
-The operator knows the sea and the course, nothing about computers. Every message, at every STOP, in their language:
+The operator knows the sea and the course, nothing about computers. Every message at a STOP, in their language, has
+three parts: **Done** (what was done and what it means for the course) · **Check now** (what to open, the full path,
+what it opens in) · **Next** (what happens next and what the factory needs from them).
 
-| | English | Latviešu | Русский |
-|---|---|---|---|
-| what was done and what it means for the course | **Done** | **Izdarīts** | **Сделано** |
-| what to open now, and exactly where (full path, what it opens in) | **Check now** | **Pārbaudiet tagad** | **Проверьте сейчас** |
-| what happens next, and what the factory needs from them | **Next** | **Tālāk** | **Дальше** |
-
-- **Everyday words** — no *script, JSON, commit, push, plugin, render, flag, schema, pipeline, build*; say what it is.
-  A computer word that cannot be avoided gets its meaning beside it, once. Maritime terms stay fully professional (L28).
+- **Everyday words** — say what a thing is, not its computer name (*script, JSON, commit, plugin, render, build*); a
+  computer word that cannot be avoided gets its meaning beside it, once. Maritime terms stay fully professional (L28).
 - **Short** — a few points, one idea each; numbers as the operator counts them; test results in one line.
-- **A question is a choice with options** (one pop-up, L31). **A problem says** what is wrong, where (full path and
-  the module / slide), how to see it, what to do, and how they will know it worked. **Offer**: *"tell me and I will"*.
+- **A question is a choice with options** (one pop-up, L31). **A problem says** what is wrong, where, how to see it,
+  what to do, and how they will know it worked.
 - `knowledge/plain-language.json` → `every_reply` holds the rule; `scripts/check_plain_language.py` checks a report.
 
 ## The operator's request wins — L26
@@ -47,7 +43,7 @@ hours (L1, L3) · no source, no maritime claim (L4) · the offline tablet (L6)**
 use it, record it as theirs, list it in that module's script review. When a request hits a limit: one or two plain
 sentences why, the closest option that works, and do that.
 
-**The design** (colours, type, logo, shell, layouts, animation, recap, viewer, text size, space, the 3D share —
+**The design** (colours, type, logo, shell, layouts, animation, recap, viewer, text size, space —
 `knowledge/design-rules.json`) **is the person's to decide**:
 
 1. Nothing conflicts → do it.
@@ -62,9 +58,10 @@ A check is never a reason to undo a person's wish. Every other "never" here gove
 
 ## Owner decisions in force — every law, one line
 
-Where any older text in this factory disagrees with a row below, **the row wins**. Most rows are a check that stops the
-build. Before bending, questioning or changing a law, or when a request seems to collide with one, read it in full:
-L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with its reasons in `references/laws-in-full.md`.
+Where any other text in this factory disagrees with a row below, **this table wins**. Most rows are a check that stops
+the build; where a row is a default, it says what the exception needs. Use judgement for what no row covers. Before
+bending or changing a law, or when a request seems to collide with one, read it in full: L27 onwards in
+`references/owner-decisions.md` (grep `## L45`), the older laws with their reasons in `references/laws-in-full.md`.
 
 | | The rule |
 |---|---|
@@ -76,12 +73,12 @@ L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with i
 | **L6** | **Tablet-first, touch-first, offline** — targets ≥ 44 px, no hover-only control, nothing at class time needs a network |
 | **L7** | **Nothing is useless until you have grepped** its id, class, label and filename across both terminals, the course and every generated script |
 | **L8** | **Explain and relocate; do not delete** on a complaint. When the operator tells you to remove something, remove it (after L7) |
-| **L9** | **Edit; do not regenerate** a stable artefact |
+| **L9** | **Edit approved inputs; do not write them again from scratch** — a content script, a figure spec or a photo record is changed in place; built output is regenerated from them (L11) |
 | **L10** | **Visible must be sufficient**: a line that refers to something names it on the same line; this outranks any word budget |
 | **L11** | **A generated file is never hand-edited** — change its input or its generator and regenerate |
 | **L12** | **Every asset has provenance, a licence and a look** (open every image); unclear rights are `RIGHTS_REVIEW_REQUIRED` and never ship |
 | **L13** | **A visual explains** a mechanism, state change, relationship, flow, sequence or cause and effect — never decoration |
-| **L14** | **Read only:** the reference course, `source_files`, the knowledge base and the Android app (the L40 hook refuses writes) |
+| **L14** | **Read only:** the reference course and the Android app; the master folder's sources are L40's |
 | **L15** | **A green exit is not proof** — read the output and the line for what you changed; report failures as plainly as passes |
 | **L16** | **The factory builds and reports; the owner approves, commits, publishes and installs** |
 | **L17** | **Every screen looks composed** — a big empty box or a huddle in a corner is a defect, however green the checks |
@@ -90,22 +87,22 @@ L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with i
 | **L20** | **A figure that claims to move is proved alive** (moves or responds; static is a defect for a dynamic idea) by a probe that can see |
 | **L21** | **The Android app is a publish target, not a workspace** — read only until a person approves that course and version in their own words: *"Approved. Publish this course to the NOVIKONTAS training app."* (`publish.py --approved-by`) |
 | **L22** | **A slide is not an internal document** — no file talk, sources or review notes on what a trainee reads (`check_slide_text.py`) |
-| **L23** | **A topic screen leads with what shows it** — the visual above the prose, looked for before the words are set |
+| **L23** | **A slide that has a picture leads with it** — the visual above the prose, looked for before the words are set; a slide whose words read on their own needs none (L61) |
 | **L24** | **An expert's change is content** (`retrofit/scripts/detect_expert_edits.py`, evidence or ask): restyled, never rewritten by the factory; the operator may still change it |
 | **L25** | **The reader does not work in IT** — see *Every reply to the operator* |
 | **L26** | **The operator's request wins** — see above |
 | **L27** | Three test levels, all on the **trainee tablet**: a self-check shows the trainee's own score; the **module check** shows the score - no pass mark and no PASSED / NOT PASSED; the **final assessment** is the only one with the pass mark (70 %) and is blind |
-| **L28** | **Course type** `NEW_ENTRANT` / `EXPERIENCED` from intake shapes the build; never easier names — the professional terms, explained; every model-course instrument and simulator is assumed available |
+| **L28** | **Course type** `NEW_ENTRANT` / `EXPERIENCED` from intake shapes the build; never easier names — the professional terms, explained; every model-course instrument is assumed available; which simulators the school has comes from `coverage/knowledge/simulators.json` (L66) |
 | **L29** | **A word-for-word content script** per module is approved before any HTML; the slides say exactly that (`check_script_match.py`) |
-| **L30** | **Module 1 is a pilot**, approved before any other module is built |
+| **L30** | **Module 1 is the pilot when a course is built module by module** — approved before the next is started; a build with agents or after the expert's Ready (L70) follows the Stage 2 `build_mode` answer instead, and every module needs its own PASS and walk review (L71) |
 | **L31** | **Ask like a colleague** — questions batched into one pop-up with options at the next STOP; honesty markers in `factory-notes.md`, never on a slide |
 | **L32** | **The course remembers** — see below |
-| **L33** | **Pictures: found before made** — knowledge base → old course → source files → internet → generated; small ones enlarged; nobody is asked to take a photo; nothing a trainee must recognise is invented |
+| **L33** | **Pictures: found before made** — knowledge base → old course → source files → internet → generated; small ones enlarged; equipment a trainee must recognise is a real photograph or a drawing, never a generated picture; a real photo still missing is listed in `PHOTOS_TO_TAKE.md` — a list, never a stop and never a question to the operator |
 | **L34** | **One module per programme topic**, in its order, with its hours; never merged or split; the final assessment is the last module |
 | **L35** | **Two tablets** — slides on the instructor's, tasks only on the trainee's, opened with **OPEN TASK** |
 | **L36** | **Enough theory before any task** (`knowledge/theory-rules.json`, `content_script.py`) |
-| **L37** | **Every slide names its picture** — kind, what it shows, who makes it (`knowledge/media-and-tasks.json`) |
-| **L38** | **Tasks varied and hands-on, no typing**; a self-check has at most 2 basic tasks (choose, match, order), the rest rich (3D, animation, a panel) — 3 + 2 in a set of five (`content_script.py` `t_sc_mix`) |
+| **L37** | **Every slide's picture slot is named** — kind, what it shows, who makes it — or `none` when its words read on their own (`knowledge/media-and-tasks.json`) |
+| **L38** | **Tasks varied and hands-on, no typing**; a self-check has at most 2 basic tasks (choose, match, order), the rest rich (a picture to tap, a panel, 3D) — 3 + 2 in a set of five; a set whose subject has nothing to tap or operate says why in `"basic_why"` and the rule is a note (`content_script.py` `t_sc_mix`) |
 | **L39** | **A colleague gets only the HTML**; the real-tablet test is the owner's, at the end |
 | **L40** | **The factory works in `course\`**; the master folder's source files, knowledge base and old course are read only (`hooks/guard_writes.py` refuses a write) |
 | **L41** | **The old course is the foundation** — read whole at intake (`scripts/old_course.py`); each module says what it keeps, modernises and adds |
@@ -113,32 +110,32 @@ L26 onwards in `references/owner-decisions.md` (grep `## L45`), every law with i
 | **L43** | **Every module in its own folder**, complete and offline (`scripts/check_module_folder.py`) |
 | **L44** | **Three places in `course\`**: `to_review\`, `modules\`, `working_claude\` (`workspace.py tidy`) |
 | **L45** | **The classroom system's own rules** (`knowledge/classroom-system.json`, `check_course_package.py`) |
-| **L46** | **3D at full quality and smooth on the tablet**; its share is L67's |
-| **L47** | **A generated picture only within the budget the operator said yes to** — one yes per course at Stage 2 (`intake.json` `picture_budget`) |
+| **L46** | **3D only where the figure's why is spatial, at full quality and smooth on the tablet** — no share and no cap (L67) |
+| **L47** | **A generated picture only within the budget the operator said yes to** — one yes per course at Stage 2 (`intake.json` `picture_budget`); outside a course build the person says yes to each picture (`nano-banana`) |
 | **L48** | **Bloom measured, and lifted by the tablet** — one level a course toward the outcome (`bloom/GUIDE.md`, `bloom_map.py`) |
 | **L49** | **20 / 80 in class, every theory slide kept** — theory-as-activity proposed per sub-topic at Stage 2 (`active/GUIDE.md`) |
-| **L50** | **A fix is not a build** — find every place, one list, one yes, change, one check (`fix/GUIDE.md`, `fix.py`); **after any fix the walk review runs on every touched slide** (`fix.py check --kind walk`, 2.116.0) |
+| **L50** | **A fix is not a build** — find every place, one list, one yes, change, one check (`fix/GUIDE.md`, `fix.py`); **after any fix the walk review runs on every touched slide** (`fix.py check --kind walk`, 2.118.0) |
 | **L51** | **Every picture opens full screen; every module closes with the same recap** before its module check |
 | **L52** | **As many real photographs as possible**; a source-book figure only once a named person cleared it (`check_assets.py clear`) |
-| **L53** | **Good padding; free space is a note** — decks pass the overflow / collide audits and the figure's own EMPTY check; the 45 % "ink" floor is a note only (2.116.0) |
+| **L53** | **Good padding; free space is a note** — decks pass the overflow / collide audits and the figure's own EMPTY check; the 45 % "ink" floor is a note only (2.118.0) |
 | **L54** | **Every drawing whole and clean** (`audit_drawing.js`) |
-| **L55** | **Kit first, custom allowed - and every figure has a teaching reason** (2.116.0): diagrams come from the figure kits (`course-visuals/kit/SPEC.md`, `kit2d`, `kit3d`); when no kit part shows the idea well, a custom figure (`"custom_figure"`, a self-contained offline file whose steps Next drives) is allowed; every kit figure, 3D model and custom figure carries `"why"` + `"why_text"` its steps serve (`figure_why.py`, `v_why`, `check_kit.py`); a good custom figure is offered to the kit afterwards |
+| **L55** | **Kit first, custom allowed - and every figure has a teaching reason** (2.118.0): diagrams come from the figure kits (`course-visuals/kit/SPEC.md`, `kit2d`, `kit3d`); when no kit part shows the idea well, a custom figure (`"custom_figure"`, a self-contained offline file whose steps Next drives) is allowed; every kit figure, 3D model and custom figure carries `"why"` + `"why_text"` its steps serve (`figure_why.py`, `v_why`, `check_kit.py`); a good custom figure is offered to the kit afterwards |
 | **L56** | **A photograph carries what it shows and its credit into the full-screen view** — no credit on the slide |
-| **L57** | **A drawing of real things carries their real photographs** when the build sheet lists them (`"photo_row"`) or the figure's why is real-thing-recognition - never unasked under every drawing (2.116.0) |
-| **L58** | **Every photograph once in the whole course** - a repeat is allowed when its slide says why (`"reuse_why"`, 2.116.0) |
+| **L57** | **A drawing of real things carries their real photographs** when the build sheet lists them (`"photo_row"`) or the figure's why is real-thing-recognition - never unasked under every drawing (2.118.0) |
+| **L58** | **Every photograph once in the whole course** - a repeat is allowed when its slide says why (`"reuse_why"`, 2.118.0) |
 | **L59** | **No module before its map** — ILO map approved and the knowledge-base decision recorded (`course_gate.py`) |
-| **L60** | **No 3D scene is picked unasked** (2.116.0): the factory no longer proposes a scene in every module - 3D only where the slide's why is spatial; `declined_3d` stays an optional note. (Was: a 3D scene in every module whose subject allows — declined only with the operator's reason.) |
-| **L61** | **Every slide is one of the layout templates** (`course-module-ui/knowledge/layout-templates.json`), chosen by the compiler; a figure gets the share it needs (40 % up to the whole slide, `layout_fit.py`) or is made another kind - never squeezed. **The factory never cuts, moves or pages the words** (2.116.0): no automatic content-in-parts or points; `v_paged_slide` is the writer's must-fix; no picture quota - a slide may have no picture when its words read on their own (dense text, "two in a row" are gone) |
-| **L62** | **Repeats of a look, the dark share and the 80 % light ground are notes** (2.116.0) — the compiler never flips a slide's layout to avoid a repeat |
+| **L60** | **No 3D scene is picked unasked** (2.118.0): the factory no longer proposes a scene in every module - 3D only where the slide's why is spatial; `declined_3d` stays an optional note |
+| **L61** | **Every slide is one of the layout templates** (`course-module-ui/knowledge/layout-templates.json`), chosen by the compiler; a figure gets the share it needs (40 % up to the whole slide, `layout_fit.py`) or is made another kind - never squeezed. **The factory never cuts, moves or pages the words** (2.118.0): no automatic content-in-parts or points; `v_paged_slide` is the writer's must-fix; no picture quota - a slide may have no picture when its words read on their own (dense text, "two in a row" are gone) |
+| **L62** | **Repeats of a look, the dark share and the 80 % light ground are notes** (2.118.0) — the compiler never flips a slide's layout to avoid a repeat |
 | **L63** | **Equipment drawn as it looks on board** (`course-visuals/kit/PARTS.md`) |
-| **L64** | **A module in 30-40 min, its fixes in 20** — the pre-check first (`precheck.py`); a rebuild is a fix (`fix.py rebuild`) |
+| **L64** | **A module in 30-40 min, its fixes in 20** — the pre-check first (`precheck.py`); a rebuild is a fix (`fix.py rebuild`); the minutes are a measure, never a reason to skip a check |
 | **L65** | **A drawing that moves stays smooth** (`audit_motion.js`) |
 | **L66** | **Every item a simulator can train is trained on one** (`coverage/SIMULATORS.md`, `sim_coverage.py check`) |
-| **L67** | **Every slide moves on Next where its picture has something to show; 3D and 2D are drawn with a reason** (2.116.0: the 60-80 % 3D share and "never a flat line drawing" are gone - the figure's kind follows its `why`; a 3D model of a flat idea is a must-fix; `gb_upgrade.css`, `gb_steps.js`) |
+| **L67** | **Every slide moves on Next where its picture has something to show; 3D and 2D are drawn with a reason** (2.118.0: the 60-80 % 3D share and "never a flat line drawing" are gone - the figure's kind follows its `why`; a 3D model of a flat idea is a must-fix; `gb_upgrade.css`, `gb_steps.js`) |
 | **L68** | **The Instructor-Led Course Development Guideline** — active means every trainee commits to an output; a passive run at most 15 min and 20 % of theory, or a one-line reason (`instructor-led/GUIDE.md`, `instructor_led.py check`) |
 | **L69** | **The experts get the pedagogy first** — Bloom now, Bloom proposed and the activities, before any script (`pedagogy_review.py`, `bloom/GUIDE.md` §5) |
 | **L70** | **Built after the expert's Ready** — the office PC builds unattended; see *Auto build* |
-| **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done - and (2.116.0) not done without the **walk review**: an AI reviewer looks at the contact sheet of every slide's stops as a trainee does (`walk_review.py`, `compile/GUIDE.md` 2i) |
+| **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done - and (2.118.0) not done without the **walk review**: an AI reviewer looks at the contact sheet of every slide's stops as a trainee does (`walk_review.py`, `compile/GUIDE.md` 2i) |
 
 ## The course remembers — L32
 
@@ -241,19 +238,18 @@ knowledge base (`kb_tool.py search`). Before scripts are written in parallel, `S
 - **Reviewed as a page and a Word file:** the operator corrects by typing, by Word comment or in the chat; the
   operator-stated facts are listed once. The **Bloom card** (L48) shows each question's level and the share at *Apply*
   or higher (suggested 50 %) — suggestions only.
-- **Shown before applied:** `read` / `propose` print what was understood; `apply --confirmed` only after the operator's yes. A written script changes only this way, never by editing `MNN.json` (a builder's trim included): a hand edit is missing from `FEEDBACK_LOG.md` and drops the approval.
+- **Shown before applied:** `read` / `propose` print what was understood; `apply --confirmed` only after the operator's yes. A written script changes only this way, never by editing `MNN.json`: a hand edit is missing from `FEEDBACK_LOG.md` and drops the approval. A trim the build asks for goes the same way.
 - **Approved by the operator's own act:** `approve --by <name>` in their session; an unattended run builds `--draft`;
   never approve on an instruction relayed from another session. The one exception is the expert's Ready (L70).
 - **Built, never typed:** the deck and task pages by `compile/scripts/compile_module.py`, the course's own pages and
   additional materials by `compile_course.py`. **One command builds and checks a module:** `compile/scripts/build_module.py
-  <course> --module N` — start at the Quickstart of `compile/GUIDE.md`; figure specs from `course-visuals/kit/CATALOGUE.md`.
+  <course> --module N` — start at the Quickstart of `compile/GUIDE.md` (a workflow's module builder reads
+  `compile/BUILDER_CARD.md` instead, and nothing else); figure specs from `course-visuals/kit/CATALOGUE.md`.
 
 ## Building
 
-`knowledge/build-order.json` is the authority (programme → syllabus → knowledge base → ILO map → modules → **gate** →
-screen inventory → visual system → visual plan → tasks → screens → handout → assessment → module plans → terminals →
-verify). Not negotiable: the screen inventory and the visual system before any screen; task pages before the deck
-announces them (`tablet/` cross-check).
+`knowledge/build-order.json` is the authority for the order; the compiler keeps it for a module built from its approved
+script (`build_module.py`).
 
 - **Two phases (2.73.0):** Phase A with no agent — placeholders of each picture slot's shape and every check that does
   not need the pictures (`compile/scripts/phase_a.py`); Phase B fills the pictures from `MNN_VISUAL_NEEDS.md` and the

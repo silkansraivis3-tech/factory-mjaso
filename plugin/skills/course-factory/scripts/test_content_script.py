@@ -350,6 +350,12 @@ def main():
         screen(plain, "q03").update(mechanic="single_choice", options=["About -104 °C", "About -42 °C"], correct="A")
         check("three basic questions in one self-check must be fixed (the first trial: mostly choose and match)",
               any(f["rule"] == "t_sc_mix" and f["level"] == cs.FAIL for f in cs.theory_findings(plain)[0]), rules_of(plain))
+        opener = next(x for x in plain["screens"] if x.get("opens") and
+                      any(f["rule"] == "t_sc_mix" and f["screen"] == x["id"] for f in cs.theory_findings(plain)[0]))
+        opener["basic_why"] = "maritime law: nothing to tap or operate"
+        check("... and is a note when its task slide says why the subject has nothing to tap or operate (basic_why)",
+              any(f["rule"] == "t_sc_mix" and f["level"] == cs.NOTE for f in cs.theory_findings(plain)[0])
+              and not any(f["rule"] == "t_sc_mix" and f["level"] == cs.FAIL for f in cs.theory_findings(plain)[0]), rules_of(plain))
         five = copy.deepcopy(SCRIPT)
         at = next(i for i, x in enumerate(five["screens"]) if x["id"] == "q03") + 1
         five["screens"][at:at] = [dict(screen(SCRIPT, "q03"), id=i, mechanic=m) for i, m in (("q06", "critique"), ("q07", "panel_operate"))]

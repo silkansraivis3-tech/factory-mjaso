@@ -50,7 +50,7 @@ python scripts/check_task_pages.py <path-to-task-pages> [--css <dir>] [--js <dir
                                    [--only NAME] [--viewport WxH]
 ```
 
-`--viewport` defaults to `800x1280` and is what the `floor` check resolves `vw`/`vh`/`vmin`/
+`--viewport` defaults to `1280x800` and is what the `floor` check resolves `vw`/`vh`/`vmin`/
 `clamp()` against. A different device passes its own — the floor is re-measured, not
 inherited. Every floor finding names **which dial bound** (`clamp-min`,
 `clamp-coefficient`, `clamp-ceiling`, `vmin`, `rem`, …) so it can be checked by hand in one

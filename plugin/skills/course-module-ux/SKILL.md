@@ -25,9 +25,9 @@ Three consequences, and they are the whole architecture:
    practical, what is marked, the debrief, the module check. If a block of the timetable has no
    screen, that block does not happen: one module was silently skipping 90 of its 220 minutes
    because two blocks had no screen at all.
-3. **The step runner survives but collapses to about two steps** — "open the presentation and
-   finish it", with the real minute total, then the closing record step. It announces the day;
-   it is not the thing you click through.
+3. **The landing page opens the presentation straight away** (L43). The step runner ("open the
+   presentation and finish it", with the real minute total, then the closing record step) exists
+   only in `START_HERE_EXTENDED.html` and in modules built before L43.
 
 This is a **delivery-UX skill**. It never decides what a module teaches.
 
@@ -101,9 +101,10 @@ revealed on the instructor's own key. Anything borderline goes there rather than
 visible body. It is why the audience rule costs nothing — the material is not lost, it is
 routed.
 
-**3 · Compact or it does not ship.** Every surface has a word budget and it is small. Long
-prose is the defect this system exists to remove, and it returns on every module unless
-actively cut. But **visible must be sufficient, not merely short** — a 60-word screen that
+**3 · Compact.** The instructor's own surfaces (a runner step, a pre-flight item, a page opened
+mid-session) have a word budget and it is small; slide words follow `course-factory/knowledge/theory-rules.json`
+(slide), where going over a budget is a note. Long prose is the defect this system exists to remove, and it
+returns on every module unless actively cut. But **visible must be sufficient, not merely short** — a 60-word screen that
 cannot be acted on without opening a `<details>` is worse than the 300-word screen it replaced,
 because it now hides the thing you need *and* looks finished. A set point, a limit or a
 maritime term in a visible line is the content, not clutter. Compact never overrides an operator
@@ -123,9 +124,9 @@ well as the behaviour — "print one per group", `☐ yes ☐ no` glyphs, blank 
 them.** A factual reference to a source document that is itself printed stays: that describes
 the source, not the workflow.
 
-**6 · The tablet is the primary device, the projector is the second.** A finger on an
-800×1280 portrait screen first, then check it survives landscape and a projector — never the
-other way round. Touch targets **≥ 44 px**, no hover-only affordance, ES5 in shared engines, a
+**6 · The deck runs on the instructor tablet (1280 × 800) and the classroom screen; tasks run on the
+trainee tablet** (L35). The tablet (1280 × 800 landscape) is judged first, 1024 × 768 is stated, and the
+projector (1920 × 1080) is checked once at the end — `measure/knowledge/floor.json` → viewports. A finger first: touch targets **≥ 44 px**, no hover-only affordance, ES5 in shared engines, a
 sticky action bar with `env(safe-area-inset-bottom)`, and `:has()` mirrored with a class
 because old Android WebViews lack it.
 
@@ -159,7 +160,9 @@ Building or converting a module page is the expensive step: one module went from
 18, and every screen carries markup, graphics and measurement. Changing a row in a table is
 free; rebuilding fourteen screens is not.
 
-So before writing any HTML, present **one table** and wait for approval:
+So before writing any HTML, work out **one table**. When the module is compiled from an approved content
+script, the table is printed for the record and the build goes on - no stop. Wait for approval only for a
+hand-built module with no approved script:
 
 | # | Screen | Kind | Block / minutes | Activity code | What is on it | Cue moved off it |
 |---|---|---|---|---|---|---|
@@ -188,7 +191,9 @@ Never fill a gap plausibly. Use exactly these four, spelled exactly this way:
 
 Never invent regulatory content, a quoted criterion, a set point, or a QR code.
 
-**Every marker you write into an artefact must also land in the delivery notes.** Copy
+Markers live in `data-` attributes, `data-cue` or the delivery notes - never in visible text on a trainee or
+projected page (`course-factory/knowledge/slide-text-rules.json` → honesty_markers). **Every marker you write
+into an artefact must also land in the delivery notes.** Copy
 `templates/DELIVERY_NOTES.md` next to the module and fill it during the run, not afterwards —
 including its final section of feedback on this skill, which is the only channel through which
 real use reaches it.
@@ -237,7 +242,7 @@ Three distinct layers, and passing one says nothing about the others:
 | STATIC | `measure/scripts/check_static.py all <module.html>`, `measure/scripts/check_navigation.py <course>` | minutes, links inside slides, missing nav, missing back hook, declared tap sizes |
 | RUNTIME | `measure/scripts/audit_drive.js` (+ `audit_deck.js`, `audit_collide.js` loaded first), `measure/scripts/audit_drawing.js` (inside a drawing: parts in their containers, nothing cut off, labels' safe zone - L54), `course-visuals/scripts/verify_figures.js` | contrast as painted, real laid-out size, spill, overlap, anything under the chrome, whether a figure rendered at all, whether a control can actually be tapped |
 | COMPOSITION | `measure/scripts/audit_compose.js` | whether the screen is COMPOSED or merely fits — see below |
-| HUMAN | `review/GUIDE.md`, the side-by-side against the reference deck | whether it teaches |
+| HUMAN | `measure/scripts/walk_review.py` (the walk review); `course-visuals/review/GUIDE.md` for figures; the side-by-side against the reference deck | whether it teaches |
 
 Serve over http — `measure/scripts/serve_fresh.py <course>`, a fresh port after every edit — then
 in the page:
@@ -278,7 +283,7 @@ A WEAK verdict is a defect. A REVIEW is a call for a human to look, not an autom
 `data-compose="sparse"`, or a named composition on the body, declares intent and the ink floor
 is not applied.
 
-Run it at **1280 × 800 and 800 × 1280**. The defaults already match the canonical shell
+Run it at **1280 × 800** (the viewport that judges; `measure/knowledge/floor.json` → viewports). The defaults already match the canonical shell
 (`.slide`, `active`, `#startBtn`, `#btnNext`), so a deck built on it needs no CONFIG edit.
 
 The first real pilot passed every static check and shipped with 75 runtime failures, including

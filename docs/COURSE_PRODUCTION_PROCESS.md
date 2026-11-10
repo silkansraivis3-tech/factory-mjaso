@@ -1,5 +1,7 @@
 # Course production process
 
+> Phase 1 document (2026-09): how GAS BASIC was made. The process in force is `plugin/skills/course-factory/SKILL.md` and `knowledge/build-order.json`.
+
 **How a course is actually made.** Reconstructed from the GAS BASIC record, generalised, and
 corrected where the record shows the order was wrong.
 

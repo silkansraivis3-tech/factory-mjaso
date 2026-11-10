@@ -100,17 +100,16 @@ image is not a slow image, it is a broken one.
 
 ---
 
-## Rights, and the one escalation that blocks
+## Rights, and the one escalation
 
-`asset-pipeline.json` → `rights_states`. Six states: `CLEARED` · `PROJECT_OWNED` ·
-`PUBLIC_DOMAIN` · `ATTRIBUTION_REQUIRED` · **`RIGHTS_REVIEW_REQUIRED`** · `REJECTED`.
+The states are `asset-pipeline.json` → `rights_states`.
 
-> **If usage rights are unclear, the state is `RIGHTS_REVIEW_REQUIRED` and the asset does not
-> ship.** Do not resolve it by assumption, and do not quietly use it anyway.
+> **If usage rights are unclear, the state is `RIGHTS_REVIEW_REQUIRED`: the build goes on, the asset is
+> listed for the owner and does not ship until it is cleared.** Do not resolve it by assumption, and do
+> not quietly use it anyway.
 
-This is not theoretical. Six publisher figures in the reference course are marked *not cleared for
-issue or publication*, and they currently block that course from being issued. One quiet decision
-became an organisational problem.
+This is not theoretical. An uncleared publisher figure can block a whole course from being issued; one
+quiet decision became an organisational problem.
 
 Acceptable for photographs: public domain, CC0, CC BY, CC BY-SA, or explicit written permission.
 Not acceptable: NC, ND, "free to use" with no named licence, stock previews, or anything scraped
@@ -181,11 +180,15 @@ When nothing suitable exists at any level and a realistic illustration genuinely
 medium, emit the marker **with a complete brief** — `schemas/GENERATED_ASSET_BRIEF.md`.
 
 There is **no image-generation MCP in this plugin**, deliberately — it lives in the sibling
-**`nano-banana`** plugin of the same marketplace. When that is installed, ask the person to describe
-the picture (its `realistic-visuals` §0 - every picture costs about €0.10, L47), turn the brief and
-their answers into the prompt, show it, and generate with `generate_image` only after their yes
-(the `image-director` agent for a set of approved ones). When it is not, the brief is still useful immediately: a human can take it to
-any generator, or commission a photograph from it.
+**`nano-banana`** plugin of the same marketplace. When that is installed: in a course build the operator's one
+yes at Stage 2 sets the picture budget (count and euros) and covers paid generation inside it; the free
+Gemini-app route (`gemini-browser`) needs no yes per picture. Outside a course build, the person describes each
+paid picture (its `realistic-visuals` §0), is shown the prompt, and says yes to it before `generate_image` runs
+(the `image-director` agent makes a set of approved ones). The count and cost are reported every time; nothing is
+generated past the budget without a new yes. Equipment a trainee must recognise is a real photograph or a
+drawing, never a generated picture; a generated picture sets a scene only. A real photo still missing is listed
+in `PHOTOS_TO_TAKE.md` - a list, never a stop and never a question to the operator. When the plugin is not
+installed, the brief is still useful immediately: a human can take it to any generator, or commission a photograph from it.
 
 A brief without every field is not a brief. The forbidden-inaccuracies field is the one that stops
 a generated image teaching something false, and it is the one most often left empty.
@@ -215,7 +218,7 @@ Facts and terms go back the same way — `course-factory`'s `script/GUIDE.md` §
 
 - Every level actually searched, in order, and the search recorded — including the terms tried
 - Every asset has a provenance entry beside it, with a real `visually_verified`
-- Every rights state is one of the six, and none is left implicit
+- Every rights state is one of `rights_states`, and none is left implicit
 - Anything at `RIGHTS_REVIEW_REQUIRED` is reported to the owner, not shipped
 - Every remote asset that is used has been **downloaded and packaged locally**
 - Every `GENERATED_ASSET_REQUIRED` carries a complete brief

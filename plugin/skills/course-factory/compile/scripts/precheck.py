@@ -15,9 +15,8 @@ MUST (the build stops before its figures; build_module.py runs this first):
   * a picture the build sheet names that is not there (figure, figure_b, inset, aside, a photograph inside a drawing)
   * a photograph under 800 px on its long side - enlarging cannot make it sharp: find a larger original (1600 px or
     more), or record in its _photo_meta.json entry why this one stays: "low_resolution_ok": "<reason>"
-  * a teaching slide with more than 60 words and no picture (L61: dense text has a picture beside it)
-  * three teaching slides in a row with no picture (L61)
 NOTE (said, never stops it):
+  * a teaching slide with more than 60 words and no picture - fine when its words read on their own (L61)
   * a photograph of 800-1599 px - the compile enlarges it (L62), a larger original would be sharper
   * the same template forced on three slides in a row or more - the compiler chooses and varies the look (L62); a
     forced template only takes that away

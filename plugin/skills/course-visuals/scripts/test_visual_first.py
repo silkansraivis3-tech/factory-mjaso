@@ -160,6 +160,12 @@ def main() -> int:
         d = run(r)
         check("a topic screen with no figure at all FAILS", len(levels(d, "FAIL")) == 1)
 
+        r = deck(os.path.join(tmp, "b2"),
+                 '<section class="slide" data-template="long-explanation.v1" data-title="The cargo pump">%s</section>' % TEXT)
+        d = run(r)
+        check("... a compiled slide in a text layout is a note: its words read on their own (L61)",
+              len(levels(d, "NOTE")) == 1 and not levels(d, "FAIL"), d["findings"])
+
         r = deck(os.path.join(tmp, "c"),
                  '<section class="slide" data-title="The cargo pump">%s%s</section>' % (TEXT, FIG))
         d = run(r)

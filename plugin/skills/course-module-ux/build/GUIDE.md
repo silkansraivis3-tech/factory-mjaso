@@ -31,8 +31,9 @@ So:
    over-run, in a banner and in the delivery notes. Do not quietly re-time blocks to make the
    total fit, and never print a total you have not added up.
 
-Then present the inventory table from the router's gate and wait for approval. Building
-fourteen screens you then have to renumber is the cost of skipping this.
+Then work out the inventory table from the router's gate. From an approved content script it is printed
+for the record and the build goes on; a hand-built module with no approved script waits for approval.
+Building fourteen screens you then have to renumber is the cost of skipping this.
 
 **Expect the count to grow.** Real conversions on one project: 6 → 18 screens, 7 → 12,
 8 → 14, 10 → 14. That is not bloat. It is the work that used to live on separate pages
@@ -78,7 +79,7 @@ a screen that had one.
 
 ---
 
-## 4 · The landing screen keeps a step runner, and it collapses to about two steps
+## 4 · The step runner (for `START_HERE_EXTENDED.html` and older modules; the landing page opens the presentation straight away, L43)
 
 Use the bundled engine: `assets/gb_run.js` and `assets/gb_run.css` are copied into the module's own
 `assets/` by `course-module-ui/scripts/design_system.py install`. Do not rewrite the engine per module.
@@ -192,7 +193,9 @@ whose module check has no recap before it - unless the person chose otherwise (L
 
 ## 7 · Compactness budgets
 
-Over budget is a defect, the same as a broken link.
+These are budgets for the instructor's own surfaces (a runner step, a pre-flight item, paragraphs on a page
+opened mid-session); over a budget there is a defect. Slide words follow
+`course-factory/knowledge/theory-rules.json` → slide, where over a budget is a note.
 
 | Surface | Budget |
 |---|---|
@@ -241,7 +244,7 @@ into one number.
 
 | The assessment is | Records |
 |---|---|
-| a **self-marking tablet task** | one score per trainee, verdict derived from the pass rule |
+| a **self-marking tablet task** | one score per trainee - no verdict on a self-check or module check; a pass rule only on the final assessment |
 | the **instructor watching** against a fixed criteria list on a scale | a mark per criterion, verdict computed from the rule |
 | one score **plus** a free verdict | name, group, score, verdict, note |
 

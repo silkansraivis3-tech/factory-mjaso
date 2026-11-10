@@ -5,7 +5,7 @@
     "min_words": 30,
     "max_words": 150,
     "_2_116_0": "2.116.0 (operator, 2026-11-09): min_words 50 -> 30 and a NOTE, never a fail - a short slide is fine when it teaches.",
-    "_why": "A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a headline for the instructor to fill in. The title counts. Under min_words the slide is too thin to teach from (must fix). Over max_words the room cannot read it from the classroom screen: split it into two slides (a note, not a must - NEW_ENTRANT wants more slides, L28)."
+    "_why": "A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a headline for the instructor to fill in. The title counts. Under min_words the slide may be too thin to teach from (a note - a short slide is fine when it teaches). Over max_words the room cannot read it from the classroom screen: split it into two slides (a note, not a must - NEW_ENTRANT wants more slides, L28)."
   },
   "notes": {
     "min_words": 10,
@@ -35,7 +35,7 @@
   },
   "answers_taught_first": {
     "min_share": 0.6,
-    "_why": "Every question's correct answer must be found in the slides the trainee has already seen - in their text or the instructor notes - before the task opens. The check compares the correct answer's key words (numbers exactly, words by their first five letters, so Latvian and Russian endings still match) with those slides; under this share of them, the question asks for something not yet taught (must fix). The review page shows, for every question, the slide that teaches its answer."
+    "_why": "Every question's correct answer must be found in the slides the trainee has already seen - in what the slides show, never only in the instructor notes - before the task opens. The check compares the correct answer's key words (numbers exactly, words by their first five letters, so Latvian and Russian endings still match) with those slides; under this share of them, the question asks for something not yet taught (must fix). The review page shows, for every question, the slide that teaches its answer."
   },
   "self_check": {
     "min_questions": 3,
@@ -48,7 +48,7 @@
     "rich": ["hotspot", "label_diagram", "spot_the_hazard", "read_instrument", "set_value", "panel_operate", "find_the_fault",
              "predict", "explore", "investigate", "line_up", "inspect_round", "take_apart", "test_atmosphere", "deck_round",
              "dress_for_job", "lay_out"],
-    "_rich": "Owner: a self-check of five is three of the richest tasks (3D, animation, a control panel) and two basic (match, order, choose) - at most two basic questions (the choose and arrange families), and the rest rich up to three: a set of five 3 + 2, of three 1 + 2. A must-fix."
+    "_rich": "Owner: a self-check of five is three of the richest tasks (3D, animation, a control panel) and two basic (match, order, choose) - at most two basic questions (the choose and arrange families), and the rest rich up to three: a set of five 3 + 2, of three 1 + 2. A must-fix, unless the task slide that opens the set says why the subject has nothing to tap or operate (\"basic_why\": law, management, a calculation) - then a note."
   },
   "module_check": {
     "min_questions": 5,

@@ -34,4 +34,5 @@ You check one module's content script against the course's sources. Nothing else
    `NOVIKONTAS_AUTO_BUILD` is 1: `F fixes <c> --module <n> --apply`) and `F status <c> --module <n>`.
 
 Report in five lines or fewer: claims, found, partly, not found, the change list's path and the `propose` command
-`fixes` printed, and any question listed for the person. The operator sees the changes before they are applied.
+`fixes` printed, and any question listed for the person. In an unattended build the fixes are applied and listed on the
+review page; in an attended session the operator sees them before they are applied.

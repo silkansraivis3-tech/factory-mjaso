@@ -167,11 +167,11 @@ the operator states during review goes into `working_claude\STANDARDS.md`, and b
 |---|---|---|---|---|
 | **Reader** | the strongest available | read + search only | programme, model course, KB | `architecture.json`, `ilo_map.json` (via the Stage 2 page), the KB suggestion |
 | **Script writer** (a module whose script is not approved) | the strongest available | full | its own rows of the ILO map, its module in `architecture.json`, its source extracts, `script/GUIDE.md` | its script, review page and Word file - then STOP |
-| **Module** (an approved script) | Sonnet, medium effort (2.51.0) | full | its own rows of the ILO map (`ilo_map.py show`) and its module in `architecture.json`, its source extracts, `script/GUIDE.md`, then - once its script is approved - `compile/GUIDE.md` and the picture lanes (`course-visuals`). **Not** the HTML rules (`course-module-ux`, `course-module-ui`, `course-task-ux`): the compiler builds their standard | its script and build sheet, its figures, `modules/moduleNN/` - and never HTML by hand |
+| **Module** (an approved script) | Sonnet, medium effort | full | its own rows of the ILO map (`ilo_map.py show`) and its module in `architecture.json`, its source extracts, `script/GUIDE.md`; once its script is approved, `compile/BUILDER_CARD.md` and nothing else. **Not** the HTML rules (`course-module-ux`, `course-module-ui`, `course-task-ux`): the compiler builds their standard | its script and build sheet, its figures, `modules/moduleNN/` - and never HTML by hand |
 | **Phase A** (2.73.0) | no model: one local process, `phase_a.py`, started and waited on by a Sonnet agent at low effort | nothing | every approved module as far as it goes with placeholders, and its `MNN_VISUAL_NEEDS.md` |
 | **Photo pass** (2.73.0) | Sonnet, medium effort - ONE for the course | `visuals/PHOTOS_TO_FIND.md` | `working_claude/photos_found/` with each photo's record and `found_for` |
 | **Visual** | the `nano-banana:image-director` agent (generates) or `course-factory:visual-sourcer` (finds) | read, write, web, the nano-banana tools | a `GENERATED_ASSET_REQUIRED` brief | the asset files named in the brief |
-| **QA** | Sonnet, medium effort (2.51.0); never the builder | read + run checks: `build_module.py --no-fix --no-review` once, the checks it does not run in one more call | the module, the two maps | a findings list — **never a fix** |
+| **QA** | Sonnet, medium effort; never the builder | read + run checks: `build_module.py --no-fix` once (it then reads the promoted sheets), the checks it does not run in one more call | the module, the two maps | a findings list — **never a fix** |
 
 **The visual agent is how a missing picture gets made without stopping the build.** When a module
 reaches an image it cannot produce, it carries on. A real picture is searched for by `visual-sourcer`
@@ -242,15 +242,12 @@ row is free while changing eight built modules is not.
 
 **Neither is the script approval (L29).** In pass 2 a module agent whose content script is not approved
 writes it and stops at its review page; the operator approves each one, and pass 2 runs again - an approved
-module is then compiled, never typed. So a module agent loads the script lane and the picture lanes, not the
-HTML rules: about **38,500 tokens of rules instead of 80,800** before its first slide (measured on 2.37.0,
-size ÷ 4, `docs/PROPOSAL_SCRIPT_COMPILER.md` §6), and it no longer writes the 80-160 KB of deck and task
-HTML a module of the IGF pilot has - it writes a 3-5 KB build sheet and its figures.
-A module agent builds and checks with ONE command, `compile/scripts/build_module.py <course> --module N
---no-course-pages` (2.50.0; the orchestrator alone writes the course's pages), starting from the Quickstart of
-`compile/GUIDE.md` and `course-visuals/kit/CATALOGUE.md`; its visual review is one `haiku` subagent reading the sheets
-the build made (`compile/REVIEW_PROMPT.md`). `build_course.js` does this from 2.51.0 - before, its module prompt still
-said `compile_module.py`, then fix and build again, and its QA ran 13 checks one at a time. The words come from the
+module is then compiled, never typed. So a module agent loads the script lane, not the HTML rules, and it writes no deck or task HTML - it writes a 3-5 KB build
+sheet and its figures.
+A module builder reads `compile/BUILDER_CARD.md` and nothing else, and builds and checks with ONE command,
+`compile/scripts/build_module.py <course> --module N --no-course-pages` (the orchestrator alone writes the course's
+pages). The builder stops at MODULE CLEAN; the judges and the QA agent review the sheets, not the builder
+(`compile/REVIEW_PROMPT.md`). The words come from the
 session's model (the reader, the script writer); building an approved script and QA, the mechanical loop, run on Sonnet
 at medium effort, and the gate (one command) at low. `args.factory` pins the factory's skills folder for a benchmark,
 `args.notes` passes the operator's words for the run to every module agent.

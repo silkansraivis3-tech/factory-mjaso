@@ -242,7 +242,7 @@
     "t_before_sc": "{set} comes after only {min} min and {w} words of new theory; it needs at least {fmin} min and {fw} words, so the trainee can actually answer it.",
     "t_sc_small": "{set} has {q} question(s); it needs at least {lo}, so the trainee's score means something.",
     "t_sc_big": "{set} has {q} questions; more than {hi} slows the lesson.",
-    "t_sc_mix": "{set}: {b} of its {q} questions are basic (match, order, choose) and {r} rich (3D, animation, a control panel) - at most 2 basic and at least {lo} rich (of five: three rich, two basic).",
+    "t_sc_mix": "{set}: {b} of its {q} questions are basic (match, order, choose) and {r} rich (3D, animation, a control panel) - at most 2 basic and at least {lo} rich (of five: three rich, two basic). Where the subject has nothing to tap or operate, the task slide says why in \"basic_why\" and this is a note.",
     "t_no_challenge": "{set} has no Part B question - nothing at Apply or higher that the trainee works out alone (a calculation, a prediction, an investigation, a line-up, a 3D task). Part A checks what was taught; Part B makes them use it (owner, 2026-10-28).",
     "t_ab_order": "{set}: a harder question (Apply or higher) comes before an easier one. Put Part A first - the quick check of what was taught - then Part B, the task they solve alone.",
     "t_not_spaced": "{set} only checks the latest block. Part A should also bring back at least one Sub-ILO from an earlier block of this module, so it is not forgotten.",

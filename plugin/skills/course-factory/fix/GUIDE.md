@@ -146,7 +146,7 @@ Run by whoever made the fix, once. Report its numbers. **Not in a fix** (`fix-ru
 checker, an orchestrator re-check, a whole-course QA, re-measuring slides nobody touched, a second screen size unless
 the operator asked about the projector, a contact sheet of slides nobody touched, more than two agents (the walk review of the touched
 slides is the one look a fix always gets, section 6). The full sign-off — the
-fourteen checks in SKILL.md — stays for building a module, a retrofit and the handover.
+verify checks in SKILL.md — stays for building a module, a retrofit and the handover.
 
 If the check fails, fix what it names and run **that** check again — not the others.
 
@@ -170,9 +170,9 @@ Then log it: the operator's words in `FEEDBACK_LOG.md` (L32) — `apply` already
    teaching ones."*
 3. Re-compose those slides: bigger figures, the text block filling its column, less padding — in the module's source
    (its generator, if it has one); for a padding that is wrong in every module, in the shared stylesheet, then
-   `sync-shared`. Add the standard: *"teaching slides use the screen: content ≥ 45 %, no empty band below"*.
-4. `fix.py check <course> --kind layout --modules 4,6,9...` — once: nothing off the screen, no text under 16 px,
-   each slide's *before → after*.
+   `sync-shared`. Add the standard: *"teaching slides use the screen: no empty band below"* (free space is a note, L53; the 45 % ink figure is a note only).
+4. `fix.py check <course> --kind layout --modules 4,6,9...` — once: nothing off the screen, no body text under 16 px,
+   no label inside a drawing under 12.5 px, each slide's *before → after*.
 5. Done · Check now · Next. No second QA.
 
 ## 6 · The walk review after a fix (2.116.0)
