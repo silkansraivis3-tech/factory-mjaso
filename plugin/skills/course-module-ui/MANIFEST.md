@@ -103,6 +103,15 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## Wide photographs on top, parts that turn like pages, a highlight with room — 2.127.0 (2026-11-10)
+
+`knowledge/blueprints.json` and `layout-templates.json`: the `figure-top` variant of explain-figure, reading-with-figure and
+content-in-parts (a row of wide photographs on top, each box its photo's shape, `under_top_row` 100 words measured by
+`course-module-ux/measure/scripts/measure_word_budgets.py`). `templates/gb_layouts.css`: the top row, words from the top of
+their column, the part tabs a 56 px strip at the foot of the body and the page-turn of a part (transform and opacity,
+instant under reduced motion). `templates/gb_compose.css`: the lit line's gap on every side (`--hl-x`, `--hl-y`), its number
+inside it. `course-module-ux/assets/gb_deck.js` turns the part at once, so Next and the lit lines are never behind.
+
 ## The task slide's tablet and chips — 2.103.1 (2026-11-05)
 
 `templates/gb_upgrade.css`, the `task-launch` template: the row is the body's height (`grid-template-rows:minmax(0,1fr)`)

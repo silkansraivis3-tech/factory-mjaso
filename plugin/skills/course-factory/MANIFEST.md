@@ -7,6 +7,15 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.127.0 · Wide photographs on top, parts that turn like pages, runs that finish, 3D speed in the build (2026-11-10)
+
+- `compile/scripts/compile_module.py`: the `figure-top` variant chosen from the photos' real shape (a build sheet's `variant` wins), `"part_figures"`, lines ending ":" as subheadings, a worked example's question and answer under its picture; refuses a card over a whole picture or a picture box with only words.
+- `scripts/content_script.py`: `t_overfull_rows` (each line counted as a card).
+- `orchestration/workflows/build_course.js`: `FOREGROUND` in every brief that runs a long command; SKILL.md *Auto build*: a helper waiting on its own background work has stopped, the session carries it on.
+- `scripts/course_portal.py`: `run_print` - streams the log, resumes a print-mode session that ended without its last line; `scripts/factory_trial.py` uses it, its progress line shows minutes and cost so far, and its deck scan counts a 2D-kit figure.
+- `scripts/check_course_package.py`: `blueprints()` / `off_blueprint()` - a slide off its blueprint fails the build.
+- Tests beside each script; known failures unchanged (test_task_engine tap area, test_patterns fuel_space_access).
+
 ## 2.126.0 · The templates hold the words, the theory covers the task, 3D that does not lag, builds that finish (2026-11-10)
 
 - `scripts/content_script.py`: `t_over_budget` (budget read from course-module-ui `layout-templates.json`), `in_parts` with `t_parts_many` / `t_parts_in_row`, `t_task_not_covered` / `t_task_lost`, `v_3d_share` / `v_3d_in_a_row`; `old_refs` keeps a range after "and"; `propose` changes `dropped_old`.

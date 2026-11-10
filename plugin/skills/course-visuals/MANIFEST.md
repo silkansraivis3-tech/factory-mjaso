@@ -146,6 +146,11 @@ lane, `trace` and `region` on charts, and the minified copy modules ship (`min/k
 changing the kit - `test_minify_engines.py` fails a stale copy).
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
+## 2.127.0 · Lines that walk with a scene, labels that cost nothing standing still (2026-11-10)
+
+- `kit3d/kit3d.js`: a scene whose steps name no line lights one line per Next; labels placed only when something moved (size, step, caption, shown labels, their points), the controls' places read only when the view stands, styles written only when changed; a label search over 8 ms (`TURN_SEARCH_MS`) waits for the view to stand. `min/kit3d.js` rebuilt.
+- `kit3d/scripts/scene3d_check.py`: the STILL CHECKING / `--wait` protocol; runs `perf_gate.py` twice and a slide over budget in both is its scene's problem.
+
 ## 2.126.0 · 3D share and speed (2026-11-10)
 
 - The picture rule (SKILL.md, L67): interactive 3D on 60-80 % of a module's slides, never more than 3 in a row.
