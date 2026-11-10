@@ -304,7 +304,8 @@ shape, true to how the thing looks on a chemical / gas tanker, no words or numbe
 long side - within the course's approved picture budget (intake.json "picture_budget"; none recorded: stop and report).
 Open and look at each before you keep it. Save it into ${A.course}/working_claude/photos_found/<module, e.g. M04>/ with its
 record in that folder's _photo_meta.json: title, "generated": true, source (the tool), the prompt, description of what it
-LITERALLY shows, shows, visually_verified, and "found_for": "<the row's slot, e.g. M04 s05>".
+LITERALLY shows, shows, "visually_verified": "yes - <what you saw> <YYYY-MM-DD>" (words, never true), and "found_for":
+"<the row's slot, e.g. M04 s05>".
 Then run photo_catalogue.py assign again: a photo found for a slot becomes that slot's pick, and the builds take it with no
 agent. You may write only into working_claude/photos_found/ - never a module, a script or a build sheet.
 Report how many rows you found, and the rows you could not.${NOTES}`
@@ -1003,7 +1004,8 @@ Do NOT start again from --init-build. Your brief is working_claude/visuals/M${tw
 still to fill (its kind, shape, real px size, the words it teaches, what it must show, the catalogue's candidates), the
 figures at their starter and the 3D scenes to place - with the build's own answer. First run build_module.py <course>
 --module ${m.id} --no-course-pages --auto (the sourcing pass may have found photos since), then fill what is left (a photo:
-into assets/img with its _photo_meta.json record, 800 px or more; a question's picture: its answers' boxes onto the real
+into assets/img with its _photo_meta.json record, 800 px or more, "visually_verified": "yes - <what you saw> <YYYY-MM-DD>"
+once you opened it; a question's picture: its answers' boxes onto the real
 things), place the 3D parts, fix what the build printed, and build again until module clean. A placeholder never ships.` : ''
 }
 async function oneModule(m) {

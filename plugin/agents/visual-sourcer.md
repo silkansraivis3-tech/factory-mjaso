@@ -114,7 +114,8 @@ so and recommend the real photograph or the authored diagram instead.
 ## Verification, before you recommend anything
 
 **Open the file and look at it.** A file named for one thing may show another — that has already
-happened in this project. A caption is not evidence of content. Record what you saw and the date.
+happened in this project. A caption is not evidence of content. Record what you saw and the date, in words:
+`"visually_verified": "yes - <what you saw> <YYYY-MM-DD>"` - never `true` (`check_assets.py` warns on anything else).
 
 If a candidate is a near-miss but still useful, say exactly how it differs, so the page can caption
 it honestly: *"a product tanker, not a gas carrier"* is a usable caption; silence is not.

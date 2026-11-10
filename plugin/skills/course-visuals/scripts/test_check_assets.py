@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -116,6 +117,20 @@ def main():
                   'licence "CC BY-SA 4.0" asks for a credit' in out, out[-400:])
         code, out = run(folder(tmp, "cc_author", record(rights_state="CLEARED", license="CC BY-SA 4.0", author="A. Person")))
         check("... and with its author it is not", "asks for a credit" not in out, out[-400:])
+        code, out = run(folder(tmp, "vv_true", record(rights_state="CLEARED", visually_verified=True, verified_date="2026-11-10")))
+        check("visually_verified true is said as not words, with the form the briefs ask for",
+              code == 0 and "visually_verified is true, not words" in out and '"yes - <what was seen> <YYYY-MM-DD>"' in out, out[-400:])
+        code, out = run(folder(tmp, "vv_none", {k: v for k, v in record(rights_state="CLEARED").items() if k != "visually_verified"}))
+        check("... a record with none fails, and the message gives the same form",
+              code == 1 and "missing required field(s): visually_verified" in out and "yes - <what was seen>" in out, out[-400:])
+        plugin = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
+        briefs = [os.path.join(plugin, "agents", "visual-sourcer.md"),
+                  os.path.join(plugin, "skills", "course-factory", "compile", "BUILDER_CARD.md"),
+                  os.path.join(plugin, "skills", "course-factory", "orchestration", "workflows", "build_course.js")]
+        said = {os.path.basename(p): re.findall(r"visually_verified.{0,80}", open(p, encoding="utf-8").read(), re.S) for p in briefs}
+        check("every brief that sends a helper to write a picture's record asks for visually_verified in the form the check "
+              "accepts (\"yes - <what you saw> <date>\"), never true",
+              all(v and all(re.search(r'"yes - <what you saw> <YYYY-MM-DD>"', x) for x in v) for v in said.values()), said)
         code, out = run(folder(tmp, "free", record(rights_state="FREE_LICENCE_ATTRIBUTION")))
         check("a rights_state the pipeline does not define fails and lists the ones it does",
               code == 1 and '"FREE_LICENCE_ATTRIBUTION" is not valid' in out and "ATTRIBUTION_REQUIRED" in out, out[-400:])

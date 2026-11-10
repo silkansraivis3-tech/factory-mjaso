@@ -35,7 +35,8 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
   catalogue's good picks), then fill the rest: a photograph 800 px or more into `assets/img` with its `_photo_meta.json`
   record, its entry's `"figure"` on it, the `"placeholder"` keys and file gone. A placeholder never ships. The record's
   `"rights_state"` is one of PUBLIC_DOMAIN, ATTRIBUTION_REQUIRED (CC BY, CC BY-SA: its `"author"` and `"licence"`
-  make the credit), CLEARED, PROJECT_OWNED, OWNER_CLEARED, RIGHTS_REVIEW_REQUIRED, REJECTED - no other word.
+  make the credit), CLEARED, PROJECT_OWNED, OWNER_CLEARED, RIGHTS_REVIEW_REQUIRED, REJECTED - no other word. Its
+  `"visually_verified"` is words, once you opened it: `"yes - <what you saw> <YYYY-MM-DD>"`, never `true`.
 - Fill the build sheet (each slide's picture, layout, photos - photos from `assets/img` or the Gas Library copy the
   operator names); a starter figure spec is edited only for what the build prints (`figures/MNN/sNN.kit.json`; parts and options:
   `course-visuals/kit/CATALOGUE.md`; never kit.js). **Kit first, a custom figure allowed (L55):** a machine, vessel, device or
