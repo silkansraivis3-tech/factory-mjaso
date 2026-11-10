@@ -116,6 +116,20 @@ def profile(text):
     return (best if scores[best] > 0.012 else None), scores, len(words)
 
 
+def language_names(declared):
+    """the declared languages as the profiles name them: "EN", "en", "english" and "English" are one language. The codes
+    are the factory's own (knowledge/page-labels.json course_language_codes)"""
+    try:
+        codes = json.loads((Path(__file__).resolve().parents[2] / "knowledge" / "page-labels.json")
+                           .read_text(encoding="utf-8"))["course_language_codes"]
+    except (OSError, ValueError, KeyError):
+        codes = {}
+    by_key = {k.lower(): k for k in PROFILES}
+    by_key.update({v.lower(): k for k, v in codes.items()})
+    by_key.update({k.lower(): k for k in codes})
+    return {by_key.get(x.strip().lower(), x.strip()) for x in re.split(r"[+/,]", declared) if x.strip()}
+
+
 def is_course_facing(rel):
     r = rel.replace("\\", "/")
     if any(x in r for x in NOT_COURSE_FACING):
@@ -128,7 +142,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("target")
-    ap.add_argument("--declare", help="COURSE_LANGUAGE, e.g. English or English+Latvian")
+    ap.add_argument("--declare", help="COURSE_LANGUAGE, e.g. English, EN or English+Latvian")
     ap.add_argument("--strict", action="store_true", help="exit 1 on drift")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
@@ -161,7 +175,7 @@ def main():
 
     allowed = set()
     if declared:
-        allowed = {x.strip() for x in re.split(r"[+/,]", declared) if x.strip()}
+        allowed = language_names(declared)
 
     drift = [r for r in rows if r["lang"] and allowed and r["lang"] not in allowed]
 
