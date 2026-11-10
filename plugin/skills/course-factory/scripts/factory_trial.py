@@ -222,6 +222,7 @@ FIT_SIZES = ("1280x800", "1024x768")
 WORDS_OVER = 120
 VERDICT = re.compile(r"^(PASS|FAIL|MODULE CLEAN|PHASE A CLEAN|STILL RUNNING)\b")
 PICTURE_TAGS = ("img", "svg", "canvas", "video", "iframe", "object")
+PICTURE_ATTRS = ("data-kit3d", "data-3d", "data-kit2d")      # a 3D scene, a 2D-kit figure: drawn when the page opens
 
 
 def module_dir(course, m):
@@ -299,7 +300,7 @@ class DeckScan(HTMLParser):
             self.slides.append({"id": a.get("id", ""), "template": a.get("data-template", ""), "variant": a.get("data-variant", ""),
                                 "pictures": 0, "placeholders": 0, "words": 0, "parts": {}})
         inside = any(x[3] for x in self.stack) or slide
-        if inside and not any(x[0] == "button" for x in self.stack) and (tag in PICTURE_TAGS or "data-kit3d" in a or "data-3d" in a):
+        if inside and not any(x[0] == "button" for x in self.stack) and (tag in PICTURE_TAGS or any(k in a for k in PICTURE_ATTRS)):
             self.slides[-1]["pictures"] += 1
             if self.placeholder.search(a.get("src", "")):
                 self.slides[-1]["placeholders"] += 1
@@ -334,31 +335,11 @@ def scan_deck(deck):
     return p.slides
 
 
-def blueprints():
-    """({slide blueprint id: the picture slots it needs}, {template: its version}) - course-module-ui knowledge/blueprints.json
-    and layout-templates.json; a mirrored blueprint needs what its base needs"""
-    ui = os.path.join(PLUGIN, "skills", "course-module-ui", "knowledge")
-    bp, lt = load(os.path.join(ui, "blueprints.json")), load(os.path.join(ui, "layout-templates.json"))
-    base = {b["id"]: b for b in bp["slides"]}
-    need = {}
-    for b in bp["slides"]:
-        fill = b.get("fill") or (base.get(b.get("mirror")) or {}).get("fill") or {}
-        need[b["id"]] = sum(1 for v in fill.values() if v[0] in ("Picture", "3D") or (len(v) > 1 and str(v[1]).startswith("figure")))
-    return need, {k: v.get("version") for k, v in lt["templates"].items()}
-
-
 def off_blueprint(slides):
-    """the slides that are not a known template, version and variant (data-template="<id>.v<n>", data-variant), or whose
-    template needs a picture and that hold none, or a placeholder"""
-    need, versions = blueprints()
-    out = []
-    for s in slides:
-        m = re.match(r"^([\w-]+)\.v(\d+)$", s["template"])
-        bid = "%s.%s" % (m.group(1), s["variant"]) if m else ""
-        if not m or versions.get(m.group(1)) != int(m.group(2)) or bid not in need \
-                or (need[bid] and (s["placeholders"] or not s["pictures"])):
-            out.append(s["id"])
-    return out
+    """the slides off their blueprint, judged as the build's course package check judges them
+    (check_course_package.off_blueprint): an unknown template, version or variant, or a picture slot empty or a placeholder"""
+    import check_course_package as ccp
+    return ccp.off_blueprint(slides)
 
 
 def pictures_pending(course, m, slides):

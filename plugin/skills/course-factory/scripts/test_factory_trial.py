@@ -283,6 +283,21 @@ def main():
         off = ft.off_blueprint(list(slides.values()))
         check("off its blueprint: an unknown template, a template's wrong version, a picture slot with a placeholder or no "
               "picture - and nothing else", off == ["s02", "s03", "s04", "s05"], off)
+        # the 2.126.0 trial scored M01 s28 and s28b off their blueprint: each holds a 2D-kit figure, which kit2d.js draws when
+        # the page opens - the scorecard saw no picture in the page as written, and the build never judged blueprints
+        k2 = ('<section class="slide" id="s28" data-kind="Theory" data-visual="comparison" data-template="worked-example.v1" '
+              'data-variant="figure"><h2>Which tanks need a secondary barrier</h2><div class="lt-scol"><div class="lt-in fill fig '
+              'kit2d-fig" data-script-ignore><div class="kit2d-stage" data-kit2d="#k2-s28"></div><script type="application/json" '
+              'id="k2-s28">{"parts":[{"id":"N1","type":"node"}]}</script></div></div></section>')
+        bare = k2.replace('<div class="kit2d-stage" data-kit2d="#k2-s28"></div>', "")
+        import check_course_package as ccp
+        k2deck = os.path.join(tmp, "k2deck.html")
+        offs = []
+        for page in (k2, bare):
+            io.open(k2deck, "w", encoding="utf-8").write("<!doctype html><html><body>%s</body></html>" % page)
+            offs.append((ft.off_blueprint(ft.scan_deck(k2deck)), ccp.off_blueprint(ccp.deck_slides(ccp.parse(k2deck)))))
+        check("a 2D-kit figure is the picture its template needs - for the scorecard and for the build's course package check "
+              "alike; the same slide with no figure is off its blueprint for both", offs == [([], []), (["s28"], ["s28"])], offs)
         check("interactive 3D counted as the course package counts it (L67): 1 of the 6 teaching slides", ft.three_d_share(deck) == 17)
         build = os.path.join(oc, "working_claude", "_build")
         io.open(os.path.join(build, "M01_answer.txt"), "w", encoding="utf-8").write(
