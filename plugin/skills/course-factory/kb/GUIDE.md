@@ -37,7 +37,20 @@ a ready pop-up question, "which one is this course's?".
 python kb/scripts/kb_tool.py build <course folder> --course <course folder>
 ```
 
-It finds the **Course KB Builder** on this computer (the folder `COURSE_KB_BUILDER` with
+Two engines can make it; `--engine auto|factory|exe` (or `NOVIKONTAS_KB_ENGINE`; default `auto`) picks one:
+
+- `exe` — the Course KB Builder program below. Needs only its `COURSE_KB_BUILDER` folder on this computer.
+- `factory` — the factory's own builder, `kb/builder/kb_build.py`. It runs as a separate process and prints its
+  progress. **What it needs it gets by itself, nothing asked:** PyMuPDF 1.24 or newer is installed with pip when it
+  is missing, and the reading models for scanned pages (English, Latvian, Russian - about 11 MB in all, from the
+  Tesseract project, checked against their checksums) are fetched into `%LOCALAPPDATA%\NOVIKONTAS\tessdata` the first
+  time a scanned page needs one. With no network (or `NOVIKONTAS_OFFLINE=1`) the knowledge base is still made; the
+  scanned pages it could not read are listed, with the files to put there.
+- `auto` tries them in the order set by `ENGINE_ORDER` in `kb_tool.py` (today the `exe` first) and runs the
+  first one that is available. Neither: exit 3, with both remedies in plain words. `find` names the one
+  `build` would use.
+
+With the `exe` engine it finds the **Course KB Builder** on this computer (the folder `COURSE_KB_BUILDER` with
 `BUILD_KNOWLEDGE_BASE.exe` — Raivis Silkans's Course Source Processor): where `--builder` or
 `NOVIKONTAS_KB_BUILDER` names it, else beside the course folder and up to four folders above it, then the
 Desktop, Documents and the home folder, one folder deep. It runs it with no window on the course's

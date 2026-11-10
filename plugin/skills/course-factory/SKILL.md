@@ -187,9 +187,10 @@ skill names, module split, screen count, task codes, pass marks, layout or lane)
 0. **The folder is the master folder** (L40): `python scripts/workspace.py <folder>` names `course\` beside it.
 1. **Find** the programme, the IMO model course, the knowledge base and the old course; propose the course type.
    **Read the old course whole** (`old_course.py inventory` and `images`). **No knowledge base?** Make it, unasked:
-   `kb_tool.py build <folder> --course <course>` runs the Course KB Builder with no window, in the background while the
-   intake goes on (`kb/GUIDE.md`); only when the builder is not on this computer, `kb_tool.py find <folder>` — suggest
-   one in plain words, its question in the pop-up. **A shared subject library?**
+   `kb_tool.py build <folder> --course <course>` makes it with no window, in the background while the intake goes on
+   (`kb/GUIDE.md`) — with the Course KB Builder program where it is on the computer, else with the factory's own
+   builder, which fetches what it needs by itself; only when neither can run, `kb_tool.py find <folder>` — suggest one
+   in plain words, its question in the pop-up. **A shared subject library?**
    `course-visuals/scripts/subject_library.py covers "<title, STCW ref>"` — used before the knowledge base and the
    internet; findings go back with `contribute`; a new course is registered once its modules folder exists.
 2. **Sort the sources** — `kb_tool.py sources <kb> --course <course>` (`kb/GUIDE.md`); several editions → one question.

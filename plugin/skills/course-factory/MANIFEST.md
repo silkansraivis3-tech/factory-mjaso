@@ -7,6 +7,21 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.123.0 · The factory's own knowledge-base builder (2026-11-10)
+
+- `kb/builder/`: `kb_build.py` (the command, progress lines, build into `KNOWLEDGE_BASE.building` then swap), `discover.py`,
+  `pdf.py`, `structure.py` (after the Course Source Processor's), `ocr.py` (PyMuPDF's Tesseract, rotation retry, the page's
+  language, `ensure_tessdata` with the pinned files), `lang.py`, `office.py` (zipfile + XML), `chunk.py`, `index.py` (the
+  version-5 tokenizer), `write.py`, `cache.py`, `pool.py`, `common.py`; `test_builder.py`; `compare_kb.py` (test only: a
+  knowledge base the .exe made against a new one - sources, units, characters, word coverage, chunks, search).
+- `cache.py` `EXTRACT_VERSION`: raise it only when a release changes how a page is read - every computer then reads all
+  its sources again once.
+- `kb/scripts/kb_tool.py`: `ENGINE_ORDER`, `factory_builder`, `choose_engine`, `pymupdf_ok`, `ensure_pymupdf`, `toks_for`,
+  `read_report` with copies; `scripts/fact_check.py` uses `toks_for`; `scripts/photo_catalogue.py` `page_words`.
+- The reading models are not in the repository (10.7 MB); the pin and checksums are in `ocr.py`. Flipping `ENGINE_ORDER`
+  to the factory's builder first waits for the gas-basic comparison (1,398 scanned pages).
+- Known gaps are listed in the release row of `_claude/CONTEXT.md`.
+
 ## 2.121.0 · The factory makes the knowledge base itself (2026-11-10)
 
 - `kb/scripts/kb_tool.py build <folder> [--course] [--builder] [--timeout-min]`: `find_builder` (named place, else the

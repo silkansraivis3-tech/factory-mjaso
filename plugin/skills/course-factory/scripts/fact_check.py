@@ -161,7 +161,7 @@ class Index:
             k1, b = idx["bm25"]["k1"], idx["bm25"]["b"]
             N, avg, chunks, df, post = idx["chunk_count"], idx["avg_tokens_per_chunk"], idx["chunks"], idx["df"], idx["postings"]
             score = Counter()
-            for t in dict.fromkeys(self.kb_tool.toks(q)):
+            for t in dict.fromkeys(self.kb_tool.toks_for(idx)(q)):
                 if t in post:
                     idf = math.log(1 + (N - df[t] + 0.5) / (df[t] + 0.5))
                     for ci, tf in post[t]:
