@@ -711,6 +711,12 @@ def walk_part():
         job = b.task_job("m", wdir, "logs")
         check("the task pages' job walks them into the module's walk folder, beside the deck's stops",
               job[2:] == ["m", wdir, "--tasks-only", "--walk-dir=" + wdir], job)
+        src = io.open(b.__file__, encoding="utf-8").read()
+        check("... on every build, a failing one too: a walk judge sent after a failed build sees the task pages in its first "
+              "round, and their grading is said beside the other fails",
+              "    want_review = not o.no_review\n" in src and "want_review = not o.no_review and not fails" not in src
+              and 'if want_review and early is None and "task pages" in results:' in src
+              and "module_clean = clean and not slots_left" in src)
         job = b.task_job("m", "", "logs")
         check("... with picture spaces to fill, a draft or --no-walk it only grades and is given no walk folder (the workflow's "
               "QA check never changes the walk its judge is reading)", job[2:] == ["m", "logs", "--tasks-only", "--grade-only"], job)

@@ -100,6 +100,7 @@ def required_fields(kind: str) -> list[str]:
 # Set by `check_assets.py clear` - never by a script on its own. compile_module.py keeps the same pattern (NAMED_CLEARANCE).
 NAMED_CLEARANCE = re.compile(r"^[^,\n]{2,},\s*\d{4}-\d{2}-\d{2}\s+-\s+\S")
 VERIFIED_OK = re.compile(r"^\s*yes\b", re.I)
+VERIFIED_FORM = '"visually_verified": "yes - <what was seen> <YYYY-MM-DD>"'      # the form every brief asks for
 HAS_DATE = re.compile(r"\d{4}-\d{2}-\d{2}|\d{1,2}\s+\w+\s+\d{4}")
 
 
@@ -243,7 +244,8 @@ def check_folder(folder: str) -> None:
                 fail(where, "missing required field(s): " + ", ".join(missing),
                      "schema: source/schemas/" +
                      ("_photo_meta.schema.json" if kind == "photo"
-                      else "_figure_meta.schema.json"))
+                      else "_figure_meta.schema.json") +
+                     ("; visually_verified is words: " + VERIFIED_FORM if "visually_verified" in missing else ""))
 
             rs = meta.get("rights_state")
             if rs is None:
@@ -278,7 +280,10 @@ def check_folder(folder: str) -> None:
                      "the credit line has to say something")
 
             vv = str(meta.get("visually_verified", ""))
-            if vv:
+            if isinstance(meta.get("visually_verified"), bool):
+                warn(where, "visually_verified is %s, not words" % str(meta["visually_verified"]).lower(),
+                     VERIFIED_FORM + " - what the person who opened it saw, never true")
+            elif vv:
                 if not VERIFIED_OK.match(vv):
                     warn(where, f'visually_verified does not start with yes: "{vv[:50]}"',
                          "that is a legitimate answer - it means somebody must still look")

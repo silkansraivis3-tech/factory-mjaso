@@ -101,7 +101,9 @@ AI-generated image sites · any page that does not say where the image itself ca
 Record per candidate: **source · url_or_origin · rights_state · technical_relevance ·
 intended_use · modification_permitted · attribution_required**.
 
-**Download it.** A legally usable internet asset is packaged locally. The tablet has no network at
+**Download it.** A legally usable internet asset is packaged locally - from Wikimedia Commons with
+`scripts/commons.py search` / `get`, which writes the record and asks at Wikimedia's polite rate. A request names the
+tool and the organisation's website, never a person: no name, e-mail address or account in a header or a URL. The tablet has no network at
 class time, and the Android app returns 403 to every host except the classroom backend — a remote
 image is not a slow image, it is a broken one.
 

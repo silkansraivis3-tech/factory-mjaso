@@ -585,7 +585,8 @@ def credit_line(meta, with_title=True):
         return "Source: " + (meta.get("credit") or meta.get("source_work"))   # 2.63.2: a cleared book figure - its book, edition, page
     if not meta or not (meta.get("attribution_required") or lic):
         return ""
-    author = re.split(r"\s*[(,]", meta.get("author") or "")[0].strip()
+    # every author of a picture made of several ("Top: A (CC BY-SA 4.0); bottom: B (CC BY 3.0)"), each without its note
+    author = "; ".join(x for x in (re.split(r"\s*[(,]", p)[0].strip() for p in re.split(r"\s*;\s*", meta.get("author") or "")) if x)
     title = meta.get("title") or ""
     m = re.search(r"/File:([^/?#]+?)\.(?:jpe?g|png|webp|gif|tiff?)$", meta.get("url_or_origin") or "", re.I)
     if not with_title:
@@ -1100,6 +1101,39 @@ def credit_path_problems(page, name):
             probs.append("%s: a credit or caption shows a file-system path (%r in \"%s\") - the trainee would read where the file "
                          "lives on a computer. Fix the photograph's record in assets\\img\\_photo_meta.json (source, author, "
                          "title, description) or the caption in the build sheet" % (name, hit.group(0).strip(), text[:90]))
+    return probs
+
+
+def credit_authors(meta):
+    """the names a CC BY / CC BY-SA picture's shown credit must carry: each author of its record (several are parted by
+    ";"), without a label ("Top:") or what follows a "(" or ","; [] for any other licence"""
+    lic = str((meta or {}).get("licence") or (meta or {}).get("license") or "")
+    if is_generated(meta) or not re.search(r"\bCC[ -]BY\b", lic, re.I):
+        return []
+    names = (re.split(r"\s*[(,]", re.sub(r"^[^:()]{1,20}:\s*", "", p.strip()))[0].strip()
+             for p in re.split(r"\s*;\s*", str(meta.get("author") or "")))
+    return [x for x in names if x]
+
+
+def credit_author_problems(page, mdir, name):
+    """a slide (or a task page) whose shown credits miss the author of a CC BY / CC BY-SA picture on it - a build problem:
+    the licence asks for every author's name, and a picture made of two photographs has two"""
+    probs = []
+    cut = [m.start() for m in re.finditer(r'<section\b[^>]*\bclass="slide\b', page)] or [0]
+    for start, end in zip(cut, cut[1:] + [len(page)]):
+        part = page[start:end]
+        sid = re.match(r'<section\b[^>]*\bid="([^"]+)"', part)
+        shown = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", next(g for g in m.groups() if g is not None)))
+                         for m in CREDIT_TEXT.finditer(part))
+        shown = re.sub(r"\s+", " ", shown).lower()
+        for rel in dict.fromkeys(re.findall(r'<img\b[^>]*\bsrc="\.\./([^"]+)"', part)):
+            meta = photo_meta(mdir, html.unescape(rel))
+            missed = [x for x in credit_authors(meta) if re.sub(r"\s+", " ", x).lower() not in shown]
+            if missed:
+                probs.append("%s%s: the credit shown for %s does not name %s - its licence (%s) asks for every author's name. "
+                             "Name each in the record's \"author\" (several parted by \";\") or in the build sheet's \"credit\""
+                             % (name, " " + sid.group(1) if sid else "", rel, " and ".join(missed),
+                                str(meta.get("licence") or meta.get("license"))[:60]))
     return probs
 
 
@@ -6086,6 +6120,7 @@ def main(argv=None):
         rec["index.html"] = sha(page)
         cs.save(rec_path, rec)
         probs += credit_path_problems(page, "presentation/index.html")
+        probs += credit_author_problems(page, mdir, "presentation/index.html")
         # 2.63.0 - a number with its unit a figure prints is the approved script's or the course's sources' (L29)
         for where, rel, shown in unsupported_facts(script, build, figdir, mdir, o.course):
             probs.append("%s: its figure %s says \"%s\" - not in the approved script or the course's sources (working_claude: "
@@ -6117,7 +6152,7 @@ def main(argv=None):
         probs += tprobs
         for path, page in sorted(pages.items()):
             key = os.path.relpath(path, mdir).replace("\\", "/")
-            probs += credit_path_problems(page, key)
+            probs += credit_path_problems(page, key) + credit_author_problems(page, mdir, key)
             if by_hand(path, key):
                 probs.append("%s was changed by hand, or was built before the compiler - it was not overwritten. Put the change "
                              "into the script or the build sheet, then compile again with --force" % key)

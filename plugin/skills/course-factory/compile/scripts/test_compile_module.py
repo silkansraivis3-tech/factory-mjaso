@@ -3590,6 +3590,23 @@ def main():
         check("... but the old --auto pick's \"license\": \"owner-cleared (L33)\" is no licence: no credit line from it",
               cm.credit_line({"source": "Novikontas old course", "author": "Novikontas", "license": "owner-cleared (L33)",
                               "rights_state": "OWNER_CLEARED"}) == "")
+        two = {"title": "LNG carriers of two designs", "source": "Wikimedia Commons", "rights_state": "ATTRIBUTION_REQUIRED",
+               "author": "Top: Nakilat (CC BY-SA 4.0); bottom: Wolfgang Fricke (CC BY 3.0)",
+               "licence": "CC BY-SA 4.0 (top) and CC BY 3.0 (bottom)", "description": "Two LNG carriers."}
+        check("a picture made of two photographs: its credit names both authors, each without its note",
+              "· Top: Nakilat; bottom: Wolfgang Fricke ·" in cm.credit_line(two) and cm.credit_authors(two) == ["Nakilat", "Wolfgang Fricke"]
+              and cm.credit_authors(meta) == ["Tholme"] and cm.credit_authors(dict(meta, licence="CC0")) == [], cm.credit_line(two))
+        cdir = os.path.join(tmp, "credits")
+        os.makedirs(os.path.join(cdir, "assets", "img"))
+        io.open(os.path.join(cdir, "assets", "img", "_photo_meta.json"), "w", encoding="utf-8").write(json.dumps({"two.jpg": two}))
+        deck_ = ('<section class="slide" id="s06"><img src="../assets/img/two.jpg" data-credit="%s"></section>'
+                 '<section class="slide" id="s07"><p>No picture</p></section>')
+        short_ = cm.credit_author_problems(deck_ % "Photo: LNG carriers · Top: Nakilat · CC BY-SA 4.0", cdir, "presentation/index.html")
+        check("the build refuses a slide whose shown credit misses the author of a CC BY / BY-SA picture on it (a picture of "
+              "two photographs credited to the first one's author only)",
+              len(short_) == 1 and short_[0].startswith("presentation/index.html s06:") and "does not name Wolfgang Fricke" in short_[0], short_)
+        check("... and passes it with the credit the compiler now writes",
+              cm.credit_author_problems(deck_ % html.escape(cm.credit_line(two)), cdir, "presentation/index.html") == [])
         few = [f for f in cs.media_findings(script()) if f["rule"] == "v_few_photos"]
         more = json.loads(json.dumps(SCREENS))
         more[1]["visual"] = "Thermometer scale; a real photo of a bunker station beside it."

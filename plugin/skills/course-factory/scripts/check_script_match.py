@@ -245,6 +245,8 @@ def main(argv=None):
             for f in cs.TASK_SLIDE_EXTRA if s["kind"] == "task-slide" else cs.SLIDE_EXTRA:
                 if f in ("claim_is", "right", "drill", "seconds") or not s.get(f):
                     continue
+                if f == "why" and not s.get("choices"):      # a figure's teaching reason, never printed - not a scenario's reasons
+                    continue
                 want_f, got_f = [norm(x) for x in cs.lines_of(str(s[f]))], [x for x in fields.get(f, []) if x]
                 if f in ("ask", "claim", "reveal") and len(got_f) == 1:
                     want_f = [" ".join(want_f)]

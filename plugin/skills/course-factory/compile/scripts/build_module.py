@@ -1492,8 +1492,10 @@ def main(argv=None):
     # 4 - the task pages are answered at the same time (2.50.1: a third of a passing build): every question graded right and
     # wrong by its own keys and, when the module can be reviewed, photographed as a trainee meets it into the walk folder,
     # beside the deck's stops - the walk review judges both. Each page's fingerprint is stamped first: a page changed
-    # after this walk is stale to the review. A page walked clean and unchanged since keeps its pictures
-    want_review = not o.no_review and not fails
+    # after this walk is stale to the review. A page walked clean and unchanged since keeps its pictures. A build that
+    # failed walks them too, beside its checks, as it walks the deck's stops: a walk judge sent after a failed build would
+    # otherwise see no task page in its first round
+    want_review = not o.no_review
     if want_review:
         walking = not (slots_left or o.no_walk or o.draft)
         jobs["task pages"] = task_job(mdir, walk_review_py().stamp_tasks(course, o.module) if walking else "", logdir)
@@ -1585,7 +1587,7 @@ def main(argv=None):
     # judged after assembly
     clean = passed or (o.no_course_pages and fails == ["course package"])
     module_clean = False                         # said under FAIL - course package: the task pages graded as they should
-    if want_review and clean and "task pages" in results:
+    if want_review and early is None and "task pages" in results:
         rcode, rout = results["task pages"]
         logged("review_sheets.mjs", rout)
         if rcode == 1:
@@ -1595,7 +1597,7 @@ def main(argv=None):
                        "line as the engine placed it - fix the drawing or the build sheet's \"labels\"):")
             say += ["  " + x for x in rout.splitlines() if "FAIL" in x]
         elif rcode == 0:                         # Phase A (picture spaces still to fill) is graded only and not clean yet
-            module_clean = not slots_left
+            module_clean = clean and not slots_left
         else:
             notes.append("Task pages not answered (%s) - no question was graded and the walk review has no task page to judge "
                          "until this runs (GUIDE 2f)" % (lines_of(rout, 1) or ["?"])[0])

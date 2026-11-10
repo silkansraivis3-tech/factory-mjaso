@@ -609,6 +609,22 @@ def tasks_part(tmp):
     rc, lines = wr.sign(course, 1, reviewer(tmp, {"check": True}))
     check("... a page with no picture cannot be signed", rc == 2 and "no contact sheet was made for task page check" in lines[0], lines)
 
+    # a build that failed walked the deck only: the walk judge's prepare walks the task pages itself, so round 1 judges them
+    called, real = [], wr.walk_tasks
+    wr.walk_tasks = lambda c, m: (called.append(m), walk_pages(c), (0, ""))[2]
+    os.environ.pop("CF_FIX_NO_WALK_RUN")
+    try:
+        rc, lines = wr.prepare(course, 1, stale_only=True)
+        rc_s, lines_s = wr.prepare(course, 1, ["s02"])
+    finally:
+        wr.walk_tasks = real
+        os.environ["CF_FIX_NO_WALK_RUN"] = "1"
+    check("prepare: task pages with no picture are walked first - the brief holds their questions, none is left without one",
+          called == [1] and rc == 0 and "6 task-page question(s) and last screen(s)" in lines[0]
+          and not any("no picture" in x for x in lines), (called, lines))
+    check("... once: walked as they are now, they are not walked again; a prepare of slides alone walks no task page",
+          called == [1] and rc_s == 0 and "task-page" not in lines_s[0], (called, lines_s))
+
     # walked: one unit per question and per last screen
     walk_pages(course)
     ok, kind, msg = wr.verify(course, 1)

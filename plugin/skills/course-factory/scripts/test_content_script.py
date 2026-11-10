@@ -100,7 +100,7 @@ SCRIPT = {
         {"id": "s02", "sub_ilo": "1.1", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "model_3d",
          "visual": "3D model of a semi-refrigerated tank - turn it and cut it open to see its insulation and its cooling coil",
          "picture": {"kind": "3d", "aspect": "4:3", "shows": "A semi-refrigerated tank, cut open"}, "notes": S02_NOTES, "minutes": 5,
-         "in_parts": "the three ship types, one a part, beside the tank they share"},
+         "in_parts": "the three ship types, one a part, beside the tank they share", "why": "spatial"},
         {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - keeping the cargo liquid",
          "text": "A short self-check opens on your tablet now: three questions on why gas is carried cold or under pressure.",
          "notes": "Press OPEN TASK. Give three minutes and watch who hesitates.", "minutes": 3},
@@ -569,6 +569,11 @@ def main():
                and x["level"] == cs.FAIL and x["screen"] == "s01"]
               and [x for x in cs.media_findings(d3 if screen(d3, "s02").update(why="spatial") is None else d3)
                    if x["rule"] == "v_why" and x["screen"] == "s02"], None)
+        sc = copy.deepcopy(SCRIPT)
+        screen(sc, "s01").update(active="scenario", ask="What do you do first?", choices="Stop the pump\nCall the master",
+                                 why="It stops the flow at once.\nThe pump keeps running meanwhile.", right="A")
+        check("... a scenario's \"why\" is its answers' reasons, never read as its picture's why",
+              not [x for x in cs.media_findings(sc) if x["rule"] == "v_why"], [x for x in cs.media_findings(sc) if x["rule"] == "v_why"])
         two = copy.deepcopy(one)
         screen(two, "s01")["visual_kind"] = "model_3d_scan"
         check("two of three in 3D (a scan counts too) is 67 % - fine", not share(two), share(two))
@@ -1095,7 +1100,8 @@ def main():
                 "<html><body>%s</body></html>" % "".join(task(x, correct if x["id"] == "m02" else None, drop_item and x["id"] == "m03", flip and x["id"] == "m01", keys) for x in tk))
             return run(MATCH, c, "--module", "1")
         code, out = build()
-        check("a module that says exactly the approved words passes", code == 0, out)
+        check("a module that says exactly the approved words passes (s02's figure \"why\" is not a scenario's reasons)",
+              code == 0 and screen(s, "s02").get("why") == "spatial", out)
         code, out = build(word=("supported by the hull", "supported by the ship's hull"))
         check("one changed word fails", code == 1 and "s03" in out, out)
         code, out = build(slides_extra="<p>An extra sentence nobody approved.</p>")

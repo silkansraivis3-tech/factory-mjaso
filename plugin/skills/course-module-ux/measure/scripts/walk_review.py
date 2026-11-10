@@ -273,6 +273,12 @@ def stamp_tasks(course, module):
     return wdir
 
 
+def tasks_due(d, names=None):
+    """a task page the names reach (none given: every one) that has no walk pictures of what it is now"""
+    return touches_tasks(d.pages, names) and any((d.tasks.get(p) or {}).get("fingerprint") != e["fingerprint"]
+                                                 for p, e in d.pages.items() if not names or touches_tasks({p: e}, names))
+
+
 def walk_tasks(course, module):
     """-> (exit code, output). The module's task pages walked now: stamped, then answered and photographed by
     review_sheets.mjs (0 walked and every answer graded as expected, 1 an answer graded wrongly, 2 could not run). A page
@@ -521,8 +527,13 @@ BUILD_AGAIN = "build again (build_module.py, or fit_gate.py --walk-dir), then pr
 
 def prepare(course, module, slides=None, stale_only=False):
     """-> (exit code, [lines]). Makes the sheets, their manifest and the brief for every walked slide, only `slides`, or
-    (stale_only) only the slides with no verdict for what they show now"""
+    (stale_only) only the slides with no verdict for what they show now. A task page no build photographed as it is now (a
+    build that failed walks the deck only) is walked here first, so the reviewer's first round judges it too"""
     d = Deck(course, module)
+    walked = None
+    if tasks_due(d, slides) and not os.environ.get("CF_FIX_NO_WALK_RUN"):
+        walked = walk_tasks(course, module)
+        d = Deck(course, module)
     wdir = walk_dir(course, d.module)
     by = d.stops
     if not d.walked:
@@ -552,6 +563,8 @@ def prepare(course, module, slides=None, stale_only=False):
                    % (d.name, ", ".join(d.short(old)), BUILD_AGAIN)]
     gap = ["walk_review: the walk of %s has no picture of %s - no reviewer can pass a slide it was not shown; %s"
            % (d.name, ", ".join(d.short(lost)), BUILD_AGAIN)] if lost else []
+    if walked and walked[0] == 2 and gap:
+        gap.append("walk_review: the task pages could not be walked - %s" % ((walked[1].splitlines() or ["?"])[-1]))
     if not ids:
         return (2, gap) if lost else (0, ["walk_review: nothing to review for %s - every slide%s has a verdict for "
                                           "what it shows now" % (d.name, " and task-page screen" if d.units else "")])

@@ -1553,7 +1553,7 @@ def media_check(script):
             add(s["id"], "visual", FAIL, "v_no_what", kind=kind_label(k, lang))
         if k in VISUAL_KINDS:
             kinds.append(k)
-            if str(s.get("why") or "").strip():              # 2.116.0: a why the script declares must be one of the seven (v_why)
+            if str(s.get("why") or "").strip() and not s.get("choices"):    # a figure's why (v_why); a scenario's is its answers' reasons
                 import figure_why
                 if s["why"] not in figure_why.WHYS or (s["why"] == "spatial" and flat_word(s)):
                     add(s["id"], "visual", FAIL, "v_why", detail=(
