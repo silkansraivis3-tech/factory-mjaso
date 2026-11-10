@@ -127,6 +127,13 @@ def write_registry(parent: str, reg: dict, cfg: dict) -> None:
     os.replace(tmp, path)
 
 
+def shared_link(cfg: dict, env: dict) -> str | None:
+    """The link of the school's shared Course Libraries folder, when the default places are in use (no env parent)."""
+    if (env.get(ENV_PARENTS) or "").strip():
+        return None
+    return (cfg.get("course_libraries", {}).get("shared_folder") or {}).get("url") or None
+
+
 def home_parent(cfg: dict, env: dict) -> str | None:
     """Where libraries are made: the first parent that has a registry, else the first that can be made
     (its own folder or the folder above it exists - Drive is mounted). None = not reachable here."""
@@ -134,6 +141,8 @@ def home_parent(cfg: dict, env: dict) -> str | None:
     for p in ps:
         if read_registry(p, cfg) is not None:
             return p
+    if shared_link(cfg, env):                           # the school's folder exists elsewhere: never a private copy of it
+        return None
     for p in ps:
         if os.path.isdir(p) or os.path.isdir(os.path.dirname(os.path.normpath(p))):
             return p
@@ -411,6 +420,14 @@ def ensure(text: str, subject_id: str | None = None, name: str | None = None, su
     env = os.environ if env is None else env
     cfg = cfg or config()
     parent = home_parent(cfg, env)
+    if not parent and shared_link(cfg, env):
+        link = shared_link(cfg, env)
+        return 3, {"ok": False, "parent": None, "libraries": [], "created": [], "get_it": link,
+                   "say": "The school's Course Libraries folder is not on this computer yet. Once only: open " + link +
+                          " signed in with the school account, press 'Add shortcut to Drive', and give Google Drive for "
+                          "desktop a minute to show it - then the factory finds it by itself. Tell the operator this in "
+                          "one line. The course goes on without a library meanwhile: its own knowledge base first, then "
+                          "the internet."}
     if not parent:
         return 3, {"ok": False, "parent": None, "libraries": [], "created": [],
                    "say": "No Course Libraries folder can be reached on this computer (Google Drive is not mounted, "

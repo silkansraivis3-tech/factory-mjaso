@@ -17,6 +17,11 @@
       "~/Google Drive/My Drive/Course Libraries",
       "~/My Drive/Course Libraries"
     ],
+    "shared_folder": {
+      "_about": "The school's own Course Libraries folder on Google Drive, open to people signed in with a novikontas.org account. On a computer where it is not there yet, nothing private is made in its place: ensure says the one thing the person does - open the link, press 'Add shortcut to Drive' - and the course goes on without a library until Google Drive shows it.",
+      "id": "1gj_67dagf7PVUhFyHoRAsM1WtVuW8h-a",
+      "url": "https://drive.google.com/drive/folders/1gj_67dagf7PVUhFyHoRAsM1WtVuW8h-a"
+    },
     "registry": "LIBRARIES.json",
     "common": {
       "id": "common",

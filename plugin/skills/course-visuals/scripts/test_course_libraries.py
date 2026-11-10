@@ -111,6 +111,22 @@ def main() -> int:
               "the Gas Library where their own computer mounts it - not at the owner's path",
               set(here) == {"gas", "common"} and "9xYz" in here["gas"]["root"] and "1AbC" in here["common"]["root"], here)
 
+        # another colleague: Google Drive is there, the school's folder is not yet - nothing private is made in its place
+        newcomer = os.path.join(tmp, "newcomer", "My Drive")
+        os.makedirs(newcomer)
+        fresh = json.loads(json.dumps(SL.config()))
+        fresh["course_libraries"]["default_parents"] = [os.path.join(tmp, "newcomer", ".shortcut-targets-by-id", "*", "Course Libraries"),
+                                                        os.path.join(newcomer, "Course Libraries")]
+        fresh["libraries"][0]["default_locations"] = [os.path.join(newcomer, "Gas Library")]
+        code, got = SL.ensure("Basic training for liquefied gas tanker cargo operations", cfg=fresh, env=clean_env())
+        check("the school's folder not on this computer yet: ensure gives its link and the one click, exit 3, and makes "
+              "no private Course Libraries",
+              code == 3 and got.get("get_it") == fresh["course_libraries"]["shared_folder"]["url"]
+              and "Add shortcut to Drive" in got["say"] and os.listdir(newcomer) == [], (code, got, os.listdir(newcomer)))
+        code, got = SL.ensure("Basic training for liquefied gas tanker cargo operations", cfg=theirs, env=clean_env())
+        check("... and once the shortcut is there the same call finds the libraries", code == 0 and
+              [x["id"] for x in got["libraries"]] == ["gas", "common"], (code, got.get("say")))
+
         print("create")
         e = SL.create("fire-fighting", "NOVIKONTAS Fire Fighting Library", "fire,fire-fighting,extinguisher",
                       "A-VI/3", env=E)
