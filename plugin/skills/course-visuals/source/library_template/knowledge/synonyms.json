@@ -1,0 +1,4 @@
+{
+  "_about": "Extra synonym groups for tools/search.py and tools/find.py, on top of the ones read from GLOSSARY.md. One group = words that mean the same thing to a trainee. Lower case.",
+  "groups": []
+}

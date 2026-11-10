@@ -190,9 +190,12 @@ skill names, module split, screen count, task codes, pass marks, layout or lane)
    `kb_tool.py build <folder> --course <course>` makes it with no window, in the background while the intake goes on
    (`kb/GUIDE.md`) — with the Course KB Builder program where it is on the computer, else with the factory's own
    builder, which fetches what it needs by itself; only when neither can run, `kb_tool.py find <folder>` — suggest one
-   in plain words, its question in the pop-up. **A shared subject library?**
-   `course-visuals/scripts/subject_library.py covers "<title, STCW ref>"` — used before the knowledge base and the
-   internet; findings go back with `contribute`; a new course is registered once its modules folder exists.
+   in plain words, its question in the pop-up. **The course libraries:**
+   `course-visuals/scripts/subject_library.py ensure "<title, STCW ref, module titles>" --course "<course>" --json` —
+   its subject library, then `common`, read before the knowledge base and the internet. Exit 3 with no match: choose
+   `--subject-id`, `--name`, `--subject-words` from the programme and call again (the library is made, nothing asked);
+   exit 3 with no Drive: go on without. Findings go back with `subject_library.py contribute`, which picks the library;
+   the course is registered (`contribute register-course`) once its modules folder exists.
 2. **Sort the sources** — `kb_tool.py sources <kb> --course <course>` (`kb/GUIDE.md`); several editions → one question.
 3. **Ask what is missing, once**, in one pop-up of up to four questions: the programme (the one blocking answer), the
    knowledge base, the old course, the course type (the programme's pointer *Recommended*), editions, and in retrofit

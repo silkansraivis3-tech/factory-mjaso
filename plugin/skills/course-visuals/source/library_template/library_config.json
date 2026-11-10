@@ -1,0 +1,37 @@
+{
+  "_about": "What this library is and what it reads. subject_library.py create fills the name, id, subject words and STCW references. A path is '{LIB}/...' (this folder, wherever it sits), relative to this folder, or absolute (a folder on one person's computer - a colleague changes it to their own copy). Add a course with tools/contribute.py register-course, then run tools/build_library.py.",
+  "library_id": "",
+  "library_name": "",
+  "subject_words": [],
+  "stcw": [],
+  "created": "",
+  "reviewers": "the library's owners",
+  "_reviewers": "Who reviews knowledge/INBOX.md and decides CONFLICT rows - put their names here.",
+  "ship_states": ["PUBLIC_DOMAIN", "ATTRIBUTION_REQUIRED", "CLEARED", "OWNER_CLEARED", "PROJECT_OWNED", "GENERATED"],
+  "_ship_states": "Only these may go on the tablets. Everything else is classroom reference until cleared.",
+  "publishers": ["imo", "ics ", "ocimf", "iacs", "manual", "guide"],
+  "_publishers": "A picture whose source names one of these and records no licence is a PUBLICATION_FIGURE (classroom reference only).",
+  "generic_words": ["ship", "ships", "vessel", "system", "safety", "code", "space", "spaces", "water", "air"],
+  "_generic_words": "Words too common on this subject to stand for a glossary term in the synonym search.",
+  "courses": [
+    {
+      "id": "contributions",
+      "kind": "import",
+      "title": "Contributions - pictures found or made while building a course (tools/contribute.py)",
+      "owner": "the contributor (see each record's contributed_by)",
+      "status": "added by course sessions - provenance in each record",
+      "module_root": "{LIB}",
+      "module_glob": "contributions"
+    }
+  ],
+  "document_roots": [],
+  "_document_roots": "Folders outside the library holding original reference PDFs. A PDF put into documents/<type>/ needs no entry here.",
+  "knowledge_bases": [
+    {
+      "id": "library-documents",
+      "title": "This library's own documents/ - made searchable by build_library.py with the factory's kb_build.py",
+      "path": "{LIB}/KNOWLEDGE_BASE",
+      "moved_sources_path": null
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__LIBRARY_NAME__ catalog</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#14202e;--muted:#5b6878;--line:#d9dfe7;--brand:#0b3a6b;--chip:#e8eef6;
+--ok:#1d7a46;--warn:#a35a00;--bad:#b3261e;--ai:#6a3fb5}
+@media (prefers-color-scheme:dark){:root{--bg:#0f151c;--card:#18212c;--ink:#e6ecf2;--muted:#9aa8b8;--line:#2a3644;--brand:#7fb2ea;--chip:#22303f;
+--ok:#5cc58b;--warn:#f0a646;--bad:#f2867e;--ai:#b79af0}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,"Segoe UI",Raleway,sans-serif}
+header{position:sticky;top:0;z-index:2;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px}
+h1{margin:0 0 8px;font-size:19px;color:var(--brand)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+input[type=search]{flex:1 1 220px}
+.count{color:var(--muted);font-size:13px;margin-left:auto}
+main{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column}
+.card:hover{border-color:var(--brand)}
+.thumb{aspect-ratio:4/3;background:#0002;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb.fig img{object-fit:contain;background:#fff}
+.body{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.id{font-weight:600;font-size:13px;word-break:break-all}
+.desc{font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font-size:11px;background:var(--chip);border-radius:20px;padding:2px 8px}
+.r-ok{color:var(--ok)}.r-warn{color:var(--warn)}.r-bad{color:var(--bad)}.ai{color:var(--ai);font-weight:600}
+dialog{max-width:min(980px,96vw);width:100%;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);padding:0}
+dialog::backdrop{background:#0009}
+.dlg{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:0}
+.dlg img{width:100%;max-height:78vh;object-fit:contain;background:#0003}
+.meta{padding:14px 16px;font-size:13px;overflow:auto;max-height:78vh}
+.meta dt{font-weight:600;margin-top:8px}.meta dd{margin:2px 0 0;word-break:break-word}
+.close{position:absolute;right:10px;top:8px;border:0;background:var(--card);color:var(--ink);font-size:22px;cursor:pointer;border-radius:50%;width:34px;height:34px}
+@media (max-width:700px){.dlg{grid-template-columns:1fr}main{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}}
+</style>
+</head>
+<body>
+<header>
+  <h1>__LIBRARY_NAME__ - pictures and documents</h1>
+  <div class="bar">
+    <input type="search" id="q" placeholder="Search pictures and documents...">
+    <select id="topic"><option value="">All topics</option></select>
+    <select id="course"><option value="">All courses</option></select>
+    <select id="kind"><option value="">All kinds</option><option value="photo">Real photos</option><option value="render">AI renders</option><option value="figure">Figures</option><option value="sim">Simulator</option><option value="document">Documents (PDF)</option></select>
+    <select id="rights"><option value="">Any rights</option><option value="ok">Cleared to use</option><option value="review">Needs rights review</option></select>
+    <span class="count" id="count"></span>
+  </div>
+</header>
+<main id="grid"></main>
+<dialog id="dlg"><button class="close" onclick="dlg.close()" aria-label="Close">&times;</button><div class="dlg"><img id="dimg" alt=""><div class="meta" id="dmeta"></div></div></dialog>
+<script>
+const DATA = /*__DATA__*/null;
+const OK = new Set(["PUBLIC_DOMAIN","ATTRIBUTION_REQUIRED","CLEARED","OWNER_CLEARED","PROJECT_OWNED","GENERATED","SHARE","FREE_DOWNLOAD"]);
+const pic = a => a.thumb || a.file;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const txt = v => v == null ? "" : Array.isArray(v) ? v.map(txt).join(", ") : typeof v === "object" ? Object.values(v).map(txt).join(", ") : String(v);
+const tname = Object.fromEntries(DATA.topics.map(t => [t.id, t.title]));
+DATA.topics.forEach(t => $("topic").add(new Option(t.id + " " + t.title.split(" - ")[0], t.id)));
+DATA.courses.forEach(c => $("course").add(new Option(c.title.split(" (")[0], c.id)));
+function rclass(r){return OK.has(r) ? "r-ok" : (r === "GENERATED" ? "ai" : "r-warn")}
+function render(){
+  const q = $("q").value.toLowerCase().trim(), tp = $("topic").value, co = $("course").value, ki = $("kind").value, ri = $("rights").value;
+  const list = DATA.assets.filter(a =>
+    (!tp || a.topics.includes(tp)) && (!co || a.courses.includes(co)) && (!ki || a.kind === ki) &&
+    (!ri || (ri === "ok" ? OK.has(a.rights_state) : !OK.has(a.rights_state))) &&
+    (!q || (a.id + " " + txt(a.description) + " " + txt(a.shows) + " " + txt(a.teaching_purpose) + " " + txt(a.credit)).toLowerCase().includes(q)));
+  $("count").textContent = list.length + " of " + DATA.assets.length + " - built " + DATA.built;
+  $("grid").innerHTML = list.map(a => `<div class="card" data-id="${esc(a.id)}">
+    <div class="thumb ${a.kind === "figure" || a.kind === "document" ? "fig" : ""}"><img loading="lazy" src="${esc(pic(a))}" alt="${esc(txt(a.description).slice(0,120))}"></div>
+    <div class="body"><div class="id">${esc(a.id)}</div>
+    <div class="desc">${esc(txt(a.description))}</div>
+    <div class="chips">${a.topics.map(t => `<span class="chip" title="${esc(tname[t])}">${t}</span>`).join("")}
+    <span class="chip ${rclass(a.rights_state)}">${a.ai_generated ? "AI · " : ""}${esc(a.rights_state)}</span></div></div></div>`).join("");
+}
+$("grid").addEventListener("click", e => {
+  const c = e.target.closest(".card"); if (!c) return;
+  const a = DATA.assets.find(x => x.id === c.dataset.id);
+  $("dimg").src = pic(a);
+  const row = (k, v) => v ? `<dt>${k}</dt><dd>${esc(txt(v))}</dd>` : "";
+  const open = a.kind === "document" ? `<p><a href="${esc(a.file)}" target="_blank" rel="noopener">Open PDF</a></p>` : "";
+  $("dmeta").innerHTML = `<h2 style="margin:0 30px 6px 0;font-size:16px">${esc(a.title || a.id)}</h2>${open}<dl>
+    ${row("Type", a.doc_type)}${row("Edition", a.edition)}${row("Pages", a.pages)}${row("Origin", a.origin)}
+    ${row("Note", a.note)}${row("Text searchable in", a.in_kbs)}
+    ${row("Kind", a.kind + (a.ai_generated ? " (AI-generated)" : "") + (a.px ? " - " + a.px + " px" : ""))}
+    ${row("Shows", a.description)}${row("Teaching purpose", a.teaching_purpose)}
+    ${row("Rights", a.rights_state)}${row("Licence", a.licence)}${row("Licence URL", a.licence_url)}
+    ${row("Credit", a.credit)}${row("Source", a.source)}${row("Page", a.page_url)}
+    ${row("Caption caveat", a.caption_caveat)}${row("Visually verified", a.visually_verified)}
+    ${row("Topics", a.topics.map(t => t + " " + tname[t]))}
+    ${row("Used in", a.used_in.map(u => `${u.course} ${u.module} (${u.name_in_course})${u.used_in ? " - " + txt(u.used_in) : ""}`))}
+    ${row("Library file", a.file)}${row("sha256", a.sha256)}</dl>`;
+  $("dlg").showModal();
+});
+["q","topic","course","kind","rights"].forEach(id => $(id).addEventListener("input", render));
+render();
+</script>
+</body>
+</html>

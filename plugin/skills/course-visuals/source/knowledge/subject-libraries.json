@@ -1,7 +1,30 @@
 {
   "_authority": "The shared SUBJECT LIBRARIES the factory reads and saves back into: one knowledge base + asset library per subject, shared by every course on that subject (pictures with provenance, reference documents with their distribution, cited facts, glossary, the courses' knowledge bases searched at once). They live OUTSIDE this public repository - on the company's Google Drive - and this file holds only how to find them. scripts/subject_library.py and scripts/resolve_asset.py read it. A library that is not found is skipped without a word: the factory works the same without one.",
   "_written": "2026-10-20",
-  "_locate": "In order: the env var NOVIKONTAS_SUBJECT_LIBRARIES (folders separated by ';' on Windows, ':' elsewhere - any folder with tools/find.py), then each library's own env var, then its default places. A folder counts when it holds the library's marker files.",
+  "_locate": "In order: the libraries of the Course Libraries registry (course_libraries below), the env var NOVIKONTAS_SUBJECT_LIBRARIES (folders separated by ';' on Windows, ':' elsewhere - any folder with tools/find.py), then each entry of 'libraries' by its own env var and its default places. A folder counts when it holds the library's marker files. NOVIKONTAS_SUBJECT_LIBRARIES=off: no library at all. NOVIKONTAS_COURSE_LIBRARIES set: only those parent folders, and the default places of 'libraries' are not searched.",
+  "course_libraries": {
+    "_about": "ONE parent folder holds every library: LIBRARIES.json (the registry: id, name, path relative to the parent or absolute, subject words, STCW references, courses, created), 00_READ_ME_FIRST.md, and one folder per library made from source/library_template. 'common' holds what every course shares. subject_library.py ensure makes the parent, the registry and Common the first time; a library in 'libraries' below that is present is listed in the registry by its absolute path and stays where it is.",
+    "env": "NOVIKONTAS_COURSE_LIBRARIES",
+    "default_parents": [
+      "G:/My Drive/Course Libraries",
+      "~/Google Drive/My Drive/Course Libraries",
+      "~/My Drive/Course Libraries"
+    ],
+    "registry": "LIBRARIES.json",
+    "common": {
+      "id": "common",
+      "name": "NOVIKONTAS Common Library",
+      "folder": "Common",
+      "holds": "what every course shares: STCW, SOLAS, MARPOL, ISM, COLREG, MLC, ISPS, the general parts of the IMO model courses, the pedagogy guideline, brand material"
+    }
+  },
+  "routing": {
+    "_about": "Where subject_library.py route / contribute --library auto puts a finding. A document, fact, term or regulation whose source (or, without one, its title) names a convention or code that applies to every ship type (common_words) goes to common; everything else to the course's subject library. A picture goes to the subject library unless it is general (general_picture_words, and none of the subject library's words) or --general is given. A course registration goes to the subject library. --library <id> overrides.",
+    "common_words": ["stcw", "solas", "marpol", "ism", "ism code", "colreg", "colregs", "mlc", "maritime labour convention", "isps", "load line", "load lines", "tonnage", "safety of life at sea", "pedagogy", "pedagogical", "bloom", "constructive alignment", "brand", "brandbook", "brand book"],
+    "general_picture_words": ["people", "person", "classroom", "trainee", "trainees", "instructor", "generic ship", "ship at sea", "crew", "seafarer", "seafarers", "lecture"],
+    "subject_kinds": ["picture", "register-course", "withdraw"],
+    "source_kinds": ["document", "fact", "term", "regulation"]
+  },
   "_contract": "A subject library answers: python tools/find.py \"<subject>\" [--json] [--only pictures] - topics, cited facts (CONFLICT rows flagged), glossary, regulations, an inbox of unreviewed facts, pictures with rights state, reference PDFs with distribution, source passages; python tools/use_asset.py <id> <module folder> - copies a picture and its provenance into a module; python tools/contribute.py picture|document|fact|term|register-course - saves back what a course session found.",
   "ship_states": ["PUBLIC_DOMAIN", "ATTRIBUTION_REQUIRED", "CLEARED", "OWNER_CLEARED", "PROJECT_OWNED", "GENERATED"],
   "_ship_states": "Only these may go on the tablets. UNKNOWN, PUBLICATION_FIGURE, RIGHTS_REVIEW_REQUIRED, SEE_LICENCE: classroom reference only until cleared - the resolver lists them as blocked, never as found. GENERATED (an AI picture) ships, but is never the picture of equipment a trainee must recognise.",
@@ -24,6 +47,8 @@
       "_default_locations": "Google Drive for desktop: Windows mounts 'My Drive' at G: by default; on a Mac it sits under the home folder. Elsewhere set NOVIKONTAS_GAS_LIBRARY.",
       "marker": ["library_config.json", "tools/find.py"],
       "courses": ["GAS BASIC (STCW A-V/1-2-1)", "GAS ADVANCED (STCW A-V/1-2-2)", "IGF Basic (STCW A-V/3-1)", "IGF Advanced (STCW A-V/3-2)"],
+      "stcw": ["A-V/1-2-1", "A-V/1-2-2", "A-V/3-1", "A-V/3-2"],
+      "created": "2026-10-19",
       "subject_words": ["gas", "lng", "lpg", "cng", "liquefied", "igf", "igc", "methane", "methanol", "ammonia", "hydrogen", "boil-off", "bunkering", "cryogenic", "low-flashpoint", "gas carrier", "gas tanker", "dual-fuel"],
       "_subject_words": "A course is ON this subject when its programme title, STCW reference or module titles hold one of these words (or the operator says so). Then the factory runs find.py before the knowledge base and the internet, saves back what it finds, and registers the course in the library. Pictures are searched for every course while the library is present - a breathing apparatus photo serves any course.",
       "owners": "GAS BASIC / GAS ADVANCED - Raivis Silkans; IGF - Aleksis Vejs; review of the inbox by them"

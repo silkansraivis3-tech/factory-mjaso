@@ -33,9 +33,9 @@ Then, before the first screen is written, read — in this order, and only these
    `"moved_why"` with the expert's reason; an old slide that taught something and is left out goes in the script's
    `"dropped_old"` (`[{"from": "<deck>.pptx, slide 27", "why": "..."}]`); the slides must show at least 60 % of the
    old slides' words.
-4. **The subject library first, when the course is on its subject** (2.52.0; `intake.json` →
-   `subject_library`; the Gas Library for every gas course): `python <course-visuals>/scripts/subject_library.py
-   find "<the slide's subject>"` — the shared topic and which module of each course teaches it, the
+4. **The course libraries first** (`intake.json` → `subject_library`; the Gas Library for every gas course,
+   then Common): `python <course-visuals>/scripts/subject_library.py
+   find "<the slide's subject>" --course "<course>"` — the shared topic and which module of each course teaches it, the
    **cited facts**, glossary, regulations held, reference PDFs with their distribution, and passages from
    every course's knowledge base at once (file + page). Quote a value only with its source. **A row marked
    CONFLICT is not settled**: do not pick one of its values — name the conflict on the screen's notes and
@@ -53,10 +53,12 @@ While writing:
 - **Every fact on a slide traces to a source in `"sources"`**: the document, its edition, the section or page
   (`"IGF Code 2016 (MSC.391(95)): 6.7.1, 15.8.2"`). Only the current edition is cited (intake). An
   operator-stated fact goes in `operator_facts`, not in `sources`.
-- **Save back what the library did not have** (on its subject): a fact you verified in a source, with
-  its document, edition and page, that `find` did not return — `subject_library.py contribute fact
-  "<subject>" "<value, unit, conditions>" --source "<doc, edition, page>" --found-for "<course> M04 s03"`;
-  a term with its regulation's definition — `... contribute term "<term>" "<meaning>" --source "<...>"`.
+- **Save back what the libraries did not have**: a fact you verified in a source, with
+  its document, edition and page, that `find` did not return — `subject_library.py contribute --course "<course>"
+  fact "<subject>" "<value, unit, conditions>" --source "<doc, edition, page>" --found-for "<course> M04 s03"`;
+  a term with its regulation's definition — `... term "<term>" "<meaning>" --source "<...>"`; a regulation —
+  `... regulation "<title>" "<edition, what it requires>" --source "<...>"`. The client picks the library
+  (a convention's material goes to Common) and says which.
   They go to the library's inbox as NEW for the course owners to review, never straight into its facts.
   An operator-stated fact is not contributed. Say in the module's report what was contributed.
 

@@ -13,7 +13,7 @@ requester's exact phrasing.
 
 ```
 1 PROJECT   source_files/, operator assets, manuals, drawings, the course's own assets
-2 SHARED    2a the subject library (the Gas Library first), 2b ${CLAUDE_PLUGIN_ROOT}/resources/
+2 SHARED    2a the course libraries (subject library, then common), 2b ${CLAUDE_PLUGIN_ROOT}/resources/
 3 INTERNET  only after 1 and 2 were actually searched
 4 CREATE    SVG · HTML/CSS/JS · Canvas · programmatic · generated illustration
 ```
@@ -47,12 +47,19 @@ equipment, and needs no rights decision.
 
 ## Level 2 — what is already shared
 
-**2a · The subject library.** One knowledge base + asset library shared by every course on a subject,
-kept on the company's Drive, never in this repository — the **NOVIKONTAS Gas Library** (GAS BASIC,
-GAS ADVANCED, IGF Basic, IGF Advanced) is the first. `scripts/subject_library.py locate` says whether
-this computer has one (`knowledge/subject-libraries.json`: the env var `NOVIKONTAS_SUBJECT_LIBRARIES`,
-the library's own variable such as `NOVIKONTAS_GAS_LIBRARY`, then its default place, `G:\My Drive\Gas
-Library` for Google Drive on Windows). None found = skipped without a word; nothing depends on it.
+**2a · The course libraries.** One knowledge base + asset library per subject, plus **Common** for what
+every course shares, kept on the company's Drive in `Course Libraries` (registry `LIBRARIES.json`),
+never in this repository — the **NOVIKONTAS Gas Library** (GAS BASIC, GAS ADVANCED, IGF Basic, IGF
+Advanced) is the first subject library and stays where it is. `scripts/subject_library.py ensure
+"<programme>"` names the course's libraries in reading order and makes a missing one;
+`subject_library.py locate` lists every library and whether it is here (`knowledge/subject-libraries.json`
+says where to look). None found = skipped without a word; nothing depends on it.
+
+Search order: **subject library → common → the course's knowledge base → the internet**
+(`subject_library.py find "<subject>" --course "<course>"` reads both libraries, each result labelled
+with its library). A value is quoted only with its source (document, edition, page); a CONFLICT row
+is not settled — name it, point to the library's `OPEN_DECISIONS.md`; an inbox row marked NEW is not
+reviewed. A document's distribution travels with it: INSTRUCTOR_ONLY never goes to trainees.
 
 `resolve_asset.py` searches it through the library's own `find.py` — by **description, what it shows
 and its teaching purpose**, with synonyms, never by file name — and gates it by rights:
@@ -197,11 +204,13 @@ a generated image teaching something false, and it is the one most often left em
 
 ## Saving back — what one course finds, every course on the subject gets
 
-When the module is on a subject library's subject (`scripts/subject_library.py covers "<programme
-title, STCW ref, module titles>"`), everything new this lane adds goes into the library as well as
-into the module — once it is packaged in the module with its provenance record:
+Everything new this lane adds goes into a course library as well as into the module — once it is
+packaged in the module with its provenance record. `contribute` routes it by itself
+(`--course "<course>"`; `knowledge/subject-libraries.json` `routing`) and prints the library and why
+in one line: a convention's material to Common, a general picture to Common, the rest to the
+subject library; `--library <id>` overrides, `scripts/subject_library.py route` only asks.
 
-| Found or made | Command (`scripts/subject_library.py contribute ...`) |
+| Found or made | Command (`scripts/subject_library.py contribute --course "<course>" ...`) |
 |---|---|
 | a picture from level 3, a Novikontas photo, a generated render | `picture <the file in the module>` — reads its `_photo_meta.json` / `_figure_meta.json` record |
 | a reference document (a PDF: SDS, manual, guidance) | `document <pdf> --type <type> --title ... --edition ... --origin-url <publisher page> --distribution SHARE\|FREE_DOWNLOAD\|INSTRUCTOR_ONLY\|CHECK` |
@@ -222,5 +231,5 @@ Facts and terms go back the same way — `course-factory`'s `script/GUIDE.md` §
 - Anything at `RIGHTS_REVIEW_REQUIRED` is reported to the owner, not shipped
 - Every remote asset that is used has been **downloaded and packaged locally**
 - Every `GENERATED_ASSET_REQUIRED` carries a complete brief
-- On a subject library's subject: every new picture and document is contributed back, and the report says which
+- With a course library here: every new picture and document is contributed back, and the report says which, and where
 - `scripts/check_assets.py` runs clean, and its output was read
