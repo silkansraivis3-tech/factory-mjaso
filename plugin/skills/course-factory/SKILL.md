@@ -258,7 +258,7 @@ screen inventory → visual system → visual plan → tasks → screens → han
 verify). Not negotiable: the screen inventory and the visual system before any screen; task pages before the deck
 announces them (`tablet/` cross-check).
 
-- **Two phases (2.73.0):** Phase A with no agent — placeholders of each picture slot's shape and every check that does
+- **Two phases:** Phase A with no agent — placeholders of each picture slot's shape and every check that does
   not need the pictures (`compile/scripts/phase_a.py`); Phase B fills the pictures from `MNN_VISUAL_NEEDS.md` and the
   photo catalogue. A placeholder never ships.
 - **The look is routed:** `course-module-ui` (`design_system.py install`, `references/vocabulary.md`); to choose and fill

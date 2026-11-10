@@ -1,8 +1,10 @@
 # NOVIKONTAS course factory
 
 The `course-factory` and `nano-banana` Claude Code plugins that build accredited maritime training courses for the
-NOVIKONTAS tablets. Read `_claude/CONTEXT.md` before changing anything: the current version, the laws and the history
-of every release are there, and `00_READ_ME_FIRST.md` is the short version.
+NOVIKONTAS tablets. Before changing anything, read the **Current** line at the top of `_claude/CONTEXT.md` and the newest
+rows of its version table (the last rows, just above `## Install, and where it lands`) - not the whole file: it is the
+history of every release, so grep it for a term when you need its past. `00_READ_ME_FIRST.md` is the short version, and
+the laws are in `docs/FACTORY_LAWS.md`.
 
 ## A factory request
 

@@ -277,3 +277,58 @@ Advanced - 332 items of MC 7.14, 69 COVERED, 43 PARTLY, 18 GAP (fire the biggest
 **Built out in:** now
 
 **Kept, lifted one level, seen whole** - a course rebuilt from an old one keeps its order and its explanations (`moved_why`, `dropped_old`, at least 60 % of the old words); one Bloom level a course, more only by the expert; outcomes never re-worded by the factory; a question asks only what the slides showed; every value from a source the course holds, every claim proved by the `fact-checker` agent; one photograph, one thing (`picture.items`, `place --seen`); the build walks every Next in a browser and stops on anything cut (`fit_gate.py`); a Ready over unanswered rows approves nothing
+
+## Why the build instructions say what they say
+
+The instruction files a builder reads hold only the rules. The runs and reviews that led to the rules that are not told above or in `laws-in-full.md` are kept here, by the file that holds the rule.
+
+### course-factory/compile/GUIDE.md
+
+- First-build queue: the wait for another module's first build was raised from 5 to 45 minutes (CF_COLD_WAIT) after three seeded first builds ran their figure stages together for 30 minutes.
+- Review loop: on the Module 1 benchmark, six open-ended review passes took 18 of 29 minutes; a POLISH fix to a drawing that already passed (IGF M02 s02) then failed four builds in a row. Hence POLISH goes to MNN_POLISH.md and is never fixed inside the loop.
+- The visual review runs on opus because on haiku it passed weak slides as fine.
+- 3D full screen and selectable labels came from the instructors' review: the scenes sat small and they wanted to tap the labels, not only the parts.
+- A hanging 3D scene once cost a build three 600-second waits (IGF M01, runs 6-8); smoke3d.py was added so a scene is checked in seconds after every edit.
+- `"unlabel": "all"` left IGF M06 q08 51 % blank, so `"answers"` became the choice to make; taking the answers' words out of the layout (instead of laying them out and hiding them) re-laid the rest and put a label beside the wrong space (benchmark run 4).
+- Moving drawings are judged on 9 frames of one clock because benchmark run 5's s03 flipped between PASS and FAIL on an unchanged spec.
+- The "not a X" photo check came from IGF M05 s03, where an oxygen sensor photo illustrated methane detection.
+
+### course-factory/script/GUIDE.md
+- The course's ship profile in STANDARDS.md exists because four scripts written in parallel for a chemical-tanker course set scenes in a "pump room" on a ship with deepwell pumps and no pump room.
+- Approval is never relayed: Claude Code's permission system blocked an agent running `approve` on an instruction passed on from another session; the factory keeps no switch around it, by design.
+
+### course-factory/orchestration/GUIDE.md
+- The minutes are settled before the fan-out because agents each "rounding up to fit" once built a course to 2175 minutes against an accredited 1640.
+- Rule 5 (no QA agent behind a fix) comes from GAS ADVANCED, where a fixer agent per module plus QA made a small fix take 30 minutes (FEEDBACK_LOG #61-#93).
+- Loading the script and picture lanes instead of the HTML rules cut a module agent's rules from about 80,800 to 38,500 tokens and its output from 80-160 KB of deck and task HTML to a 3-5 KB build sheet. Earlier, the workflow's module prompt still called compile_module.py and its QA ran 13 checks one at a time.
+
+### course-task-ux/SKILL.md
+- Part A / Part B self-checks were asked for so self-checks become practical learning: first check what was understood, then a slightly difficult task where the trainee finds the answer alone, with 3D deck views, equipment in 3D, panoramas and on-ship activities; the owner wanted them "interestingly difficult", and approved the prototypes in design/task-prototypes/index.html as the functionality every course gets, not as copies.
+
+### course-module-ui/SKILL.md
+- The look skill exists because two courses passed every floor check in floor.json and still looked nothing alike.
+- design_system.py install (copy the style files, read only vocabulary.md) replaced builders reading about 82 KB of style files.
+- One course arrived with 14 of 37 screens in default flow, most of them a lead sentence over a row of cards; the same course carried its own etpb3_ui.css headed "ETPB2 - shared visual layer" and a task.css headed "ETPA1" - a dialect two courses back and still spreading, written because the shared shell was incomplete.
+- The audit_ui.py check "a class the markup uses that no loaded stylesheet defines" was written after a module moved onto the canonical shell and silently lost every callout, caption and table rule while everything else was green.
+- The known-drift measurements across the eight GAS BASIC modules were taken in early September 2026.
+- When the upgraded slide templates landed, the content script did not yet carry the new words (summary questions, drills, the self-check list, short points with full notes); that was named as the next step.
+
+### course-module-ux/SKILL.md
+- The one-page model comes from the owner's words: open the HTML, do not navigate to another page, start the module and press next until the end.
+- The audience rule comes from the owner's words: information a trainee needs stays on the screen; what is strictly for the instructor goes to the instructor's tablet.
+- One module was silently skipping 90 of its 220 minutes because two timetable blocks had no screen at all; another went from 6 screens to 18 when every block got one.
+- The engine's red "no Next button" banner exists because the pilot shipped a module a finger could not advance.
+- The step walk lives only in the shared deck engine because M01 and M02 each carried a per-module copy and M03 was built without it, so its figures were skipped in front of a class.
+- A report of zero contrast failures across 16 slides turned out to be 40 failures, body text at 1.08:1 among them, because a 0.42 s CSS transition was still running at measurement time.
+- audit_compose.js first checked only horizontal drift, and a deck whose content stopped at 60 % of every screen passed; the y check was added.
+- The first real pilot passed every static check and shipped with 75 runtime failures: seventeen headings at contrast 1.00, a figure's step buttons below the fold behind the chrome, and a dismissed landing screen still swallowing taps across the lower half of every slide.
+- A probe printed linksInsideSlides: 17 and it was read past.
+
+### course-visuals/SKILL.md
+- A publisher figure whose rights were never cleared once blocked a whole course from publishing; that is why an unclear licence is marked *rights not cleared* and stops only the publish, never the build.
+
+### course-visuals/kit/SPEC.md
+- Relations exist because an IGF build placed parts by guessed y values: a vent mast drawn under the deck line inside the hull, pipes ending in the air, and a "Bunkering station" made of words only.
+- The meaning checks (BLOCK / NOTE) were asked for because a figure with even a small physical error was going out unflagged; the checks before them judged only the look.
+- The "Getting into the fuel spaces" pattern replaced a hand-drawn IGF Basic M02 s10 slide that the instructors' review called a bad diagram: pastel boxes, a bunkering station drawn as a cart, pale tiny labels, and everything greyed out on the last step.
+- An expert reviewing the rebuilt Project Management slides said drawn ideas alone "turn into just arrows and lines"; that is why a Concepts-only figure must name its real example (NO REAL EXAMPLE).

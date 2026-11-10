@@ -18,30 +18,25 @@ description: >
 
 # Course visuals — what representation actually teaches this?
 
-> **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
-> in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
+> **Every reply to the operator (L25):** **Done · Check now · Next**, in everyday words - the full rule is in `course-factory/SKILL.md`.
 
-**v1 (2026-09-10) · plugin `course-factory` (since 2.1.0)**
+Technically working HTML is not the bar: a screen can validate, fit and contrast correctly and still teach nothing. A
+language model's default course graphic is a row of cards, boxes joined by arrows, an icon, a gradient and something
+that pulses - none of them represents anything.
 
-Technically working HTML is not the bar. A screen can validate, fit, contrast correctly and still
-teach nothing. This skill exists because the default output of a language model asked for a course
-graphic is a row of cards, three boxes joined by arrows, an icon, a gradient and something that
-pulses — and none of those is a representation of anything.
-
-**The acceptance test.** Point at any figure in a finished module and ask: *what can the learner do
-now that they could not before?* If that sentence cannot be said out loud, the figure should not
-have been built.
+**The acceptance test.** Point at any figure in a finished module and ask: *what can the learner do now that they could
+not before?* If that sentence cannot be said out loud, the figure should not have been built.
 
 ---
 
-## The person decides the design — L26 (course-factory, 2.30.0)
+## The person decides the design — L26
 
-Every rule in this skill about how a course **looks or behaves** is a rule for the factory's own choices. When the
-person asks for something else: if nothing conflicts, just do it; if it goes against a rule here, say which rule and
-the risk in one or two plain sentences and ask **once** - *your way* / *the factory's way*; on *your way*, do it fully,
-record it (`course-factory/scripts/design_choices.py add <course> --rule <id> ...`), and **never change it back** - not
-in a later build, fix or session, and not because a check flagged it. The course material (programme, Main ILOs,
-hours, sources, the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
+Every rule here about how a course **looks or behaves** is a rule for the factory's own choices. The person asks for
+something else: nothing conflicts, do it; it goes against a rule here, say which rule and the risk in one or two plain
+sentences and ask **once** - *your way* / *the factory's way*; on *your way*, do it fully, record it
+(`course-factory/scripts/design_choices.py add <course> --rule <id> ...`) and **never change it back** - not in a later
+build, fix or session, and not because a check flagged it. The course material (programme, Main ILOs, hours, sources,
+the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
 
 ## The one law: learning first, format second
 
@@ -55,54 +50,49 @@ hours, sources, the approved words) keeps its own rules: `course-factory` SKILL.
    candidates for that need, what each costs, and how each behaves on a tablet.
 3. **Record the decision** in the storyboard, including a decision of *no visual*.
 
-**When the operator asks for a picture, the screen gets one (L26)** — this skill decides what kind
-and where it comes from, never whether.
+**When the operator asks for a picture, the screen gets one (L26)** — this skill decides what kind and where it comes
+from, never whether.
 
-**Plain text is a valid outcome.** A definition, a limit, an exact regulatory phrase, a set point —
-text carries those precisely and a picture only decorates them. Never add a visual to fill space or
-to make a screen look finished. An empty area is cheaper than a misleading figure.
+**Plain text is a valid outcome.** A definition, a limit, an exact regulatory phrase, a set point — text carries those
+precisely and a picture only decorates them. Never add a visual to fill space or to make a screen look finished. An
+empty area is cheaper than a misleading figure.
 
 ---
 
 ## L23 — a topic screen leads with the thing that shows it
 
-The law above says *never add a visual to fill space*. This one says the opposite failure is just as
-real and was the more common one: modules kept leaving this factory as **text with pictures added
-afterwards**, which is the order in which a picture becomes decoration.
+The opposite failure is just as real: a module written as text with pictures added afterwards - the order in which a
+picture becomes decoration.
 
-> **For a topic screen, find the visual first.** Search the operator's source files and knowledge
-> base for a scheme, drawing or photograph. If there is none, search the internet for a **real
-> photograph** of the actual thing. Author it if it is structural. Generate only when all of that
-> genuinely comes back empty — not when nobody felt like looking.
+> **For a topic screen, find the visual first.** Search the operator's source files and knowledge base for a scheme,
+> drawing or photograph. If there is none, search the internet for a **real photograph** of the actual thing. Author it
+> if it is structural. Generate only when all of that genuinely comes back empty.
 >
-> **As many real photographs as possible (L52, owner 2026-10-15)** — in the presentation and the trainee tasks.
-> Where a drawing teaches the inside or the flow, a small real photograph of the actual thing still goes beside it.
+> **As many real photographs as possible (L52)** — in the presentation and the trainee tasks. Where a drawing teaches
+> the inside or the flow, a small real photograph of the actual thing still goes beside it.
 >
-> **Every drawing whole and clean (L54, owner 2026-10-15).** A room inside a hull follows the hull's real shape (a
-> sloping stern, a curved bow) - a path or a clip, never a rectangle poking through; nothing reaches past the drawing's
-> frame, not even a line's thickness; every label keeps 4 px clear of every other shape, line and label, and of its own
-> box's edge. Proven with `course-module-ux/measure/scripts/audit_drawing.js`; numbers in `review/knowledge/visual-floor.json`.
+> **Every drawing whole and clean (L54).** A room inside a hull follows the hull's real shape (a sloping stern, a curved
+> bow) - a path or a clip, never a rectangle poking through; nothing reaches past the drawing's frame, not even a line's
+> thickness; every label keeps 4 px clear of every other shape, line and label, and of its own box's edge. Proven with
+> `course-module-ux/measure/scripts/audit_drawing.js`; numbers in `review/knowledge/visual-floor.json`.
 
-And **lead** means the reading order, not merely presence: a screen that explains a cargo pump in
-three paragraphs and then shows one has a picture, but the trainee stopped reading before it.
+**Lead** means the reading order, not merely presence: three paragraphs on a cargo pump and then its picture - the
+trainee stopped reading before it.
 
-The two laws do not conflict, because L23 does not say every screen carries a figure. It says a
-topic screen is **built around a representation**, and a screen without one is a *declared decision*
-— `data-novisual="definition"`, `"quotation"`, `"activity"`, `"structural"`, `"summary"`,
-`"no_honest_representation"` — not the silence that happens when nobody looked. Closing a finding by
-pasting in an icon fails `check_visuals.py` instead, which is the correct outcome.
+L23 does not say every screen carries a figure. A topic screen is **built around a representation**, and a screen
+without one is a *declared decision* — `data-novisual="definition"`, `"quotation"`, `"activity"`, `"structural"`,
+`"summary"`, `"no_honest_representation"`. Closing a finding by pasting in an icon fails `check_visuals.py`.
 
 `knowledge/visual-first-rules.json` is the authority; `scripts/check_visual_first.py` reads it.
 
 ### When this model cannot make the picture
 
-Build the module as far as it goes, then **leave the request with it**.
-`scripts/write_visual_handoff.py` writes one `VISUAL_HANDOFF.md`: a paste-ready prompt, every brief
-in full, the destination path and mount line for each asset, and the verification command. Where the
-agents are available, the factory spawns the work instead of writing a note — `visual-sourcer` to find,
-and, **only within the course's picture budget, said yes to once** (L47: every picture costs about
-€0.10; no question before each picture), `nano-banana:image-director` to generate it once — and the run continues. A module never stops because one image is
-missing, and a missing image is never closed by inventing a schematic.
+Build the module as far as it goes, then **leave the request with it**. `scripts/write_visual_handoff.py` writes one
+`VISUAL_HANDOFF.md`: a paste-ready prompt, every brief in full, the destination path and mount line for each asset, and
+the verification command. Where the agents are available, spawn the work instead of writing a note — `visual-sourcer`
+to find, and, **only within the course's picture budget, said yes to once** (L47: every picture costs about €0.10; no
+question before each picture), `nano-banana:image-director` to generate it once — and the run continues. A module never
+stops because one image is missing, and a missing image is never closed by inventing a schematic.
 
 ---
 
@@ -149,9 +139,8 @@ Never load a lane the mode does not need.
 | Hours, ILOs, build order, coverage | `course-factory` |
 | What a module teaches, and whether a claim is true | `course-evidence` when it exists; until then the operator's sources |
 
-The division that matters: **`course-module-ui` owns how a page looks like a NOVIKONTAS page.
-This skill owns what the picture on it should be.** A figure obeys the token set; the token set has
-no opinion on whether the figure should have been a photograph.
+**`course-module-ui` owns how a page looks like a NOVIKONTAS page; this skill owns what the picture on it should be.**
+A figure obeys the token set; the token set has no opinion on whether the figure should have been a photograph.
 
 ---
 
@@ -168,61 +157,59 @@ Every substantial animation answers all four questions **in the storyboard, befo
 3. **What should the learner notice?**
 4. **What should the learner understand afterwards, that they did not before?**
 
-**The failure signature:** if question 4 is answered by the caption alone, with the motion removed,
-the motion is not carrying the teaching. Ship the caption and a static figure.
+**The failure signature:** if question 4 is answered by the caption alone, with the motion removed, the motion is not
+carrying the teaching. Ship the caption and a static figure.
 
-**An animation the person asks for is theirs (L26).** If the course office asks for an animation
-these rules see as decoration, never refuse it: say the risk once, in plain words (*"movement that
-does not teach pulls the eye away from what does"*), then make it, and record it as their choice -
-`course-factory/scripts/design_choices.py add <course> --rule motion --choice "<what they asked for>" --said "<their words>" --risk "<the risk told>"`. Every later build, fix and check (`check_visuals.py` among them)
-reports it as their choice, keeps it, and never asks again.
+**An animation the person asks for is theirs (L26).** Never refuse one these rules see as decoration: say the risk once,
+in plain words (*"movement that does not teach pulls the eye away from what does"*), make it, and record it as their
+choice -
+`course-factory/scripts/design_choices.py add <course> --rule motion --choice "<what they asked for>" --said "<their words>" --risk "<the risk told>"`.
+Every later build, fix and check (`check_visuals.py` among them) reports it
+as their choice, keeps it, and never asks again.
 
 Rejected by name — `review/knowledge/motion-rules.json` carries the full list and the reasons:
 random floating · decorative pulsing · bouncing icons · unnecessary fade sequences · moving arrows
 without an explained process · meaningless autoplay loops · parallax and scroll reveal ·
 **motion added only because animation was requested**.
 
-Every non-chrome animation **declares its category** in the markup — `data-motion="teaching"`,
-`"affordance"` or `"ambient"`. An animation that cannot be categorised is not built. Ambient motion
-is capped at one effect per screen and is banned on a screen that carries a teaching animation.
+Every non-chrome animation **declares its category** in the markup — `data-motion="teaching"`, `"affordance"` or
+`"ambient"`. An animation that cannot be categorised is not built. Ambient motion is capped at one effect per screen
+and is banned on a screen that carries a teaching animation.
 
 ---
 
 ## Technical honesty — L12, and this skill owns it too
 
-**Simplification is allowed. Misleading simplification is not.**
-
-Dropping a branch to keep a schematic readable is simplification. Drawing a branch that does not
-exist, implying a flow direction that is wrong, or joining two components that are not connected is
-an error wearing the costume of a diagram.
+**Simplification is allowed. Misleading simplification is not.** Dropping a branch to keep a schematic readable is
+simplification; drawing a branch that does not exist, a wrong flow direction, or joining two components that are not
+connected is an error.
 
 For anything with topology — a cargo system, a circuit, a fixed installation — do **not** render
 `[BOX] → [BOX] → [BOX]` when the real arrangement teaches better. Show, where relevant: component
 identity · approximate physical or system relationship · connection · flow direction · active and
 inactive state · changing conditions · the labels the learner is asked about · cause and result.
 
-**Every asset carries provenance, a licence and a visual verification**, in a metadata file beside
-the file. Open and look at every image before using it, and record that you looked. A plausible
-photograph of the wrong equipment teaches false recognition and is worse than no photograph.
-A photograph's record also says, for the trainee, what it shows (`description` - the text of its panel, L56) and
-names the things in it (`shows` - the compiler puts the photo beside every drawing that names one of them, L57).
+**Every asset carries provenance, a licence and a visual verification**, in a metadata file beside the file. Open and
+look at every image before using it, and record that you looked: a plausible photograph of the wrong equipment teaches
+false recognition. A photograph's record also says, for the trainee, what it shows (`description` - the text of its
+panel, L56) and names the things in it (`shows` - the compiler puts the photo beside every drawing that names one of
+them, L57).
 
-Never present a generated illustration as a photograph, an interpolated value as a measured one, or
-one manufacturer's equipment as another's.
+Never present a generated illustration as a photograph, an interpolated value as a measured one, or one manufacturer's
+equipment as another's.
 
 ---
 
 ## The storyboard gate
 
-**For a substantial module or a complex concept, the storyboard is approved before any figure is
-implemented.** Not for a trivial screen — a single labelled photograph does not need paperwork.
+**For a substantial module or a complex concept, the storyboard is approved before any figure is implemented.** Not for
+a trivial screen — a single labelled photograph does not need paperwork.
 
-Per important concept: learning purpose · representation · source strategy · interaction or
-animation (with the four questions, if any) · implementation technology · **why this representation
-is appropriate**.
+Per important concept: learning purpose · representation · source strategy · interaction or animation (with the four
+questions, if any) · implementation technology · **why this representation is appropriate**.
 
-Copy `templates/VISUAL_STORYBOARD.md`. The gate exists to stop the jump straight from text into
-generic HTML, which is where the card grids come from.
+Copy `templates/VISUAL_STORYBOARD.md`. The gate stops the jump straight from text into generic HTML, where card grids
+come from.
 
 ---
 
@@ -230,58 +217,56 @@ generic HTML, which is where the card grids come from.
 
 `source/knowledge/asset-pipeline.json` is the authority. The short form:
 
-> **Owner, 2026-10-01 (L33 revised):** every picture in the course's **knowledge base and old course is usable as it
-> is** (`OWNER_CLEARED`) - including textbook and publisher figures and the old decks' pictures
-> (`course-factory/scripts/old_course.py images`). When a slide needs a picture neither has, the factory **must search
-> the internet and download it** into the course folder; the downloads are shown once per module as a list and made on
-> the operator's yes. An unclear licence on a download goes on the owner's licence list; it no longer blocks the build.
+> **L33:** every picture in the course's **knowledge base and old course is usable as it is** (`OWNER_CLEARED`) -
+> including textbook and publisher figures and the old decks' pictures (`course-factory/scripts/old_course.py images`).
+> When a slide needs a picture neither has, the factory **must search the internet and download it** into the course
+> folder; the downloads are shown once per module as a list and made on the operator's yes. An unclear licence on a
+> download goes on the owner's licence list; it does not block the build.
 
-> **Source-book figures (2.63.2, Aleksis 2026-10-22: "use them either way"):** a figure of a book, guideline or
-> manufacturer's manual (publisher, edition, page) is used only when a **named person has cleared it**, and that is
-> recorded, never automatic: `scripts/check_assets.py clear <assets-dir> <file> --by "<name>" --reason "..."
-> --source-work "<book, edition, page / figure>"` sets `rights_state: OWNER_CLEARED`, `cleared_by` (`"<name>, <date> -
-> <reason>"`) and `source_work` in the picture's `_photo_meta.json` / `_figure_meta.json`, and refuses without all three.
-> check_assets accepts it, L57 may place it as a thumbnail, and the credit - the full-screen view and the course's
-> credits page - is its `source_work`. Without a whole `cleared_by` it is never published: `RIGHTS_REVIEW_REQUIRED` is
-> marked *rights not cleared* in the module's findings - the build carries on; publishing to the tablets is refused
-> while any is left (`course-tablet-publisher`); an `OWNER_CLEARED` book figure without it fails and L57 never uses it.
+> **Source-book figures:** a figure of a book, guideline or manufacturer's manual (publisher, edition, page) is used
+> only when a **named person has cleared it**, and that is recorded, never automatic: `scripts/check_assets.py clear
+> <assets-dir> <file> --by "<name>" --reason "..." --source-work "<book, edition, page / figure>"` sets `rights_state:
+> OWNER_CLEARED`, `cleared_by` (`"<name>, <date> - <reason>"`) and `source_work` in the picture's `_photo_meta.json` /
+> `_figure_meta.json`, and refuses without all three. check_assets accepts it, L57 may place it as a thumbnail, and the
+> credit - the full-screen view and the course's credits page - is its `source_work`. Without a whole `cleared_by` it
+> is never published: `RIGHTS_REVIEW_REQUIRED` is marked *rights not cleared* in the module's findings - the build
+> carries on; publishing to the tablets is refused while any is left (`course-tablet-publisher`); an `OWNER_CLEARED`
+> book figure without it fails and L57 never uses it.
 
-> **A small photograph made sharp on this computer (2.68.0):** `scripts/upscale_photos.py <course> --modules 1-3`
-> (`--list` first shows what it would do) enlarges a module's photographs under 1000 px with Real-ESRGAN, run locally on
-> the graphics card - nothing is sent anywhere. Never a picture with words or numbers (a page, label, gauge, chart,
-> screen: the enlarger would make them sharp and wrong), never one whose record says `"ai_enlarge": false`; the
-> original is kept in `working_claude/photo_originals/`, the record says `"enlarged"`, and the pre-check judges it at
-> the size it was found. Install once: unpack Real-ESRGAN's Windows zip to `~/.novikontas/tools/realesrgan/` (the
-> script prints the link). A real larger photograph is still truer - search first.
+> **A small photograph made sharp on this computer:** `scripts/upscale_photos.py <course> --modules 1-3` (`--list`
+> first shows what it would do) enlarges a module's photographs under 1000 px with Real-ESRGAN, run locally on the
+> graphics card - nothing is sent anywhere. Never a picture with words or numbers (a page, label, gauge, chart, screen:
+> the enlarger would make them sharp and wrong), never one whose record says `"ai_enlarge": false`; the original is kept
+> in `working_claude/photo_originals/`, the record says `"enlarged"`, and the pre-check judges it at the size it was
+> found. Install once: unpack Real-ESRGAN's Windows zip to `~/.novikontas/tools/realesrgan/` (the script prints the
+> link). A real larger photograph is still truer - search first.
 
-**1 PROJECT** — `source_files/`, operator-supplied assets, manuals, drawings, the course's own
-existing assets. Search by more than the requester's phrasing: equipment name, manufacturer,
-alternate and older terminology, system name, likely figure captions, abbreviations, both
-spellings. *One failed grep is not a search.*
-**2 FACTORY** — `${CLAUDE_PLUGIN_ROOT}/resources/`. Reuse only if technically **and** pedagogically
-right; a near-miss reused to save time teaches the near-miss.
-**3 INTERNET** — only after 1 and 2 were actually searched. Manufacturer → official organisation →
-original manual → recognised technical body → other credible source. **Not** SEO farms, aggregators,
-scraped image sites or blogs. Record source, origin, rights, relevance, intended use, whether
-modification is permitted, whether attribution is required. **Legally usable assets are downloaded
-and packaged locally** — the tablet has no network and the app 403s every external host.
-**4 CREATE** — **from the kits first (L55).** Anything with topology, labels, state, flow or
-sequence is a kit spec in `working_claude/figures/MNN/`, never a one-off SVG; which kit is the picture
-rule's (above); a part a kit lacks is made into the kit (below). **A 3D model is a 3D-kit spec**,
-`sNN.kit3d.json` (`kit3d/SPEC.md`, `kit3d/PARTS.md`; made from the nine hand-made IGF scenes): parts in metres,
-labels on the parts, steps the deck's Next walks - full screen, clickable labels, the build-ahead and the poster
+**1 PROJECT** — `source_files/`, operator-supplied assets, manuals, drawings, the course's own existing assets. Search
+by more than the requester's phrasing: equipment name, manufacturer, alternate and older terminology, system name,
+likely figure captions, abbreviations, both spellings. *One failed grep is not a search.*
+**2 FACTORY** — `${CLAUDE_PLUGIN_ROOT}/resources/`. Reuse only if technically **and** pedagogically right; a near-miss
+reused to save time teaches the near-miss.
+**3 INTERNET** — only after 1 and 2 were actually searched. Manufacturer → official organisation → original manual →
+recognised technical body → other credible source. **Not** SEO farms, aggregators, scraped image sites or blogs. Record
+source, origin, rights, relevance, intended use, whether modification is permitted, whether attribution is required.
+**Legally usable assets are downloaded and packaged locally** — the tablet has no network and the app 403s every
+external host.
+**4 CREATE** — **from the kits first (L55).** Anything with topology, labels, state, flow or sequence is a kit spec in
+`working_claude/figures/MNN/`, never a one-off SVG; which kit is the picture rule's (above); a part a kit lacks is made
+into the kit (below). **A 3D model is a 3D-kit spec**, `sNN.kit3d.json` (`kit3d/SPEC.md`, `kit3d/PARTS.md`): parts in
+metres, labels on the parts, steps the deck's Next walks - full screen, clickable labels, the build-ahead and the poster
 come with it; never a hand-written three.js file per slide. **A 2D figure is a 2D-kit spec**, `sNN.kit2d.json`
 (`kit2d/SPEC.md`; see `kit2d/demos.html` and `kit2d/pm.html`): a graph, an object in motion (a cutaway with its flow) or
 a concept (cycle, timeline, matrix, process, trade-off) - depth, labels clear of each other, motion on Next and the
-trainee's controls come with it, and `fit_gate.py` runs its overlap check on every step. Each is composed for its
-slide from the slide's own words, best not the same look within 5 slides (the compile lists a look-alike for the reviewer). The figure kit (`kit/`) stays
-for a control screen the trainee reads (an HMI) and for courses already built with it. Hand-written SVG/HTML only for what the kits cannot be
-(a photo annotation); Canvas only where SVG genuinely fails;
-a generated illustration only when a realistic scene is the right medium. **Never generated imagery
-in place of a structured technical schematic.**
+trainee's controls come with it, and `fit_gate.py` runs its overlap check on every step. Each is composed for its slide
+from the slide's own words, best not the same look within 5 slides (the compile lists a look-alike for the reviewer).
+The figure kit (`kit/`) stays for a control screen the trainee reads (an HMI) and for courses already built with it.
+Hand-written SVG/HTML only for what the kits cannot be (a photo annotation); Canvas only where SVG genuinely fails; a
+generated illustration only when a realistic scene is the right medium. **Never generated imagery in place of a
+structured technical schematic.**
 
-> **The figure kit (L55, owner 2026-10-15):** *use the kit; if there is no element in the kit, the AI creates the
-> element, puts it in the kit, and asks for a merge after the module is complete.*
+> **The figure kit (L55):** use the kit; a part the kit lacks is made by the AI, put in the kit, and offered for a merge
+> after the module is complete.
 > 1. **Write the spec.** `kit/SPEC.md` lists the seven families and every part. A step names the slide line it
 >    lights (`"line": 2`); an alarm is a mark on a value, so it fires when the value crosses it - never a second picture.
 > 2. **A part is missing?** Make it to `kit/PARTS.md` in the module's `assets/kit_parts.js` (status `new`, kit helpers,
@@ -290,31 +275,33 @@ in place of a structured technical schematic.**
 >    <factory-mjaso clone>`; **ask the operator once**, then the same command with `--pr` makes the branch, the commit,
 >    the push and the pull request itself; the owner merges.
 >    A part is the thing, or the shape of an idea (the Concepts family, `kit/SPEC.md`) - never a table: an idea with no
->    kit part and no photo gets a new part, not a `grid_table`. The one exception: a module's ONE comparison table (2-4 things
->    side by side with their facts or numbers) as a slide's picture - the build sheet's `"table"`, the compiler builds it. In an orchestrated build module agents never touch the factory's `kit.js` - the
->    orchestrator promotes every module's parts together at assembly and merges duplicates.
+>    kit part and no photo gets a new part, not a `grid_table`. The one exception: a module's ONE comparison table (2-4
+>    things side by side with their facts or numbers) as a slide's picture - the build sheet's `"table"`, the compiler
+>    builds it. In an orchestrated build module agents never touch the factory's `kit.js` - the orchestrator promotes
+>    every module's parts together at assembly and merges duplicates.
 > 4. **Review surface:** `kit/GALLERY.html` shows every part moving; a promoted part shows there with its example.
 
 Two escalations, and neither is silent:
 
 - **`RIGHTS_REVIEW_REQUIRED`** — rights unclear or restricted on a **download** (it goes on the owner's licence list;
-  the knowledge base and the old course are `OWNER_CLEARED`). The picture is marked *rights not cleared* in the module's findings - the build carries on; publishing to the tablets is refused while any is left (`course-tablet-publisher`, `gates.py` rights). An uncleared publisher
-  figure has already blocked a whole course in this system once.
-- **`GENERATED_ASSET_REQUIRED`** — nothing suitable exists at any level. Emit the full generation
-  brief in `source/schemas/GENERATED_ASSET_BRIEF.md`. If the **`nano-banana`** plugin is installed, it
-  is made once within the course's picture budget, said yes to once at the start - no question before
-  each picture (its `realistic-visuals` §0, *Which applies when*; L47: every picture costs money);
-  outside a course the person describes it and says yes first. Otherwise the brief is the handoff.
+  the knowledge base and the old course are `OWNER_CLEARED`). The picture is marked *rights not cleared* in the
+  module's findings - the build carries on; publishing to the tablets is refused while any is left
+  (`course-tablet-publisher`, `gates.py` rights).
+- **`GENERATED_ASSET_REQUIRED`** — nothing suitable exists at any level. Emit the full generation brief in
+  `source/schemas/GENERATED_ASSET_BRIEF.md`. If the **`nano-banana`** plugin is installed, it is made once within the
+  course's picture budget, said yes to once at the start - no question before each picture (its `realistic-visuals` §0,
+  *Which applies when*; L47: every picture costs money); outside a course the person describes it and says yes first.
+  Otherwise the brief is the handoff.
 
 `scripts/resolve_asset.py` runs levels 1 and 2 mechanically. Level 3 is judgement and belongs to the
 **`visual-sourcer`** agent, which works in isolated context and returns a short report.
 
-**Subject libraries (2.52.0).** Level 2 starts with the shared **subject library** when this computer
-has one — the NOVIKONTAS Gas Library on Drive for GAS BASIC / ADVANCED and IGF Basic / Advanced
-(`scripts/subject_library.py locate`). The resolver searches it by description and rights-gates it;
-an AI picture from it is never the picture of equipment a trainee must recognise. What this skill
-finds or makes on the library's subject is **saved back** (`subject_library.py contribute`), and the
-report says so — `source/GUIDE.md` §Level 2 and §Saving back. No library = skipped, never a failure.
+**Subject libraries.** Level 2 starts with the shared **subject library** when this computer has one — the NOVIKONTAS
+Gas Library on Drive for GAS BASIC / ADVANCED and IGF Basic / Advanced (`scripts/subject_library.py locate`). The
+resolver searches it by description and rights-gates it; an AI picture from it is never the picture of equipment a
+trainee must recognise. What this skill finds or makes on the library's subject is **saved back**
+(`subject_library.py contribute`), and the report says so — `source/GUIDE.md` §Level 2 and §Saving back. No library =
+skipped, never a failure.
 
 ---
 
@@ -324,9 +311,9 @@ Touch-first · large labels · large controls · **no hover dependency** · no p
 robust in landscape and sane in portrait · minimal typing · annotations readable at arm's length ·
 offline-safe · **no remote runtime asset**.
 
-An SVG label authored at font-size 10 in a 1000-unit viewBox is 3.8 px inside a 380 px column.
-Measure the *rendered* size, not the viewBox units. `review/knowledge/visual-floor.json` has the
-numbers; `course-module-ux` owns the screen floor and this skill does not restate it.
+Measure the *rendered* size, not the viewBox units: font-size 10 in a 1000-unit viewBox is 3.8 px inside a 380 px
+column. `review/knowledge/visual-floor.json` has the numbers; `course-module-ux` owns the screen floor and this skill
+does not restate it.
 
 ---
 
@@ -335,29 +322,28 @@ numbers; `course-module-ux` owns the screen floor and this skill does not restat
 Consistent across the course: typography, tokens, interaction quality, navigation, feedback,
 accessibility, semantic colour, quality level.
 
-**Not consistent: the representation.** An electrical circuit, a cargo piping system, a firefighting
-procedure and a human-factors scenario should not reach for the same layout mechanic. If three
-screens in a row use the same interaction, that is a finding, not a house style.
+**Not consistent: the representation.** An electrical circuit, a cargo piping system, a firefighting procedure and a
+human-factors scenario should not reach for the same layout mechanic. Three screens in a row with the same interaction
+is a finding, not a house style.
 
-**Planned before it is built (L37, owner 2026-09-30, 2.18.0).** Every slide's visual - its kind, what it
-shows, its layout and who makes it - is already named in the operator-approved content script
-(`course-factory/knowledge/media-and-tasks.json`, which adds `model_3d`, `model_3d_scan`,
-`model_3d_licensed`, `video_real` and `video_generated` to the representations here). Build what was
-approved; a better choice found while building goes back to the operator as a change to the script.
-A 3D model is three.js from geometry the factory can state exactly; the exact look of a named piece of
-equipment is a phone 3D scan at Novikontas, a manufacturer's or licensed model - never an AI model.
+**Planned before it is built (L37).** Every slide's visual - its kind, what it shows, its layout and who makes it - is
+already named in the operator-approved content script (`course-factory/knowledge/media-and-tasks.json`, which adds
+`model_3d`, `model_3d_scan`, `model_3d_licensed`, `video_real` and `video_generated` to the representations here).
+Build what was approved; a better choice found while building goes back to the operator as a change to the script. A
+3D model is three.js from geometry the factory can state exactly; the exact look of a named piece of equipment is a
+phone 3D scan at Novikontas, a manufacturer's or licensed model - never an AI model.
 
-**Every 3D scene answers a tap (operator, 2026-10-19).** Drag turns, pinch zooms, and a tap on a part highlights it -
-blue glow, the camera frames it, its name shows; a second tap or a tap beside puts the view back. The tappable parts are
-the ones the labels name. A scene that only turns is not finished (`media-and-tasks.json` → `three_d.interaction`;
-reference: IGF M03 `m03_station3d.js`).
+**Every 3D scene answers a tap.** Drag turns, pinch zooms, and a tap on a part highlights it - blue glow, the camera
+frames it, its name shows; a second tap or a tap beside puts the view back. The tappable parts are the ones the labels
+name. A scene that only turns is not finished (`media-and-tasks.json` → `three_d.interaction`; reference: IGF M03
+`m03_station3d.js`).
 
-**3D: never at a lower quality, and smooth (L46, owner 2026-10-07).** 3D only where a shape, an inside or a layout in
-space is the lesson - never a chart, a symbol, a document, an idea, or 3D only because it can be; how many is the
-picture rule's (above). Each 3D scene is made at full quality and built to `course-factory/knowledge/media-and-tasks.json` →
-`three_d.performance`, where the speed comes from how the scene runs: one shared renderer for the deck; the scene
-built when its slide comes up and disposed two slides later (two alive at most); no frame drawn while nothing moves or
-is touched; soft shadows kept, and worked out once while the model is still (`shadowMap.autoUpdate = false`); the
+**3D: never at a lower quality, and smooth (L46).** 3D only where a shape, an inside or a layout in space is the lesson
+- never a chart, a symbol, a document, an idea, or 3D only because it can be; how many is the picture rule's (above).
+Each 3D scene is made at full quality and built to `course-factory/knowledge/media-and-tasks.json` →
+`three_d.performance`, where the speed comes from how the scene runs: one shared renderer for the deck; the scene built
+when its slide comes up and disposed two slides later (two alive at most); no frame drawn while nothing moves or is
+touched; soft shadows kept, and worked out once while the model is still (`shadowMap.autoUpdate = false`); the
 environment light made once; repeats instanced; models and textures compressed without visible loss; pixel ratio
 `Math.min(devicePixelRatio, 2)`; preserveDrawingBuffer off; a still poster first. Before reporting a 3D slide done,
 open it in the browser with the CPU slowed 4x: the first frame within a second, 30 frames a second while turning.
@@ -366,37 +352,35 @@ open it in the browser with the CPU slowed 4x: the first frame within a second, 
 
 ## Verify before reporting done
 
-1. `scripts/check_visuals.py <files or dirs>` — the deterministic half: undeclared decorative
-   motion, missing reduced-motion guard, tiny SVG labels, remote assets, missing alt, box-and-arrow
-   chains, text-in-cards screens with no figure, disallowed file types.
-2. `scripts/check_assets.py <assets dir>` — provenance: every image has a metadata entry, every
-   entry has its required fields, `visually_verified` is real, rights states are valid, nothing
-   sits at `RIGHTS_REVIEW_REQUIRED`, and a source-book figure carries a whole `cleared_by` (2.63.2).
-3. `scripts/verify_figures.js` **in the page**, over http — `run()` proves each figure
-   rendered at all, and `await motion()` proves it is alive: `MOVES`, `RESPONDS` or `STATIC`.
-   Only `STATIC` fails. A figure that answers its own toggle, slider or tap is doing its job
-   and must not be reported as a picture. Always read the `scheduler` field — a hidden page
-   suspends `requestAnimationFrame`, and a probe that cannot see frames must never be read as
-   a verdict about the course (L20).
-4. `scripts/check_visual_first.py <module> --strict` — L23. Every topic screen either leads with
-   a figure or declares, in writing, why it has none.
-5. `scripts/write_visual_handoff.py <module>` — only if anything is still unbuilt. It prints
-   "nothing to hand off" when the visuals are complete, which is the outcome you want.
-6. `review/GUIDE.md` — the half no script can do. **A visual does not pass because the HTML
-   validates.** Fourteen named failure modes, and one question: *does this actually teach?*
+1. `scripts/check_visuals.py <files or dirs>` — the deterministic half: undeclared decorative motion, missing
+   reduced-motion guard, tiny SVG labels, remote assets, missing alt, box-and-arrow chains, text-in-cards screens with
+   no figure, disallowed file types.
+2. `scripts/check_assets.py <assets dir>` — provenance: every image has a metadata entry, every entry has its required
+   fields, `visually_verified` is real, rights states are valid, nothing sits at `RIGHTS_REVIEW_REQUIRED`, and a
+   source-book figure carries a whole `cleared_by`.
+3. `scripts/verify_figures.js` **in the page**, over http — `run()` proves each figure rendered at all, and
+   `await motion()` proves it is alive: `MOVES`, `RESPONDS` or `STATIC`. Only `STATIC` fails. A figure that answers its own
+   toggle, slider or tap is doing its job and must not be reported as a picture. Always read the `scheduler` field — a
+   hidden page suspends `requestAnimationFrame`, and a probe that cannot see frames must never be read as a verdict
+   about the course (L20).
+4. `scripts/check_visual_first.py <module> --strict` — L23. Every topic screen either leads with a figure or declares,
+   in writing, why it has none.
+5. `scripts/write_visual_handoff.py <module>` — only if anything is still unbuilt. It prints "nothing to hand off" when
+   the visuals are complete, which is the outcome you want.
+6. `review/GUIDE.md` — the half no script can do. **A visual does not pass because the HTML validates.** Fourteen named
+   failure modes, and one question: *does this actually teach?*
 
-Then write `templates/visual-notes.md` next to the module: every representation chosen and why,
-every asset with its source and rights, every animation with its four answers, every
-`RIGHTS_REVIEW_REQUIRED` and `GENERATED_ASSET_REQUIRED`, and feedback on this skill.
+Then write `templates/visual-notes.md` next to the module: every representation chosen and why, every asset with its
+source and rights, every animation with its four answers, every `RIGHTS_REVIEW_REQUIRED` and
+`GENERATED_ASSET_REQUIRED`, and feedback on this skill.
 
 ## Honesty markers
 
-The family set — `UNKNOWN`, `PLACEHOLDER`, `PROVISIONAL`, `[VERIFY: …]` — plus two of this
-skill's own:
+The family set — `UNKNOWN`, `PLACEHOLDER`, `PROVISIONAL`, `[VERIFY: …]` — plus two of this skill's own:
 
 | Marker | Means |
 |---|---|
-| `RIGHTS_REVIEW_REQUIRED` | rights unclear or restricted: *rights not cleared* - the build carries on, publishing is refused. Owner decides - for a source-book figure, by name: `check_assets.py clear` (`cleared_by`, 2.63.2). |
+| `RIGHTS_REVIEW_REQUIRED` | rights unclear or restricted: *rights not cleared* - the build carries on, publishing is refused. Owner decides - for a source-book figure, by name: `check_assets.py clear` (`cleared_by`). |
 | `GENERATED_ASSET_REQUIRED` | no suitable asset exists at any level; a generation brief is attached. |
 
 Every marker written into an artefact must also appear in the notes file.

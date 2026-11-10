@@ -5,12 +5,11 @@ until the operator has approved the script.** One script per module, plus one fo
 assessment (`--module final`). Everything is done with `scripts/content_script.py`; the check that the
 built module obeys it is `scripts/check_script_match.py`.
 
-## 0 · Before writing — the ILO map, the model course, the old course, the knowledge base (2.42.0)
+## 0 · Before writing — the ILO map, the model course, the old course, the knowledge base
 
-Owner, 2026-10-16: *"before creating any module the AI should have already made the ILO mapping and
-suggested for KNOWLEDGE_BASE to be created"*. **A module is written against what it owes, never from
-memory.** `content_script.py` will not render or approve a script (exit 2) until the course has its ILO
-map, the Stage 2 page is approved with it, and the knowledge-base decision is recorded:
+**A module is written against what it owes, never from memory.** `content_script.py` will not render or
+approve a script (exit 2) until the course has its ILO map, the Stage 2 page is approved with it, and the
+knowledge-base decision is recorded:
 
 ```
 python scripts/course_gate.py <course> --module 4        open, or exactly what has to happen first
@@ -33,14 +32,14 @@ Then, before the first screen is written, read — in this order, and only these
    `"moved_why"` with the expert's reason; an old slide that taught something and is left out goes in the script's
    `"dropped_old"` (`[{"from": "<deck>.pptx, slide 27", "why": "..."}]`); the slides must show at least 60 % of the
    old slides' words.
-4. **The subject library first, when the course is on its subject** (2.52.0; `intake.json` →
-   `subject_library`; the Gas Library for every gas course): `python <course-visuals>/scripts/subject_library.py
-   find "<the slide's subject>"` — the shared topic and which module of each course teaches it, the
-   **cited facts**, glossary, regulations held, reference PDFs with their distribution, and passages from
-   every course's knowledge base at once (file + page). Quote a value only with its source. **A row marked
-   CONFLICT is not settled**: do not pick one of its values — name the conflict on the screen's notes and
-   in `"sources"`, and point to the library's `OPEN_DECISIONS.md`; the course owners decide. An inbox row
-   (NEW) is not reviewed: check its source before using it. No library on this computer: skip this.
+4. **The subject library first, when the course is on its subject** (`intake.json` → `subject_library`;
+   the Gas Library for every gas course): `python <course-visuals>/scripts/subject_library.py find "<the slide's subject>"` —
+   the shared topic and which module of each course teaches it, the **cited facts**, glossary, regulations held,
+   reference PDFs with their distribution, and passages from every course's knowledge base at once (file + page).
+   Quote a value only with its source. **A row marked CONFLICT is not settled**: do not pick one of its values — name
+   the conflict on the screen's notes and in `"sources"`, and point to the library's `OPEN_DECISIONS.md`; the course
+   owners decide. An inbox row (NEW) is not reviewed: check its source before using it. No library on this computer:
+   skip this.
 5. **The knowledge base — only through `kb/scripts/kb_tool.py search`** (several phrasings: the other
    names, the abbreviation, the older term). Never open a whole `document.md`. A declined knowledge base
    (the Stage 2 page says so) means the source files themselves, searched the same narrow way.
@@ -63,7 +62,7 @@ While writing:
 The review page's **ILO map and sources check** — must-fix findings, like the theory check — lists a Sub-ILO
 taught nowhere or checked nowhere, a question with no `"sub_ilo"`, a `"sub_ilo"` the module does not own, and
 an empty `"sources"`. Approval waits for them unless the operator approves `--despite-findings` (L26). A
-script approved before 2.42.0 keeps its approval; its findings are reported, never forced (§4).
+script approved before these checks existed keeps its approval; its findings are reported, never forced (§4).
 
 The ILO map's slide and question rows are **built from the scripts**, not typed per module: after a script is
 approved or its slides move, `python scripts/ilo_map.py refresh <course> [--module N]` writes each row's
@@ -72,7 +71,7 @@ approved or its slides move, `python scripts/ilo_map.py refresh <course> [--modu
 ## 1 · Write the script
 
 `<course>/working_claude/script/M01.json` — the whole lesson **in the order it is taught**. It runs on two
-tablets (L35, owner 2026-09-30), and the script says which screen is where:
+tablets (L35), and the script says which screen is where:
 
 - **Instructor tablet** - `slide`, `task-slide` and `activity` screens: what the classroom screen shows,
   with the notes on the instructor's panel. A task is **never** on a slide. Where a task begins there is
@@ -103,7 +102,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 ```
 
 - `text` is the **exact visible words** of the slide, not a description of them. One line per line.
-- **Groups of trainees (2.103.0).** When one class holds two or more groups that learn the same theory but are
+- **Groups of trainees.** When one class holds two or more groups that learn the same theory but are
   checked differently (ship technicians and ship navigators), the script says so at the top:
   `"groups": {"T": "Ship technicians", "N": "Ship navigators"}` - any ids, two or more, each with the name the
   trainee taps (in the course language). A `self-check`, `module-check` or `final` question with `"group": "T"` is
@@ -116,7 +115,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   single choice at most 40 % and a hands-on question in the module; every group has a question in every set. The
   review page and the Word file mark each question *Only for: <group>*. A final with groups is one blind page per
   variant that branches the same way (FA, FB stay re-sit variants - see `compile/GUIDE.md`).
-- **The recap closes the module (L51, 2.30.0).** The slide straight before the module check's task slide is the
+- **The recap closes the module (L51).** The slide straight before the module check's task slide is the
   recap: `{"id": "s24", "kind": "slide", "recap": true, "title": "What to take away", "text": "Kept liquid - cold,
   under pressure, or both
 ...", "visual_kind": "none", "notes": "...", "minutes": 2}` - 3 to 6 points, one line
@@ -124,7 +123,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   The slide word floor does not apply to it; the notes floor does. It is built in the one shared design (every
   module the same). Missing or misplaced, it is a must-fix - unless the person chose otherwise after hearing the
   risk (L26, `design_choices.py`), and then approval passes and names their choice.
-- **20 / 80 in class (L49, 2.26.0).** A slide where the trainees do something gets `"active"`:
+- **20 / 80 in class (L49).** A slide where the trainees do something gets `"active"`:
   `explain-then-reveal`, `predict-then-reveal`, `worked-example`, `scenario` or `explore` (they work the
   model or diagram themselves) - and its notes say what they do. Never mark a slide that is only shown.
   The review page shows plain theory against active minutes (aim: 20 / 80). To get there, **keep every
@@ -159,14 +158,14 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   a worked example's lines and question 85 (`layout-templates.json` `budgets`, `t_overfull`, a must-fix that names the
   split) - an active slide's question, choices, whys and answer count toward its words, so trim the situation, not the
   teaching.
-- **3D and AI pictures - planned unasked (2.49.0, operator 2026-10-16: "make it so they add 3D + AI generated photos
-  when needed").** Before the review page is shown, plan them yourself - the operator never has to ask:
+- **3D and AI pictures - planned unasked.** Before the review page is shown, plan them yourself - the operator never
+  has to ask:
   - **3D:** where a slide's lesson is a shape, an inside or a layout in space (a tank and its barriers, a space and
     what is around it, a pump or a compressor), set its `visual_kind` to `model_3d` and describe the scene in
     `visual`. How many and which is the picture rule (L67, `course-visuals` SKILL.md): a procedure, a flow or a chart is
     never turned 3D to reach the share; never a real photo replaced, full quality.
   - **AI picture:** where a slide sets a scene or a situation that no real photograph shows (people at work, an
-    operation, an incident) - `ai_illustration`; (2.73.2) equipment too, first generated, then fixed. Planning it is
+    operation, an incident) - `ai_illustration`; equipment too, first generated, then fixed. Planning it is
     free; the pictures are made within the course's one approved budget (nano-banana, L47).
   - The review page names what you left out as proposals (`v_3d_propose`, `v_ai_propose`): the slide and the words
     that made it. Each one the operator keeps goes into the script (propose / apply); each one they strike goes into
@@ -175,10 +174,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   - A 3D proposal needs the shape in the slide's **title or planned picture** (two fit words at least), not only
     in its text, and none of: a sequence, a document or an idea there (steps, procedure, report, permit,
     checklist, model, layers of protection, "in turn"), a flow or process animation, a generated picture, or a
-    worked example whose text is a list (2.49.2, `knowledge/media-and-tasks.json` `three_d`).
-- **Bloom (L48, 2.25.0).** A question says which Sub-ILO it checks (`"sub_ilo": "1.2"` - expected on every
-  question since 2.42.0, §0), and - only when
-  it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
+    worked example whose text is a list (`knowledge/media-and-tasks.json` `three_d`).
+- **Bloom (L48).** A question says which Sub-ILO it checks (`"sub_ilo": "1.2"` - expected on every question, §0), and -
+  only when it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
   The review page then shows every question below its Sub-ILO and how the tablet would lift it.
   Aim the tasks at the Sub-ILO's level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`).
 - **Enough theory (L36, `knowledge/theory-rules.json`).** A slide carries the teaching itself - the facts,
@@ -202,13 +200,13 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   itself. The guideline and the other counts here (notes, words a minute, answers, the task mix) are warnings for the
   expert. Three checks stay must-fix, because they protect the teaching: enough theory before each self-check, every
   answer taught before it is asked, three rich + two basic in a self-check of five.
-- **Instructor notes are short** (2.18.1): two to four points per slide, one per line starting `- `, 10-50 words -
+- **Instructor notes are short**: two to four points per slide, one per line starting `- `, 10-50 words -
   what to ask, the one example to give, what to stress. The theory is on the slide. `render` writes them to
   `to_review/M01_INSTRUCTOR_NOTES.md` for the instructor's panel; they are never on a slide.
 - Kinds: `slide`, `task-slide`, `activity` (instructor tablet); `self-check`, `module-check`, `final`
   (trainee tablet). Module checks are never graded (L27) and come at the end of the module; a
   final-assessment script (`--module final`, the last module, L34) holds a task slide and `final` questions.
-- **A team task** (2.23.0, the classroom rulebook 4b) is a task slide with `"team": {"size": "3", "roles":
+- **A team task** (the classroom rulebook 4b) is a task slide with `"team": {"size": "3", "roles":
   ["Leader", "Recorder", "Checker"], "scope": "team"}` - `"3-4"` for a range; `"scope"` `team` (one answer per team)
   or `member` (everyone answers, the team's average shown); roles are optional. The review page and the Word file say
   it in a line under OPEN TASK; changing it goes through the chat, like the way a question is answered. A module check
@@ -217,7 +215,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   and from `FEEDBACK_LOG.md` rows marked *operator-stated* for this module.
 - NEW_ENTRANT or EXPERIENCED changes how much is explained and how (`knowledge/course-type.json`).
 
-### Pictures, and how the trainee answers (L37, L38 — 2.18.0)
+### Pictures, and how the trainee answers (L37, L38)
 
 `knowledge/media-and-tasks.json` is the list, and who makes each thing. On every **slide**:
 
@@ -227,7 +225,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   `video_generated`, `ai_illustration` — or `none`, only on the closing summary. Pick it from what the
   slide must teach (`course-visuals`, `decide/knowledge/learning-needs.json`): what moves or changes state
   is animated; what has an inside is a cutaway or a 3D model; what must be recognised on board is the course's own
-  photograph (reused, enlarged) or a photorealistic generated one - never a photo to take (L33, owner 2026-10-28).
+  photograph (reused, enlarged) or a photorealistic generated one - never a photo to take (L33).
 - `"from_old"` (L41; on every slide of a course rebuilt from an old one) — where in the old course the slide comes
   from and what changed: *"1. Liquefied Gas tankers.pptx, slides 37-40 - the photographs became a 3D model"*, the deck's
   file name and its slide numbers as written there. Shown on the review page and read by the order check.
@@ -240,7 +238,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   library's `find`), then write the source's value.
 - `"visual"` — what it shows and why, in one or two sentences; `"layout"` — `split` (text left, picture
   right), `visual_wide` or `visual_full`.
-- **`"picture"` — the slot, fixed here (2.73.0):** `{"kind": "photo|figure|3d|none", "aspect": "4:3", "shows": "<what it
+- **`"picture"` — the slot, fixed here:** `{"kind": "photo|figure|3d|none", "aspect": "4:3", "shows": "<what it
   must show>"}` on every slide but the recap, and on every question answered on a picture. The kind follows the visual:
   a real picture (photo, document drawing, film still, generated) is `photo`; **one photo shows one thing** - several
   of a sort (four kinds of gas carrier, ships A to F) go in `"items": ["LPG carrier", "Moss LNG carrier", ...]`, each
@@ -248,15 +246,14 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   animation is `figure`; `model_3d*` is `3d`. It decides the slide's layout before anything is built, so the build's first
   phase needs no agent (placeholders of this shape, compile/GUIDE.md 2g), and the course photo catalogue matches photos
   to it by `shows`. Must fix: an unknown kind, a kind the visual does not need, a photo or figure with no aspect, nothing
-  it must show. A script from before 2.73.0 is read from `visual_kind` and `visual` (a reminder, never a block).
-- **The words a layout holds are a must-fix here (2.73.0)**, not a build-time note: beside a picture a slide's lines go
+  it must show. A script without `"picture"` is read from `visual_kind` and `visual` (a reminder, never a block).
+- **The words a layout holds are a must-fix here**, not a build-time note: beside a picture a slide's lines go
   into parts of at most 75 words (1024 x 768, layout-templates.json "budgets"); the build can put lines in parts but never
   cut one, so a single line over 75 words must be split in the script.
-- **The course's ship (2.73.0).** STANDARDS.md may carry a `## Ship profile` section - `- Pump arrangement: deepwell pumps`,
+- **The course's ship.** STANDARDS.md may carry a `## Ship profile` section - `- Pump arrangement: deepwell pumps`,
   `- Not on board: pump room, cargo pump room` - and render then says (a note) every screen that names what the course's
-  ship does not have (chem advanced: four scripts written in parallel set scenes in a "pump room" on a deepwell-pump ship).
-  Write the profile at Stage 2, before the scripts are written in parallel.
-- **No quota** (2.18.1): wherever a picture, an animation or a realistic 3D illustration can show what the slide
+  ship does not have. Write the profile at Stage 2, before the scripts are written in parallel.
+- **No quota**: wherever a picture, an animation or a realistic 3D illustration can show what the slide
   teaches, put it in. A slide with none, a long module where nothing moves, few kinds of picture - these come
   back as suggestions, never blocks; nothing is added only for variety (L13).
 - **3D by the picture rule, at full quality** (L67, `course-visuals` SKILL.md). Its share counts `model_3d`,
@@ -280,7 +277,7 @@ one line per item, `*` marking what is right:
 | `set_value` | `-42 °C ± 3, range -170 to 20` |
 | `panel_operate` | `control = end state` per line |
 | `scenario` | `situation => right action* \| wrong \| wrong` per step |
-| `true_false` | `statement => why` per line, the true ones `*` (2.74.0, Part A) |
+| `true_false` | `statement => why` per line, the true ones `*` (Part A) |
 | `critique` | `claim => right correction* \| wrong` - a claim that is right: `claim => * \| decoy \| decoy` (every claim the same number of choices; the tablet adds "keep it" to each) |
 | `calculate` | `0.84 % vol ± 0.02`, then `! what the device shows` and `# the \| data \| sheet` lines |
 | `predict` | `13.7 ± 1.5 @ 40`, `x: name \| unit \| low \| high`, `y: ...`, `given: x \| y \| label`, `curve: x y; x y` |
@@ -291,7 +288,7 @@ one line per item, `*` marking what is right:
 | `take_apart` | `part: name: what it is`, `find: question => part`, `set: instruction => position` |
 | `test_atmosphere` | `space: name \| depth`, `levels: 2; 8; 14`, `O₂ % \| 20.9 @ 0; 19.2 @ 14 \| below 19.5` |
 
-**Part A, then Part B (owner, 2026-10-28 - 2.74.0).** Write each self-check as Part A - quick questions that check what
+**Part A, then Part B.** Write each self-check as Part A - quick questions that check what
 was taught (Bloom 1-2), at least one of them on a Sub-ILO from an earlier block - then Part B: one harder task the
 trainee works out alone (Bloom 3+). Every question gets a `"brief"`: one short line said when the answer is wrong - why
 it is not right, never which answer is ("That is the boiling point of another cargo.", not "It is -42 °C."). The right
@@ -307,10 +304,23 @@ detector display for a reading, the GA drawing for "where is it".
 
 ## 2 · Show it to the operator
 
-**First, taught before it is asked (L36, L71).** Once a module's script is written, the `task-coverage-checker` agent (one per module, in parallel, before the fact-checker so the lines it adds are proved too) reads each self-check and module-check question and only the slides before it, and judges covered / partly / not covered: could the trainee answer it, or do it, from those slides alone? `scripts/task_cover.py` gives it the slides, refuses a quote they do not show (the notes alone are not enough), and turns its verdicts into a change list that adds the missing line to a slide before the task - proposed with `content_script.py propose` (unattended: `fixes --apply`); a question to change is listed for the person. A verdict holds while the question and the slides before it are unchanged. Once the module has verdicts, approval is refused while a question is unjudged, partly or not covered; the key-word check (`t_not_taught`) stays as the quick first filter.
+**First, taught before it is asked (L36, L71).** Once a module's script is written, the `task-coverage-checker` agent
+(one per module, in parallel, before the fact-checker so the lines it adds are proved too) reads each self-check and
+module-check question and only the slides before it, and judges covered / partly / not covered: could the trainee
+answer it, or do it, from those slides alone? `scripts/task_cover.py` gives it the slides, refuses a quote they do not
+show (the notes alone are not enough), and turns its verdicts into a change list that adds the missing line to a slide
+before the task - proposed with `content_script.py propose` (unattended: `fixes --apply`); a question to change is
+listed for the person. A verdict holds while the question and the slides before it are unchanged. Once the module has
+verdicts, approval is refused while a question is unjudged, partly or not covered; the key-word check (`t_not_taught`)
+stays as the quick first filter.
 
-**Then, proved in the sources (L4).** Once a module's script is written, the `fact-checker` agent (one per module, in parallel) proves every claim in the course's knowledge base: `scripts/fact_check.py` finds the claims and proves what a source says word for word, the agent judges the rest found / partly / not found from the source passages only, and leaves a change list that cuts what no source says and corrects what it says otherwise - proposed with `content_script.py propose`, shown like any correction (an unattended build applies it itself, `fixes --apply`, each change logged for the expert). Approval is refused while a claim is not judged or one not proved is still in the script (a course with no knowledge base is not checked).
-
+**Then, proved in the sources (L4).** Once a module's script is written, the `fact-checker` agent (one per module, in
+parallel) proves every claim in the course's knowledge base: `scripts/fact_check.py` finds the claims and proves what a
+source says word for word, the agent judges the rest found / partly / not found from the source passages only, and
+leaves a change list that cuts what no source says and corrects what it says otherwise - proposed with
+`content_script.py propose`, shown like any correction (an unattended build applies it itself, `fixes --apply`, each
+change logged for the expert). Approval is refused while a claim is not judged or one not proved is still in the script
+(a course with no knowledge base is not checked).
 
 ```
 python scripts/content_script.py render <course> --module 1
@@ -320,10 +330,9 @@ writes `to_review/M01_SCRIPT_REVIEW.html` (opens with a double-click, prints to 
 `to_review/M01_SCRIPT.docx`, both in two parts: **part 1, the instructor tablet** (every slide, and the
 OPEN TASK button on each task slide) and **part 2, the trainee tablet** (every task, one question per
 screen, each showing the slide that teaches its answer). At the top: the module in numbers - minutes
-against the programme's, words per theory minute - and the findings of both checks. It writes
-`to_review/M01_SCRIPT.docx` — **the operator's copy is the Word file** (owner, 2026-09-30). Every
-editable text is its own grey box, locked against deletion, open for typing. Fix every problem
-`render` lists before showing it.
+against the programme's, words per theory minute - and the findings of both checks. **The operator's copy is
+the Word file** `to_review/M01_SCRIPT.docx`. Every editable text is its own grey box, locked against deletion, open
+for typing. Fix every problem `render` lists before showing it.
 
 ## 3 · Corrections — understood first, applied only on yes
 
@@ -361,7 +370,7 @@ python scripts/content_script.py apply <course> --module 1 --confirmed --confirm
 python scripts/content_script.py discard <course> --module 1               they said no
 ```
 
-Say who proposed and who said yes (2.49.2, F10): `propose --proposed-by "<who>"` (the operator in chat, or the agent
+Say who proposed and who said yes: `propose --proposed-by "<who>"` (the operator in chat, or the agent
 that worked the change out) and `apply --confirmed-by "<the operator's name>"`. The log row keeps both
 (`[proposed by Claude (agent); confirmed by Aleksis]`); a Word or PDF read is "the operator (their Word file)". Left
 out, a name is "not stated" — the log never claims the words were the operator's when nobody said so.
@@ -392,11 +401,10 @@ python scripts/content_script.py approve <course> --module 1 --by "<name>"
 Refused while a pending list waits or the script has problems. **Any change after approval makes it a
 draft again.** Record the approval in `COURSE_STATE.md` (L32). `status` says where a module stands.
 
-**Approval is the operator's own act — never an agent's, never relayed** (2.49.2, F24). `--by` is the
-person who read the words and said "next", in their own session. An agent does not run `approve` on an
-instruction passed on from another session, a note, a handoff file or an earlier message: the permission
-system of Claude Code blocks it — correctly, since a relayed "approve" is not the operator's word — and the
-factory has no switch around it, by design. So:
+**Approval is the operator's own act — never an agent's, never relayed.** `--by` is the person who read the words and
+said "next", in their own session. An agent does not run `approve` on an instruction passed on from another session, a
+note, a handoff file or an earlier message: Claude Code's permission system blocks it, correctly, and the factory has
+no switch around it. So:
 
 - **Unattended runs** (overnight, a module agent, a batch): build with `compile_module.py --draft` and stop
   at the draft. Say in the report which scripts wait for approval; never try to approve them.
@@ -410,25 +418,25 @@ factory has no switch around it, by design. So:
 - A script whose approval an unattended run needs stays a draft; nothing downstream pretends otherwise
   (`check_script_match.py` fails a build from a draft).
 
-**An old script re-approved** (2.49.2, F9). A script approved before 2.42.0 keeps its approval and its
-ILO-map findings are only reported. After a change that does not touch Sub-ILO tags, the sources or the
-screens — a picture, a word — `approve` does not hold it to those rules again (it says so; `propose` also
-says which applies). A change to a `sub_ilo` tag or the sources, or a screen added or removed, checks them
-in full; a new approval always does, and records it (`approved_checks`).
+**An old script re-approved.** A script approved before the ILO-map checks keeps its approval and its ILO-map findings
+are only reported. After a change that does not touch Sub-ILO tags, the sources or the screens — a picture, a word —
+`approve` does not hold it to those rules again (it says so; `propose` also says which applies). A change to a
+`sub_ilo` tag or the sources, or a screen added or removed, checks them in full; a new approval always does, and
+records it (`approved_checks`).
 
-**The theory check runs on the script, before any HTML** (2.17.0, L36): a slide too thin to teach from,
+**The theory check runs on the script, before any HTML** (L36): a slide too thin to teach from,
 notes too thin to explain from, a module whose words do not fill its minutes, a self-check after too
 little theory or with too few questions, a question whose answer the trainee has not been taught yet,
 and a task written onto its slide. A slide longer than the room can read from the screen is a note.
 Its findings head the review page and the Word file, and block approval the same way as the text check.
 
-**The pictures-and-tasks check runs on the script too** (2.18.0, L37, L38): a slide with no kind of
+**The pictures-and-tasks check runs on the script too** (L37, L38): a slide with no kind of
 picture or no word of what it shows, a long module where nothing moves, too few kinds of picture, a task
 set answered only one way, too much "choose one", no hands-on question. The review page draws each
 slide's picture area, lists the kinds and ways of answering, and lists what Novikontas or outside help
 must provide — a photograph, a film, a 3D scan.
 
-**The text check runs on the script, before any HTML** (2.16.1). `render` puts the same four rules
+**The text check runs on the script, before any HTML.** `render` puts the same four rules
 the finished slides get (`scripts/check_slide_text.py`, L22) over every screen: internal abbreviations,
 an IMO model course cited as a source, version control on the opening slide, and the factory's own
 markers. What the trainee sees — titles, slide text, questions, answers, feedback — is checked as a
@@ -440,7 +448,7 @@ apply), or, if the operator has read it and wants the words as they are (L26), a
 
 ## 5 · Building from it, and proving it
 
-**The deck is compiled, not typed** (2.25.0): `compile/GUIDE.md`. The marks below are what the compiler
+**The deck is compiled, not typed**: `compile/GUIDE.md`. The marks below are what the compiler
 writes; they are listed here for a module still built by hand.
 
 The screen inventory is **derived from the approved script** — not a separate approval. Every screen

@@ -5,76 +5,65 @@ description: The locked LOOK of a course module - the token set every deck, task
 
 # The look of a module
 
-> **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
-> in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
+> **Every reply to the operator (L25):** **Done · Check now · Next**, in everyday words — the full rule is in `course-factory/SKILL.md`.
 
-`course-module-ux` owns whether a screen **works** — fill, overflow, contrast ratio, tap
-targets. It is a floor, not an identity: two people can pass every check in `floor.json` and
-produce courses that look nothing alike. That happened. This skill owns what a screen **looks
-like**, so they cannot.
+`course-module-ux` owns whether a screen **works** — fill, overflow, contrast ratio, tap targets. That is a floor, not
+an identity: two courses can pass every check in `floor.json` and look nothing alike. This skill owns what a screen
+**looks like**, so they cannot.
 
-## The person decides the design — L26 (course-factory, 2.30.0)
+## The person decides the design — L26
 
-Every rule in this skill about how a course **looks or behaves** is a rule for the factory's own choices. When the
-person asks for something else: if nothing conflicts, just do it; if it goes against a rule here, say which rule and
-the risk in one or two plain sentences and ask **once** - *your way* / *the factory's way*; on *your way*, do it fully,
-record it (`course-factory/scripts/design_choices.py add <course> --rule <id> ...`), and **never change it back** - not
-in a later build, fix or session, and not because a check flagged it. The course material (programme, Main ILOs,
-hours, sources, the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
+Every rule here about how a course **looks or behaves** governs the factory's own choices. When the person asks for
+something else: nothing conflicts → do it; it goes against a rule → name the rule and the risk in one or two plain
+sentences and ask **once** - *your way* / *the factory's way*; on *your way*, do it fully, record it
+(`course-factory/scripts/design_choices.py add <course> --rule <id> ...`), and **never change it back** - not in a later
+build, fix or session, and not because a check flagged it. The course material (programme, Main ILOs, hours, sources,
+the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
 
 ## When this skill runs
 
-Step **8** of `course-factory`'s build order — *establish the visual system* — is this
-skill, and for a new module it is **required**, not a polish pass. It sits after the screen
-inventory and before the first line of HTML, because retro-fitting tokens onto a finished deck
-is how drift gets signed off. `scripts/audit_ui.py --strict` then runs again at verify (step 16)
-as part of sign-off. A new module does not reach sign-off without both.
+Step **8** of `course-factory`'s build order — *establish the visual system* — is this skill, and for a new module it is
+**required**, not a polish pass. It sits after the screen inventory and before the first line of HTML (tokens
+retro-fitted onto a finished deck is how drift gets signed off). `scripts/audit_ui.py --strict` runs again at verify
+(step 16) as part of sign-off. A new module does not reach sign-off without both.
 
 **Copy the style files; never read them.** Setting up a module's look is one command:
 
     python scripts/design_system.py install <module folder> --start-deck
 
-It copies every canonical style file and engine into the module's `assets/`, byte for byte
-(the list is `knowledge/design-system.json`), and starts `module.html` from the deck frame if the
-module has none. Then read **`references/vocabulary.md`** — every composition, component, page and
-task class and every token, by name and when to use it. That page *is* the design vocabulary;
-the style files hold nothing a builder needs beyond it. `scripts/design_system.py check <module>`
-proves the copies are still identical, and runs at verify. A module's copy is never edited: a
-genuinely shared gap is fixed in the canonical file here, course-specific styling goes in the
-module's own stylesheet loaded after them. *(2.11.1 — this replaced reading ~82 KB of style files.)*
+It copies every canonical style file and engine into the module's `assets/`, byte for byte (the list is
+`knowledge/design-system.json`), and starts `module.html` from the deck frame if the module has none. Then read
+**`references/vocabulary.md`** — every composition, component, page and task class and every token, by name and when to
+use it; reading the style files is replaced by it - they hold nothing a builder needs beyond it. `scripts/design_system.py check <module>` proves the
+copies are still identical, and runs at verify. A module's copy is never edited: a genuinely shared gap is fixed in the
+canonical file here, course-specific styling goes in the module's own stylesheet loaded after them.
 
 ## The one law
 
 **Module 1's `:root` is the reference. Every other screen matches it.**
 
-The owner ruled this on 2026-09-01 for interface, and it holds for the visual layer too. When
-a value here disagrees with a shipped deck, the deck is wrong — but see *Known drift* before
-changing anything, because three shipped modules disagree and that is the owner's call, not
-yours.
+When a value here disagrees with a shipped deck, the deck is wrong — but see *Known drift* before changing anything:
+three shipped modules disagree and that is the owner's call.
 
-Canonical values live in `knowledge/tokens.json`. That file is the authority; this guide points
-at it rather than restating it, so there is one place to change a colour.
+Canonical values live in `knowledge/tokens.json`. That file is the authority; this guide points at it rather than
+restating it, so there is one place to change a colour.
 
-**Canonical means the look, not the layout.** Module 1 is the reference for the palette, the
-typography, the two modes, the header band, card geometry, pills, spacing, radius, shadow, the
-takeaway and the semantic colours. It is **not** a template to reproduce: there is no canonical
-screen count, no canonical content density, no canonical practical/theory ratio and no required
-screen sequence. A module may run 10 screens or 50, or be practical-only with almost no
-presentation. Never copy Module 1's markup, and never add filler screens to resemble it
-numerically. Composition is adaptive; the visual language is not.
+**Canonical means the look, not the layout.** Module 1 is the reference for the palette, the typography, the two
+modes, the header band, card geometry, pills, spacing, radius, shadow, the takeaway and the semantic colours. It is
+**not** a template to reproduce: no canonical screen count, content density, practical/theory ratio or required screen
+sequence. A module may run 10 screens or 50, or be practical-only with almost no presentation. Never copy Module 1's
+markup, and never add filler screens to resemble it numerically. Composition is adaptive; the visual language is not.
 
-Nor does this skill decide how much a screen teaches. Low visible density is not low learning
-depth — progressive disclosure, layered cards, diagrams, animation and interactive figures are
-all legitimate ways to teach without a wall of text, and nothing here should be read as
-requiring, or forbidding, interactivity on any given screen. Pedagogy belongs to
-`novikontas-pedagogy-toolkit`; the token set only has to stay out of its way.
+Nor does this skill decide how much a screen teaches. Low visible density is not low learning depth — progressive
+disclosure, layered cards, diagrams, animation and interactive figures are all legitimate, and nothing here requires or
+forbids interactivity on any given screen. Pedagogy belongs to `novikontas-pedagogy-toolkit`.
 
 ## Never hardcode a colour — in new work
 
 Every colour, radius, shadow and font in a **new** screen comes from a token:
 
 ```css
-/* wrong - this is how the drift started */
+/* wrong */
 background: #0A2463;
 border-radius: 13px;
 
@@ -83,36 +72,29 @@ background: var(--navy);
 border-radius: var(--r-m);
 ```
 
-**MEASURED, and it matters:** the reference module does not obey this. `presentation.css`
-carries **134 raw chrome colours, 81 distinct**, outside its own `:root`. The token set is
-real but only partly adopted — it was written after much of the deck already existed.
+**MEASURED:** the reference module does not obey this (`presentation.css` carries 134 raw chrome colours, 81 distinct,
+outside its own `:root`). So the rule is *forward-looking*: do not point `--strict` at a shipped module and start
+repainting a signed-off deck. New screens tokenise; old screens are left alone until the owner asks.
 
-So the rule is *forward-looking*, not a description of the code. Do not point `--strict` at a
-shipped module and start repainting; you would be rewriting a signed-off deck on the strength
-of a lint rule. New screens tokenise; old screens get left alone until the owner asks.
-
-One exception is permanent: a raw colour on `fill` or `stroke` inside a diagram — the sea in an
-illustration, vapour in a cross-section — is content, not chrome, and stays raw.
-`scripts/audit_ui.py` counts the two separately for exactly this reason.
+One exception is permanent: a raw colour on `fill` or `stroke` inside a diagram — the sea in an illustration, vapour in
+a cross-section — is content, not chrome, and stays raw. `scripts/audit_ui.py` counts the two separately.
 
 ## The two modes
 
-A slide is **light** by default, or **dark** when it carries `.dark` or `.photo`. This is not a
-theme toggle — both appear inside one deck, chosen per screen, and a photo screen is always
-dark so the image is not framed in white.
+A slide is **light** by default, or **dark** when it carries `.dark` or `.photo`. Not a theme toggle — both appear
+inside one deck, chosen per screen, and a photo screen is always dark so the image is not framed in white.
 
-Every colour that touches text therefore exists twice: `--dim-l` / `--dim-d`,
-`--faint-l` / `--faint-d`, `--good` / `--good-d`, `--warn` / `--warn-d`, `--sh` / `--sh-d`,
-`--line-l` / `--line-d`, and the wash pairs. **Pick the variant that matches the surface behind
-it**, never the one that matches the last screen you wrote.
+Every colour that touches text therefore exists twice: `--dim-l` / `--dim-d`, `--faint-l` / `--faint-d`, `--good` /
+`--good-d`, `--warn` / `--warn-d`, `--sh` / `--sh-d`, `--line-l` / `--line-d`, and the wash pairs. **Pick the variant
+that matches the surface behind it**, never the one that matches the last screen you wrote.
 
 `--txt-d` is body text on a dark slide. There is no `--txt-l`; light slides use `--ink`.
 
-## The upgraded templates - 2.88.0 (owner, 2026-11-03, L67)
+## The upgraded templates (L67)
 
-The owner approved a new body for every L61 template, and six new ones, in the template gallery; the reference is
-`design/slide-templates/` - open `presentation/index.html` and press Next through 28 slides. The frame is unchanged
-(top line, the logo 48 px from the top and the right, title, bottom line, Raleway). What is new:
+Every L61 template has an upgraded body, plus six new templates; the reference is `design/slide-templates/` - open
+`presentation/index.html` and press Next through 28 slides. The frame is unchanged (top line, the logo 48 px from the
+top and the right, title, bottom line, Raleway). What is new:
 
 - **Pictures.** Live 3D (`gb_scene.js`, a course's scenes registered on `LTStage.scenes`), a static 3D render of the
   same scenes, a photograph or a 2D-kit figure, by the picture rule (`course-visuals` SKILL.md, L67). **Never the old
@@ -121,19 +103,17 @@ The owner approved a new body for every L61 template, and six new ones, in the t
   only behind opening, task, check and summary slides and the start screen (`gb_layouts.css`, its last block).
 - **Motion.** Every upgraded slide has stops that Next walks (`gb_steps.js`); parts rise in reading order on entry;
   everything settles for reduced motion.
-- **The mix.** The picture rule's 3D share; neighbouring slides change
-  ground (light / Navy) and kind of activity.
+- **The mix.** The picture rule's 3D share; neighbouring slides change ground (light / Navy) and kind of activity.
 - **Room activity.** The summary asks each card as a question first (the instructor notes say to ask the room); a
   "before the self-check" list; quick drills (say it, quick fire, find it - 20 to 60 s, the answer shows itself when the
   clock ends) before the module check in every second or third module, never every module.
 - **Words.** Long explanations become short points with the key word first; the full approved words and the key idea
-  go to the instructor notes (`data-cue`). Summary questions, drill prompts and the self-check list are words like any
+  go to the instructor notes (`data-cue`). The new words - summary questions, drill prompts and the self-check list - are words like any
   other: written and approved in the content script, never made up by the compiler.
 
-Every class is in `references/vocabulary.md` §0b. `gb_upgrade.css` and `gb_steps.js` load in every compiled deck; since
-2.89.0 the compiler writes the summary, the task slide, step boxes, compare boxes, the two-column figure and photo spots
-and zoom (`course-factory/compile/GUIDE.md` §2h). The content script carrying the new words (summary questions, drills,
-the self-check list, short points with full notes) is the next step.
+Every class is in `references/vocabulary.md` §0b. `gb_upgrade.css` and `gb_steps.js` load in every compiled deck; the
+compiler writes the summary, the task slide, step boxes, compare boxes, the two-column figure and photo spots and zoom
+(`course-factory/compile/GUIDE.md` §2h).
 
 ## Where to look
 
@@ -150,9 +130,8 @@ the self-check list, short points with full notes) is the next step.
 
 ### L17 · Every screen must look intentionally composed
 
-A screen is not finished because it fits. **A big empty box is not a composition.** The fix is not
-a percentage rule — it is a vocabulary, and it lives in `templates/gb_compose.css`. Put the
-composition on the slide body:
+A screen is not finished because it fits. **A big empty box is not a composition.** The fix is a vocabulary, not a
+percentage rule, and it lives in `templates/gb_compose.css`. Put the composition on the slide body:
 
 | composition | when | what it does |
 |---|---|---|
@@ -164,22 +143,18 @@ composition on the slide body:
 | `checkbody` | a knowledge check | one big question, centred |
 | `sum` | the closing grid | one column per block |
 
-Every one of them shares a single mechanic: **the composition claims the stage.** `flex:1`,
-`min-height:0`, content placed deliberately. Nothing is left where the normal flow happened to drop
-it.
+Every one shares a single mechanic: **the composition claims the stage** — `flex:1`, `min-height:0`, content placed
+deliberately, nothing left where the normal flow happened to drop it.
 
-Pick the one the CONTENT needs. Different learning needs get different compositions; a module built
-from one repeated card grid is a different failure from a badly balanced screen and just as visible.
-ETPB3 arrived with 14 of 37 screens in default flow, most of them a lead sentence over a row of
-cards.
+Pick the one the CONTENT needs. A module built from one repeated card grid (a lead sentence over a row of cards, screen
+after screen) is a failure as visible as a badly balanced screen.
 
-**Sparse is allowed** when the sparsity IS the composition — one statement, one question, one
-dominant visual, one activity code. It never means a cluster in a corner. Choosing a named
-composition declares intent; `data-compose="sparse"` declares it for a flow screen.
+**Sparse is allowed** when the sparsity IS the composition — one statement, one question, one dominant visual, one
+activity code. It never means a cluster in a corner. Choosing a named composition declares intent;
+`data-compose="sparse"` declares it for a flow screen.
 
-Checked at runtime by `course-module-ux/measure/scripts/audit_compose.js`, which measures
-**meaningful content** — headings, copy, diagrams, controls — and never the container rectangles a
-fill percentage counts.
+Checked at runtime by `course-module-ux/measure/scripts/audit_compose.js`, which measures **meaningful content** —
+headings, copy, diagrams, controls — never the container rectangles a fill percentage counts.
 
 ### The three surfaces, and who owns what
 
@@ -190,20 +165,18 @@ fill percentage counts.
 | a document page | `templates/gb_page.css` | `.gbt-topback`, `.wrap`, headings, cards, tables, `.links`, `.jump`, `.bigstart`, `.foot` |
 | a task page | `course-task-ux/assets/gb_task.css` | the task controls only, layered **on top of** `gb_page.css` |
 
-A course that writes its own version of any of these has started a dialect. ETPB3 arrived with
-`etpb3_ui.css` headed *"ETPB2 — shared visual layer"* and `task.css` headed *"ETPA1"*: two courses
-back and still spreading. The shell was incomplete, which is **why** they wrote their own — so if
-something genuinely shared is missing here, add it here.
+A course that writes its own version of any of these has started a dialect, and dialects keep spreading to the next
+course. If something genuinely shared is missing here, add it here.
 
-### What `audit_ui.py` checks, and why each one exists
+### What `audit_ui.py` checks
 
-| check | the defect it was written for |
+| check | the defect it catches |
 |---|---|
 | raw chrome colour outside `:root` | drift |
 | a token whose value differs from canon | drift |
 | a local name that is not canonical | drift — unless its value is `var(--canonical, fallback)`, which is *following*, and is reported as such |
-| **a class the markup uses that no loaded stylesheet defines** | a module moved onto the canonical shell and silently lost every callout, caption and table rule. Everything else was green. |
-| **a `var(--x)` nothing defines for that page** | a retired dialect. An unresolvable custom property voids the **whole declaration** — the colour does not fall back, it disappears. Both answer states on a task page rendered transparent. Looks inside `<style>` *and* `style=""`. |
+| **a class the markup uses that no loaded stylesheet defines** | a module moved onto the canonical shell silently loses its callout, caption and table rules. Everything else stays green |
+| **a `var(--x)` nothing defines for that page** | a retired dialect: an unresolvable custom property voids the **whole declaration** — the colour disappears, it does not fall back. Looks inside `<style>` *and* `style=""` |
 
 Fixtures for the last two are in `scripts/fixtures/`. Run them if you change the checks.
 
@@ -216,33 +189,32 @@ Fixtures for the last two are in `scripts/fixtures/`. Run them if you change the
 | Logo, print identity, brand colour across the company | `novikontas-brandbook` |
 | Hours, ILOs, build order | `course-factory` |
 
-`novikontas-brandbook` owns the company's identity — Raleway, the logo, the corporate palette.
-This skill owns what that becomes on a projected 1366×768 screen and a 1280×800 tablet. Where
-they overlap, the brandbook wins on brand colour and typeface; this skill wins on everything
-the brandbook has no opinion about, which is most of a deck.
+`novikontas-brandbook` owns the company's identity — Raleway, the logo, the corporate palette. This skill owns what that
+becomes on a projected 1366×768 screen and a 1280×800 tablet. Where they overlap, the brandbook wins on brand colour and
+typeface; this skill wins on everything the brandbook has no opinion about.
 
 ## Known drift — read before "fixing" anything
 
-Measured across the eight GAS BASIC modules on 2026-09-09:
+Measured across the eight GAS BASIC modules:
 
 - Modules **04, 07, 08** match Module 1 exactly.
-- Modules **03, 05, 06** run a second dialect: `--blue-soft-*` / `--amber-soft-*` instead of
-  `--blue-wash-*` / `--amber-wash-*`, eight reference tokens missing, and six values off by a
-  shade (`--deep-3` `#10264F` vs `#122A52`, `--txt-d` `#F2F7FC` vs `#F3F8FD`, and four more).
+- Modules **03, 05, 06** run a second dialect: `--blue-soft-*` / `--amber-soft-*` instead of `--blue-wash-*` /
+  `--amber-wash-*`, eight reference tokens missing, and six values off by a shade (`--deep-3` `#10264F` vs `#122A52`,
+  `--txt-d` `#F2F7FC` vs `#F3F8FD`, and four more).
 - Two `gb_review.css` files declare no `:root` at all and inherit whatever is loaded.
 - The second dialect has three tokens the reference lacks: `--red`, `--flame`, `--toxic`.
 
-**Do not silently normalise a shipped module.** Repainting a signed-off deck is a content
-decision. Report the drift, name the files, and let the owner decide. New work uses the
-reference set. A retrofit the operator asked for **is** that decision for the module it names
-(L18): its rebuilt files get the reference set and the strict check; nothing else is repainted.
+**Do not silently normalise a shipped module.** Repainting a signed-off deck is a content decision: report the drift,
+name the files, and let the owner decide. New work uses the reference set. A retrofit the operator asked for **is** that
+decision for the module it names (L18): its rebuilt files get the reference set and the strict check; nothing else is
+repainted.
 
-`--red` / `--flame` / `--toxic` are a real gap: a gas course needs hazard colours and the
-reference set has none. Adding them is an owner decision, not a fix to apply quietly.
+`--red` / `--flame` / `--toxic` are a real gap: a gas course needs hazard colours and the reference set has none. Adding
+them is an owner decision, not a fix to apply quietly.
 
 ## Honesty markers
 
-Same set as the rest of the family. The visual layer earns two of its own:
+Same set as the rest of the family. The visual layer adds two:
 
 - **MEASURED** — a value read out of a shipped file by a script, not from memory.
 - **DRIFTED** — two shipped modules disagree and neither has been ruled canonical yet.
