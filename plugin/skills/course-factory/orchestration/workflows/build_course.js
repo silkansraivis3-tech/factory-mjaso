@@ -883,7 +883,8 @@ none and sign nothing: run STEP 4 ONLY and report what it prints (walked = true)
    for what it shows now${again
     ? ' - this is the look after a fix or a rebuild: only the slides and task pages it changed (one that failed and was not '
       + 'changed keeps its verdict and is not shown again)'
-    : ''} and prints the sheets' folder and the brief's path.
+    : ''} and prints the sheets' folder and the brief's path. A task page the build did not photograph as it is now is
+   answered and photographed first (it takes a minute or two) - that changes no file of the module.
      "nothing to review"                 -> go to step 4.
      a line "has no picture of ..."      -> the build did not walk that slide or task page: review what the brief
                                             holds; verify (step 4) then says "incomplete" and that is your state.
