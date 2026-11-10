@@ -138,6 +138,19 @@ def main():
         check("... and neither is reported as untaught", not any(r["id"] in ("1", "-") for r in rep["not_taught"] + rep["not_checked"]))
         check("a Main ILO's text is the architecture's, else the map's row, cleaned of its number and trailing ';'",
               {x["id"]: x["text"] for x in doc["main"]}["7"] == "Examined", doc["main"])
+
+        print("\n-- a module that owes two Main ILOs")
+        both = {"module": "M01", "module_title": "Gas tankers", "main_ilo_ids": ["1", "3"], "main_ilo": "First outcome; | Third outcome;"}
+        m["rows"] += [dict(both, sub_ilo_id="3.1", sub_ilo="Pick the team."), dict(both, sub_ilo_id="9.1", sub_ilo="Numbered after neither."),
+                      dict(both, sub_ilo_id="3", sub_ilo="3. Third outcome;")]
+        put(mp, m)
+        doc, rep = ilo_coverage.build(c)
+        check("a Sub-ILO goes under the Main ILO its own number names, not the module's first",
+              row(doc, "M01", "3.1")["main"] == "3" and row(doc, "M01", "3")["main"] == "3", [(r["id"], r["main"]) for r in doc["rows"]])
+        check("... and that Main ILO's words are its own part of the module's joined line",
+              {x["id"]: x["text"] for x in doc["main"]}.get("3") == "Third outcome", doc["main"])
+        check("... a Sub-ILO numbered after none of them falls back to the module's first", row(doc, "M01", "9.1")["main"] == "1")
+        check("... a module with one Main ILO keeps it whatever its Sub-ILOs are numbered", row(doc, "M02", "2.1")["main"] == "1")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n" + "=" * 72)

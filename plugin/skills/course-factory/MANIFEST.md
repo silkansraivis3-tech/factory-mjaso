@@ -130,6 +130,12 @@ upload, but no workflow build ever ran it, a one-slide fix made every slide stal
 - `orchestration/workflows/build_course.js`: the cross-check on Sonnet (`MECHANICAL`), the builder prompt without the L60
   answer and the picture on every topic screen, the cold-build wait 45 min.
 - Open rulings and the speed, cost and quality proposals: `_claude/AUDIT_2026-11-10_FACTORY_FLOW.md`.
+## 2.119.1 · A Sub-ILO under its own Main ILO in the admin's ILO map (2026-11-10)
+
+- `scripts/ilo_coverage.py` `main_of`: `main_ilo_ids` on a map row is the module's list, and its first entry was taken for
+  every Sub-ILO of the module. A Sub-ILO now goes under the Main ILO its own number names (3.1 under 3) when the module
+  owes that outcome; the first entry is the fallback. `main_words` gives that outcome its own part of the joined
+  `main_ilo` line. Same change in the training app's `tools/ilo-coverage.mjs`. Pinned in `scripts/test_ilo_coverage.py`.
 
 ## 2.119.0 · The classroom files the tablet app imports (2026-11-09)
 
