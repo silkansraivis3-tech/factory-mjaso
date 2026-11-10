@@ -7,7 +7,8 @@
     fix.py apply    <course> --confirmed                 after the operator's one yes: scripts AND built slides
     fix.py approve  <course> --by "<name>" [--despite-findings]   one approval for every module in the batch
     fix.py check    <course> --kind words|layout|package|walk [--modules ...] [--slides s03,s07]
-                                                         walk (2.116.0): the touched slides walked like a trainee (walk_review.py)
+                                                         walk (2.116.0): the touched slides and task pages walked like a
+                                                         trainee (walk_review.py); --slides s03,self_check_1 names both
     fix.py standard <course> [--add "<rule>" --said "<operator's words>" [--departs <design rule> --risk "..."]]
                                                          the course's house decisions; --departs: a design choice (L26)
     fix.py sync-shared <course> [--confirmed]            one shared file -> every module's own copy
@@ -575,9 +576,10 @@ def cmd_check(course, kind, modules, slides=None, floor=None):
         fails += rc != 0
         lines.append(out if rc else "The course folder follows the classroom system's rules.")
     elif kind == "walk":
-        # 2.116.0 - after any fix, the walk review runs on every touched slide (walk it like a trainee): the module is walked
-        # at 1280x800 (fit_gate.py saves every stop), the touched slides' contact sheets and brief are made, and the check
-        # passes only when the reviewer has signed those slides (walk_review.py sign)
+        # 2.116.0 - after any fix, the walk review runs on every touched slide and task page (walk it like a trainee): the
+        # deck is walked at 1280x800 (fit_gate.py saves every stop), a touched task page is answered and photographed
+        # (review_sheets.mjs), the touched units' contact sheets and brief are made, and the check passes only when the
+        # reviewer has signed them (walk_review.py sign). --slides takes slide ids and task pages (self_check_1, or its file)
         measure = os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-module-ux", "measure", "scripts")
         if measure not in sys.path:
             sys.path.insert(0, measure)
@@ -596,6 +598,14 @@ def cmd_check(course, kind, modules, slides=None, floor=None):
                     fails += 1
                     lines.append("Module %d: the walk could not be made - %s" % (m, (out.splitlines() or ["?"])[-1]))
                     continue
+                if walk_review.touches_tasks(walk_review.task_pages(mods[m]), want):
+                    rc, out = walk_review.walk_tasks(course, m)
+                    if rc:
+                        fails += 1
+                        lines.append("Module %d: %s" % (m, "a task page does not grade as it should - fix it, then this check again"
+                                                        if rc == 1 else "the task pages could not be walked"))
+                        lines += ["    " + x for x in out.splitlines() if rc != 1 or "FAIL" in x][-12:]
+                        continue
             ok, why_kind, msg = walk_review.verify(course, m, want)
             if ok:
                 lines.append("Module %d, walk review: %s" % (m, msg))

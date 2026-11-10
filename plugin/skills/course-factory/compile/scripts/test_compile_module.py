@@ -3307,7 +3307,7 @@ def main():
         code, out = run(COMPILE, c, "--module", "1")
         check("an approved script with every picture builds clean (exit 0)", code == 0, out)
         check("finding 14 (2.50.0): the build points at build_module.py and the required visual review with its brief",
-              "build_module.py" in out and "required" in out and "REVIEW_PROMPT.md" in out and "not handed over" in out, out)
+              "build_module.py" in out and "required" in out and "walk_review.py" in out and "REVIEW_PROMPT" not in out and "not handed over" in out, out)
         page = deck(md)
         code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
         check("check_script_match --part instructor passes on the built deck", code == 0, out)

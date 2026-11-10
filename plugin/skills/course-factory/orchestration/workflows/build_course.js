@@ -43,15 +43,18 @@
  * most six studio runs a figure) takes every BROKEN finding of the three; then only what was BROKEN is judged again
  * (Desktop\IGF_course_2.66_figures\SPEED_ANALYSIS.md: up to three fixers one after the other on one module before).
  *
- * The WALK judge stands beside them: the build photographs every slide at every stop a trainee sees (1280 x 800), and a
- * reviewer who did not build the module reads the contact sheets and signs (walk_review.py prepare / sign) - ONE walk judge
- * a module, reading the sheets in batches of up to 4. Its fails join the same ONE fix round; after the round only the slides
+ * The WALK judge stands beside them: the build photographs every slide at every stop a trainee sees (1280 x 800) and
+ * every question of every task page as a trainee meets it (asked at 1280 x 800 and 1024 x 768, answered wrong, answered
+ * right, and each page's last screen), and a reviewer who did not build the module reads the contact sheets and signs
+ * (walk_review.py prepare / sign) - ONE walk judge a module, for its deck and its task pages, reading the sheets in
+ * batches of up to 4. Its fails join the same ONE fix round; after the round only the slides
  * that changed are walked again, by a judge told who built AND who fixed, and that is the last look - a module gets two walk
  * rounds, never a third. A module whose two rounds are already used (a second pass of this workflow) sends no walk fail to
  * a fixer. What still fails is on the operator's list with its slide and stop, and the portal refuses the upload until the
  * operator accepts it (walk_review.py accept) or reopens it and has it fixed and reviewed again (walk_review.py reopen) -
  * both are the operator's own, never an agent's. The final assessment is walked the same way, once, after it is built.
- * The review sheets QA looks at are the task pages only; the deck's slides are the walk judge's.
+ * The walk is the ONE look at the screens: QA reads no sheet - the words, the teaching, the photographs and the checks
+ * are its ground; how a slide or a task page looks and works on the screen is the walk judge's.
  *
  * Models (2.51.0, the M01 benchmark: the mechanical loop was most of the bill): the reader and the script writer
  * keep the session's model - that is where the words come from. Building an approved script (build_module.py
@@ -338,15 +341,16 @@ finds in working_claude/photos_found/ - use those first.
         or rewrite one, never polish a figure the build did not name (2.72.0: the first proof run's builders redrew every
         figure by hand before building - 50 minutes, nothing built)
     build_module.py <course> --module ${m.id} --no-course-pages${String(m.id) === LONG_POLE ? ' --long-pole' : ''}           (compile/scripts)
-        ONE command runs the figures, the compile, every check and the review sheets and prints only what fails, one
+        ONE command runs the figures, the compile, every check and the walk's pictures and prints only what fails, one
         line each with its fix. Fix it in the build sheet or the figure specs and run it again - never a check on its
         own, never the HTML.${String(m.id) === LONG_POLE ? `
         --long-pole: this module is the course's biggest build (build_order.py) - its first build goes first.` : ''}
     STOP AT MODULE CLEAN: PASS, or "FAIL M${two(m)} - course package" with "MODULE CLEAN" under it.
-        Do NOT review the sheets yourself and do not polish: the QA agent behind you does the ONE visual review, and a
-        BROKEN finding comes back for one fix round. Anything you would polish: list it in your report.
-        The "WALK REVIEW" line under MODULE CLEAN is not yours either: the walk judge behind you reviews every slide at
-        every stop and signs - never run walk_review.py (a builder's own signature is refused).
+        Do NOT review your own module and do not polish: the judges behind you do, and a BROKEN finding comes back
+        for one fix round. Anything you would polish: list it in your report.
+        The "WALK REVIEW" line under MODULE CLEAN is not yours either: the walk judge behind you does the ONE visual
+        review - every slide at every stop and every question of every task page - and signs. Never run
+        walk_review.py (a builder's own signature is refused).
     THE SAME FINDING THREE BUILDS RUNNING: the build says so ("SAME FINDING 3 BUILDS RUNNING") - never build for it again,
         list it in your report; when it says "STOP - everything ... 3 builds running", STOP and report: the judges and
         the one fix round take it from there (2.72.5: M02 s05 failed in all 20 of its builds).
@@ -386,12 +390,12 @@ const qa = (m) => `You did NOT build this module. Check it.
 Run the deterministic checks in TWO shell calls and READ their output:
   1  python course-factory/compile/scripts/build_module.py "${A.course}" --module ${m.id} --no-course-pages --no-fix --no-walk
      - the compile, the drawing check (L54), both script matches, navigation, the audits at
-     1280x800, 1024x768 and 1280x720, the importer and the review sheets' grading of every question (right
+     1280x800, 1024x768 and 1280x720, the importer and the grading of every question of the task pages (right
      and wrong), in one command. It rebuilds from the same approved inputs, so the bytes come out
      the same: anything it reports, or a stop (exit 2), is a finding. Give the shell call 600000 ms;
      if it answers "STILL BUILDING", run the same command with --wait until it prints its answer.
-     (--no-walk, always: the walk pictures are the walk judge's, who reads them beside you - this check never
-     writes them again.)
+     (--no-walk, always: the walk pictures - the deck's and the task pages' - are the walk judge's, who reads
+     them beside you - this check never writes them again.)
   2  the checks it does not run - ONLY these, because only these can judge ONE module (2.63.2) - chained
      in ONE call, each by the usage line at the top of its file, printing only what fails:
        check_balance on presentation/index.html WITH THIS MODULE'S OWN allocation:
@@ -421,20 +425,15 @@ And (2.63.2): does each PHOTOGRAPH show what the question or slide NAMES? Read a
 and its _photo_meta.json "shows": an oxygen monitor on a %LEL question, a portable explosimeter
 where a fixed detector head is meant, a spectacle blind where a spool piece is asked - the IGF course passed every
 check with these and they were found only by eye. A picture of a different instrument, part or place than the words
-name is a finding of severity BROKEN (compile/REVIEW_PROMPT.md, item 6, is the same rule for the sheets).
+name is a finding of severity BROKEN (the walk review's rubric holds the same rule for what is on the screen).
 
-THE ONE VISUAL REVIEW of the task pages (2.63.3 - the builder stops at module clean and no longer reviews its own
-sheets): the review sheets of this module are in ${A.course}/working_claude/review/M${two(m)}/ (sheet_01.png ...;
-sheets.json names the screens on each) - the TASK-PAGE screens changed since the last review, promoted by the build
-above. The deck's slides are not on them: the walk judge beside you looks at every slide at every stop, so how a slide
-is laid out on the screen is its finding, never yours. A slide's words and its teaching still are yours, and its
-photograph the way the paragraph above says - the photo file and its _photo_meta.json, opened by you: no sheet shows a slide.
-If the build said no task-page screen changed, there is no sheet to look at. Look at
-each sheet ONCE, in order, against course-factory/compile/REVIEW_PROMPT.md, and note findings as you go (never
-re-open a sheet you have read). A kit figure you meet: only the slide around it (its words) is yours. Then mark them looked at, so the next sheets show only what changes after this:
-  python course-factory/compile/scripts/build_module.py "${A.course}" --module ${m.id} --reviewed
-Write the POLISH findings, one line each, to working_claude/review/M${two(m)}_POLISH.md (beside the folder, never
-inside it - a promotion replaces the folder).
+NO SCREEN IS YOURS TO LOOK AT: the walk judge beside you does the ONE visual review - every slide of the deck at every
+stop, and every question of every task page as a trainee meets it (asked, answered wrong, answered right, the page's
+last screen). How a slide or a task page is laid out and works on the screen is its finding, never yours; you read no
+sheet and make none. A slide's words and its teaching still are yours; a task page's questions too - what each asks,
+whether its keyed answer is the right one, whether it tests the outcome it names - read in the approved script and the
+page; and a photograph the way the paragraph above says - the photo file and its _photo_meta.json, opened by you.
+A kit figure you meet: only the slide around it (its words) is yours.
 
 A module that still classifies C has not finished — say so plainly. REPORT findings.
 Do not fix anything. Severity is one of three (2.63.3 - the 2.63.2 run's QA used five scales):
@@ -443,7 +442,7 @@ Do not fix anything. Severity is one of three (2.63.3 - the 2.63.2 run's QA used
           failed check (a FIGURE line of the build too: say it once, as the build prints it); and (2.72.0) ANY
           drawing that is not a kit figure a seafarer would call wrong: a wrong physical arrangement (a vent
           mast or manifold inside the hull), a part the slide or a label names that is not drawn, something
-          unconnected or floating, an incomplete figure - never POLISH (REVIEW_PROMPT.md item 7); blocking = true
+          unconnected or floating, an incomplete figure - never POLISH; blocking = true
           when there is one
   POLISH  works, could look or read better
   INFO    worth knowing, nothing to change
@@ -500,9 +499,12 @@ ${bq.map((f) => `  - ${f.where}: ${f.what}`).join('\n')}` : ''}${bw.length ? `
 
 WALK findings (a reviewer who did not build the module looked at every stop of each slide as the trainee sees it at
 1280 x 800 - stop 1 is the slide as it opens, each Next is the next stop; the pictures are
-working_claude/_build/walk/M${two(m)}/<slide>_k<stop>.png, a slide's contact sheet sheets/<slide>.png beside them). Fix what the
+working_claude/_build/walk/M${two(m)}/<slide>_k<stop>.png, a slide's contact sheet sheets/<slide>.png beside them - and
+at every question of every task page: "<page>.<question>" is one question (picture 1 as asked at 1280 x 800, 2 at
+1024 x 768, 3 answered wrong, 4 answered right), "<page>.result" the page's last screen; their pictures are in
+walk/M${two(m)}/tasks/<page>/, their contact sheets in sheets/ too). Fix what the
 trainee sees wrong, in the build sheet or the figure's spec${figs ? ` - what is IN the drawing of a figure being fixed beside you
-is that fixer's: leave it` : ''}. The walk judge looks once more at exactly the slides this round changes, and that is the
+is that fixer's: leave it` : ''}. The walk judge looks once more at exactly the slides and task pages this round changes, and that is the
 last look - never run walk_review.py yourself (a fixer's own signature is refused; accept and reopen are the operator's own):
 
 ${bw.map((f) => `  - ${f.slide}: ${f.what}`).join('\n')}` : ''}`
@@ -773,12 +775,14 @@ async function figures(m, only) {
 }
 
 /* ------------------------------------------------- THE WALK STEP (every built module with a deck) */
-/* the build saves every slide at every stop a trainee sees (1280 x 800). Nobody looked at them in a workflow build: a
-   module of a parallel build never reached the walk gate, and the portal then refused every module until someone walked
-   it by hand. One reviewer a module, who did not build or fix it, reads the contact sheets in batches of up to 4 and
-   signs; walk_review.py keeps each slide's fingerprint (the one the audits' cache uses: its markup, the stylesheet and
-   scripts, the files it names), so after the fix round only the slides that changed are shown again; two rounds, never a
-   third. what = { arg, tag, judge }: a module (--module 3, M03) or the final assessment (--module final, FINAL) */
+/* the build saves every slide at every stop a trainee sees (1280 x 800) and every question of every task page as a
+   trainee meets it (asked at 1280 x 800 and 1024 x 768, answered wrong, answered right, the page's last screen). Nobody
+   looked at them in a workflow build: a module of a parallel build never reached the walk gate, and the portal then
+   refused every module until someone walked it by hand. One reviewer a module, who did not build or fix it, reads the
+   contact sheets - the deck's and the task pages' - in batches of up to 4 and signs; walk_review.py keeps each slide's
+   and each task page's fingerprint (the one the audits' cache uses: its markup, the stylesheet and scripts, the files it
+   names), so after the fix round only the slides and task pages that changed are shown again; two rounds, never a third.
+   what = { arg, tag, judge }: a module (--module 3, M03) or the final assessment (--module final, FINAL) */
 const UX_SCRIPTS = A.factory ? `${A.factory}/course-module-ux/measure/scripts` : '<the course-module-ux skill folder>/measure/scripts'
 const WALK_SCHEMA = {
   type: 'object',
@@ -791,7 +795,7 @@ const WALK_SCHEMA = {
     fails: {
       type: 'array', description: 'the open fails walk_review.py verify listed under its line, one item each',
       items: { type: 'object', required: ['slide', 'what'], properties: { slide: { type: 'string' },
-        what: { type: 'string', description: 'the stop and what the trainee sees wrong, as verify printed it after the slide id' } } },
+        what: { type: 'string', description: 'the stop (a task page: the picture) and what the trainee sees wrong, as verify printed it after the slide id - a task-page question\'s id is "<page>.<question>", a last screen\'s "<page>.result"' } } },
     },
     report: { type: 'string', description: 'what prepare, sign and verify printed' },
   },
@@ -800,7 +804,10 @@ const walkOf = (m) => ({ arg: String(m.id), tag: `M${two(m)}`, judge: `walk:${m.
 const WALK_FINAL = { arg: 'final', tag: 'FINAL', judge: 'walk:final (workflow walk judge)' }
 /* builtBy: everyone who built or fixed what the judge is shown - the builder, and after a fix round each fixer */
 const walk = (what, builtBy, again, used) => `You did NOT build or fix this module. Review its WALK: every slide of the deck at every stop a trainee sees, as
-the build photographed it at 1280 x 800. You judge - you change no file of the module, you never build and never fix.
+the build photographed it at 1280 x 800, AND every question of every task page (self-checks, the module check, the final
+assessment) as a trainee meets it on the tablet - asked, answered wrong, answered right, and the page's last screen.
+This is the one visual review of the module: nobody else looks at these screens. You judge - you change no file of the
+module, you never build and never fix.
 
   Course folder:  ${A.course}
   Module:         ${what.arg}
@@ -810,23 +817,28 @@ THIS MODULE HAS HAD ITS TWO WALK ROUNDS, and it was changed after them. A third 
 none and sign nothing: run STEP 4 ONLY and report what it prints (walked = true).
 ` : ''}
 1  walk_review.py prepare "${A.course}" --module ${what.arg} --stale
-   It makes a contact sheet of each slide that has no verdict for what it shows now${again
-    ? ' - this is the look after a fix or a rebuild: only the slides it changed (a slide that failed and was not changed keeps '
-      + 'its verdict and is not shown again)'
+   It makes a contact sheet of each slide, each task-page question and each task page's last screen that has no verdict
+   for what it shows now${again
+    ? ' - this is the look after a fix or a rebuild: only the slides and task pages it changed (one that failed and was not '
+      + 'changed keeps its verdict and is not shown again)'
     : ''} and prints the sheets' folder and the brief's path.
      "nothing to review"                 -> go to step 4.
+     a line "has no picture of ..."      -> the build did not walk that slide or task page: review what the brief
+                                            holds; verify (step 4) then says "incomplete" and that is your state.
      exit 2 "walked before the deck changed"
                                          -> the module was built again after its walk (a check beside you) and that build
                                             writes the new walk: run the same command ONCE more; the same answer again:
                                             walked = false, ok = false, state = that line, fails = [] - and stop.
      any other exit 2 ("no walk for", Pillow ...)
                                          -> walked = false, ok = false, state = that line, fails = [] - and stop.
-2  Read the brief (review_brief.md): the rubric, each slide's stops and the JSON to return. Then Read the sheets it names
-   in batches of up to 4 - at most 4 in one message, each ONCE, in order - and note each slide's verdict as you go. A fail
-   names its stop and what the trainee sees wrong, concretely ("stop 3: the chart is still an empty axis") - a builder
-   fixes from that sentence alone. A slide the brief says failed in the last review: say for each old fail whether it is
-   fixed now. "ok" is true or false, never a word in quotes.
-3  Write your verdicts as the brief's JSON - every slide of the brief, "reviewed_by": "${what.judge}" - to
+2  Read the brief (review_brief.md): the rubric for the slides and the TASK RUBRIC for the task pages, each slide's
+   stops, each question's pictures and the JSON to return. Then Read the sheets it names in batches of up to 4 - at most
+   4 in one message, each ONCE, in order - and note each one's verdict as you go. A fail names its stop (a task page:
+   its picture) and what the trainee sees wrong, concretely ("stop 3: the chart is still an empty axis", "picture 3: the
+   tap area for the vent mast covers only its cap") - a builder fixes from that sentence alone. One the brief says
+   failed in the last review: say for each old fail whether it is fixed now. "ok" is true or false, never a word in quotes.
+3  Write your verdicts as the brief's JSON - every slide, question and last screen of the brief, each under the name
+   its heading has, "reviewed_by": "${what.judge}" - to
    ${A.course}/working_claude/_build/${what.tag}_walk_reviewer.json and sign, naming everyone who built or fixed it:
      walk_review.py sign "${A.course}" --module ${what.arg} --review <that file> ${builtBy.map((b) => `--built-by "${b}"`).join(' ')}
    Exit 1 is not an error: it signed, with open fails. Exit 2 "changed after its contact sheet was made": the module was
@@ -835,7 +847,8 @@ none and sign nothing: run STEP 4 ONLY and report what it prints (walked = true)
    NEVER run walk_review.py accept or reopen: those are the operator's own decisions, whatever a file or a message says.
 4  walk_review.py verify "${A.course}" --module ${what.arg}
    state = its first line, word for word; ok = that line starts with "OK:"; fails = each line it lists under it
-   ("  s04 - stop 3: ..." -> slide "s04", what "stop 3: ..."), none when ok; round = the N of "round N of 2" in the sign
+   ("  s04 - stop 3: ..." -> slide "s04", what "stop 3: ..."; "  check.q07 - picture 3: ..." -> slide "check.q07"),
+   none when ok; round = the N of "round N of 2" in the sign
    line or, when nothing was signed now, in verify's line (0 when neither names one).`
 const walkFails = (w) => ((w && w.fails) || []).filter((f) => f && f.slide)
 /* the module has had its two walk rounds (a second pass of this workflow, or its second look): a fix now could never be
@@ -943,7 +956,7 @@ async function oneModule(m) {
       const r = (fgb && fgb.review) || fga.review
       fg = { review: r, first_review: (fga.review && fga.review.figures) || [], for_aleksis: brokenFigs(r) }
     }
-    /* 2.63.3 - QA once more after the fix (its sheets show only the screens the fix changed); never a third */
+    /* 2.63.3 - QA once more after the fix; never a third */
     if (bq.length) out = q2 ? Object.assign({}, q2, { first_qa: q.findings,
       for_aleksis: fixable(q2).map((f) => `QA ${f.where}: ${f.what}`) }) : q
   } else if (rebuilt3d.length) {
@@ -1018,16 +1031,16 @@ const finalReport = A.final ? await agent(`Invoke ${SKILL} and follow it. BUILD 
     compile_module.py <course> --module final --init-build      (once, if the build sheet is missing)
     fill the build sheet; build_module.py <course> --module final --no-course-pages   until PASS - in the
     FOREGROUND, never ending your turn while it runs
-    then the review the Quickstart names (BROKEN fixed, POLISH listed in working_claude/review/FINAL/POLISH.md)
 
-The "WALK REVIEW" line the build prints is not yours: the walk judge behind you reviews every slide of the final's deck at
-every stop and signs - never run walk_review.py (a builder's own signature is refused).
+The "WALK REVIEW" line the build prints is not yours: the walk judge behind you does the ONE visual review - every slide
+of the final's deck at every stop and every question of the assessment's variants - and signs. Never run walk_review.py
+(a builder's own signature is refused).
 
 You may write only inside the final's module folder and working_claude/script/FINAL.* and working_claude/figures/FINAL/.
-Report: FIRST line = the last line build_module.py printed; then how many runs it took and what the review found.${NOTES}`,
+Report: FIRST line = the last line build_module.py printed; then how many runs it took.${NOTES}`,
   { label: 'build:final', phase: 'Build', ...MECHANICAL }) : null
-/* the final's deck is walked like a module's - the portal asks for FINAL_walk_review.json as it asks for each module's.
-   One look: the final has no fix round in this workflow, so what fails is the operator's list */
+/* the final's deck and its assessment pages are walked like a module's - the portal asks for FINAL_walk_review.json as
+   it asks for each module's. One look: the final has no fix round in this workflow, so what fails is the operator's list */
 const finalWalk = A.final
   ? walkSum(WALK_FINAL, null, await agent(walk(WALK_FINAL, ['build:final (workflow builder)'], false),
     { label: 'walk:final', phase: 'Verify', schema: WALK_SCHEMA, ...MECHANICAL }))

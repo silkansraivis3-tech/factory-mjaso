@@ -5173,8 +5173,9 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
 
 NEXT_STEPS = """
 Next: compile\\scripts\\build_module.py <course> --module N runs this compile AND every check in one command, prints only
-  what fails, and on a pass makes the visual review's sheets (GUIDE 2f - required: one review subagent reads them with
-  compile\\REVIEW_PROMPT.md). A module is not handed over until the review is done and what it found is fixed."""
+  what fails, and on a pass has walked every slide and every task page like a trainee (GUIDE 2i - required: one reviewer
+  who did not build the module reads the walk's sheets, walk_review.py). A module is not handed over until the walk
+  review is done and what it found is fixed."""
 
 
 def module_folder(course, module, module_dir=None):

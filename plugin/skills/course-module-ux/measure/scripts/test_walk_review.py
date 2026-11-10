@@ -18,8 +18,13 @@ Every check RUNS the behaviour on a fixture course (a deck with a stylesheet, a 
     rounds again and lets the open slides be reviewed as they are;
   * the final assessment is FINAL whether asked for by name or by its folder's number;
   * a review signed before the fingerprints stands for its deck and no other; a walk with no fingerprints is refused;
-  * the gates: fix.py check --kind walk, course_portal upload (what stops it, and the accepted fails it shows).
-No browser needed: the walk's stops are fixture PNGs (walk() stands in for the build's fit walk).
+  * the gates: fix.py check --kind walk, course_portal upload (what stops it, and the accepted fails it shows);
+  * the trainee's task pages (tasks\\, assessment\\, never an answer key) are reviewed like the slides: one verdict per
+    question and per last screen, one fingerprint per page (the page and what it loads) - a changed page makes its own
+    questions stale and nothing else; a module whose deck is reviewed and whose task pages are not is incomplete and
+    refused at the upload; the two rounds, the accept (on the upload's list) and fix.py check --slides <page> hold for them.
+No browser needed: the walk's stops are fixture PNGs (walk() stands in for the build's fit walk, walk_pages() for
+review_sheets.mjs --walk-dir).
 """
 from __future__ import annotations
 
@@ -512,6 +517,210 @@ def gates_part(tmp):
           and let[0].endswith("the line is read out by the instructor"), let)
 
 
+def task_html(pid, words="Which gauge shows the tank pressure?"):
+    return ("<html><head><link rel=\"stylesheet\" href=\"../assets/deck.css\"></head><body><h1>%s</h1><p>%s</p>%s</body></html>"
+            % (pid, words, "<img src=\"../assets/img/gauge.jpg\">" if pid == "self_check_1" else ""))
+
+
+def add_tasks(course, module=1, pages=("self_check_1", "check"), sub="tasks"):
+    """the module's task pages (and an answer key, which is no trainee's page) -> the module folder"""
+    mdir = wr.module_dir(course, module)
+    os.makedirs(os.path.join(mdir, sub), exist_ok=True)
+    for pid in pages:
+        Path(mdir, sub, pid + ".html").write_text(task_html(pid), encoding="utf-8")
+    Path(mdir, sub, "check_answer_key.html").write_text("<html>the answers</html>", encoding="utf-8")
+    Path(mdir, "assets", "img", "gauge.jpg").write_bytes(b"a gauge")
+    return mdir
+
+
+def walk_pages(course, module=1):
+    """what the build's task walk leaves (review_sheets.mjs --walk-dir): per question a picture as asked at both sizes,
+    answered wrong and answered right, the page's last screen after each run, and tasks.json with each page's fingerprint
+    as its walk began. A page unchanged since it was walked keeps its pictures"""
+    from PIL import Image
+    wdir = wr.stamp_tasks(course, module)
+    stamp = json.loads(Path(wdir, "tasks_stamp.json").read_text(encoding="utf-8"))["pages"]
+    old = (wr.load_json(os.path.join(wdir, "tasks.json"), {}) or {}).get("pages") or {}
+    pages = {}
+    for n, (pid, e) in enumerate(stamp.items(), 1):
+        if (old.get(pid) or {}).get("fingerprint") == e["fingerprint"]:
+            pages[pid] = old[pid]
+            continue
+        os.makedirs(os.path.join(wdir, "tasks", pid), exist_ok=True)
+
+        def shot(name, k):
+            rel = "tasks/%s/%s.png" % (pid, name)
+            Image.new("RGB", (480, 300), (60 * n, 50 * k, 90)).save(os.path.join(wdir, rel))
+            return rel
+        said = {"wrong": "Not quite - the tank gauge is the one on the dome.", "right": "Correct."}
+        pages[pid] = dict(e, questions=[
+            {"id": q, "ask": "%sWhich gauge shows the tank pressure?" % q[1:], "mech": "choice", "states": [
+                {"state": s, "file": shot("%s_%d_%s" % (q, k, s.replace(" ", "_")), k), "said": said.get(s, "")}
+                for k, s in enumerate(("asked", "asked 1024x768", "wrong", "right"), 1)]} for q in ("q1", "q2")],
+            result=[{"state": s, "file": shot("result_" + s.replace(" ", "_"), k)}
+                    for k, s in enumerate(("all wrong", "all right"), 1)])
+    Path(wdir, "tasks.json").write_text(json.dumps({"viewport": "1280x800", "pages": pages}), encoding="utf-8")
+
+
+UNITS = ["%s.%s" % (p, u) for p in ("check", "self_check_1") for u in ("q1", "q2", "result")]
+TAP = "picture 3: the tap area for the vent mast covers only its cap"
+
+
+def fix_check(course, module, slides):
+    import fix
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        code = fix.cmd_check(course, "walk", module, slides)
+    return code, buf.getvalue()
+
+
+def tasks_part(tmp):
+    """the trainee's task pages: walked, reviewed and gated like the deck's slides"""
+    course, deck = fixture(tmp, "tasks")
+    mdir = add_tasks(course)
+    page = Path(mdir, "tasks", "check.html")
+    pages = wr.task_pages(mdir)
+    check("task pages: every page of tasks\\ is one, never an answer key - each with its own fingerprint",
+          list(pages) == ["check", "self_check_1"] and pages["check"]["file"] == "tasks/check.html"
+          and pages["check"]["fingerprint"] and pages["check"]["fingerprint"] != pages["self_check_1"]["fingerprint"], pages)
+    check("... named by its id, its file or the file's name; a slide is no task page",
+          wr.page_named(pages, "check") == "check" and wr.page_named(pages, "tasks/check.html") == "check"
+          and wr.page_named(pages, "tasks\\self_check_1.html") == "self_check_1" and wr.page_named(pages, "check.html") == "check"
+          and wr.page_named(pages, "s02") is None)
+    check("... a fix reaches the task pages when it names none of its slides, a page or one of its questions",
+          wr.touches_tasks(pages, None) and wr.touches_tasks(pages, ["s02", "check.q2"]) and wr.touches_tasks(pages, ["self_check_1.html"])
+          and not wr.touches_tasks(pages, ["s02", "s03"]) and not wr.touches_tasks({}, None))
+    sys.path.insert(0, str(HERE.parents[2] / "course-factory" / "scripts"))
+    import course_portal
+    os.environ["CF_FIX_NO_WALK_RUN"] = "1"
+
+    # the deck walked and reviewed, the task pages never walked
+    rc, lines = wr.prepare(course, 1)
+    check("prepare: a task page the walk has no picture of is named - no reviewer can pass it",
+          rc == 0 and any("has no picture of task page check, task page self_check_1" in x for x in lines), lines)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, ALL), BUILDER)
+    ok, kind, msg = wr.verify(course, 1)
+    check("verify: a deck reviewed whole is not a module reviewed - its task pages were never walked",
+          rc == 0 and not ok and kind == "incomplete" and "not reviewed: task page check, task page self_check_1" in msg
+          and "no picture" in msg, (lines, msg))
+    problems = course_portal.walk_problems(course)
+    check("... and the upload is refused for it", len(problems) == 1 and "incomplete for M01" in problems[0]
+          and "task page check" in problems[0], problems)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"check": True}))
+    check("... a page with no picture cannot be signed", rc == 2 and "no contact sheet was made for task page check" in lines[0], lines)
+
+    # walked: one unit per question and per last screen
+    walk_pages(course)
+    ok, kind, msg = wr.verify(course, 1)
+    check("... walked and not reviewed is not done either", not ok and kind == "incomplete"
+          and "not reviewed: task page check, task page self_check_1" in msg and "no picture" not in msg, msg)
+    check("... nor is the upload", len(course_portal.walk_problems(course)) == 1, course_portal.walk_problems(course))
+    rc, lines = wr.prepare(course, 1)
+    wdir = wr.walk_dir(course, 1)
+    brief = brief_of(course)
+    check("prepare: one contact sheet per slide, per question and per last screen",
+          rc == 0 and "(5 slide(s), 6 task-page question(s) and last screen(s))" in lines[0] and "4 batch(es)" in lines[1]
+          and all(os.path.isfile(os.path.join(wdir, "sheets", u + ".png")) for u in UNITS + list(ALL)), lines)
+    from PIL import Image
+    wide = Image.open(os.path.join(wdir, "sheets", "check.q1.png")).size
+    last = Image.open(os.path.join(wdir, "sheets", "check.result.png")).size
+    check("... a question's sheet holds its four pictures, a last screen's its two", wide[1] > last[1] * 1.5, (wide, last))
+    sheet = Image.open(os.path.join(wdir, "sheets", "check.q1.png")).convert("RGB")
+    first = Image.open(os.path.join(wdir, "tasks", "check", "q1_1_asked.png")).convert("RGB")
+    check("... a picture's number stands in a band above it, not on it: the screen's own first words stay readable",
+          sheet.getpixel((10, 10)) == (10, 36, 99) and sheet.getpixel((9, 39)) == first.getpixel((1, 1))
+          and sheet.getpixel((30, 50)) == first.getpixel((22, 12)),
+          (sheet.getpixel((10, 10)), sheet.getpixel((9, 39)), first.getpixel((1, 1))))
+    check("the brief: the task rubric beside the deck's, each of its points",
+          "Judge by this RUBRIC" in brief and "Judge by this TASK RUBRIC" in brief and all(r in brief for r in wr.TASK_RUBRIC)
+          and all(r in brief for r in wr.RUBRIC), brief[:1500])
+    check("... each page's questions in order, once", brief.count("## The task pages of this review") == 1
+          and "- `tasks/check.html` (check): q1 1. Which gauge shows the tank pressure?; q2 2. Which gauge" in brief, brief)
+    check("... each question with its page, its kind and what the screen said in each picture",
+          "### check.q2 - 2. Which gauge shows the tank pressure?" in brief and "Task page: tasks/check.html - question q2 (choice)" in brief
+          and "- picture 3: wrong - the screen says: \"Not quite - the tank gauge" in brief and "- picture 4: right" in brief
+          and "### self_check_1.result - the last screen" in brief and "Task page: tasks/self_check_1.html - its last screen" in brief, brief)
+    check("... and the name a verdict goes under", "exactly as its heading has it (\"check.q1\")" in brief
+          and "## Batch 3 - check.q1, check.q2, check.result, self_check_1.q1" in brief, brief)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, dict({u: True for u in UNITS}, **{"check.q2": TAP})))
+    ok, kind, msg = wr.verify(course, 1)
+    got = signed(course)
+    check("sign: one failing question fails the module - in the round of the deck's review, signed for its page's fingerprint",
+          rc == 1 and got["rounds"] == 1 and not ok and kind == "failing" and "open fails on check.q2" in msg
+          and got["slides"]["check.q2"]["fingerprint"] == pages["check"]["fingerprint"] and got["tasks"]
+          and got["slides"]["self_check_1.result"]["ok"] is True, (lines, msg))
+    check("... and says what was reviewed in its own words", "- 6 task-page question(s) and last screen(s) reviewed now" in lines[0], lines[0])
+    check("... and stops the upload", len(course_portal.walk_problems(course)) == 1 and "open fails on check.q2" in course_portal.walk_problems(course)[0])
+    code, out = fix_check(course, "1", "self_check_1")
+    check("fix.py check --kind walk --slides <a task page>: only that page must be covered", code == 0 and "walk review passed" in out, out)
+    code, out = fix_check(course, "1", "s02,tasks/check.html")
+    check("... a page named by its file: its open fail stops the check, with the fail", code == 1 and "open fails on check.q2" in out
+          and "check.q2 - " + TAP in out, out)
+
+    # a fix to one task page
+    page.write_text(task_html("check", "Which gauge shows the vent mast's pressure?"), encoding="utf-8")
+    ok, kind, msg = wr.verify(course, 1)
+    check("a task page changed: its questions and its last screen are stale - no other page, no slide",
+          not ok and kind == "stale" and "3 of 11" in msg and "changed after the review: task page check;" in msg
+          and "self_check_1" not in msg, msg)
+    rc, lines = wr.prepare(course, 1, stale_only=True)
+    check("... and pictures of the page as it was are not shown to a reviewer", rc == 2 and "task page check" in lines[0]
+          and "older" in lines[0], lines)
+    walk_pages(course)
+    rc, lines = wr.prepare(course, 1, stale_only=True)
+    brief = brief_of(course)
+    check("prepare --stale: only the changed page's questions and last screen, with what failed last time",
+          rc == 0 and "(0 slide(s), 3 task-page question(s) and last screen(s))" in lines[0] and "task page check" in lines[0]
+          and "### check.q1" in brief and "### check.result" in brief and "### self_check_1" not in brief and "### s0" not in brief
+          and "Judge by this RUBRIC" not in brief and "Failed in the last review - say for each whether it is fixed now: " + TAP in brief, (lines, brief))
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"self_check_1.q1": True}))
+    check("... a question of the page that did not change keeps the verdict it has", rc == 2 and "already has a verdict" in lines[0], lines)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"check.q1": True, "check.q2": TAP, "check.result": True}), FIXER)
+    check("round 2 after the fix: a question still failing is the last round - the operator's choice",
+          rc == 1 and signed(course)["rounds"] == 2 and "that was the last round" in lines[0] and "accept" in lines[-1], lines)
+    second = page.read_text(encoding="utf-8")
+    page.write_text(task_html("check", "A third try"), encoding="utf-8")
+    walk_pages(course)
+    wr.prepare(course, 1, stale_only=True)
+    rc, lines = wr.sign(course, 1, reviewer(tmp, {"check.q1": True, "check.q2": True, "check.result": True}))
+    check("... and a third review of a task page is refused like a slide's", rc == 3 and "Still failing: check.q2" in lines[0], lines)
+    page.write_text(second, encoding="utf-8")
+    walk_pages(course)
+    rc, lines = wr.accept(course, 1, OPERATOR, "the mast's cap is what a trainee taps", ["tasks/check.html"])
+    ok, kind, msg = wr.verify(course, 1)
+    let = course_portal.walk_accepted(course)
+    check("accept: the operator lets a task page's fail stand - the module passes and the upload goes",
+          rc == 0 and ok and "accepted by Aleksis Vejs" in msg and course_portal.walk_problems(course) == [], (lines, msg))
+    check("... on the operator's list at the upload, with its page and question",
+          len(let) == 1 and let[0].startswith("M01 check.q2 - " + TAP + " - accepted by Aleksis Vejs")
+          and let[0].endswith("the mast's cap is what a trainee taps") and wr.accepted(course, 1)[0].startswith("check.q2 - "), let)
+
+    # what a page loads is part of it; the deck and the pages do not make each other stale
+    Path(mdir, "assets", "img", "gauge.jpg").write_bytes(b"another gauge")
+    ok, kind, msg = wr.verify(course, 1)
+    check("a picture one task page shows replaced: that page is stale, no other page and no slide",
+          not ok and kind == "stale" and "3 of 11" in msg and "changed after the review: task page self_check_1;" in msg, msg)
+    Path(mdir, "assets", "img", "gauge.jpg").write_bytes(b"a gauge")
+    deck.write_text(DECK.replace("Two", "Two, changed"), encoding="utf-8")
+    ok, kind, msg = wr.verify(course, 1)
+    check("a slide changed: the slide is stale, no task page", not ok and kind == "stale" and "1 of 11" in msg and "s02" in msg
+          and "task page" not in msg and len(course_portal.walk_accepted(course)) == 1, msg)
+
+    # the final assessment's variants are task pages of the final
+    add_module(course, 2, FINAL_DECK)
+    add_tasks(course, 2, ("final",), "assessment")
+    walk(course, 2)
+    rc = sign_all(tmp, course, "final")
+    ok, kind, msg = wr.verify(course, "final")
+    check("the final assessment: its page in assessment\\ is reviewed too - the final's deck alone is not the final",
+          rc == 0 and list(wr.task_pages(wr.module_dir(course, "final"))) == ["final"] and not ok and kind == "incomplete"
+          and "FINAL" in msg and "task page final" in msg, msg)
+    walk_pages(course, "final")
+    wr.prepare(course, "final", stale_only=True)
+    rc, lines = wr.sign(course, "final", reviewer(tmp, {"final.q1": True, "final.q2": True, "final.result": True}))
+    check("... and passes once its questions and last screen are signed", rc == 0 and wr.verify(course, 2)[0], (lines, wr.verify(course, 2)))
+
+
 def main():
     try:
         import PIL  # noqa: F401
@@ -525,6 +734,7 @@ def main():
         rounds_part(tmp)
         older_part(tmp)
         gates_part(tmp)
+        tasks_part(tmp)
     finally:
         os.environ.pop("CF_FIX_NO_WALK_RUN", None)
         shutil.rmtree(tmp, ignore_errors=True)

@@ -92,8 +92,9 @@ Or (2.72.7) when everything the build prints has failed three builds running - t
 its FAIL line and list what is left. WHY: the 2.72.5 run's M02 / M03 made 20 builds each without PASS (s05 over-filled in
 all 20); a FAIL with what is left listed goes straight to the judges - no fresh agent carries on (that is only for a
 builder that ended mid-build or with no build answer).
-Do NOT review the sheets and do not polish - the workflow's FIGURE review (every figure at projector size, a reviewer who
-did not build it) and the QA agent look after you. Anything you would polish: list it.
+Do NOT review your own module and do not polish - the workflow's FIGURE review (every figure at projector size, a reviewer
+who did not build it), the WALK judge (every slide at every stop and every question of every task page - the one visual
+review; never run walk_review.py yourself) and the QA agent look after you. Anything you would polish: list it.
 
 ## Report (your final message)
 First line: the PASS / FAIL line build_module.py printed. Then: the full log's path, how many build_module.py runs, every

@@ -7,7 +7,7 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
-## 2.122.0 · The walk review is part of the whole-course workflow, and cheap to repeat (2026-11-10)
+## 2.122.0 · The walk review is part of the whole-course workflow, covers the task pages, and is cheap to repeat (2026-11-10)
 
 (2.121.0 is the knowledge-base release, built beside this one on `aleksis/factory-flow-audit`.)
 
@@ -30,8 +30,10 @@ upload, but no workflow build ever ran it, a one-slide fix made every slide stal
 - `compile/scripts/build_module.py`: `walk_gate()`. A module of a parallel build (`--no-course-pages`, "course package"
   the only open fail) reaches the walk and prints `WALK REVIEW - ...` under `MODULE CLEAN` (under `PASS` when the course
   was assembled before) and never fails on it; a build by itself fails on
-  "walk review" as before and now prepares only the stale slides' sheets. The review sheets are made with
-  `review_sheets.mjs --tasks-only`. The build's "nothing changed since the last answer" reads the walk review too: a
+  "walk review" as before and now prepares only the stale slides' sheets. Its task-page job walks the task pages
+  (`review_sheets.mjs --tasks-only --walk-dir`, below) and with `--no-walk` only grades them (`--grade-only`); the
+  sheet-review promotion, `--reviewed` and `working_claude\review\MNN` are gone. The build's "nothing changed since the
+  last answer" reads the walk review too: a
   review signed, accepted or reopened since that answer is a change, so the old answer is not repeated with a walk
   line that no longer stands.
 - `course-module-ux/measure/scripts/walk_review.py` + `fit_gate.py`: `walk.json` and the signed file carry **each
@@ -50,17 +52,42 @@ upload, but no workflow build ever ran it, a one-slide fix made every slide stal
   stands for the deck it was signed for; a change after it makes every slide stale once.
 - `scripts/fix.py` `check --kind walk`: the same rules, and the open fails printed. `scripts/course_portal.py`: the
   upload asks for the final's review under the same name, and lists what the operator accepted.
-- **The sheet review is the task pages'**: `compile/REVIEW_PROMPT.md`, GUIDE Quickstart step 5 and 2f; the deck's slides
-  are the walk's (its rubric gained "nothing of the factory's on screen" and "the picture is the thing the words name").
-- Guides: `compile/GUIDE.md` 2i, `fix/GUIDE.md` 4 and 6, `orchestration/GUIDE.md` (flow, Rule 4, the role table),
-  `compile/BUILDER_CARD.md`, `course-module-ux/measure/GUIDE.md` 4, `knowledge/fix-rules.json`, law L71's row.
-- Tests (they run the behaviour): `test_walk_review.py`, `test_fit_gate.py`, `test_build_module.py` (`walk_part`, the
-  last-answer check in `blanks_part`), `test_build_course.py` (`walk_part`), `test_course_portal.py`, `test_fix.py`.
+- **The task pages are walked too** (Aleksis: "add trainee task pages as well"; audit section 4, item 5). Every page of
+  `tasks\` and `assessment\` (never an answer key) is answered like a trainee by `review_sheets.mjs --walk-dir`: per
+  question a picture as asked at 1280 x 800 and at 1024 x 768, answered wrong and checked (the tap areas and drop zones
+  outlined), answered right and checked, and the page's last screen after a run answered wrong and one answered right
+  (and scrolled to its end where it is longer than the screen) - each group of a page whose questions differ per group
+  in turn - into `walk\MNN\tasks\<page>\` with `tasks.json`; the grading is still checked by script. A blind page (the
+  final) records an answer and goes straight on, so its answer is photographed in place, before the press that records
+  it. A calculation is answered with the middle of the accepted values - the answer itself, not the edge of its
+  tolerance (a reviewer read 329 for 330 as a wrong key). On a contact sheet the picture's number, and what a task picture shows, stand in a band above the picture (on the
+  picture the number hid the screen's first words). `walk_review.py`: one verdict per question (`<page>.<question>`) and per last screen (`<page>.result`), **one
+  fingerprint per task page** (`check_cache.fingerprints`: the page and what it loads), stamped before the walk
+  (`tasks_stamp.json`) - a changed page makes its own questions stale and nothing else. `prepare` makes their contact
+  sheets and puts a **task rubric** of seven points in the brief (readable and whole at both sizes; the picture is the one
+  the question is about and its tap areas sit on the right parts; the feedback explains and gives away no later answer;
+  nothing needed under the Check bar; usable with no tablet experience; the last screen is the last, with the trainee's
+  own score and no way onward; nothing of the factory's on screen). The same machinery as the slides: `verify` is
+  `incomplete` for a page never walked or never reviewed (a module whose deck is reviewed and whose task pages are not is
+  NOT DONE and refused at the upload), the two rounds, `accept` (shown at the upload with page and question), the
+  builder's signature refused, `fix.py check --kind walk --slides s03,self_check_1` (walks a touched page first).
+- **One visual review, not two**: `compile/REVIEW_PROMPT.md` is removed, and with it Quickstart step 5's sheet reading,
+  the builder's "review the Quickstart names", QA's sheet reading and `POLISH.md` in the workflow. Its points are the
+  walk's rubrics. The workflow's walk judge (one a module) reads the deck's and the task pages' sheets; QA looks at no
+  screen. `review_sheets.mjs` keeps its older sheet mode as code no step calls (`test_review_sheets.py` runs it); outside
+  the walk it still answers the first group of a blind page only.
+- Guides: `compile/GUIDE.md` Quickstart step 5, 2f and 2i, `fix/GUIDE.md` 4 and 6, `orchestration/GUIDE.md` (flow, Rule 4,
+  the role table), `compile/BUILDER_CARD.md`, `course-module-ux/measure/GUIDE.md` 4, `knowledge/fix-rules.json`,
+  `knowledge/build-order.json` step 16, law L71's row.
+- Tests (they run the behaviour): `test_walk_review.py` (`tasks_part` for the task pages), `test_fit_gate.py`,
+  `test_build_module.py` (`walk_part`, the last-answer check in `blanks_part`), `test_build_course.py` (`walk_part`),
+  `test_course_portal.py`, `test_fix.py`.
 - Not done here: who built, fixed, reviewed, accepted or reopened is a label the caller gives - the script cannot tell
   which agent ran it, so "never an agent" for `accept` / `reopen` is a rule in the prompts and guides, recorded but not
-  enforced; the review sheets (`review_sheets.mjs`) keep their own cache key; a walk fail on a figure slide goes to the
-  module fixer and, for its own slide, the figure's fixer - kept apart by their prompts only; the task pages are still
-  not walked (audit section 4, item 5).
+  enforced; a walk fail on a figure slide goes to the module fixer and, for its own slide, the figure's fixer - kept
+  apart by their prompts only; a last screen longer than two windows is photographed at its start and its end, not in
+  between; a change to the walk's own driver does not make a verdict stale (the fingerprint is the page's) - units the
+  driver photographed wrong are reopened by the operator (`walk_review.py reopen --slides`) and reviewed again.
 
 ## 2.120.0 · One rule per subject (2026-11-10)
 

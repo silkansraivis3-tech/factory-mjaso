@@ -161,8 +161,14 @@ def walk_part(tmp, mods, clean, qa_broken, all_broken):
           not any(x.startswith(("fix:", "walk:1+", "walk:2+")) for x in lc)
           and (clean.get("r") or {}).get("walk") == {"reviewed": 2, "not_passed": []}, (lc, (clean.get("r") or {}).get("walk")))
     check("... the builder is told the walk is not theirs, and QA's check build leaves the walk pictures alone (--no-walk)",
-          "never run walk_review.py" in pc.get("build:1", "") and "--no-walk" in pc.get("qa:1", "")
-          and "TASK-PAGE screens" in pc.get("qa:1", "") and "the walk judge beside you" in pc.get("qa:1", ""), pc.get("qa:1", "")[:2500])
+          "walk_review.py (a builder's own signature is refused)" in pc.get("build:1", "")
+          and "every question of every task page" in pc.get("build:1", "") and "--no-walk" in pc.get("qa:1", "")
+          and "the deck's and the task pages'" in pc.get("qa:1", "") and "the walk judge beside you" in pc.get("qa:1", ""), pc.get("qa:1", "")[:2500])
+    check("... the walk judge's ONE review covers the deck AND the task pages: every question as a trainee meets it, the "
+          "task rubric of the brief, a question's verdict under its own name",
+          all(w in w1 for w in ("every question of every task page", "answered wrong, answered right", "the page's last screen",
+                                "the TASK RUBRIC for the task pages", "\"  check.q07 - picture 3: ...\" -> slide \"check.q07\"",
+                                "nobody else looks at these screens")), w1[:3500])
     bad = run(tmp, dict(base, _badwalk=["1"]))
     lb, pb = bad.get("labels", []), bad.get("prompts", {})
     qb = [q for q in (bad.get("r") or {}).get("qa", []) if q and q.get("module") == "1"]
@@ -171,7 +177,8 @@ def walk_part(tmp, mods, clean, qa_broken, all_broken):
           lb.count("fix:1") == 1 and lb.index("fix:1") > lb.index("walk:1") and "(WALK)" in pb.get("fix:1", "")
           and "s04: stop 3: the chart is still an empty axis" in pb.get("fix:1", "") and "never run walk_review.py yourself" in pb.get("fix:1", "")
           and lb.count("walk:1+fix") == 1 and lb.index("walk:1+fix") > lb.index("fix:1") and "qa:1+fix" not in lb
-          and "only the slides it changed" in pb.get("walk:1+fix", "") and not any(x.startswith(("fix:2", "walk:2+")) for x in lb)
+          and "only the slides and task pages it changed" in pb.get("walk:1+fix", "")
+          and "\"<page>.<question>\" is one question" in pb.get("fix:1", "") and not any(x.startswith(("fix:2", "walk:2+")) for x in lb)
           and qb and qb[0].get("walk", {}).get("ok") is True and qb[0]["walk"].get("first_fails")
           and not any("WALK" in x for x in qb[0].get("for_aleksis", [])), (lb, qb))
     check("... the look after the fix round signs against the builder AND the fixer: a fixer's own signature is refused",
@@ -256,7 +263,9 @@ def walk_part(tmp, mods, clean, qa_broken, all_broken):
           and all(w in wf for w in ("walk_review.py prepare \"C:/c\" --module final --stale", "_build/FINAL_walk_reviewer.json",
                                     "--module final --review <that file> --built-by \"build:final (workflow builder)\"\n",
                                     "\"reviewed_by\": \"walk:final (workflow walk judge)\"", "walk_review.py verify \"C:/c\" --module final"))
-          and "never run walk_review.py" in pf.get("build:final", "")
+          and "Never run walk_review.py" in pf.get("build:final", "")
+          and "every question of the assessment's variants" in pf.get("build:final", "")
+          and "the review the Quickstart names" not in pf.get("build:final", "")
           and rf.get("walk") == {"reviewed": 3, "not_passed": []}
           and (rf.get("final_walk") or {}).get("ok") is True and rf["final_walk"].get("for_aleksis") == [], (lf, rf.get("walk"), wf[:2500]))
     finbad = run(tmp, dict(base, final=True, _stillwalk=["final"]))
@@ -350,24 +359,19 @@ def main():
               and "Does each figure teach something" not in qa1 and "drawing that is not a kit figure" in qa1
               and "only the slide around it" in qa1, qa1[:3000])
         tail = qa1.split("Next alone?", 1)[-1].split("A module that still classifies C", 1)[0]
-        with open(os.path.join(HERE, "..", "..", "compile", "REVIEW_PROMPT.md"), encoding="utf-8") as f:
-            review = f.read()
         check("2.63.2 the QA agent asks whether each picture shows what the question / slide names (an oxygen monitor on a %LEL "
               "question) and a different instrument or part is BROKEN",
               "show what the question or slide NAMES" in tail and "%LEL question" in tail and "spectacle blind" in tail
-              and "severity BROKEN" in tail and "REVIEW_PROMPT.md, item 6" in tail, tail)
-        rv_item6 = review.split("6. **The picture shows what the words name**", 1)[-1].split("**A re-review**", 1)[0]
-        rv_broken = review.split("- `BROKEN` -", 1)[-1].split("- `POLISH`", 1)[0]
-        check("2.63.2 REVIEW_PROMPT.md has the rule as item 6 - the picture is the instrument / part / place the words name - "
-              "and lists a different one under BROKEN (the sheets' reviewer, item numbers 1-7 since 2.72.0)",
-              "6. **The picture shows what the words name**" in review and "oxygen monitor on a %LEL" in rv_item6
-              and "portable explosimeter" in rv_item6 and "spectacle blind" in rv_item6
-              and "different instrument, part" in rv_broken and "item number (1-7)" in review, review[-1200:])
-        check("2.72.0 REVIEW_PROMPT.md item 7: a drawing a seafarer calls wrong (inside the hull, a named part missing, "
-              "unconnected, floating, incomplete) is BROKEN, never POLISH; so is it in the QA prompt",
-              "7. **The drawing is physically right and complete**" in review and "item 7" in rv_broken
-              and "(item 7) is BROKEN,\nnever POLISH" in review and "a minuscule detail is not that" in review
-              and "never POLISH (REVIEW_PROMPT.md item 7)" in open(WORKFLOW, encoding="utf-8").read())
+              and "severity BROKEN" in tail and "the walk review's rubric holds the same rule" in tail, tail)
+        sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "course-module-ux", "measure", "scripts"))
+        import walk_review
+        task_rubric = " ".join(walk_review.TASK_RUBRIC)
+        check("the sheet review is gone and its two rules are the walk's: the picture is the instrument / part / place the "
+              "words name, drawn so that a seafarer would not call it wrong - judged per question by the walk judge; the old "
+              "prompt file is no more, and nothing in the workflow names it",
+              "the instrument, part or place the words name" in task_rubric and "a seafarer would not call it wrong" in task_rubric
+              and not os.path.exists(os.path.join(HERE, "..", "..", "compile", "REVIEW_PROMPT.md"))
+              and "REVIEW_PROMPT" not in open(WORKFLOW, encoding="utf-8").read() and "never POLISH" in qa1, task_rubric[:600])
         three = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_approved": ["1"],
                           "factory": "C:/f/skills", "notes": "no paid pictures"})
         labels, o, pr = three.get("labels", []), three.get("opts", {}), three.get("prompts", {})
@@ -421,13 +425,14 @@ def main():
               and "check_numbers.py" in p4.get("crosscheck:course", "") and "one quantity, one value" in p4.get("crosscheck:course", ""),
               p4.get("assemble:course"))
         # 2.63.3 (the 2.63.2 full-course run: 46 of 128 build calls after module clean, builders reviewing their own sheets)
-        check("2.63.3 the builder stops at module clean and does not review its own sheets",
-              "STOP AT MODULE CLEAN" in b1 and "Do NOT review the sheets" in b1 and "review the sheets yourself against it" not in b1, b1[-2500:])
+        check("2.63.3 the builder stops at module clean and does not review its own module",
+              "STOP AT MODULE CLEAN" in b1 and "Do NOT review your own module" in b1 and "review the sheets yourself against it" not in b1, b1[-2500:])
         check("... and waits for a long build with --wait instead of blind (STILL BUILDING)",
               "STILL BUILDING" in b1 and "--wait" in b1 and "600000" in b1, b1[-1500:])
-        check("2.63.3 the QA agent does the one visual review on the promoted sheets, marks them reviewed, keeps POLISH outside "
-              "the folder, and grades BROKEN / POLISH / INFO",
-              "THE ONE VISUAL REVIEW" in qa1 and "--reviewed" in qa1 and "M01_POLISH.md" in qa1 and "Look at\neach sheet ONCE" in qa1
+        check("the QA agent looks at no screen - the walk judge does the one visual review of slides and task pages, so no "
+              "screen is judged twice - and still grades BROKEN / POLISH / INFO",
+              "NO SCREEN IS YOURS TO LOOK AT" in qa1 and "--reviewed" not in qa1 and "_POLISH.md" not in qa1
+              and "THE ONE VISUAL REVIEW" not in qa1 and "you read no\nsheet and make none" in qa1
               and "BROKEN" in qa1 and "POLISH" in qa1 and "INFO" in qa1, qa1[-2000:])
         with open(WORKFLOW, encoding="utf-8") as f:
             wsrc = f.read()

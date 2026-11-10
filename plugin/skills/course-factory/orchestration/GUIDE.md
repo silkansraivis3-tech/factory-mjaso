@@ -263,8 +263,9 @@ module is then compiled, never typed. So a module agent loads the script lane, n
 sheet and its figures.
 A module builder reads `compile/BUILDER_CARD.md` and nothing else, and builds and checks with ONE command,
 `compile/scripts/build_module.py <course> --module N --no-course-pages` (the orchestrator alone writes the course's
-pages). The builder stops at MODULE CLEAN; the judges and the QA agent review the task-page sheets, not the builder
-(`compile/REVIEW_PROMPT.md`), and the walk judge reviews the deck's slides at every stop and signs (Rule 4). The words come from the
+pages). The builder stops at MODULE CLEAN and reviews nothing of its own; the walk judge does the one visual review - the
+deck's slides at every stop and every question of every task page - and signs (Rule 4), and the QA agent beside it
+looks at no screen. The words come from the
 session's model (the reader, the script writer); building an approved script and QA, the mechanical loop, run on Sonnet
 at medium effort, and the gate (one command) at low. `args.factory` pins the factory's skills folder for a benchmark,
 `args.notes` passes the operator's words for the run to every module agent.

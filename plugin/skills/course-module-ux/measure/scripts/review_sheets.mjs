@@ -5,6 +5,15 @@
  *                          [--fixed-waits]   (2.61.0: the waits end when the page is still, not after fixed times - see TIMERS)
  *                          [--grade-only]    (2.73.0: Phase A - every question answered and graded, no deck walk, no sheets)
  *                          [--tasks-only]    (2.74.1: the task pages' sheets alone - a task redo - no deck walk)
+ *                          [--walk-dir=<working_claude/_build/walk/MNN>]   the task pages walked for the walk review
+ *
+ * --walk-dir: the task pages are walked like a trainee for walk_review.py - no deck walk, no sheets. Every question of every
+ * task page is answered and graded as always, and its states are saved at half size into <walk-dir>/tasks/<page>/: as asked
+ * at 1280 x 800 and at 1024 x 768, answered wrong and checked (tap areas outlined), answered right and checked - and the
+ * result screen after each run. A page whose questions differ per group of trainees is walked once a group. tasks.json
+ * beside them says which picture is which and carries each page's fingerprint from tasks_stamp.json (written by
+ * walk_review.stamp_tasks before this runs - the fingerprint the review signs). A page unchanged since it was walked clean
+ * keeps its pictures and is not answered again.
  *
  * WHY (IGF M01 benchmark, 2026-10-19): the required look at every screen was done by browser-driving subagents - 100 model
  * calls and $2.42 for one module, a third of the build's cost. The looking is still required; driving a browser to see is
@@ -129,6 +138,27 @@ function cachedTile(id) {
   try { return Object.assign({}, t, { png: readFileSync(join(SHOTS, tileFile(id))) }); } catch { return null; }
 }
 
+/* ------------------------------------------------------------------ the walk of the task pages (--walk-dir) */
+const WALK = opt['walk-dir'] && !opt['grade-only'] ? resolve(String(opt['walk-dir'])) : null;
+const readPages = f => { try { return JSON.parse(readFileSync(join(WALK, f), 'utf8')).pages || {}; } catch { return {}; } };
+const stamp = WALK ? readPages('tasks_stamp.json') : {}, walkedBefore = WALK ? readPages('tasks.json') : {}, walked = {};
+const safe = s => String(s).replace(/[^\w-]+/g, '_');
+const pageId = rel => Object.keys(stamp).find(k => stamp[k].file === rel) || safe(basename(rel).replace(/\.html$/i, ''));
+const picturesOf = p => [...(p.questions || []).flatMap(q => (q.states || []).map(s => s.file)), ...(p.result || []).map(s => s.file)];
+function keep(pid, file, png) {
+  mkdirSync(join(WALK, 'tasks', pid), { recursive: true });
+  writeFileSync(join(WALK, 'tasks', pid, file), png);
+  return `tasks/${pid}/${file}`;
+}
+const STATES = [['asked', 'as asked, 1280 x 800'], ['asked_1024', 'as asked, 1024 x 768'],
+  ['wrong', 'answered WRONG and checked (pink dashes: every tap area / drop zone - the review\'s overlay, not the page\'s)'],
+  ['right', 'answered RIGHT and checked']];
+/* a blind page records an answer and goes straight on, with no verdict: its answer is photographed in place, before
+   the press that records it (after it the screen is the next question's) */
+const STATES_BLIND = {
+  wrong: 'answered WRONG, before the press that records it (pink dashes: every tap area / drop zone - the review\'s overlay, not the page\'s)',
+  right: 'answered RIGHT, before the press that records it' };
+
 function findChrome(explicit) {
   const c = [explicit, process.env.CF_BROWSER, process.env.CHROME_PATH].filter(Boolean);
   if (process.platform === 'win32') {
@@ -182,6 +212,16 @@ const click = async js => { await evaluate(js); await mark(); };       // someth
 async function shot(height) {
   const r = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: W, height: height || H, scale: 1 }, captureBeyondViewport: false });
   return Buffer.from(r.data, 'base64');
+}
+async function small(w, h) {              // the window at half size: a state of a walked question, wherever the page is scrolled to
+  const at = await evaluate('[window.pageXOffset || 0, window.pageYOffset || 0]').catch(() => [0, 0]);
+  const r = await send('Page.captureScreenshot', { format: 'png', clip: { x: at[0], y: at[1], width: w, height: h, scale: 0.5 }, captureBeyondViewport: false });
+  return Buffer.from(r.data, 'base64');
+}
+async function size(w, h) {               // the window resized, and the page left to lay itself out again
+  await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false });
+  await mark();
+  await pause(250); await evaluate(SETTLE); await pause(80);
 }
 /* every animation at its end, every kit figure at the end of its step and held still - a flow that never ends is set to
    its start, so the same screen gives the same picture (the re-review compares pictures) */
@@ -268,9 +308,10 @@ window.__rv = (function(){
   function k(el){ return (el.getAttribute('data-key')||'').toLowerCase(); }
   function keyEl(it){ return it.hasAttribute('data-key') ? it : (it.parentNode.querySelector('[data-key]') || it); }
   function $$(s,r){ return [].slice.call((r||document).querySelectorAll(s)); }
-  function go(){
-    /* 2.116.1 (PM FINAL): a page whose questions differ per group opens on #grpScr - pick the first group, as a trainee would */
-    var gs=document.getElementById('grpScr'), gp=gs && gs.classList.contains('on') && gs.querySelector('.grp-pick');
+  function go(g){
+    /* 2.116.1 (PM FINAL): a page whose questions differ per group opens on #grpScr - pick the first group, as a trainee
+       would (the walk picks each group in turn: g) */
+    var gs=document.getElementById('grpScr'), gp=gs && gs.classList.contains('on') && ((g && gs.querySelector('[data-pick="'+g+'"]')) || gs.querySelector('.grp-pick'));
     if(gp){ gp.click(); return true; }
     var g=document.getElementById('go'); if(g && !g.disabled){ g.click(); return true; } return false; }
   function press(el){ var r=el.getBoundingClientRect(), o={bubbles:true,button:0,clientX:r.left+5,clientY:r.top+5};
@@ -372,12 +413,15 @@ window.__rv = (function(){
         }
         out = true;
       } else if (type === 'calc') {
-        var K = ks(root), unit = root.getAttribute('data-unit') || '', dec = parseInt(root.getAttribute('data-dec') || '2', 10), v = null, S = Math.pow(10, dec);
-        for (var nn = 0; nn < 3000000 && v == null; nn++) {                 /* outward from 0, both signs */
-          if (K.indexOf(key(id, unit, (nn / S).toFixed(dec))) >= 0) v = (nn / S).toFixed(dec);
-          else if (nn && K.indexOf(key(id, unit, (-nn / S).toFixed(dec))) >= 0) v = (-nn / S).toFixed(dec);
+        var K = ks(root), unit = root.getAttribute('data-unit') || '', dec = parseInt(root.getAttribute('data-dec') || '2', 10), v = null, S = Math.pow(10, dec), n0 = -1, sg = 1;
+        function has(n){ return K.indexOf(key(id, unit, (n / S).toFixed(dec))) >= 0; }
+        for (var nn = 0; nn < 3000000 && n0 < 0; nn++) {                    /* outward from 0, both signs */
+          if (has(nn)) n0 = nn; else if (nn && has(-nn)) { n0 = nn; sg = -1; }
         }
-        if (v == null) return false;
+        if (n0 < 0) return false;
+        /* the middle of the accepted values: the answer itself, not the edge of its tolerance (a reviewer read 329 for 330 as a wrong key) */
+        var n1 = n0; while (n1 - n0 < K.length && has(sg * (n1 + 1))) n1++;
+        v = (sg * Math.floor((n0 + n1) / 2) / S).toFixed(dec);
         if (!good) v = (parseFloat(v) * 3 + 7).toFixed(dec);
         var s = String(parseFloat(v)), keysB = $$('.cl-k', root);
         for (var ci = 0; ci < s.length; ci++) {
@@ -470,7 +514,10 @@ window.__rv = (function(){
     return out;
   }
   return {
-    start: function(){ for (var t = 0; t < 2 && !document.querySelector('.scr.on[data-script]'); t++) go(); return 1; },   /* group pick, then the intro */     /* the try / intro screen's own button */
+    start: function(g){ for (var t = 0; t < 2 && !document.querySelector('.scr.on[data-script]'); t++) go(g); return 1; },   /* group pick, then the intro */     /* the try / intro screen's own button */
+    groups: function(){ var gs = document.getElementById('grpScr'); return gs ? $$('[data-pick]', gs).map(function(x){ return x.getAttribute('data-pick'); }) : []; },
+    what: function(){ var sec = document.querySelector('.scr.on[data-script]'); if (!sec) return {};
+      return { ask: txt(sec.querySelector('h1, h2, h3') || sec).slice(0, 160), mech: sec.getAttribute('data-mech') || '', group: sec.getAttribute('data-group') || '' }; },
     current: function(){ var s = document.querySelector('.scr.on[data-script]') || $$('.scr[data-script]').filter(function(x){ return x.offsetParent; })[0]; return s ? s.getAttribute('data-script') : null; },
     ids: function(){ return $$('.scr[data-script]').map(function(s){ return s.getAttribute('data-script'); }); },
     overlay: function(on){
@@ -489,7 +536,8 @@ window.__rv = (function(){
       });
       document.body.appendChild(ov); return 1;
     },
-    answer: async function(good){
+    /* hold: the last part is answered and its Check not pressed - next() presses it (the walk of a blind page) */
+    answer: async function(good, hold){
       var sec = document.querySelector('.scr.on[data-script]'); if (!sec) return {error:'no question on screen'};
       var parts = $$('.part', sec); if (!parts.length) parts = [sec];
       var prev = null, i;
@@ -498,6 +546,10 @@ window.__rv = (function(){
         if (!did && !lb) return {error:'could not answer part '+(i+1)};
         /* 2.74.1 - "how sure are you?" is answered with the last part (the script's "confidence": true) */
         var sure = $$('.sure button', sec); if (sure.length && i === parts.length - 1) sure[Math.min(1, sure.length - 1)].click();
+        if (hold && i === parts.length - 1 && lb !== 'checked') {
+          var cb = document.getElementById('go');
+          return cb && !cb.disabled ? { held: true, vd: '' } : {error:'Check stayed off after answering part '+(i+1)};
+        }
         if (lb !== 'checked' && !go()) return {error:'Check stayed off after answering part '+(i+1)};
         await sleep(60);
         if (i < parts.length - 1) { go(); await sleep(120); }                     /* "Go on": the next part opens */
@@ -507,6 +559,12 @@ window.__rv = (function(){
       return { ok: !!(w && w.classList.contains('good')), bad: !!(w && w.classList.contains('bad')), vd: txt(sec.querySelector('.vd')||document.body).slice(0,90) };
     },
     next: function(){ return go(); },
+    /* the screen scrolled to its end, wherever it scrolls; true when anything moved (the last screen is longer than the window) */
+    end: function(){
+      var moved = false, els = [document.scrollingElement || document.documentElement].concat($$('body *').filter(function(e){
+        return e.scrollHeight > e.clientHeight + 4 && e.offsetParent && /auto|scroll/.test(getComputedStyle(e).overflowY); }));
+      els.forEach(function(e){ var b = e.scrollTop; e.scrollTop = e.scrollHeight; if (e.scrollTop > b + 4) moved = true; });
+      return moved; },
     blind: function(){ return document.body.hasAttribute('data-blind'); },
     done: function(){ return window.__rvDone; },
     /* 2.50.1 (M01 benchmark: three re-reviews were spent on these) - every leader line of the question on screen, as the
@@ -565,11 +623,22 @@ async function tasks(tiles, failures) {
   }
   for (const page of pages) {
     const url = pathToFileURL(page).href, name = basename(page), tp = Date.now(), sp = slept, wp = waited;
+    const rel = basename(dirname(page)) + '/' + name, pid = WALK ? pageId(rel) : '', fp = (stamp[pid] || {}).fingerprint || '';
     /* 2.63.3 - a page unchanged in everything it loads since it graded clean keeps its pictures and is not answered again */
     let pkey = '';
     try { const src = readFileSync(page, 'utf8'); pkey = sha(ENGINE + '|' + src + '|' + loads(src, dirname(page)) + '|' + !!opt.asked); } catch {}
     const was = shotIndex.pages[name];
-    if (SHOTS && pkey && was && was.key === pkey) {
+    if (WALK) {                 // the walk keeps its own pictures: a page walked clean, the same in this script's eyes and the review's
+      const old = walkedBefore[pid];
+      if (old && pkey && fp && old.key === pkey && old.fingerprint === fp && picturesOf(old).length
+          && picturesOf(old).every(f => existsSync(join(WALK, f)))) {
+        walked[pid] = old;
+        reused += picturesOf(old).length;
+        note('task ' + name + ' (kept)', tp);
+        continue;
+      }
+      rmSync(join(WALK, 'tasks', pid), { recursive: true, force: true });
+    } else if (SHOTS && pkey && was && was.key === pkey) {
       const olds = (was.tiles || []).map(cachedTile);
       if (olds.length && olds.every(Boolean)) {
         olds.forEach((t, i) => tiles.push(Object.assign(t, { id: was.tiles[i], reused: true })));
@@ -584,50 +653,88 @@ async function tasks(tiles, failures) {
     await evaluate(DRIVER);
     const ids = await evaluate('__rv.ids()');
     const blind = await evaluate('__rv.blind()');
-    // pass 1: asked (with the overlay), then wrong; pass 2 (a fresh load): right
-    for (const good of [false, true]) {
-      if (good) { await load(url); await evaluate(DRIVER); }
-      await click('__rv.start()');
-      await pause(200);
-      for (let n = 0; n < ids.length; n++) {
-        const q = await evaluate('__rv.current()');
-        if (!q) break;
-        await evaluate(SETTLE); await pause(150); await evaluate(SETTLE);
-        if (!good) {          // 2.63.3: judged once the course font is in and laid out (two frames) - as on the quiet tablet
-          await evaluate(`(document.fonts ? document.fonts.ready : Promise.resolve()).then(function(){ return new Promise(function(r){
-            requestAnimationFrame(function(){ requestAnimationFrame(function(){ r(1); }); }); }); })`);
-          await evaluate(SETTLE);
-          for (const x of await evaluate('__rv.leaders()')) failures.push(`${name} ${q}: ${x}`);
+    /* the walk goes through every group of a page whose questions differ per group; a question shared by the groups is
+       photographed and judged in the first one that shows it */
+    const groups = WALK ? await evaluate('__rv.groups()') : [];
+    const qs = {}, order = [], result = [];
+    let first = true;
+    for (const g of (groups.length ? groups : [null])) {
+      // pass 1: asked (with the overlay), then wrong; pass 2 (a fresh load): right
+      for (const good of [false, true]) {
+        if (g !== null && !good) await evaluate('try { localStorage.clear(); } catch (e) {}');     // the group kept from the run before
+        if (!first || g !== null) { await load(url); await evaluate(DRIVER); }
+        first = false;
+        await click(`__rv.start(${JSON.stringify(g)})`);
+        await pause(200);
+        for (let n = 0; n < ids.length; n++) {
+          const q = await evaluate('__rv.current()');
+          if (!q) break;
+          await evaluate(SETTLE); await pause(150); await evaluate(SETTLE);
+          if (WALK && !qs[q]) { qs[q] = Object.assign({ of: g, shots: {}, said: {} }, await evaluate('__rv.what()')); order.push(q); }
+          const mine = !WALK || qs[q].of === g;
+          if (!good && mine) {  // 2.63.3: judged once the course font is in and laid out (two frames) - as on the quiet tablet
+            await evaluate(`(document.fonts ? document.fonts.ready : Promise.resolve()).then(function(){ return new Promise(function(r){
+              requestAnimationFrame(function(){ requestAnimationFrame(function(){ r(1); }); }); }); })`);
+            await evaluate(SETTLE);
+            for (const x of await evaluate('__rv.leaders()')) failures.push(`${name} ${q}: ${x}`);
+          }
+          if (!WALK && opt.asked && good) tiles.push({ id: `${name}/${q}/asked`, label: `${name} ${q} - as asked`, png: await shot() });
+          if (WALK && mine && good) {          // as asked, at both sizes a tablet in the room may have
+            qs[q].shots.asked = keep(pid, `${safe(q)}_1_asked.png`, await small(W, H));
+            await size(1024, 768);
+            qs[q].shots.asked_1024 = keep(pid, `${safe(q)}_2_asked_1024x768.png`, await small(1024, 768));
+            await size(W, H);
+          }
+          const r = await evaluate(`__rv.answer(${good}${WALK && blind ? ', true' : ''})`);   // a blind page: next() records it
+          await mark();
+          await pause(220); await evaluate(SETTLE); await pause(80);
+          if (!good) await evaluate('__rv.overlay(true)');      // the tap areas and drop zones, outlined on the wrong-answer screen
+          if (r.error) {
+            failures.push(`${name} ${q}: answered ${good ? 'right' : 'wrong'} by the script - ${r.error}`);
+            if (!WALK) tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - could not be answered ${good ? 'right' : 'wrong'}: ${r.error}`, png: await shot() });
+            break;
+          } else if (!mine) { /* graded with the group that showed it first */ }
+          else if (!blind && good && !r.ok) failures.push(`${name} ${q}: the RIGHT answer (by its own keys) was graded not right - "${r.vd}"`);
+          else if (!blind && !good && !r.bad) failures.push(`${name} ${q}: a WRONG answer was graded right - "${r.vd}"`);
+          if (!WALK && !opt.asked) tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - answered ${good ? 'RIGHT' : 'WRONG'} and checked: "${r.vd || ''}"`
+                       + (good ? '' : ' (pink: every tap area / drop zone, review overlay only)'), png: await shot() });
+          if (WALK && mine) {
+            const k = good ? 'right' : 'wrong';
+            qs[q].shots[k] = keep(pid, `${safe(q)}_${good ? 4 : 3}_${k}.png`, await small(W, H));
+            qs[q].said[k] = r.vd || '';
+          }
+          if (!good) await evaluate('__rv.overlay(false)');
+          await click('__rv.next()');
+          await pause(180);
         }
-        if (opt.asked && good) tiles.push({ id: `${name}/${q}/asked`, label: `${name} ${q} - as asked`, png: await shot() });
-        const r = await evaluate(`__rv.answer(${good})`);
-        await mark();
-        await pause(220); await evaluate(SETTLE); await pause(80);
-        if (!good) await evaluate('__rv.overlay(true)');      // the tap areas and drop zones, outlined on the wrong-answer screen
-        if (r.error) {
-          failures.push(`${name} ${q}: answered ${good ? 'right' : 'wrong'} by the script - ${r.error}`);
-          tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - could not be answered ${good ? 'right' : 'wrong'}: ${r.error}`, png: await shot() });
-          break;
-        } else if (!blind && good && !r.ok) failures.push(`${name} ${q}: the RIGHT answer (by its own keys) was graded not right - "${r.vd}"`);
-        else if (!blind && !good && !r.bad) failures.push(`${name} ${q}: a WRONG answer was graded right - "${r.vd}"`);
-        if (!opt.asked) tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - answered ${good ? 'RIGHT' : 'WRONG'} and checked: "${r.vd || ''}"`
-                     + (good ? '' : ' (pink: every tap area / drop zone, review overlay only)'), png: await shot() });
-        if (!good) await evaluate('__rv.overlay(false)');
-        await click('__rv.next()');
-        await pause(180);
-      }
-      if (blind) {                     // what a blind page graded is in its report to the classroom, one item a question
-        let rep = null;
-        for (let k = 0; k < 20 && !rep; k++) { rep = await evaluate('__rv.done()'); if (!rep) await pause(100); }
-        if (!rep) failures.push(`${name}: a blind page never reported its result (gb-task-done) after the ${good ? 'right' : 'wrong'} answers`);
-        else (rep.items || []).forEach((it, i) => {
-          if (good && !it.ok) failures.push(`${name} ${ids[i] || i + 1}: the RIGHT answer (by its own keys) was graded not right - its report says ok: false`);
-          if (!good && it.ok) failures.push(`${name} ${ids[i] || i + 1}: a WRONG answer was graded right - its report says ok: true`);
-        });
+        if (blind) {                     // what a blind page graded is in its report to the classroom, one item a question
+          let rep = null;
+          for (let k = 0; k < 20 && !rep; k++) { rep = await evaluate('__rv.done()'); if (!rep) await pause(100); }
+          if (!rep) failures.push(`${name}: a blind page never reported its result (gb-task-done) after the ${good ? 'right' : 'wrong'} answers`);
+          else (rep.items || []).forEach((it, i) => {
+            if (good && !it.ok) failures.push(`${name} ${ids[i] || i + 1}: the RIGHT answer (by its own keys) was graded not right - its report says ok: false`);
+            if (!good && it.ok) failures.push(`${name} ${ids[i] || i + 1}: a WRONG answer was graded right - its report says ok: true`);
+          });
+        }
+        if (WALK) {                      // the screen the set ends on, after this run's answers
+          await evaluate(SETTLE); await pause(250); await evaluate(SETTLE);
+          const what = (g !== null ? `group ${g}: ` : '') + `the last screen, after every answer ${good ? 'RIGHT' : 'WRONG'}`;
+          const stem = `result_${g !== null ? safe(g) + '_' : ''}${good ? 'right' : 'wrong'}`;
+          result.push({ state: what, file: keep(pid, `${stem}.png`, await small(W, H)) });
+          if (await evaluate('__rv.end()')) {       // longer than the window: its end too, where a way onward would be
+            await pause(150); await evaluate(SETTLE);
+            result.push({ state: what.replace('the last screen', 'the end of the last screen'), file: keep(pid, `${stem}_end.png`, await small(W, H)) });
+          }
+        }
       }
     }
     note('task ' + name, tp, { questions: ids.length, slept: (slept - sp) / 1000, waited: (waited - wp) / 1000 });
-    if (pkey && failures.length === nf) kept.pages[name] = { key: pkey, tiles: tiles.slice(before).map(t => t.id) };
+    if (WALK) {
+      walked[pid] = { file: rel, fingerprint: fp, key: failures.length === nf ? pkey : '', blind, groups,
+        questions: order.map(q => ({ id: q, ask: qs[q].ask || '', mech: qs[q].mech || '', group: qs[q].group || '',
+          states: STATES.filter(([k]) => qs[q].shots[k]).map(([k, state]) => ({ state: (blind && STATES_BLIND[k]) || state, file: qs[q].shots[k], said: qs[q].said[k] || '' })) })),
+        result };
+    } else if (pkey && failures.length === nf) kept.pages[name] = { key: pkey, tiles: tiles.slice(before).map(t => t.id) };
   }
 }
 
@@ -725,14 +832,28 @@ try {
   let t0 = Date.now(), s0 = slept, w0 = waited;
   const lap = (what, extra) => { note(what, t0, Object.assign({ slept: (slept - s0) / 1000, waited: (waited - w0) / 1000 }, extra || {}));
     t0 = Date.now(); s0 = slept; w0 = waited; };
-  /* 2.73.0 - --grade-only (Phase A: the pictures are placeholders still): the questions are answered and graded, nothing is
-     photographed for a sheet - the deck walk and the sheets wait for the real pictures */
+  /* 2.73.0 - --grade-only (Phase A, where the pictures are placeholders still, and a check build that leaves the walk's
+     pictures alone): the questions are answered and graded, nothing is photographed */
   if (opt['grade-only']) {
     await tasks(tiles, failures);
     lap('tasks (graded only)');
     failures.forEach(f => console.log('  FAIL ' + f));
-    console.log(failures.length ? `${failures.length} task-page problem(s)` : 'Graded only (Phase A): every question graded as expected - '
-                + 'wrong answers not right, right answers right. No sheets: the pictures are still placeholders.');
+    console.log(failures.length ? `${failures.length} task-page problem(s)` : 'Graded only: every question graded as expected - '
+                + 'wrong answers not right, right answers right. Nothing photographed.');
+    code = failures.length ? 1 : 0;
+    throw null;
+  }
+  if (WALK) {                                 // the task pages walked for the walk review: their states, no deck, no sheets
+    await tasks(tiles, failures);
+    mkdirSync(WALK, { recursive: true });
+    writeFileSync(join(WALK, 'tasks.json'), JSON.stringify({ window: W + 'x' + H, pages: walked }, null, 1));
+    try { for (const d of readdirSync(join(WALK, 'tasks'))) if (!walked[d]) rmSync(join(WALK, 'tasks', d), { recursive: true, force: true }); } catch {}
+    lap('tasks (walked)');
+    const all = Object.values(walked), shots = all.reduce((n, p) => n + picturesOf(p).length, 0);
+    console.log(`Task pages walked: ${all.length} page(s), ${all.reduce((n, p) => n + p.questions.length, 0)} question(s) - ${shots} picture(s) in `
+                + `${join(WALK, 'tasks')}${reused ? ` (${shots - reused} taken now, ${reused} of unchanged pages kept)` : ''}`);
+    failures.forEach(f => console.log('  FAIL ' + f));
+    console.log(failures.length ? `${failures.length} task-page problem(s)` : 'Every question graded as expected: wrong answers not right, right answers right; every leader line ends on its part and crosses no words.');
     code = failures.length ? 1 : 0;
     throw null;
   }
@@ -753,7 +874,7 @@ try {
   console.log(failures.length ? `${failures.length} task-page problem(s)` : 'Every question graded as expected: wrong answers not right, right answers right; every leader line ends on its part and crosses no words.');
   code = failures.length ? 1 : 0;
 } catch (e) {
-  if (e !== null) {                           // null: --grade-only ended on purpose, its code is set
+  if (e !== null) {                           // null: --grade-only or --walk-dir ended on purpose, its code is set
     console.error('review_sheets: ' + (e && e.message || e));
     code = 2;
   }

@@ -538,7 +538,7 @@ def solver_part():
 
 
 def retry_part():
-    """2.63.0 - a round that will be built again does not wait for the review sheets or check the package: the moment the
+    """2.63.0 - a round that will be built again does not wait for the task pages' job or check the package: the moment the
     audits say a slide the compiler moved does not fit, every check still running is ended and the package is not
     started (IGF M01 / M02 v262: retried rounds waited 22-824 s, the sheets holding browser slots the next round needed)"""
     import tempfile
@@ -548,7 +548,7 @@ def retry_part():
     py = sys.executable
     jobs = {"words (instructor)": [py, "-c", "print('ok')"],
             "audits 1280x800 1024x768": [py, "-c", "import time, sys; time.sleep(1); print('slide 5 (s05): spills'); sys.exit(1)"],
-            "review sheets": [py, "-c", "import time; time.sleep(40)"]}
+            "task pages": [py, "-c", "import time; time.sleep(40)"]}
     pkg = [py, "-c", "open(%r, 'w').write('x')" % mark]
     asked = []
 
@@ -558,61 +558,47 @@ def retry_part():
     t = time.time()
     results, took, again = b.run_checks(jobs, pkg, retry)
     secs = time.time() - t
-    check("a round that will retry ends as soon as the audits say so - not after the 40 s review sheets (%.1f s)" % secs,
+    check("a round that will retry ends as soon as the audits say so - not after the 40 s task pages (%.1f s)" % secs,
           secs < 15 and again == {"s05": ("picture-top", "light", "abc")}, (secs, again))
     check("... the package is never checked in that round", "course package" not in results and not os.path.exists(mark), results.keys())
-    check("... and the review sheets' answer is not one to read (it was ended)", results.get("review sheets", (0,))[0] != 0, results.get("review sheets"))
-    jobs["review sheets"] = [py, "-c", "print('sheets')"]
-    results, took, again = b.run_checks(jobs, pkg, lambda k, res: None)
+    check("... and the task pages' answer is not one to read (it was ended)", results.get("task pages", (0,))[0] != 0, results.get("task pages"))
+    jobs["task pages"] = [py, "-c", "print('walked')"]
+    seen = []
+    results, took, again = b.run_checks(jobs, pkg, lambda k, res: seen.append(k))
     check("a round that will not retry runs everything and checks the package once the others are done",
-          again is None and results["review sheets"][0] == 0 and results["course package"][0] == 0 and os.path.exists(mark), results)
+          again is None and results["task pages"][0] == 0 and results["course package"][0] == 0 and os.path.exists(mark), results)
+    check("... the task pages' own end never asks for a retry", sorted(seen) == ["audits 1280x800 1024x768", "words (instructor)"], seen)
 
 
 def review_part():
-    """2.63.3 (the 2.63.2 full-course run) - the sheets are promoted at module clean, a POLISH.md written into the review
-    folder survives the next promotion (five were deleted), and --reviewed makes the sheets just looked at the baseline"""
+    """the task pages have one visual review - the walk review, with the deck's slides. The older sheet review (sheets in
+    review\\MNN, promoted at module clean and marked with --reviewed) is gone from the build: its pages would be judged
+    twice, or by nobody once the builders stopped reading them"""
+    import contextlib
     import io
-    import json
-    import shutil
-    import tempfile
-    tmp = tempfile.mkdtemp(prefix="bm_review_")
+    src = io.open(b.__file__, encoding="utf-8").read()
+    check("the build has no sheet review of its own left (no promotion, no --reviewed, no review\\MNN_POLISH.md)",
+          not any(hasattr(b, n) for n in ("promote", "mark_reviewed", "reviewed_dir", "polish_path", "sheets_job")))
     try:
-        out = os.path.join(tmp, "review", "M01")
-        os.makedirs(out)
-        io.open(os.path.join(out, "POLISH.md"), "w", encoding="utf-8").write("- s03: the label could sit closer\n")
-        io.open(os.path.join(out, "manifest.json"), "w", encoding="utf-8").write(json.dumps({"deck/s01": "AAA"}))
-        pend = out + ".pending"
-        os.makedirs(pend)
-        io.open(os.path.join(pend, "manifest.json"), "w", encoding="utf-8").write(json.dumps({"deck/s01": "BBB", "deck/s02": "CCC"}))
-        b.promote(pend, out)
-        kept = io.open(b.polish_path(out), encoding="utf-8").read() if os.path.isfile(b.polish_path(out)) else ""
-        check("a promotion keeps the builder's POLISH list (review\\M01_POLISH.md)", "label could sit closer" in kept, kept)
-        check("... and the new sheets replace the folder", json.load(io.open(os.path.join(out, "manifest.json"))) == {"deck/s01": "BBB", "deck/s02": "CCC"})
-        b.promote(pend if os.path.isdir(pend) else (os.makedirs(pend) or pend), out)
-        check("... a second promotion does not repeat the list", kept == io.open(b.polish_path(out), encoding="utf-8").read())
-        check("before --reviewed there is no baseline (every screen is new to the reviewer)", not os.path.isdir(b.reviewed_dir(out)))
-        io.open(os.path.join(out, "manifest.json"), "w", encoding="utf-8").write(json.dumps({"deck/s01": "BBB"}))
-        code = b.mark_reviewed(out, "M01")
-        check("--reviewed copies the sheets' manifest into review\\M01_reviewed, the next comparison's base",
-              code == 0 and json.load(io.open(os.path.join(b.reviewed_dir(out), "manifest.json"))) == {"deck/s01": "BBB"})
-        src = io.open(b.__file__, encoding="utf-8").read()
-        check("the review sheets compare with the reviewed baseline and keep their pictures in _build\\MNN_shots",
-              'sheets_job(mdir, pending, reviewed_dir(out_dir), os.path.join(logdir, "%s_shots" % m)' in src
-              and b.sheets_job("m", "p", b.reviewed_dir(out), "shots")[4:6] == ["--base=" + b.reviewed_dir(out), "--shots=shots"])
-        check("a parallel build promotes at module clean (only the course package left)",
-              'clean = passed or (o.no_course_pages and fails == ["course package"])' in src)
-        check("--auto fills the picture slots after a failed build too, not only at PHASE A CLEAN (the factory trial: every "
-              "builder lost a run, then filled them by hand)",
-              "    if slots_left and o.auto and not o.auto_round:" in src and "if passed and slots_left and o.auto" not in src)
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+        with contextlib.redirect_stderr(io.StringIO()):
+            b.main(["no-such-course", "--module", "1", "--reviewed"])
+        refused = False
+    except SystemExit as stop:
+        refused = stop.code == 2
+    check("... --reviewed is no argument of the build any more", refused)
+    check("a parallel build is clean at module clean (only the course package left)",
+          'clean = passed or (o.no_course_pages and fails == ["course package"])' in src)
+    check("--auto fills the picture slots after a failed build too, not only at PHASE A CLEAN (the factory trial: every "
+          "builder lost a run, then filled them by hand)",
+          "    if slots_left and o.auto and not o.auto_round:" in src and "if passed and slots_left and o.auto" not in src)
 
 
 def walk_part():
     """the walk review gate is reached at MODULE CLEAN: a module of a parallel build (--no-course-pages) never passes by
     itself, so before this it never came to the gate and every module of a workflow build was refused at upload. A build
     by itself is NOT DONE without the review; a parallel build still ends on "FAIL MNN - course package" (what the
-    workflow reads as a pass) and says under MODULE CLEAN where the walk review stands. The sheets are the task pages'"""
+    workflow reads as a pass) and says under MODULE CLEAN where the walk review stands. The task pages are walked into
+    the same folder and need their verdicts as the slides do"""
     import io
     import json
     import shutil
@@ -697,9 +683,28 @@ def walk_part():
         check("... the other sizes save none, and --no-walk keeps the fit walk from writing the walk pictures (the workflow's QA "
               "check runs beside the walk judge)", "--walk-dir" not in b.fit_job(course, 1, deck, "1024x768")
               and "--walk-dir" not in b.fit_job(course, 1, deck, "1280x800", True))
-        job = b.sheets_job("m", "p", "base", "shots")
-        check("the review sheets are the task pages alone - the deck's slides are the walk review's",
-              "--tasks-only" in job and "--grade-only" not in job and "--grade-only" in b.sheets_job("m", "p", "base", "shots", True), job)
+        wdir = walk_review.walk_dir(course, 1)
+        job = b.task_job("m", wdir, "logs")
+        check("the task pages' job walks them into the module's walk folder, beside the deck's stops",
+              job[2:] == ["m", wdir, "--tasks-only", "--walk-dir=" + wdir], job)
+        job = b.task_job("m", "", "logs")
+        check("... with picture spaces to fill, a draft or --no-walk it only grades and is given no walk folder (the workflow's "
+              "QA check never changes the walk its judge is reading)", job[2:] == ["m", "logs", "--tasks-only", "--grade-only"], job)
+        # a task page nobody walked: the deck's review, signed and clean above, no longer carries the module
+        os.makedirs(os.path.join(course, "modules", "module01", "tasks"))
+        io.open(os.path.join(course, "modules", "module01", "tasks", "self_check_1.html"), "w", encoding="utf-8").write(
+            "<html><body><section class=\"scr\" data-script=\"q1\">Which one?</section></body></html>")
+        opened, said = b.walk_gate(course, 1, alone=True)
+        check("a module whose deck is walked and signed but whose task pages are not is NOT DONE - the page is named",
+              opened.startswith("walk review incomplete") and "task page self_check_1" in opened
+              and b.walk_step(course, 1, deck, True, [], parallel=False)[:2] == (False, ["walk review"]), opened)
+        opened, said = b.walk_gate(course, 1, alone=False)
+        check("... and a parallel build says so under MODULE CLEAN, for the walk judge", opened == ""
+              and said.startswith("WALK REVIEW - incomplete") and "task page self_check_1" in said, said)
+        stamped = walk_review.stamp_tasks(course, 1)
+        stamp = json.load(io.open(os.path.join(stamped, "tasks_stamp.json"), encoding="utf-8"))["pages"]
+        check("the build stamps each task page's fingerprint in the walk folder before its walk begins",
+              stamped == wdir and stamp["self_check_1"]["file"] == "tasks/self_check_1.html" and stamp["self_check_1"]["fingerprint"], stamp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
