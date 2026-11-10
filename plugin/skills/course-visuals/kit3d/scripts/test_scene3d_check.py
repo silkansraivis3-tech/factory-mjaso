@@ -27,9 +27,9 @@ def check(what, ok, detail=""):
         FAILS.append(what)
 
 
-def run(*a):
+def run(*a, env=None):
     p = subprocess.run([sys.executable, "-I", SCRIPT] + list(a), capture_output=True, text=True, encoding="utf-8",
-                       errors="replace", timeout=600)
+                       errors="replace", timeout=600, env=dict(os.environ, **(env or {})))
     return p.returncode, (p.stdout or "") + (p.stderr or "")
 
 
@@ -58,14 +58,47 @@ def main():
     check("smoke: a scene the run never named failed", sc.smoke_said("FAIL 3D smoke test (135 s): timed out", "s07")[1])
     check("perf: perf3d.mjs's \"OVER\" is a scene over the budget", sc.perf_over("s05          1840.2     -       -  OVER"))
     check("perf: \"OK\" is not", not sc.perf_over("s05           640.0     -       -  OK"))
+    gate = ("slide          3D      ctx   first     med     p95  hidden    heap\ns27            kit3d     1      95    16.7    49.9       0"
+            "    10.2\n1280x800  35 slides, 19 with 3D\n  s27  p95 frame 49.9 ms - 3.0 frames of 16.7 ms (at most 2: 33 ms)\n"
+            "  s01  12 frames drawn by canvases not on the slide shown (at most 10)\nperf_gate: FAIL 2 slide(s), 2 finding(s)\n")
+    check("perf_gate: each slide it names over its budget, with what (the trial's M01 passed its build with s27 lagging: no "
+          "step ran perf_gate)", sc.lag_said(gate) == {"s27": ["p95 frame 49.9 ms - 3.0 frames of 16.7 ms (at most 2: 33 ms)"],
+                                                        "s01": ["12 frames drawn by canvases not on the slide shown (at most 10)"]},
+          sc.lag_said(gate))
+    walks, real_run = [], sc.run
+    second = "  s26  p95 frame 49.9 ms - 3.0 frames of 16.6 ms (at most 2: 33 ms)\n  s01  12 frames drawn by canvases not on the slide shown (at most 10)\n"
+    try:
+        sc.run = lambda cmd, timeout=600: walks.append(cmd) or ((1, gate) if len(walks) == 1 else (1, second))
+        over = sc.lagging("deck.html")
+        check("a slide over in one walk and not in the next is a busy computer, not lag; one over in both lags",
+              len(walks) == 2 and over == {"s01": ["12 frames drawn by canvases not on the slide shown (at most 10)"]}, over)
+        walks.clear()
+        sc.run = lambda cmd, timeout=600: walks.append(cmd) or (0, "perf_gate: PASS - the 3D keeps up")
+        check("... a deck within the budget is walked once", sc.lagging("deck.html") == {} and len(walks) == 1, walks)
+        sc.run = lambda cmd, timeout=600: (2, "perf_gate: Playwright is not installed")
+        check("... and one that could not be measured is no lag", sc.lagging("deck.html") == {})
+    finally:
+        sc.run = real_run
     if not shutil.which("node"):
         print("SKIP - no Node")
         return 0
     tmp = tempfile.mkdtemp(prefix="test_scene3d_")
     try:
         c0 = course(os.path.join(tmp, "flat"), {"s03": {"figure": "s03.kit.json"}}, {})
+        # the 2.126.0 trial: helpers sent a 3D check longer than the shell's 10 minutes to the background, ended their turns,
+        # and claude -p quit with both checks unreported
+        code, out = run(c0, "--module", "2", "--wait")
+        check("--wait with no check to wait for says so", code == 1 and "No 3D check of M02 to wait for" in out, (code, out))
         code, out = run(c0, "--module", "2")
         check("a module with no 3D-kit scene: nothing to check (exit 2), said in one line", code == 2 and "No 3D-kit scene" in out, (code, out))
+        slow = {"CF_3D_ANSWER_WITHIN": "1", "CF_3D_TEST_SLEEP": "4"}
+        code, out = run(c0, "--module", "2", env=slow)
+        check("a check longer than its answer time says STILL CHECKING (exit 3) and goes on by itself",
+              code == 3 and "STILL CHECKING M02" in out and "--wait" in out and "never end your turn" in out, (code, out))
+        code, out = run(c0, "--module", "2", env={"CF_3D_ANSWER_WITHIN": "1"})
+        check("... the same command meanwhile waits for it, never a second check", "already running" in out, (code, out))
+        code, out = run(c0, "--module", "2", "--wait", env={"CF_3D_ANSWER_WITHIN": "30"})
+        check("... and --wait prints its answer and its exit", code == 2 and "No 3D-kit scene" in out, (code, out))
         tank = os.path.join(KIT3D, "examples", "m02_tank.kit3d.json")
         nsteps = len(json.load(io.open(tank, encoding="utf-8")).get("steps") or [])
         c = course(os.path.join(tmp, "c"), {"s09": {"figure": "s09.kit3d.json", "visual_kind": "model_3d"}, "s03": {"figure": "x.kit.json"}},
