@@ -47,26 +47,23 @@
       kept Chrome per slot of the pool, each page in a new browser context (browser_slots.run_dom; CF_CHROME_REUSE=off
       starts a fresh Chrome per page as before).
 5  on PASS - or MODULE CLEAN in a parallel build (--no-course-pages: only the course package left, judged after assembly)
-      - it has photographed every CHANGED slide (every part of a paged slide), figure step and question (asked, wrong,
-      right) onto a few sheets, and checked that every question grades right and wrong answers as such. A screen
-      unchanged in everything it loads keeps its picture (_build\MNN_shots); the sheets show what changed since the last
-      REVIEWED sheets. Give the sheets to ONE review subagent (model haiku) with compile/REVIEW_PROMPT.md. It labels each
-      finding BROKEN or POLISH (2.56.0). Then mark them looked at: build_module.py <course> --module 1 --reviewed (the next
-      sheets show only what changes after this). Fix every BROKEN one in one go, build again, and send the same reviewer
-      a re-review (the changed screens only, with its BROKEN list: FIXED / NOT FIXED - no new polish), --reviewed again.
-      In the whole-course workflow (orchestration/workflows/build_course.js) the BUILDER STOPS AT MODULE CLEAN and the QA
-      agent does this review; a BROKEN finding sends the module back for one fix round. POLISH is never fixed in the loop:
-      write it to working_claude\review\MNN_POLISH.md (beside the sheets' folder, which each promotion replaces; a
-      POLISH.md left inside it is moved there) for the operator - a fix to a drawing that already passes can break it again
-      (IGF M02 s02: PASS, then four failed builds). Every BROKEN finding is fixed before hand-over, so the loop ends (M01
-      benchmark: 6 open-ended review passes took 18 of 29 minutes).
+      - it has walked the deck (every slide at every stop) and every task page like a trainee - each question of the
+      self-checks and the module check as asked (1280 x 800 and 1024 x 768), answered wrong, answered right, and each
+      page's last screen - into working_claude\_build\walk\MNN, and checked that every question grades right and wrong
+      answers as such (a right answer not graded right, or a wrong one graded right, fails the build). Nobody has
+      LOOKED yet: the WALK REVIEW (2i) is the one visual review of the module - slides and task pages, one reviewer who
+      did not build it, two rounds at most - and the module is not done without it. There is no other sheet review: no
+      screen is judged twice and none by nobody.
+      In the whole-course workflow (orchestration/workflows/build_course.js) the BUILDER STOPS AT MODULE CLEAN; the walk
+      judge reviews the walk beside the QA agent (who looks at no screen), and a BROKEN finding or a walk fail sends the
+      module back for one fix round. Under MODULE CLEAN the build prints "WALK REVIEW - ..." : where the module's walk
+      review stands. What could look better but is not wrong is never fixed in the loop: list it for the operator - a
+      fix to a drawing that already passes can break it again (IGF M02 s02: PASS, then four failed builds).
    A FIGURE problem (from the build or the review): fix it in the studio, not in build after build -
       course-visuals\kit\scripts\studio.py <spec> --step all judges one figure at every step in seconds, on its real
       slide or task page (2.52.1). The build lists each finding's spec part ("[part TK1]") and those parts' numbers
       together: change them together, try in the studio until clean, then ONE build_module.py run. While only figures
-      fail, build_module.py stops after them (a figures-only round, ~1 min) and runs the rest once they are clean. (Proved on the IGF M01 round-1 build: haiku found both problems the old browser-driving
-      review found - the q03 tap area on the mast's cap only, a leader line through a caption - in 3 calls, $0.02,
-      where the old review took 100 calls and $2.42.)
+      fail, build_module.py stops after them (a figures-only round, ~1 min) and runs the rest once they are clean.
 ```
 
 - **A figure problem** is reported once per figure and part, with the step. `figure_fit.py` has already tried the fixes
@@ -560,27 +557,23 @@ Every automatic probe was green on IGF Module 4 while a look at the screens stil
 showing an internal file path, a broken "choose all" and tap areas off the things they name. The probes measure what
 someone thought to measure; only looking finds the rest. So **looking is a required step**, not a courtesy:
 
-- **Who:** ONE review subagent, model `haiku` or `sonnet` (the main session never views the pictures; it gets a short
-  verdict). Its brief is `compile/REVIEW_PROMPT.md`. It reads sheets; it never drives a browser (2.50.0 - the M01
-  benchmark's browser-driving review took 100 model calls and a third of the module's cost).
-- **What:** a screenshot of **every slide** of the deck, **every step** of a figure that steps, and **every question**
-  of every task page and the module check - as asked (every tap area and drop zone outlined by a review overlay), answered
-  wrong and checked, answered right and checked - at **1280 × 800**. Not a sample. `build_module.py` makes them on a pass
-  (`course-module-ux/measure/scripts/review_sheets.mjs <module> <out>`, two screens to a sheet, in
-  `working_claude\review\M01\`); the next review gets only the screens whose picture changed (`--all` for every one).
-  Item 4 below is checked by the script: each question is answered by its own keys, and a right answer not graded right
-  (or a wrong one graded right) fails the build.
-- **Against this list:**
-  1. every curve, line and label is visible against what is behind it (a kit figure sits on a dark panel - nothing navy
-     or steel on it, nothing hidden under a shape);
-  2. every credit and caption is clean - no file path, no drive letter, no internal folder name;
-  3. every tap area sits on the thing it names; every drawn label is beside what it labels;
-  4. every answer type is answered **once right and once wrong**, and the screen says which it was ("choose all" keeps
-     every tapped option and scores a fully right answer as right);
-  5. nothing is cut off, covered, or sits under the Check bar until the page is scrolled.
-- **After:** fix what it found, build again, review the screens that changed. `compile_module.py` prints this under
-  **Next** after every clean build. A module is not handed over until it is done.
-- **Two backstops that are cheap and automatic** (they do not replace the review): the drawing check (§2e) now also
+- **The look is the walk review (2i) - one review, of everything a trainee sees.** The deck's slides at every stop and
+  **every question** of every task page (self-checks, the module check, the final assessment's variants) - as asked at
+  **1280 × 800** and **1024 × 768**, answered wrong and checked (every tap area and drop zone outlined by a review
+  overlay), answered right and checked, and the page's last screen. Not a sample. One reviewer who did not build the
+  module reads contact sheets (never a browser: 2.50.0 - the M01 benchmark's browser-driving review took 100 model
+  calls and a third of the module's cost; the main session never views the pictures) against the walk's two rubrics,
+  signs, and the module is not done, and not uploaded, without it. The older review of task-page sheets
+  (`REVIEW_PROMPT.md`, `--reviewed`, `working_claude\review\MNN`) is gone: its points are in the walk's task rubric,
+  so no screen is judged twice.
+- **What the script checks, so nobody has to look for it:** each question is answered by its own keys **once right and
+  once wrong**, and a right answer not graded right (or a wrong one graded right) fails the build ("choose all" keeps
+  every tapped option and scores a fully right answer as right) - `build_module.py`'s "task pages" stage
+  (`course-module-ux/measure/scripts/review_sheets.mjs <module> --walk-dir=...`, which also takes the walk's pictures;
+  `--grade-only` in Phase A and in a check build with `--no-walk`).
+- **After:** fix what the walk found, build again, and the reviewer sees only the slides and task pages that changed.
+  `compile_module.py` prints this under **Next** after every clean build. A module is not handed over until it is done.
+- **Two backstops that are cheap and automatic** (they do not replace the walk review): the drawing check (§2e) now also
   reports a part of a kit figure that cannot be seen on the figure's dark panel (`contrast`: a label under 4.5:1, a
   shape or line under 3:1; the kit's own parts are exempt; `data-low-contrast` marks a part meant to be quiet), and a
   credit, caption or full-screen record that shows a file-system path or a drive letter is a **build problem**.
@@ -696,21 +689,60 @@ A slide may have **no picture** at all when its words read on their own - there 
 A good custom figure is offered to the kit afterwards (`course-visuals/kit2d/SPEC.md`, "Custom figures").
 
 **The walk review - "walk it like a trainee" (the module is not done without it).** `build_module.py` walks the deck at 1280x800
-(`fit_gate.py --walk-dir`: every Start and every Next, a ~480 px picture of each stop, `working_claude\_build\walk\MNN\walk.json`).
-When every other check passes it prints `NOT DONE: walk review missing/stale/failing` until an AI reviewer has looked. The factory
-cannot call the reviewer; **the lead session runs it:**
-1. `python course-module-ux\measure\scripts\walk_review.py prepare <course> --module N` - one contact sheet per slide
-   (`walk\MNN\sheets\sNN.png`) and `walk\MNN\review_brief.md`: the sheets in batches of 3-4 slides with each slide's stop texts, its
-   figure's why / why_text, and the rubric (1 something visibly changes on each Next; 2 the picture shows what the lit line says;
+(`fit_gate.py --walk-dir`: every Start and every Next, a ~480 px picture of each stop, `working_claude\_build\walk\MNN\walk.json`)
+**and every task page** (`review_sheets.mjs --walk-dir`: each question of `tasks\*.html` and `assessment\*.html` as asked at
+1280x800 and at 1024x768, answered wrong with its tap areas outlined, answered right, and the page's last screen -
+`walk\MNN\tasks\<page>\`, `walk\MNN\tasks.json`; a page with question groups is walked group by group).
+When every other check passes it prints `NOT DONE: walk review missing/stale/failing/incomplete` until an AI reviewer has looked;
+a module of a parallel build (`--no-course-pages`) prints the same under `MODULE CLEAN` (under `PASS`, when the course was assembled before), as `WALK REVIEW - ...`, and never fails on it. The factory cannot
+call the reviewer. The final assessment is walked like a module (`--module final`: `walk\FINAL\`, `FINAL_walk_review.json` - the one
+name the build, `walk_review.py` and the portal use). **In the whole-course workflow the walk judge runs it** (`build_course.js`: ONE
+reviewer a module beside QA, for its deck and its task pages, reading the sheets in batches of up to 4; its fails in the one fix
+round, one more look at the slides and task pages the round changed; one judge for the final after it is built); **in a build by
+hand the lead session does:**
+1. `python course-module-ux\measure\scripts\walk_review.py prepare <course> --module N --stale` - one contact sheet per slide,
+   per task-page question (`<page>.<question>`) and per task page's last screen (`<page>.result`) that
+   has no verdict for what it shows now (`walk\MNN\sheets\sNN.png`, `sheets\<page>.<question>.png`; the first time that is every one) and
+   `walk\MNN\review_brief.md`: the sheets in batches of up to 4 slides with each slide's stop texts, its figure's why / why_text, its
+   fails of the last review, and the rubric (1 something visibly changes on each Next; 2 the picture shows what the lit line says;
    3 nothing empty, hidden, cut, duplicated or contradictory; 4 a trainee knows what to do / what the slide teaches; 5 the drawing has
-   a reason and serves it; 6 the answer / reveal is visible and does not cover the figure). (Pillow: `python -m pip install pillow`.)
-2. **One Sonnet subagent per batch** (3-4 contact sheets - several images in one look, never one screenshot at a time): give it the
-   batch's section of the brief and the sheet files; it returns JSON `{"reviewed_by": "...", "slides": {"s03": {"ok": true, "fails": []},
-   "s07": {"ok": false, "fails": ["stop 3: the chart is still an empty axis"]}}}`.
-3. Save each batch's JSON and `walk_review.py sign <course> --module N --review <reviewer.json>` (the results merge by slide).
-4. **Fix every fail, build again, walk and review again** until `walk_review.py verify <course> --module N` says OK (exit 0). A
-   changed deck makes the review stale (the hash ignores build timestamps and comments). `--no-walk` is for the factory's own tests.
-`fix.py upload` and `course_portal.py upload` refuse while a built module's walk review is missing, stale or failing.
+   a reason and serves it; 6 the answer / reveal is visible and does not cover the figure; 7 nothing of the factory's on screen - a
+   file path, a placeholder, a cut credit; 8 the picture is the thing the words name and a seafarer would not call it wrong).
+   **The task rubric**, judged per question: 1 the question and every choice readable and whole at 1280x800 and 1024x768; 2 the
+   picture is the one the question is about and its tap areas / drop zones sit on the right parts; 3 the feedback explains and
+   does not hand over a later question's answer; 4 nothing a trainee needs is under the Check bar; 5 usable with zero tablet
+   experience - tap and drag, big controls (L42); 6 the last screen is the last: the trainee's own score and no way onward (L27,
+   L45); 7 nothing of the factory's on screen. A task page is ONE fingerprint (the page and what it loads): a page that changes
+   shows all of its questions again, and no other page's.
+   (Pillow: `python -m pip install pillow`.)
+2. **One Sonnet subagent per batch** (up to 4 contact sheets - several images in one look, never one screenshot at a time; the
+   workflow's one judge a module reads the same batches itself): give it the batch's section of the brief and the sheet files; it
+   returns JSON `{"reviewed_by": "...", "slides": {"s03": {"ok": true, "fails": []}, "s07": {"ok": false, "fails": ["stop 3: the
+   chart is still an empty axis"]}}}` - `ok` a real `true` / `false`: the word `"false"` in quotes, or an `ok` with fails beside it,
+   counts as a fail. **Never the agent or session that built the module or made the fix.**
+3. Save each batch's JSON and `walk_review.py sign <course> --module N --review <reviewer.json> --built-by "<who built it>"`
+   (`--built-by` once more for each agent that fixed it; the results merge by slide). It records who reviewed and everyone who built
+   or fixed, and refuses a review signed by any of them, by nobody, or of a slide that is not what its contact sheet showed - a
+   module built again while the reviewer looked: `prepare --stale` again and review the new sheets. The names are labels the caller
+   gives: the script cannot tell which agent typed them, so the lead session passes the true ones.
+4. **Fix every fail in one go, build again, and review once more:** `prepare --stale` then shows only the slides with no verdict for
+   what they show now - the ones the fix changed. The walk keeps each slide's fingerprint, the one the audits' cache uses: its
+   markup (build timestamps and comments ignored), the module's stylesheet and scripts, the shell, the files it names - a changed
+   `gb_*.js`, kit part or photo makes its slides stale, a slide nothing touched keeps its verdict, and a slide that failed and was
+   not changed keeps its fail and is not shown again. **Two rounds at most** - a third `sign` is refused, and a round is counted for
+   the module, so renaming a slide does not start it over. What still fails after the second is the operator's:
+   `walk_review.py verify <course> --module N` lists each one with its slide and stop, and the operator either accepts it -
+   `walk_review.py accept <course> --module N --by "<operator>" --why "<why it may ship>" [--slides s04]`, recorded in the signed
+   file and shown by `verify`, in the draft's notes and at upload from then on - or has it fixed and opens one more pair of rounds
+   (`walk_review.py reopen <course> --module N --by "<operator>"`). After the second round a changed slide needs `reopen` first:
+   `accept` is refused for a slide that is not the one reviewed. **`accept` and `reopen` are the operator's own**, typed by the
+   operator - no agent runs them, and the file records how each was run (typed in a terminal, or not). An accepted slide that
+   changes again is stale again. `--no-walk` leaves the walk pictures alone: the factory's own tests, and a check build that runs
+   beside a reviewer.
+`fix.py upload` and `course_portal.py upload` refuse while a built module's walk review - or the final's - is missing, stale,
+incomplete or failing with nothing accepted; a slide or a task page that was never walked does not pass (`incomplete` - a
+module whose deck is reviewed and whose task pages are not is NOT DONE), and what the operator accepted is listed at upload.
+`fix.py check --kind walk --slides s03,self_check_1` walks and checks the slides and task pages a fix touched.
 
 ## 3 · When the look is not enough
 

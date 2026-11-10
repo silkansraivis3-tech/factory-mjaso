@@ -135,7 +135,7 @@ bending or changing a law, or when a request seems to collide with one, read it 
 | **L68** | **The Instructor-Led Course Development Guideline** — active means every trainee commits to an output; a passive run at most 15 min and 20 % of theory, or a one-line reason (`instructor-led/GUIDE.md`, `instructor_led.py check`) |
 | **L69** | **The experts get the pedagogy first** — Bloom now, Bloom proposed and the activities, before any script (`pedagogy_review.py`, `bloom/GUIDE.md` §5) |
 | **L70** | **Built after the expert's Ready** — the office PC builds unattended; see *Auto build* |
-| **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done - and (2.118.0) not done without the **walk review**: an AI reviewer looks at the contact sheet of every slide's stops as a trainee does (`walk_review.py`, `compile/GUIDE.md` 2i) |
+| **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done - and (2.118.0) not done without the **walk review**: an AI reviewer who did not build it looks at the contact sheet of every slide's stops as a trainee does (`walk_review.py`, `compile/GUIDE.md` 2i; the whole-course workflow's walk judge runs it; two rounds, then the operator accepts on record or has it fixed) |
 
 ## The course remembers — L32
 

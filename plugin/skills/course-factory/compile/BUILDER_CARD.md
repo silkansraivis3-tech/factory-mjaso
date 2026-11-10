@@ -57,7 +57,8 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
 - Draw 2D figures with the 2D kit (`course-visuals/kit2d/SPEC.md`) beside the kit; 3D only where the figure's why is spatial.
 - Every figure spec carries `"why"` + `"why_text"` - what the figure's steps serve.
 - When no kit part shows the idea, write a `custom_figure` (an offline, self-contained file whose steps Next drives).
-- The walk review is run by the lead session after PASS, not by the builder.
+- The walk review is never the builder's: the workflow's walk judge runs it (by hand: the lead session). The "WALK REVIEW"
+  line under MODULE CLEAN says where it stands; never run `walk_review.py` - a builder's own signature is refused.
 
 ## Reading its answer - one line per problem, with its fix and file
 The answer lists only what fails (the full log's path is its last line - open it only when a line is not enough).
@@ -91,8 +92,9 @@ Or (2.72.7) when everything the build prints has failed three builds running - t
 its FAIL line and list what is left. WHY: the 2.72.5 run's M02 / M03 made 20 builds each without PASS (s05 over-filled in
 all 20); a FAIL with what is left listed goes straight to the judges - no fresh agent carries on (that is only for a
 builder that ended mid-build or with no build answer).
-Do NOT review the sheets and do not polish - the workflow's FIGURE review (every figure at projector size, a reviewer who
-did not build it) and the QA agent look after you. Anything you would polish: list it.
+Do NOT review your own module and do not polish - the workflow's FIGURE review (every figure at projector size, a reviewer
+who did not build it), the WALK judge (every slide at every stop and every question of every task page - the one visual
+review; never run walk_review.py yourself) and the QA agent look after you. Anything you would polish: list it.
 
 ## Report (your final message)
 First line: the PASS / FAIL line build_module.py printed. Then: the full log's path, how many build_module.py runs, every

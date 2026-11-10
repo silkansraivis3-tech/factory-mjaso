@@ -140,7 +140,7 @@ the script, and anything else a fix changed (a layout, a picture, a class) - tha
 | space, size, position, spacing, CSS, a bigger picture | `fix.py check <course> --kind layout --modules ... [--slides s03,s07]` | nothing off the screen, no text under the floor; for swept slides **before → after** |
 | a file added, moved, renamed, linked; a shared file copied | `fix.py check <course> --kind package` | the classroom system still takes the course |
 | a new or changed component, animation, interaction | `--kind layout`, then `--kind walk` | it works and looks right |
-| **any fix** (2.116.0) | `fix.py check <course> --kind walk --modules ... --slides s03,s07` | every touched slide walked like a trainee by the reviewer (section 6) |
+| **any fix** (2.116.0) | `fix.py check <course> --kind walk --modules ... --slides s03,s07,self_check_1` | every touched slide and task page walked like a trainee by the reviewer (section 6) |
 
 Run by whoever made the fix, once. Report its numbers. **Not in a fix** (`fix-rules.json → never_in_a_fix`): a second
 checker, an orchestrator re-check, a whole-course QA, re-measuring slides nobody touched, a second screen size unless
@@ -178,14 +178,25 @@ Then log it: the operator's words in `FEEDBACK_LOG.md` (L32) — `apply` already
 ## 6 · The walk review after a fix (2.116.0)
 
 Operator Aleksis Vējs, 2026-11-09: the old "no visual check after a fix" is gone. **After ANY fix the walk review runs on every
-touched slide** ("walk it like a trainee"), once, by the lead session:
+touched slide and every touched task page** ("walk it like a trainee"), once, by the lead session:
 
 1. `python course-factory\scripts\fix.py check <course> --kind walk --modules N --slides s03,s07` - walks the module at 1280x800
    (`fit_gate.py --walk-dir`, a ~480 px picture of every Next), makes the touched slides' contact sheets and
-   `working_claude\_build\walk\MNN\review_brief.md`, and fails until the reviewer has signed those slides.
-2. Run the reviewer exactly as `compile/GUIDE.md` 2i says: **one Sonnet subagent per batch of 3-4 contact sheets** (several images in
-   one look - never a screenshot at a time in the main session), returning reviewer JSON.
-3. `python course-module-ux\measure\scripts\walk_review.py sign <course> --module N --review <reviewer.json>` (touched slides only
-   are replaced; the rest keep their earlier result), then the same `fix.py check --kind walk` again.
-4. Every fail is fixed and the module walked again until the check passes. `fix.py rebuild`'s upload and `course_portal.py upload`
-   refuse while a built module's walk review is missing, stale or failing.
+   `working_claude\_build\walk\MNN\review_brief.md`, and fails until the reviewer has signed those slides. The walk keeps each
+   slide's fingerprint (its markup, the stylesheet and scripts, the files it names), so a slide the fix did not change keeps the
+   verdict it had: only the touched ones are stale - and every slide of a module whose stylesheet or script the fix changed.
+   **A fix to a task page** is named the same way - `--slides self_check_1` (or `tasks/self_check_1.html`), beside any slides:
+   the check answers that module's task pages like a trainee (`review_sheets.mjs --walk-dir`: each question asked, answered
+   wrong, answered right, and the last screen), and wants every question and the last screen of the touched page signed. A
+   task page is one fingerprint (the page and what it loads): its questions go stale together, no other page does. With no
+   `--slides` the whole module - deck and task pages - must be covered.
+2. Run the reviewer exactly as `compile/GUIDE.md` 2i says: **one Sonnet subagent per batch of up to 4 contact sheets** (several
+   images in one look - never a screenshot at a time in the main session), returning reviewer JSON. **Never the session or agent
+   that made the fix** - its own signature is refused.
+3. `python course-module-ux\measure\scripts\walk_review.py sign <course> --module N --review <reviewer.json> --built-by "<who made
+   the fix>"` (touched slides only are replaced; the rest keep their earlier result), then the same `fix.py check --kind walk` again.
+4. A fail is fixed and those slides are reviewed **once more - two rounds at most**, a third `sign` is refused. What still fails is
+   listed by the check with its slide and stop, and it is the operator's: accept it as it is (`walk_review.py accept <course>
+   --module N --by "<operator>" --why "<why it may ship>"`, recorded) or have it fixed and open the rounds again (`walk_review.py
+   reopen`). `fix.py rebuild`'s upload and `course_portal.py upload` refuse while a built module's walk review is missing, stale,
+   incomplete or failing with nothing accepted.

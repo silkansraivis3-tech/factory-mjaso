@@ -190,9 +190,22 @@ on the machine, in which case the browser console is the only syntax check you h
 ### 4 · The walk review
 
 `python measure/scripts/walk_review.py prepare <course> --module N` walks Start, then Next to the end at
-1280 × 800 and lays every stop of every slide out as a contact sheet for one look; `walk_review.py sign`
-records the reviewer's answer and `walk_review.py verify` exits 0 only when the review was made for this
-deck. The build prints `NOT DONE` until it is signed and fresh (`course-factory` `compile/GUIDE.md` 2i).
+1280 × 800 and lays every stop of every slide out as a contact sheet for one look (`--stale`: only the
+slides with no verdict for what they show now - the walk keeps each slide's fingerprint, the one the audits'
+cache uses (`check_cache.py`: its markup, the module's stylesheet and scripts, the files it names), so a
+one-slide fix makes one slide stale and a changed stylesheet all of them); `walk_review.py sign --built-by
+"<who built it>"` (once more for each fixer) records the reviewer's answer, who reviewed and who built, and
+refuses a builder's or fixer's own, and a slide that is not what its sheet showed; `walk_review.py verify`
+exits 0 only when every slide of the deck was walked and reviewed as it is. **The task pages are part of it**:
+`review_sheets.mjs <module> <walk folder> --tasks-only --walk-dir=<walk folder>` (the build runs it) answers
+every page of `tasks\` and `assessment\` like a trainee and saves each question as asked at 1280 × 800 and
+1024 × 768, answered wrong, answered right, and the page's last screen; `prepare` makes one sheet per
+question (`<page>.<question>`) and per last screen (`<page>.result`) and gives the reviewer a task rubric
+beside the deck's; a page is one fingerprint, so a changed page makes only its own questions stale; a page
+never walked or never reviewed is `incomplete`. Two rounds at most; what still
+fails the operator - never an agent - accepts on record (`walk_review.py accept --by --why`) or has fixed
+(`reopen`). The final assessment is `--module final`. The build prints `NOT DONE` until it is
+signed and fresh (`course-factory` `compile/GUIDE.md` 2i); the whole-course workflow's walk judge runs it.
 Every screen must be actionable without opening anything; the module check is second-to-last and the
 hand-off screen is last.
 

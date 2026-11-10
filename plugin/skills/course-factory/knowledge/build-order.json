@@ -163,21 +163,22 @@
       "n": 16,
       "step": "verify",
       "owner": "course-factory/tablet + course-module-ux + course-module-ui + course-visuals",
-      "does": "run every check and READ the output: hours, model-course outcome coverage, structure, links, navigation reachability, task crosscheck, and the visual audit of the module's own stylesheets. A green exit is not proof the work happened - inspect the line for the thing you changed. THEN the VISUAL REVIEW (required, 2.44.0): a subagent looks at a screenshot of every slide and every task screen at 1280x800 and returns a short verdict - see visual_review below.",
+      "does": "run every check and READ the output: hours, model-course outcome coverage, structure, links, navigation reachability, task crosscheck, and the visual audit of the module's own stylesheets. A green exit is not proof the work happened - inspect the line for the thing you changed. THEN the VISUAL REVIEW (required, 2.44.0) - the walk review: a reviewer who did not build the module looks at every slide at every stop and every question of every task page as a trainee meets it, and signs - see visual_review below.",
       "rule": "a green exit is not proof; read the line for the thing you changed. A module is not verified until its visual review is done and what it found is fixed",
       "visual_review": {
         "_why": "IGF Module 4 (2026-10-16): every automatic probe was green while a visual review still found invisible curves, a credit showing an internal file path, a broken 'choose all' and tap areas off the things they name. Probes measure what someone thought to measure; only looking at the screen finds the rest.",
         "required": true,
-        "who": "ONE review subagent, model haiku or sonnet, briefed by compile/REVIEW_PROMPT.md - it reads sheets and never drives a browser (2.50.0: the browser-driving review of the M01 benchmark was 100 model calls, a third of the module's cost); the main session receives a short text verdict - CLAUDE.md 'Visual QA'",
-        "what": "a screenshot of EVERY slide of the deck, EVERY figure step and EVERY question of every task page and the module check (as asked with its tap areas outlined, answered wrong, answered right), at 1280x800 - not a sample. compile/scripts/build_module.py makes them on a pass (review_sheets.mjs, two screens to a sheet) and checks by script that every question grades right and wrong answers as such; a re-review gets only the screens that changed",
+        "who": "ONE reviewer a module who did not build or fix it (a Sonnet subagent, or the workflow's walk judge), briefed by the brief walk_review.py prepare writes (the slide rubric and the task rubric) - it reads contact sheets in batches of up to 4 and never drives a browser (2.50.0: the browser-driving review of the M01 benchmark was 100 model calls, a third of the module's cost); the main session receives a short text verdict - CLAUDE.md 'Visual QA'",
+        "what": "the WALK REVIEW (course-module-ux/measure/scripts/walk_review.py, compile/GUIDE.md section 2i): EVERY slide of the deck at EVERY stop and EVERY question of every task page, the module check and the final assessment (as asked at 1280x800 and 1024x768, answered wrong with its tap areas outlined, answered right, the page's last screen) - not a sample. compile/scripts/build_module.py takes the pictures (fit_gate.py --walk-dir, review_sheets.mjs --walk-dir) and checks by script that every question grades right and wrong answers as such; after a fix the reviewer gets only the slides and task pages that changed; two rounds at most. It is the ONE visual review: there is no other sheet review",
         "checklist": [
           "every curve, line and label is visible against what is behind it (nothing navy-on-dark, nothing under a shape)",
           "every credit and caption is clean - no file-system path, no drive letter, no internal folder name",
           "every tap area sits on the thing it names, and every drawn label is beside what it labels",
-          "every answer type is answered once RIGHT and once WRONG, and the screen says which it was ('choose all' keeps every tapped option)",
-          "nothing is cut off, covered, or sits under the Check bar until the page is scrolled"
+          "every answer type is answered once RIGHT and once WRONG (by the script), and the screen says which it was ('choose all' keeps every tapped option)",
+          "nothing is cut off, covered, or sits under the Check bar until the page is scrolled",
+          "a task page's last screen is the last screen: the trainee's own score and no way onward"
         ],
-        "after": "fix what it found, build again (build_module.py), and review the screens that changed. build_module.py prints the sheet folder; compile/GUIDE.md section 2f describes it. Automatic backstops (not a replacement): the drawing check's contrast finding, and a build problem for a credit that shows a path."
+        "after": "fix what it found, build again (build_module.py), and the reviewer looks once more at what changed (walk_review.py prepare --stale, sign). The build, fix.py upload and course_portal.py upload refuse a module whose walk review is missing, stale, incomplete or failing with nothing accepted by the operator. Automatic backstops (not a replacement): the drawing check's contrast finding, and a build problem for a credit that shows a path."
       },
       "scripts": [
         "hours/scripts/check_hours.py",

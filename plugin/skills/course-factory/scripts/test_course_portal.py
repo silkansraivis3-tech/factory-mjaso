@@ -376,6 +376,19 @@ def main():
                 code, out = out_of(cp.cmd_upload, c)
                 check("only pictures left: imported as a draft, pictures pending (the import marks it built - the stop "
                       "message goes)", code == 0 and "Imported into the staging editor" in out and "pictures pending: 1" in out, out)
+                let = "M01 s04 - stop 3: the axis has no bars yet - accepted by Aleksis Vejs, 2026-11-10 (typed in a terminal): drawn next"
+                real_accepted, real_import, went = cp.walk_accepted, cp.cmd_import, []
+                try:
+                    cp.walk_accepted = lambda course: [let]
+                    cp.cmd_import = lambda *a: went.append(real_import(*a)) or went[-1]
+                    code, out = out_of(cp.cmd_upload, c)
+                finally:
+                    cp.walk_accepted, cp.cmd_import = real_accepted, real_import
+                notes = ((went[0][1] if went else {}).get("release") or {}).get("notes") or []
+                check("a walk-review fail the operator accepted goes up - shown at the upload, and written into the draft's notes",
+                      code == 0 and "1 walk-review fail(s) nobody fixed" in out and let in out and let in notes
+                      and any(x.startswith("Walk review: 1 fail(s) nobody fixed") for x in notes) and notes[0].startswith("Pictures pending"),
+                      (out, notes))
                 cp.blockers = lambda course: ([], ["module03/deck.html uses assets/img/x.png, which is not there"])
                 srv.done = None
                 code, out = out_of(cp.cmd_upload, c)

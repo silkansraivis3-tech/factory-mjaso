@@ -215,6 +215,17 @@ def walk(page, deck, min_shown, shots=None, record=None):
     return found
 
 
+def walked_deck(deck):
+    """what the walk is made of: each slide's fingerprint and the whole deck's, taken BEFORE the first picture and kept
+    beside the pictures - so the walk review tells a picture of an older slide from a picture of this one, and a deck that
+    changed while it was walked is not passed off as walked (walk_review.py). A walk with none cannot be reviewed"""
+    try:
+        import walk_review
+        return walk_review.walk_stamp(deck)
+    except Exception:                                       # noqa: BLE001 - the fit result stands; prepare asks for a new walk
+        return {}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("deck")
@@ -253,11 +264,13 @@ def main(argv=None):
                 page = b.new_page(viewport={"width": w, "height": h})
                 page.add_init_script(PROBE)
                 rec = [] if (o.walk_dir and (w, h) == (1280, 800)) else None
+                made_of = walked_deck(deck) if rec is not None else {}
                 res["%dx%d" % (w, h)] = walk(page, deck, o.min_shown, o.walk_dir if rec is not None else None, rec)
                 if rec is not None:
                     Path(o.walk_dir).mkdir(parents=True, exist_ok=True)
                     (Path(o.walk_dir) / "walk.json").write_text(
-                        json.dumps({"viewport": "1280x800", "stops": rec}, indent=1, ensure_ascii=False), encoding="utf-8")
+                        json.dumps(dict({"viewport": "1280x800", "stops": rec}, **made_of), indent=1, ensure_ascii=False),
+                        encoding="utf-8")
                 page.close()
             b.close()
     except Exception as err:                                # the browser did not start or the page did not answer
