@@ -569,6 +569,8 @@ def credit_line(meta, with_title=True):
     if is_generated(meta):
         return ""
     lic = (meta or {}).get("licence") or (meta or {}).get("license")       # a record written either way
+    if re.search(r"\(L\d+\)", str(lic or "")):      # "owner-cleared (L33)": the factory's own note, not a licence
+        lic = None
     if named_clearance(meta) and not lic and (meta.get("source_work") or meta.get("credit")):
         return "Source: " + (meta.get("credit") or meta.get("source_work"))   # 2.63.2: a cleared book figure - its book, edition, page
     if not meta or not (meta.get("attribution_required") or lic):

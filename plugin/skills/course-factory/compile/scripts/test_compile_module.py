@@ -3421,7 +3421,10 @@ def main():
         us["license"] = "CC BY-SA 4.0"
         check("... a record that writes it \"license\" has the same credit (the gas trial's M01 s01 shipped with none)",
               cm.credit_line(us) == cm.credit_line(meta), cm.credit_line(us))
-        few =[f for f in cs.media_findings(script()) if f["rule"] == "v_few_photos"]
+        check("... but the old --auto pick's \"license\": \"owner-cleared (L33)\" is no licence: no credit line from it",
+              cm.credit_line({"source": "Novikontas old course", "author": "Novikontas", "license": "owner-cleared (L33)",
+                              "rights_state": "OWNER_CLEARED"}) == "")
+        few = [f for f in cs.media_findings(script()) if f["rule"] == "v_few_photos"]
         more = json.loads(json.dumps(SCREENS))
         more[1]["visual"] = "Thermometer scale; a real photo of a bunker station beside it."
         check("L52: fewer than half the teaching slides with a real photograph -> a suggestion; a real photo beside a drawing counts",
