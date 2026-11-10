@@ -5,12 +5,15 @@
   "course_libraries": {
     "_about": "ONE parent folder holds every library: LIBRARIES.json (the registry: id, name, path relative to the parent or absolute, subject words, STCW references, courses, created), 00_READ_ME_FIRST.md, and one folder per library made from source/library_template. 'common' holds what every course shares. subject_library.py ensure makes the parent, the registry and Common the first time; a library in 'libraries' below that is present is listed in the registry by its absolute path and stays where it is.",
     "env": "NOVIKONTAS_COURSE_LIBRARIES",
-    "_default_parents": "Read in this order. A shared drive of any name comes first, so everyone the school has added to it gets the same libraries with nothing to set up; a person's own My Drive after it. A place with * is used only where it exists.",
+    "_default_parents": "Read in this order. A shared drive of any name comes first; then a folder somebody shared with this person, once they pressed 'Add shortcut to Drive' on it (Google Drive for desktop mounts the shortcut's target under .shortcut-targets-by-id); then a person's own My Drive. So everyone the folder is shared with gets the same libraries with nothing to set up. A place with * is used only where it exists.",
     "default_parents": [
       "G:/Shared drives/*/Course Libraries",
       "~/Library/CloudStorage/GoogleDrive-*/Shared drives/*/Course Libraries",
       "~/Google Drive/Shared drives/*/Course Libraries",
+      "G:/.shortcut-targets-by-id/*/Course Libraries",
+      "~/Library/CloudStorage/GoogleDrive-*/.shortcut-targets-by-id/*/Course Libraries",
       "G:/My Drive/Course Libraries",
+      "~/Library/CloudStorage/GoogleDrive-*/My Drive/Course Libraries",
       "~/Google Drive/My Drive/Course Libraries",
       "~/My Drive/Course Libraries"
     ],
@@ -45,6 +48,9 @@
       "env": "NOVIKONTAS_GAS_LIBRARY",
       "default_locations": [
         "G:/My Drive/Gas Library",
+        "G:/.shortcut-targets-by-id/*/Gas Library",
+        "~/Library/CloudStorage/GoogleDrive-*/My Drive/Gas Library",
+        "~/Library/CloudStorage/GoogleDrive-*/.shortcut-targets-by-id/*/Gas Library",
         "~/Google Drive/My Drive/Gas Library",
         "~/My Drive/Gas Library"
       ],

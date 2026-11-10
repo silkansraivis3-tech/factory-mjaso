@@ -102,14 +102,7 @@ def parents(cfg: dict, env: dict) -> list[str]:
     raw = (env.get(ENV_PARENTS) or "").strip()
     if raw:
         return [] if _off(raw) else [os.path.expanduser(p.strip()) for p in raw.split(os.pathsep) if p.strip()]
-    out = []
-    for p in cfg.get("course_libraries", {}).get("default_parents", []):
-        p = os.path.expanduser(p)
-        if "*" in p:                                    # a shared drive of any name: only the ones that are there
-            out += sorted(x for x in glob.glob(p) if os.path.isdir(x))
-        else:
-            out.append(p)
-    return out
+    return _places(cfg.get("course_libraries", {}).get("default_parents", []))
 
 
 def _registry_name(cfg: dict) -> str:
@@ -145,6 +138,15 @@ def home_parent(cfg: dict, env: dict) -> str | None:
         if os.path.isdir(p) or os.path.isdir(os.path.dirname(os.path.normpath(p))):
             return p
     return None
+
+
+def _places(places: list[str]) -> list[str]:
+    """The folders these places name: ~ opened, and a place with * replaced by the folders that are there."""
+    out: list[str] = []
+    for p in places:
+        p = os.path.expanduser(p)
+        out += sorted(x for x in glob.glob(p) if os.path.isdir(x)) if "*" in p else [p]
+    return out
 
 
 def _root_of(parent: str, path: str) -> str:
@@ -203,13 +205,13 @@ def catalogue(cfg: dict | None = None, env: dict | None = None) -> list[dict]:
     explicit = bool((env.get(ENV_PARENTS) or "").strip())
     for spec in specs:
         marker = spec.get("marker", ["tools/find.py"])
-        places = ([env[spec["env"]]] if spec.get("env") and env.get(spec["env"]) else []) + \
-                 ([] if explicit else spec.get("default_locations", []))
-        hit = next((os.path.expanduser(p) for p in places if _is_library(os.path.expanduser(p), marker)), None)
+        places = _places(([env[spec["env"]]] if spec.get("env") and env.get(spec["env"]) else []) +
+                         ([] if explicit else spec.get("default_locations", [])))
+        hit = next((p for p in places if _is_library(p, marker)), None)
         if hit:
             add(_entry(spec, hit, "config", marker))
         elif places:
-            add(_entry(spec, os.path.expanduser(places[0]), "config", marker))
+            add(_entry(spec, places[0], "config", marker))
     return out
 
 
@@ -301,9 +303,9 @@ def open_registry(parent: str, cfg: dict, env: dict) -> dict:
         if spec["id"] in ids:
             continue
         marker = spec.get("marker", ["tools/find.py"])
-        places = ([env[spec["env"]]] if spec.get("env") and env.get(spec["env"]) else []) + \
-                 ([] if (env.get(ENV_PARENTS) or "").strip() else spec.get("default_locations", []))
-        hit = next((os.path.expanduser(p) for p in places if _is_library(os.path.expanduser(p), marker)), None)
+        places = _places(([env[spec["env"]]] if spec.get("env") and env.get(spec["env"]) else []) +
+                         ([] if (env.get(ENV_PARENTS) or "").strip() else spec.get("default_locations", [])))
+        hit = next((p for p in places if _is_library(p, marker)), None)
         if hit:
             reg["libraries"].append({"id": spec["id"], "name": spec.get("name", spec["id"]),
                                      "path": _norm(os.path.abspath(hit)),

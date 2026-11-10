@@ -92,6 +92,25 @@ def main() -> int:
         os.rmdir(shared)
         check("... and a shared drive that is not there is not listed", SL.parents(cfg, {}) == [mine], SL.parents(cfg, {}))
 
+        # a colleague's computer: nothing of their own; the two folders were shared with them and each has a shortcut
+        short = os.path.join(tmp, "colleague", ".shortcut-targets-by-id")
+        their_parent = os.path.join(short, "1AbC", "Course Libraries")
+        shutil.copytree(SL.TEMPLATE, os.path.join(their_parent, "Common"))
+        shutil.copytree(SL.TEMPLATE, os.path.join(short, "9xYz", "Gas Library"))
+        with open(os.path.join(their_parent, "LIBRARIES.json"), "w", encoding="utf-8") as fh:
+            json.dump({"libraries": [
+                {"id": "gas", "name": "NOVIKONTAS Gas Library", "path": "Q:/the owner's own/My Drive/Gas Library",
+                 "subject_words": ["gas", "lng"]},
+                {"id": "common", "name": "NOVIKONTAS Common Library", "path": "Common", "common": True}]}, fh)
+        theirs = json.loads(json.dumps(SL.config()))
+        theirs["course_libraries"]["default_parents"] = [os.path.join(short, "*", "Course Libraries")]
+        theirs["libraries"][0]["default_locations"] = [os.path.join(tmp, "colleague", "My Drive", "Gas Library"),
+                                                       os.path.join(short, "*", "Gas Library")]
+        here = {x["id"]: x for x in SL.locate(theirs, clean_env())}
+        check("a folder shared with a colleague and added as a shortcut is found by itself: Common through the registry, "
+              "the Gas Library where their own computer mounts it - not at the owner's path",
+              set(here) == {"gas", "common"} and "9xYz" in here["gas"]["root"] and "1AbC" in here["common"]["root"], here)
+
         print("create")
         e = SL.create("fire-fighting", "NOVIKONTAS Fire Fighting Library", "fire,fire-fighting,extinguisher",
                       "A-VI/3", env=E)
