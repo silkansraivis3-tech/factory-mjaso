@@ -4654,42 +4654,50 @@ KIT.define('push_button', function (fig, part, g, p) {
      stack in a 390-high figure). The picture is drawn at h/182 of its first size; its words (the tag, the name, READY /
      PRESSED) keep their own size and sit under it, and the plate grows to hold the tag when the words are grown. */
   var h = KIT.h, S = h.clamp((p.h || 120) / 182, 0.3, 1.5);
+  /* "guard": false - a plain push button (an alarm's ACCEPT, a RESET): no hinged guard, a flat button, no tag unless given */
+  var guard = p.guard !== false, tag = p.tag || (guard ? 'ESD' : '');
+  if (!guard) g.classList.add('kit-push-button-plain');
   /* 2.52.0: the painted wall plate, the button's cast housing, its steel stem and the guard's steel posts */
   var eq = h.equip(g, { shadow: false });
   var plate = h.body('rect', { rx: 8, 'class': 'kit-push-button-plate' }, eq, { mat: 'paint', shade: 'box' });   // the wall plate it is mounted on
   var art = h.el('g', { transform: 'scale(' + S.toFixed(4) + ')' }, eq);
-  h.el('line', { x1: -38, y1: 10, x2: -38, y2: -36, 'class': 'kit-m-stem kit-push-button-post' }, art);
-  h.el('line', { x1: 38, y1: 10, x2: 38, y2: -36, 'class': 'kit-m-stem kit-push-button-post' }, art);
+  if (guard) {
+    h.el('line', { x1: -38, y1: 10, x2: -38, y2: -36, 'class': 'kit-m-stem kit-push-button-post' }, art);
+    h.el('line', { x1: 38, y1: 10, x2: 38, y2: -36, 'class': 'kit-m-stem kit-push-button-post' }, art);
+  }
   h.body('rect', { x: -44, y: 10, width: 88, height: 30, rx: 5 }, art, { mat: 'cast', shade: 'box' });
   h.body('rect', { x: -7, y: -2, width: 14, height: 13 }, art, { mat: 'steel', shade: 'cylv' });
-  [-1, 1].forEach(function (s) { h.body('circle', { cx: 38 * s, cy: -38, r: 3 }, art, { mat: 'steel', shade: 'round' }); });   // the guard's hinge knuckles
+  if (guard) [-1, 1].forEach(function (s) { h.body('circle', { cx: 38 * s, cy: -38, r: 3 }, art, { mat: 'steel', shade: 'round' }); });   // the guard's hinge knuckles
   var screws = [0, 1, 2, 3].map(function () { return h.el('circle', { r: 2, 'class': 'kit-m-bolt' }, eq); });
   var cap = h.el('g', {}, art);
-  h.el('path', { d: 'M-30 2 C-30 -28 30 -28 30 2 Z', 'class': 'kit-push-button-cap' }, cap);
+  if (guard) h.el('path', { d: 'M-30 2 C-30 -28 30 -28 30 2 Z', 'class': 'kit-push-button-cap' }, cap);
+  else h.el('rect', { x: -26, y: -14, width: 52, height: 16, rx: 4, 'class': 'kit-push-button-cap' }, cap);
   h.el('line', { x1: -33, y1: 2, x2: 33, y2: 2, 'class': 'kit-flange' }, cap);
-  var lid = h.el('g', {}, art);
-  h.el('rect', { x: -38, y: -41, width: 76, height: 6, rx: 3, 'class': 'kit-push-button-lid' }, lid);
-  var tagBox = h.el('rect', { x: -22, y: 46 * S, width: 44, height: 22, rx: 4, 'class': 'kit-push-button-tag' }, g);
-  var tagTxt = h.el('text', { x: 0, y: 46 * S + 15, 'text-anchor': 'middle', 'class': 'kit-tl' }, g, p.tag || 'ESD');
+  var lid = guard ? h.el('g', {}, art) : null;
+  if (lid) h.el('rect', { x: -38, y: -41, width: 76, height: 6, rx: 3, 'class': 'kit-push-button-lid' }, lid);
+  var tagBox = tag ? h.el('rect', { x: -22, y: 46 * S, width: 44, height: 22, rx: 4, 'class': 'kit-push-button-tag' }, g) : null;
+  var tagTxt = tag ? h.el('text', { x: 0, y: 46 * S + 15, 'text-anchor': 'middle', 'class': 'kit-tl' }, g, tag) : null;
   var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;
   var ly0 = 46 * S + 22 + 8 + 12.5 + 8;
   var nl = p.label ? h.lines(lg, { x: 0, y: ly0, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label) : 0;
   var st = p.state === false ? null : h.el('text', { x: 0, y: ly0, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
   fig.fit(function (k) {                                // the tag plate is as wide as its words need, 8 a side, and as tall
-    var wd = Math.max(44, h.widest(tagTxt, [p.tag || 'ESD']) + 16), th = 22 * k, ty = 46 * S;
+    var wd = tag ? Math.max(44, h.widest(tagTxt, [tag]) + 16) : 44, th = tag ? 22 * k : 0, ty = 46 * S;
     var bottom = Math.max(80 * S, ty + th + 8), pw = Math.max(120 * S, wd + 16);
     h.reshape(plate, { x: -pw / 2, y: -102 * S, width: pw, height: bottom + 102 * S });
     [[-pw / 2 + 6, -102 * S + 6], [pw / 2 - 6, -102 * S + 6], [-pw / 2 + 6, bottom - 6], [pw / 2 - 6, bottom - 6]].forEach(function (c, i) {
       screws[i].setAttribute('cx', c[0]); screws[i].setAttribute('cy', c[1]);
     });
-    tagBox.setAttribute('x', -wd / 2); tagBox.setAttribute('width', wd); tagBox.setAttribute('height', th);
-    tagTxt.setAttribute('y', ty + th / 2 + 4.5 * k);
+    if (tag) {
+      tagBox.setAttribute('x', -wd / 2); tagBox.setAttribute('width', wd); tagBox.setAttribute('height', th);
+      tagTxt.setAttribute('y', ty + th / 2 + 4.5 * k);
+    }
     if (lg) [].forEach.call(lg.querySelectorAll('text'), function (t) { t.setAttribute('y', bottom + 8 + 12.5 * k); });
   });
   part.render = function (v) {
-    var c = h.clamp(v, 0, 1), up = h.clamp(c / 0.4, 0, 1), dn = h.clamp((c - 0.4) / 0.6, 0, 1);
-    lid.setAttribute('transform', 'rotate(' + (-55 * up).toFixed(1) + ' -38 -38)');
-    cap.setAttribute('transform', 'translate(0 ' + (9 * dn).toFixed(1) + ')');
+    var c = h.clamp(v, 0, 1), up = h.clamp(c / 0.4, 0, 1), dn = guard ? h.clamp((c - 0.4) / 0.6, 0, 1) : c;
+    if (lid) lid.setAttribute('transform', 'rotate(' + (-55 * up).toFixed(1) + ' -38 -38)');
+    cap.setAttribute('transform', 'translate(0 ' + ((guard ? 9 : 6) * dn).toFixed(1) + ')');
     g.classList.toggle('kit-push-button-on', c > 0.5);
     if (st) st.textContent = c > 0.5 ? 'PRESSED' : 'READY';
   };
@@ -4699,12 +4707,14 @@ KIT.define('push_button', function (fig, part, g, p) {
   course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
   look: 'equipment',
   why: 'M14 the ESD panel: an emergency-stop mushroom push button under a hinged guard, with its tag - the guard lifts, the button goes down and turns red, the word PRESSED shows (the shutdown it starts is drawn by the other parts)',
-  value: '0 ready, 1 pressed: the guard lifts over 0..0.4, the button goes down over 0.4..1 and turns red (trip); READY or PRESSED under the name; option h: the height of the wall plate, 120 units (2.49.2; it was a fixed 182, so two did not stack in a 390-high figure) - the words under it keep their size',
+  value: '0 ready, 1 pressed: the guard lifts over 0..0.4, the button goes down over 0.4..1 and turns red (trip); READY or PRESSED under the name; option guard: false, a plain push button (an alarm ACCEPT, a RESET) - no guard, a flat button that goes down and lights, no tag plate unless "tag" is given; option h: the height of the wall plate, 120 units (2.49.2; it was a fixed 182, so two did not stack in a 390-high figure) - the words under it keep their size',
   css: '.kit-push-button-post{stroke-width:3}' +
     '.kit-push-button-cap{fill:var(--cold);fill-opacity:.45;stroke:var(--mat-stem);stroke-width:2}' +
     '.kit-push-button-lid{fill:var(--cold);fill-opacity:.2;stroke:var(--mat-stem);stroke-width:2}' +
     '.kit-push-button-tag{fill:var(--deep);stroke:var(--dim-d);stroke-width:1.5}' +
     '.kit-push-button-on .kit-push-button-cap{fill:var(--warn-d);fill-opacity:.9;stroke:var(--mat-stem)}' +
+    '.kit-push-button-plain.kit-push-button-on .kit-push-button-cap{fill:var(--cold)}' +
+    '.kit-push-button-plain.kit-push-button-on .kit-state{fill:var(--txt-d)}' +
     '.kit-push-button-on .kit-state{fill:var(--warn-d)}',
   example: { size: [640, 250], parts: [
     { id: 'A', type: 'push_button', x: 110, y: 114, tag: 'ESD 1', label: 'navigation bridge' },
