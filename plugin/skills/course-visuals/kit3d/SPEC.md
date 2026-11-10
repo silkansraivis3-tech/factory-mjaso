@@ -32,6 +32,10 @@ smoke3d, perf3d and a picture of every step in `working_claude\review\MNN_3d\` -
 - **Built ahead** on the slide before (window.__noPrepare honoured), its shaders compiled off screen; draws only
   when something moves; pixel ratio at most 2; static meshes merged per part and material; `window.__scene3d` for
   `perf3d.mjs` / `smoke3d.py`.
+- **One WebGL context for the whole deck**: every scene draws with one renderer, whose canvas the scene shown holds
+  (two scenes shown on one slide: the second has its own while it is shown). A scene two slides away gives its graphics
+  memory back and is sent again when it is built ahead next time. `perf_gate.py` (course-module-ux/measure) walks the
+  deck on a 4x slowed CPU and fails more than one live context, drawing off screen, or frames over 33 ms.
 - **The poster fallback**: an element `[data-poster]` in the stage (a 2D drawing or a picture of the model) shows
   until the first frame, and stays if there is no WebGL or the scene fails. Without one, the kit says "The 3D view is
   not available on this device."

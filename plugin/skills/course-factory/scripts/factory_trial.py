@@ -356,6 +356,20 @@ def three_d_share(deck):
     return int(round(100.0 * len(three) / len(teach))) if teach else None
 
 
+def perf_slides(deck, no_browser):
+    """slides whose 3D lags at 1280 x 800, CPU slowed 4x (perf_gate.py) - None when not measured"""
+    if no_browser or not os.path.isfile(deck):
+        return None
+    sys.path.insert(0, os.path.join(PLUGIN, "skills", "course-module-ux", "measure", "scripts"))
+    import contextlib
+    import perf_gate
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        code = perf_gate.main([deck])
+    m = re.search(r"FAIL (\d+) slide", buf.getvalue())
+    return int(m.group(1)) if m else (0 if code == 0 else None)
+
+
 def score_module(course, m, no_browser=False):
     mid = cs.mid(m)
     row = {"module": m}
@@ -368,6 +382,7 @@ def score_module(course, m, no_browser=False):
     row["build_minutes"] = measured(build_minutes, course, mid)
     fit = measured(fit_slides, deck, no_browser) or {}
     row["cut_or_cropped_slides"], row["cut_at_1024x768"] = fit.get("1280x800"), fit.get("1024x768")
+    row["slides_3d_lagging"] = measured(perf_slides, deck, no_browser)
     slides = measured(scan_deck, deck) if row["built"] else None
     off = measured(off_blueprint, slides) if slides else None
     row["off_blueprint_slides"] = None if off is None else len(off)
@@ -406,12 +421,12 @@ def score_module(course, m, no_browser=False):
     return row
 
 
-LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped",
+LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped",
                    "old_thinner", "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row", "build_minutes",
                    "off_blueprint_slides", "pictures_pending", "max_words_slide", "slides_over_120_words", "self_checks_off_mix")
 # a number that is best inside a band: closer to it is better (L67: 60-80 % of the teaching slides with interactive 3D)
 BANDS = {"interactive_3d_share": (int(round(100 * cs.MEDIA["three_d"]["min_share"])), int(round(100 * cs.MEDIA["three_d"]["max_share"])))}
-SHOWN = ("built", "passed", "build_says", "build_minutes", "cut_or_cropped_slides", "cut_at_1024x768", "off_blueprint_slides",
+SHOWN = ("built", "passed", "build_says", "build_minutes", "cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "off_blueprint_slides",
          "pictures_pending", "interactive_3d_share", "max_words_slide", "slides_over_120_words", "claims", "claims_unproven",
          "claims_unchecked", "old_moved", "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates",
          "same_template_in_a_row", "self_check_basic_tasks", "self_checks_off_mix", "simulator_exercises")

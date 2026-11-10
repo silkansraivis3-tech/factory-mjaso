@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - many 3D-kit scenes in one deck</title>
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_shell.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_compose.css">
+<link rel="stylesheet" href="../../kit3d.css">
+<style>.kit3d-fig{height:420px}.two{display:flex;gap:16px}.two > .kit3d-fig{flex:1 1 0}</style>
+</head>
+<body>
+<!-- Test fixture for test_kit3d.py and test_perf_gate.py: a deck whose 3D slides share ONE WebGL context - four scenes on
+     their own slides, two more on one slide together (the second gets a renderer of its own while it is shown), a scene two
+     slides away gives its graphics memory back and draws again when the deck comes back to it. -->
+<div id="landing"><button id="startBtn" type="button"><span class="btn-label">Start</span></button></div>
+<div id="chrome"><button id="btnPrev" type="button">Back</button><button id="btnNext" type="button">Next</button></div>
+<main id="stage">
+  <section class="slide" id="m1"><div class="slide-body"><h2>Words</h2></div></section>
+  <section class="slide" id="m2" data-visual="model_3d"><div class="slide-body"><h2>A tank</h2>
+    <div class="fill fig kit3d-fig" data-3d-box><div class="kit3d-stage" data-stage data-3d data-kit3d="#k3-m2"></div><script type="application/json" id="k3-m2">
+{"label": "A tank", "parts": [{"id": "tank", "type": "tank_c", "at": [0, 2, 0], "r": 1.5, "len": 5}], "labels": [{"part": "tank", "text": "Tank"}]}
+</script></div></div></section>
+  <section class="slide" id="m3" data-visual="model_3d"><div class="slide-body"><h2>A valve</h2>
+    <div class="fill fig kit3d-fig" data-3d-box><div class="kit3d-stage" data-stage data-3d data-kit3d="#k3-m3"></div><script type="application/json" id="k3-m3">
+{"label": "A valve", "parts": [{"id": "valve", "type": "valve", "at": [0, 1, 0]}], "labels": [{"part": "valve", "text": "Valve"}]}
+</script></div></div></section>
+  <section class="slide" id="m4" data-visual="model_3d"><div class="slide-body"><h2>A pump</h2>
+    <div class="fill fig kit3d-fig" data-3d-box><div class="kit3d-stage" data-stage data-3d data-kit3d="#k3-m4"></div><script type="application/json" id="k3-m4">
+{"label": "A pump", "parts": [{"id": "pump", "type": "pump", "at": [0, 0, 0]}], "labels": [{"part": "pump", "text": "Pump"}]}
+</script></div></div></section>
+  <section class="slide" id="m5"><div class="slide-body"><h2>Words</h2></div></section>
+  <section class="slide" id="m6" data-visual="model_3d"><div class="slide-body two"><h2>Two side by side</h2>
+    <div class="fill fig kit3d-fig" data-3d-box><div class="kit3d-stage" data-stage data-3d data-kit3d="#k3-m6a"></div><script type="application/json" id="k3-m6a">
+{"label": "A box", "parts": [{"id": "box", "type": "box", "size": [2, 1, 1]}], "labels": [{"part": "box", "text": "Box"}]}
+</script></div>
+    <div class="fill fig kit3d-fig" data-3d-box><div class="kit3d-stage" data-stage data-3d data-kit3d="#k3-m6b"></div><script type="application/json" id="k3-m6b">
+{"label": "A ball", "parts": [{"id": "ball", "type": "sphere", "r": 1}], "labels": [{"part": "ball", "text": "Ball"}]}
+</script></div></div></section>
+  <section class="slide" id="m7"><div class="slide-body"><h2>Words</h2></div></section>
+</main>
+<script src="../../../../course-module-ux/assets/gb_deck.js"></script>
+<script src="../../../../course-module-ui/templates/vendor/three.min.js"></script>
+<script src="../../kit3d.js"></script>
+<script>GBDeck.init({ hooks: window.GB_HOOKS || {} });</script>
+</body>
+</html>

@@ -9,21 +9,23 @@
   if (!T) { return; }
   var H = w.GB_HOOKS = w.GB_HOOKS || {};
   var CALM = !!(w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  var SCENES = {}, R = null;
+  var SCENES = {}, OWN = null, PR = Math.min(w.devicePixelRatio || 1, 1.75);
   function ease(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function approach(v, to, rate, dt) { return v < to ? Math.min(to, v + rate * dt) : Math.max(to, v - rate * dt); }
   function rnd() { return Math.random(); }
 
-  function renderer() {
+  /* the 3D kit's renderer when the page has it (KIT3D.gl): one graphics context for every 3D picture of the deck */
+  function renderer(holder) {
+    var R = w.KIT3D && w.KIT3D.gl ? w.KIT3D.gl(holder) : null;
     if (R) { return R; }
-    R = new T.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-    R.setPixelRatio(Math.min(w.devicePixelRatio || 1, 1.75));
-    R.outputEncoding = T.sRGBEncoding;
-    R.toneMapping = T.ACESFilmicToneMapping; R.toneMappingExposure = 0.95;
-    R.localClippingEnabled = true;
-    R.domElement.className = 'lt-canvas';
-    return R;
+    if (OWN) { return OWN; }
+    OWN = new T.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    OWN.setPixelRatio(PR);
+    OWN.outputEncoding = T.sRGBEncoding;
+    OWN.toneMapping = T.ACESFilmicToneMapping;
+    OWN.localClippingEnabled = true;
+    return OWN;
   }
 
   /* a soft round dot for gas and glow */
@@ -171,12 +173,17 @@
       [].concat(o.material || []).forEach(function (m) { if (m.userData.lin) { return; } m.userData.lin = true; if (m.color) { m.color.convertSRGBToLinear(); } if (m.emissive) { m.emissive.convertSRGBToLinear(); } });
     });
     var pos = new T.Vector3(), look = new T.Vector3(), from = null, to = null, tw = 1, k = 0, running = false, last = 0, raf = 0;
-    var tags = [].slice.call(box.querySelectorAll('[data-tag]')), v3 = new T.Vector3();
+    var tags = [].slice.call(box.querySelectorAll('[data-tag]')), v3 = new T.Vector3(), R = null, v2 = new T.Vector2();
     function mine() { return R && R.domElement.parentNode === box; }
     function size() {
       var W = box.clientWidth, Hh = box.clientHeight;
       if (!W || !Hh) { return; }
-      if (mine()) { R.setSize(W, Hh, false); }
+      if (mine()) {
+        R.getSize(v2);
+        if (v2.x !== W || v2.y !== Hh || R.getPixelRatio() !== PR) { R.setDrawingBufferSize(W, Hh, PR); }
+      }
+      /* a box that had no size (a question's picture shown on its answer) starts drawing when it gets one */
+      if (running && !still && !raf) { raf = w.requestAnimationFrame(frame); }
       /* the scene keeps its width: a box narrower than 3:2 shows more height, never less of the sides */
       var v = (def.fov || 40) * Math.PI / 180, hw = Math.tan(v / 2) * 1.5;
       cam.aspect = W / Hh; cam.fov = Math.max(v, 2 * Math.atan(hw / cam.aspect)) * 180 / Math.PI; cam.updateProjectionMatrix();
@@ -194,6 +201,7 @@
       var sx = CALM ? 0 : Math.sin(api.t * 0.23) * 0.14 * (def.sway || 1), sy = CALM ? 0 : Math.sin(api.t * 0.17) * 0.06 * (def.sway || 1);
       cam.position.set(pos.x + sx, pos.y + sy, pos.z); cam.lookAt(look);
       S.tick(dt, api.t);
+      R.toneMappingExposure = 0.95; R.shadowMap.enabled = false;
       R.render(scene, cam);
       /* the name tags follow their part on the screen */
       var W = box.clientWidth, Hh = box.clientHeight;
@@ -205,6 +213,8 @@
     }
     function frame(now) {
       raf = 0;
+      /* a box with no size on the slide shown (perf_gate: a hidden question figure drew 30 frames a second) waits for size() */
+      if (!box.clientWidth || !box.clientHeight || !mine()) { last = 0; return; }
       var dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
       draw(dt);
       if (running && !still) { raf = w.requestAnimationFrame(frame); }
@@ -219,33 +229,70 @@
       },
       start: function () {
         if (running) { return; }
-        var r = renderer();
-        if (r.domElement.parentNode !== box) { box.insertBefore(r.domElement, box.firstChild); }
-        running = true; last = 0; size(); S.reset(); aim(S.views[0], true); me.go(k);
+        R = renderer(me);
+        if (R.domElement.parentNode !== box) { R.domElement.className = 'lt-canvas'; box.insertBefore(R.domElement, box.firstChild); }
+        running = me.live = true; last = 0; size(); S.reset(); aim(S.views[0], true); me.go(k);
         if (!still && !raf) { raf = w.requestAnimationFrame(frame); }
       },
-      stop: function () { running = false; if (raf) { w.cancelAnimationFrame(raf); raf = 0; } },
-      step: function () { return k; }
+      stop: function () { running = me.live = false; if (raf) { w.cancelAnimationFrame(raf); raf = 0; } },
+      step: function () { return k; },
+      /* its graphics memory given back (its slide two or more away); sent again when it next draws */
+      release: function () {
+        if (running) { return; }
+        scene.traverse(function (o) {
+          if (o.geometry) { o.geometry.dispose(); }
+          [].concat(o.material || []).forEach(function (m) { if (m.map) { m.map.dispose(); } m.dispose(); });
+        });
+      },
+      live: false
     };
     if (w.ResizeObserver) { new w.ResizeObserver(size).observe(box); } else { w.addEventListener('resize', size); }
     aim(S.views[0], true);
     return me;
   }
 
-  /* every picture box with a scene gets its stage; the slide's own hooks start and stop it */
+  /* every picture box with a scene gets its stage, built on the slide before (not every scene at page load); the slide's
+     own hooks start and stop it, and a stage two or more slides away gives its graphics memory back */
+  var STAGES = [];
   function boot() {
+    var all = d.querySelectorAll('.slide');
     [].forEach.call(d.querySelectorAll('[data-lt-scene]'), function (box) {
       var def = SCENES[box.getAttribute('data-lt-scene')], slide = box.closest('.slide');
       if (!def || !slide || box.__lt) { return; }
-      var st;
-      try { st = new Stage(box, def); } catch (e) { box.classList.add('lt-no3d'); if (w.console) { w.console.warn('lt_stage', e); } return; }
-      box.__lt = st;
+      var st = null, bad = false, k = 0, at = [].indexOf.call(all, slide), timer = 0;
+      function get() {
+        if (!st && !bad) {
+          try { st = new Stage(box, def); if (k) { st.go(k); } }
+          catch (e) { bad = true; box.classList.add('lt-no3d'); if (w.console) { w.console.warn('lt_stage', e); } }
+        }
+        return st;
+      }
+      function sweep(here) {
+        STAGES.forEach(function (x) { if (x.st() && Math.abs(x.at - here) >= 2) { x.st().release(); } });
+      }
+      STAGES.push({ at: at, st: function () { return st; } });
+      box.__lt = {
+        go: function (n) { k = n; if (st) { st.go(n); } },
+        start: function () { if (get()) { st.start(); } },
+        stop: function () { if (st) { st.stop(); } },
+        step: function () { return st ? st.step() : k; }
+      };
       var old = H[slide.id] || {};
       H[slide.id] = {
-        enter: function () { st.start(); if (old.enter) { old.enter(); } },
-        leave: function () { st.stop(); if (old.leave) { old.leave(); } },
+        enter: function () { clearTimeout(timer); sweep(at); box.__lt.start(); if (old.enter) { old.enter(); } },
+        leave: function () { box.__lt.stop(); if (old.leave) { old.leave(); } },
         step: old.step
       };
+      var prev = slide.previousElementSibling;
+      while (prev && !(prev.classList && prev.classList.contains('slide'))) { prev = prev.previousElementSibling; }
+      if (prev && prev.id) {
+        var was = H[prev.id] || {};
+        H[prev.id] = {
+          enter: function () { if (was.enter) { was.enter.apply(this, arguments); } clearTimeout(timer); timer = setTimeout(get, 120); },
+          leave: function () { if (was.leave) { was.leave.apply(this, arguments); } },
+          step: was.step
+        };
+      }
     });
   }
   w.LTStage = { scenes: SCENES, boot: boot, THREE: T };

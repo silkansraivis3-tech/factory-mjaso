@@ -179,6 +179,28 @@ build-ahead) so this tool can show the cold number, and set `__scene3d.prepared 
 scene was built ahead. The test is `scripts/test_perf3d.py` (fixture `scripts/fixtures/deck_3d_perf.html`;
 skips when Node or Chrome is missing).
 
+### 2c · The deck's 3D budget — `perf_gate.py`
+
+perf3d.mjs times one 3D slide's first frame. A module with 3D on most of its slides also lags from what
+the slides do together: a WebGL context kept for every scene passed (a browser keeps 16, a tablet's
+WebView fewer, each with its own drawing buffer in the graphics memory), a scene that keeps drawing when
+its slide is not shown, a build-ahead that stalls the slide before. `scripts/perf_gate.py` walks the
+whole deck as the instructor does (Start, every Next) in the Chrome or Edge already installed, through
+Python Playwright, at 1280x800 and 2x sharpness with the CPU slowed 4x:
+
+```
+python scripts/perf_gate.py <deck index.html | module folder> [--throttle 4] [--dsf 2] [--gl gpu|swiftshader]
+                            [--p95-ms 33] [--max-ctx 1] [--first-ms 1500] [--max-hidden 10] [--json out.json]
+```
+
+Per slide: live WebGL contexts, ms from Next to the slide's first frame, frame time median and p95 while
+the slide is up (a kit3d scene is turned meanwhile), frames drawn by canvases off the slide shown, and
+the JS heap. Fails more than one live context, more than 10 off-screen frames, a 3D slide's p95 over
+33 ms or a first frame over 1.5 s. `--gl gpu` (default) uses this computer's graphics chip - SwiftShader
+draws a kit3d scene in 300-450 ms a frame on any CPU, so its frame times say nothing about a tablet.
+Exit 0 / 1 / 2 as fit_gate. The test is `scripts/test_perf_gate.py`; `factory_trial.py report` counts
+the slides it fails.
+
 ### 3 · The console
 
 After any scripted edit to inline JavaScript, **load the page and read the console.** Not the

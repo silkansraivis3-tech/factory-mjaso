@@ -17,7 +17,8 @@
        no-WebGL message, context loss, prefers-reduced-motion;
      - tablet performance: draws only on demand, pixel ratio <= 2, shadows once, static meshes merged
        per part and material, built and shader-compiled on the slide BEFORE (window.__noPrepare),
-       window.__scene3d for perf3d.mjs / smoke3d.py.
+       one WebGL context for the whole page (GL), the graphics memory of a scene two slides away given
+       back (sweep), window.__scene3d for perf3d.mjs / smoke3d.py, perf_gate.py the deck's budget.
    SPEC.md is the format; PARTS.md the parts and how to add one (KIT3D.define).
 
    In a deck:  <div class="fill fig kit3d-fig" data-3d-box>
@@ -47,6 +48,41 @@
   var PART = {};                                  /* part type -> builder(k, p) */
   var PART_INFO = {};                             /* part type -> {family, about} for check_kit3d / PARTS.md */
   var scenes = [];
+
+  /* ONE graphics context for the page: every scene draws with one renderer and its one canvas, which the scene shown holds
+     (P.take). A browser keeps only so many WebGL contexts - 16 on a computer, fewer in a tablet's WebView, the oldest lost -
+     and each keeps its own drawing buffer in the graphics memory: a deck of 18 3D slides held 16 (perf_gate.py). A scene
+     built ahead while another is shown draws off screen (P.prepare); gb_scene.js borrows the same renderer (KIT3D.gl). */
+  var GL = { r: null, holder: null, failed: false, rt: null, dpr: 0, v2: null };
+  function newRenderer() {
+    var r;
+    try {
+      r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
+    } catch (e1) { r = null; }
+    if (!r) { return null; }
+    r.setPixelRatio(Math.min(w.devicePixelRatio || 1, 2));
+    r.outputEncoding = T.sRGBEncoding;
+    r.toneMapping = T.ACESFilmicToneMapping;
+    r.localClippingEnabled = true;
+    r.shadowMap.type = T.PCFSoftShadowMap;
+    r.shadowMap.autoUpdate = false;               /* the scene stands still: shadows are worked out once */
+    r.setClearColor(0x000000, 0);
+    return r;
+  }
+  function shared() {
+    if (!GL.r && !GL.failed) {
+      T = T || w.THREE;
+      GL.r = T ? newRenderer() : null;
+      GL.failed = !GL.r;
+    }
+    return GL.r;
+  }
+  /* the scenes of the slides two or more away from the slide shown give their graphics memory back */
+  function sweep(here) {
+    scenes.forEach(function (S) {
+      if (S.at != null && S.prepared && !S.live && Math.abs(S.at - here) >= 2) { S.release(); }
+    });
+  }
 
   /* ---- the palette: [colour (sRGB), roughness, metalness] - taken from the hand-made scenes ---- */
   var PAL = {
@@ -369,21 +405,69 @@
   };
 
   P.renderer = function () {
-    var S = this, r;
-    try {
-      r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
-    } catch (e1) { r = null; }
-    if (!r) { return null; }
-    r.setPixelRatio(Math.min(w.devicePixelRatio || 1, 2));
-    r.outputEncoding = T.sRGBEncoding;
-    r.toneMapping = T.ACESFilmicToneMapping;
-    r.toneMappingExposure = num(S.spec.exposure, 1.05);
-    r.localClippingEnabled = true;
-    r.shadowMap.enabled = S.shadows;
-    r.shadowMap.type = T.PCFSoftShadowMap;
-    r.shadowMap.autoUpdate = false;               /* the scene stands still: shadows are worked out once */
-    r.setClearColor(0x000000, 0);
-    return r;
+    this.exposure = num(this.spec.exposure, 1.05);
+    return shared();
+  };
+  /* the renderer set for this scene before it draws: one renderer serves every scene, each with its own light */
+  P.gl = function () {
+    var S = this;
+    S.r.toneMappingExposure = S.exposure;
+    S.r.shadowMap.enabled = S.shadows;
+    if (S.envAgain) {
+      S.envAgain = false;
+      if (!S.lite) { try { S.env(); } catch (e1) { S.scene.environment = null; } }
+    }
+  };
+  /* the canvas to this scene: moved into its box - or, while another scene shown holds it (two on one slide, a page of
+     scenes), a renderer of its own until this one is hidden */
+  P.take = function () {
+    var S = this, h = GL.holder;
+    if (S.own || S.r !== GL.r) { return; }
+    if (h && h !== S && h.live && !h.dead && S.live) {
+      var r = newRenderer();
+      if (r) { S.adopt(r); return; }
+    }
+    if (GL.holder !== S) { GL.holder = S; S.W = S.H = 0; }      /* sized again: another scene drew with it since */
+    var cv = S.r.domElement;
+    if (cv.parentNode !== S.wrap) { cv.className = ''; S.wrap.insertBefore(cv, S.labelLayer); }
+  };
+  P.adopt = function (r) {
+    var S = this;
+    S.own = S.r = r;
+    S.wrap.insertBefore(r.domElement, S.labelLayer);
+    S.lost();
+    S.W = S.H = 0;
+  };
+  P.disown = function () {
+    var S = this, r = S.own;
+    S.release();
+    S.own = null; S.r = GL.r;
+    r.dispose();
+    try { r.forceContextLoss(); } catch (e2) { /* gone */ }
+    if (r.domElement.parentNode) { r.domElement.parentNode.removeChild(r.domElement); }
+  };
+  /* the graphics memory is gone (the context lost, given back, another renderer): the shadows and the studio light are
+     made again before the next frame */
+  P.lost = function () {
+    var S = this;
+    S.shadowsDone = false;
+    if (S.envRT) { S.envRT.dispose(); S.envRT = null; S.envAgain = true; }
+    S.schedule();
+  };
+  /* the scene's graphics memory given back when its slide is two or more away (sweep): its parts stay in the page and go
+     to the graphics chip again when the scene is built ahead next time */
+  P.release = function () {
+    var S = this;
+    if (S.live || !S.ok) { return; }
+    S.prepared = false;
+    S.scene.traverse(function (o) {
+      if (o.geometry) { o.geometry.dispose(); }
+      [].concat(o.material || []).forEach(function (m) { m.dispose(); });
+      if (o.isInstancedMesh && o.dispose) { o.dispose(); }
+    });
+    S.mats.forEach(function (m) { m.dispose(); });
+    if (S.sun.shadow.map) { S.sun.shadow.map.dispose(); S.sun.shadow.map = null; }
+    S.lost();
   };
 
   /* a soft studio light, made once from a gradient sphere and three bright panels (the hand-made scenes' makeEnv) */
@@ -419,12 +503,12 @@
     var S = this, spec = S.spec, i;
     if (S.built || S.dead) { return S.ok; }
     S.built = true;
+    if (S.lightMode === 'auto' && slowDevice()) { S.lite = true; S.shadows = false; }   /* a scene juddered since the page opened */
     T = T || w.THREE;
     if (!T) { S.fail('three.js is not loaded'); return false; }
     S.dom();
     S.r = S.renderer();
     if (!S.r) { S.fail('no WebGL'); return false; }
-    S.wrap.insertBefore(S.r.domElement, S.labelLayer);
     S.scene = new T.Scene();
     S.root = new T.Group();
     S.scene.add(S.root);
@@ -738,15 +822,15 @@
      GL (perf3d, IGF M01 kit port) - so it is made at the box's size while the slide before is on screen */
   P.size = function (W, H) {
     var S = this;
-    if (W === S.bufW && H === S.bufH) { return; }
     S.bufW = W; S.bufH = H;
     /* 2.70.0 - a pixel budget (owner: "better ... but not lagging"): at most ~2.4 million pixels a frame. A slide's box keeps
        twice the screen's pixels; full screen on a sharp tablet (2560 x 1600) is drawn at 1.5x, still smoothed - about half
        the work for the graphics chip, the part of the frame a slow tablet spends longest on. steady() may step it down further */
-    var pr = Math.min(w.devicePixelRatio || 1, 2, S.dpr || 2, Math.sqrt(PIXEL_BUDGET / Math.max(1, W * H)));
+    var pr = Math.min(w.devicePixelRatio || 1, 2, S.dpr || GL.dpr || 2, Math.sqrt(PIXEL_BUDGET / Math.max(1, W * H)));
     pr = Math.max(1, Math.round(pr * 4) / 4);
-    if (S.r.getPixelRatio() !== pr) { S.r.setPixelRatio(pr); }
-    S.r.setSize(W, H, false);
+    /* the one renderer is sized by the scene that draws: a new buffer only when this scene's size or sharpness differs */
+    var now0 = S.r.getSize(GL.v2 || (GL.v2 = new T.Vector2()));
+    if (now0.x !== W || now0.y !== H || S.r.getPixelRatio() !== pr) { S.r.setDrawingBufferSize(W, H, pr); }
   };
   /* the size the stage will have when its slide shows: the slide laid out for a moment, unseen, as the one on screen is */
   P.measureHidden = function () {
@@ -1058,6 +1142,13 @@
   P.updateLabels = function () {
     var S = this, W = S.W, H = S.H;
     if (!tmpV) { tmpV = new T.Vector3(); }
+    if (S.cap) {
+      var cap = '';
+      S.spec.captions.some(function (c) { if (c.text && test(S, c.when)) { cap = c.text; return true; } return false; });
+      if (S.cap.textContent !== cap) { S.cap.textContent = cap; }
+      if (S.cap.style.display !== (cap ? '' : 'none')) { S.cap.style.display = cap ? '' : 'none'; }
+    }
+    S.keepOut();
     S.labels.forEach(function (l) {
       var s = S.labelShown(l);
       if (s) {
@@ -1071,20 +1162,13 @@
       setCls(l.el, 'k3-off', !s);
       if (s) { l.el.style.transform = l.el.style.webkitTransform = 'translate(' + l.sx.toFixed(1) + 'px,' + l.sy.toFixed(1) + 'px)'; }
     });
-    if (S.cap) {
-      var cap = '';
-      S.spec.captions.some(function (c) { if (c.text && test(S, c.when)) { cap = c.text; return true; } return false; });
-      if (S.cap.textContent !== cap) { S.cap.textContent = cap; }
-      S.cap.style.display = cap ? '' : 'none';
-    }
     S.settle();
     if (W && H) { S.labelLayer.style.visibility = 'visible'; }
   };
-  /* Every label that touches another pill, stem or dot, a control, the Full screen button, the top-right corner
-     or the box edge tries other stem lengths, the other side of its point and a sideways shift, and takes the place
-     where the least touches and the stem changes least (the hand-made settleLabels, IGF slide review 2026-10-22). */
-  P.settle = function () {
-    var S = this, W = S.W, H = S.H, res = [], shown = [], lr = S.labelLayer.getBoundingClientRect(), i, k0, a, pass;
+  /* the places a pill keeps off - the controls, the caption, the Full screen button - read before the labels move in this
+     frame: read after, each frame paid a whole layout of the page (perf_gate: a fifth of a turn's time at 4x) */
+  P.keepOut = function () {
+    var S = this, W = S.W, H = S.H, res = [], lr = S.labelLayer.getBoundingClientRect();
     function rectOf(e2, pad) {
       var r = e2.getBoundingClientRect();
       return { x1: r.left - lr.left - pad, y1: r.top - lr.top - pad, x2: r.right - lr.left + pad, y2: r.bottom - lr.top + pad };
@@ -1094,6 +1178,13 @@
     var box = S.stage.closest ? S.stage.closest('.gb-fs3d') || S.stage.parentNode : S.stage.parentNode;
     var fb = box && box.querySelector ? box.querySelector('.gb-fs3d-btn') : null;
     if (fb && fb.offsetWidth) { res.push(rectOf(fb, 6)); } else { res.push({ x1: W - 60, y1: 0, x2: W, y2: 60 }); }
+    S.res = res;
+  };
+  /* Every label that touches another pill, stem or dot, a control, the Full screen button, the top-right corner
+     or the box edge tries other stem lengths, the other side of its point and a sideways shift, and takes the place
+     where the least touches and the stem changes least (the hand-made settleLabels, IGF slide review 2026-10-22). */
+  P.settle = function () {
+    var S = this, W = S.W, H = S.H, res = S.res || [], shown = [], i, k0, a, pass;
     S.labels.forEach(function (l) {
       if (!l.shown) { return; }
       var j, r0;
@@ -1115,6 +1206,16 @@
     var still = key === S.setKey;
     if (still && S.setFull) {
       shown.forEach(function (l) { if (l.f) { l.up = l.f[0]; l.gap = l.f[1]; l.dx = l.f[2]; l.oy = l.f[3]; } });
+      return;
+    }
+    /* while the view turns, the places are searched again only after 100 ms, or three times as long as the last search took;
+       between, each pill keeps its place round its moving point (perf_gate, a turn at 4x: the search was a third to half of
+       every frame, 15 labels 130 ms a search). At rest the full search follows, as before */
+    var tn = now();
+    if (!still && S.setT && tn - S.setT < Math.max(100, 3 * (S.setCost || 0)) && shown.every(function (l) { return !!l.f; })) {
+      shown.forEach(function (l) { l.up = l.f[0]; l.gap = l.f[1]; l.dx = l.f[2]; l.oy = l.f[3]; });
+      S.setFull = false;
+      S.schedule();
       return;
     }
     function pillR(l) {
@@ -1277,6 +1378,7 @@
     });
     shown.forEach(function (l) { l.f = [l.up, l.gap, l.dx, l.oy]; });
     S.setKey = key; S.setFull = calm;
+    S.setT = now(); S.setCost = S.setT - tn;
     if (!calm) { S.schedule(); }
   };
 
@@ -1297,6 +1399,7 @@
   P.frame = function () {
     var S = this;
     if (S.dead || !S.ok) { return; }
+    S.take();
     var moving = S.tweenStep(), tnow = now(), first = S.frames === 0 || (w.__scene3d && w.__scene3d.__k3 === S && !w.__scene3d.firstFrameT);
     if (first) { S.mark('frame'); }
     S.anims.forEach(function (a) {
@@ -1309,8 +1412,10 @@
     S.applyCamera();
     S.updateLabels();
     if (first) { S.mark('labels'); }
+    S.gl();
     if (!S.shadowsDone) { S.r.shadowMap.needsUpdate = true; S.shadowsDone = true; }
     S.r.render(S.scene, S.camera);
+    S.drawn = [S.r.info.render.calls, S.r.info.render.triangles];
     if (first) { S.mark('rendered'); }
     S.frames++;
     var sc = w.__scene3d;
@@ -1327,23 +1432,33 @@
      is why it never goes back and forth; a fast screen never loses sharpness. window.__scene3d.dpr says where it is */
   P.steady = function (moving, tnow) {
     var S = this;
-    if (!moving) { S.lastT = 0; S.dts = []; return; }
+    if (!moving) {
+      /* lite comes when the turn stops: its shaders are compiled again, a pause of up to seconds on a slow tablet
+         (perf_gate, 4x) - in the middle of a turn a judder, at rest a still picture a moment longer */
+      if (S.liteDue) { S.liteDue = false; S.goLite(); S.schedule(); }
+      S.lastT = 0; S.dts = []; return;
+    }
     if (S.lastT) {
       S.dts = S.dts || [];
       S.dts.push(tnow - S.lastT);
       if (S.dts.length > 20) { S.dts.shift(); }
     }
     S.lastT = tnow;
-    if (!S.dts || S.dts.length < 20) { return; }
-    var sum = 0;
+    var n = S.dts ? S.dts.length : 0, sum = 0;
+    if (n < 8 || (n < 20 && S.stepped)) { return; }
     S.dts.forEach(function (d) { sum += d; });
-    if (sum / 20 <= 30) { return; }
+    /* a screen far too slow is judged after 8 frames, on their middle one (over 50 ms): at 300 ms a frame (perf_gate, 4x)
+       20 frames were six seconds of a juddering turn. Its first step only - each step after waits for 20 frames */
+    if (n < 20 ? S.dts.slice().sort(function (p, q) { return p - q; })[n >> 1] <= 50 : sum / n <= 30) { return; }
     var pr = S.r.getPixelRatio(), next = pr > 1.5 ? 1.5 : pr > 1 ? 1 : 0;
-    S.dts = [];
-    if (pr <= 1.5 && !S.lite && S.lightMode === 'auto') { S.goLite(); return; }    /* before the last sharpness step */
+    S.dts = []; S.stepped = true;
+    if (pr <= 1.5 && !S.lite && S.lightMode === 'auto') {      /* before the last sharpness step */
+      if (!S.liteDue) { S.liteDue = true; slowDevice(true); }  /* the scenes built from now on are lite already */
+      return;
+    }
     if (!next) { return; }
     S.r.setPixelRatio(next);
-    S.dpr = next;
+    S.dpr = GL.dpr = next;                              /* the scenes after it on this page start there */
     if (w.__scene3d && w.__scene3d.__k3 === S) { w.__scene3d.dpr = next; }
   };
   /* lite from now on: this scene drops its shadows and its studio light at once (its materials stay; their metal is turned
@@ -1357,6 +1472,7 @@
     S.sun.castShadow = false;
     if (S.groundMesh) { S.groundMesh.visible = false; }
     if (S.scene.environment) { S.scene.environment = null; S.hemi.intensity = 0.95; S.sun.intensity = 1.0; }
+    if (S.envRT) { S.envRT.dispose(); S.envRT = null; }
     S.mats.forEach(function (m) {
       if (m.isMeshStandardMaterial) { m.metalness = Math.min(m.metalness, 0.2); }
       if (m.lights) { m.needsUpdate = true; }
@@ -1494,7 +1610,7 @@
     var box = S.stage.parentNode;
     if (box) { S.listen(box, 'gb3d-resize', function () { S.schedule(); }); }
     S.listen(S.r.domElement, 'webglcontextlost', function (e) { e.preventDefault(); });
-    S.listen(S.r.domElement, 'webglcontextrestored', function () { S.shadowsDone = false; S.schedule(); });
+    S.listen(S.r.domElement, 'webglcontextrestored', function () { S.lost(); });
     if (w.ResizeObserver) { S.ro = new w.ResizeObserver(function () { S.schedule(); }); S.ro.observe(S.wrap); }
   };
   /* a tap - not a drag - on a part picks it; a tap beside the parts lets go. A ring of 8 more rays 12 px round the
@@ -1549,20 +1665,31 @@
     if (S.prepared || S.dead) { return; }
     if (!S.build()) { return; }
     S.prepared = true;
+    /* built full before a scene juddered: lite now, while its shaders are compiled ahead - not in the middle of its turn */
+    if (!S.lite && S.lightMode === 'auto' && slowDevice()) { S.goLite(); }
+    /* the canvas shows another scene (or gb_scene's picture) right now: this one draws into a small target off screen - the
+       same shaders (its colours are written as the canvas's), its shadows worked out, its parts sent to the graphics chip */
+    var h = GL.holder, busy = S.r === GL.r && h && h !== S && h.live && !h.dead, rt = null;
     try {
       var sz = S.measureHidden(), pw = sz.w || 64, ph = sz.h || 48;
-      S.size(pw, ph);
+      if (busy) {
+        rt = GL.rt = GL.rt || new T.WebGLRenderTarget(64, 64, { encoding: T.sRGBEncoding });
+      } else { S.size(pw, ph); }
       S.camera.aspect = pw / ph; S.camera.updateProjectionMatrix();
       S.W = pw; S.H = ph;
       S.homeFit();
       S.goStep(0, true);
       S.applyCamera();
+      S.gl();
+      S.r.setRenderTarget(rt);
       S.r.compile(S.scene, S.camera);
       S.r.shadowMap.needsUpdate = true;
       S.r.render(S.scene, S.camera);
+      S.drawn = [S.r.info.render.calls, S.r.info.render.triangles];
       S.shadowsDone = true;
       S.W = S.H = 0;
     } catch (e6) { S.warn('prepare: ' + e6.message); }
+    if (rt) { S.r.setRenderTarget(null); }
   };
   P.mark = function (name) {
     var sc = w.__scene3d;
@@ -1576,6 +1703,7 @@
     if (!S.ok) { return false; }
     S.mark('built');
     S.live = true;
+    S.take();
     S.W = S.H = 0;
     S.resize();
     S.mark('resized');
@@ -1586,7 +1714,9 @@
       if (S.wired && !(S.stage.closest && S.stage.closest('.gb-fs3d'))) { S.wired = false; }
     }
     if (!S.wired) { S.ownLabels(); S.ownFull(); }
-    S.schedule();
+    /* drawn at once: the canvas just moved here still holds the last scene's picture */
+    try { S.frame(); } catch (e8) { S.warn('frame: ' + e8.message); }
+    S.schedule();                                       /* and once more when the slide has its places */
     return true;
   };
   P.hide = function () {
@@ -1595,6 +1725,8 @@
     if (S.raf) { w.cancelAnimationFrame(S.raf); S.raf = 0; }
     S.endTween();
     S.anims.forEach(function (a) { a.on = false; });
+    if (S.liteDue) { S.liteDue = false; S.goLite(); }
+    if (S.own) { S.disown(); }
   };
   /* outside a deck: the labels are buttons of the kit's own */
   P.ownLabels = function () {
@@ -1651,7 +1783,7 @@
       ok: true, frames: S.frames, size: [S.W, S.H], pixelRatio: S.r.getPixelRatio(), light: S.lite ? 'lite' : 'full',
       step: S.step, steps: S.steps().length,
       selected: S.sel, lit: Object.keys(S.lit), wired: !!S.wired,
-      calls: S.r.info.render.calls, triangles: S.r.info.render.triangles, geometries: S.r.info.memory.geometries,
+      calls: (S.drawn || [0])[0], triangles: (S.drawn || [0, 0])[1], geometries: S.r.info.memory.geometries,
       parts: S.order.filter(function (k0) { return S.parts[k0].pick; }),
       states: (function () { var o = {}; each(S.states, function (s, n) { o[n] = Math.round(s.v * 1000) / 1000; }); return o; }()),
       view: { az: S.view.az / DEG, el: S.view.el / DEG, zoom: S.view.zoom },
@@ -1672,11 +1804,12 @@
     S.listeners.forEach(function (l) { l[0].removeEventListener(l[1], l[2], l[3]); });
     S.listeners = [];
     if (S.ro) { S.ro.disconnect(); }
+    if (S.ok) { S.release(); }                          /* the one renderer stays, for the other scenes */
     S.geos.forEach(function (g) { g.dispose(); });
     S.mats.forEach(function (m) { m.dispose(); });
     S.disposeLater.forEach(function (m) { if (m.dispose) { m.dispose(); } });
     if (S.envRT) { S.envRT.dispose(); }
-    if (S.r) { S.r.dispose(); try { S.r.forceContextLoss(); } catch (e8) { /* gone */ } }
+    if (GL.holder === S) { GL.holder = null; }
     if (S.wrap && S.wrap.parentNode) { S.wrap.parentNode.removeChild(S.wrap); }
     var i = scenes.indexOf(S);
     if (i >= 0) { scenes.splice(i, 1); }
@@ -1734,11 +1867,18 @@
       }
     }
     S.onStep = lines;
+    S.at = [].indexOf.call(d.querySelectorAll('.slide'), slide);
     hook(before && before.id, {
       enter: function () {
+        sweep(S.at - 1);
         if (w.__noPrepare || S.prepared) { return; }
         clearTimeout(timer);
-        timer = setTimeout(function () { S.prepare(); if (w.__scene3d && w.__scene3d.__k3 === S) { w.__scene3d.prepared = true; } }, 120);
+        /* in two turns - the parts made, then the shaders compiled and the first picture drawn - so the slide shown (its own
+           scene may be turning) is held up twice briefly, not once for the whole build */
+        timer = setTimeout(function () {
+          S.build();
+          timer = setTimeout(function () { S.prepare(); if (w.__scene3d && w.__scene3d.__k3 === S) { w.__scene3d.prepared = true; } }, 40);
+        }, 120);
       }
     });
     hook(id, {
@@ -1753,6 +1893,7 @@
               if (now() - t0 < ms) { w.requestAnimationFrame(turn); } else { S.spin = false; cb({ frames: S.frames - f0, ms: now() - t0 }); }
             }());
           } };
+        sweep(S.at);
         if (!S.show()) { return; }
       },
       leave: function () { S.hide(); },
@@ -1819,6 +1960,13 @@
     },
     auto: auto,
     all: function () { return scenes.map(function (S) { return S.stage.__k3; }); },
+    /* the one renderer, lent to gb_scene.js: to a holder ({live}) when no scene shown holds it, else null */
+    gl: function (holder) {
+      var r = shared(), h = GL.holder;
+      if (!r || (h && h !== holder && h.live && !h.dead)) { return null; }
+      GL.holder = holder;
+      return r;
+    },
     _test: test,
     light: true                       /* 2.75.2: this kit chooses its own light ("light"); a host's lite patch leaves it be */
   };
