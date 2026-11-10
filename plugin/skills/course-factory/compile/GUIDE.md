@@ -17,7 +17,8 @@
       its label boxes. A "ghost" label is still laid out (leaders go round it); a valve's OPEN / CLOSED: "state": false.
 3  fill the build sheet (each slide's picture, layout, the photos) and EDIT the starter specs - never write one from nothing
       Several photographs on one slide: "tiles": ["assets/img/a.jpg", {"photo": ..., "caption": ...}] (each opens full
-      screen); cuts of one document: add "tiles_as": "strips" - never a hand-written fragment.
+      screen); cuts of one document: add "tiles_as": "strips" - never a hand-written fragment. A slide has a
+      "figure" or "tiles", never both: both are a problem.
 4  python compile/scripts/build_module.py <course> --module 1            again after every change, until PASS
       ONE command runs everything: every figure on its real slide at once (auto-fixes what has one right answer), the
       compile and its drawing check, the words (instructor + trainee), navigation, the audits at 1280x800, 1024x768 and 1280x720,

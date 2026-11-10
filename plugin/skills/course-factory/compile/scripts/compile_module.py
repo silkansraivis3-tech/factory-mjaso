@@ -4743,7 +4743,8 @@ def prefill(script, sheet, mdir, figdir):
               and os.path.isfile(os.path.join(mdir, "assets", "img", n))}
     taken = {(e.get("figure") or "").replace("\\", "/").rsplit("/", 1)[-1] for e in screens.values() if isinstance(e, dict)}
     want = [s for s in script["screens"] if s["kind"] == "slide" and s["id"] in screens
-            and not (screens[s["id"]].get("figure") or "").strip()
+            and not (screens[s["id"]].get("figure") or "").strip() and not screens[s["id"]].get("tiles")
+            and not screens[s["id"]].get("table")
             and (cs.parse_kind(s.get("visual_kind", "")) == "photo" or screens[s["id"]].get("photo_wanted"))]
 
     def give(s, name, why):
@@ -4991,6 +4992,12 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         if b.get("figure") or b.get("tiles"):
             probs.append("%s (%s): \"table\" and a picture - the comparison table is the slide's picture: one or the other"
                          % (cs.place(script, sid), sid))
+    for s in screens:
+        b = (build.get("screens") or {}).get(s["id"]) or {}
+        if isinstance(b, dict) and (b.get("figure") or "").strip() and b.get("tiles"):
+            probs.append("%s (%s): \"figure\" and \"tiles\" - the slide shows only its figure, and its %d tiles are lost: "
+                         "several pictures are its \"tiles\" (remove \"figure\"), one picture is its \"figure\" (remove "
+                         "\"tiles\")" % (cs.place(script, s["id"]), s["id"], len(b["tiles"])))
     for sid in tables[1:]:
         probs.append("%s (%s): a second comparison table in the module (the first is %s) - one comparison table a module; "
                      "show this one as a drawing, a photograph or a 3D model, or its facts in the slide's own words"
