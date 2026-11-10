@@ -35,7 +35,7 @@ On the screen that carries `data-mins` (the first screen of a block):
 
     data-track   "theory" | "practice"   which allocation bucket these minutes
                                          are claimed against. Required.
-    data-active  integer minutes         of this block's minutes, how many are
+    data-active  minutes (whole or half) of this block's minutes, how many are
                                          learner-active. Required. 0 is a legal
                                          and sometimes honest answer.
 
@@ -186,7 +186,11 @@ def main():
         if b["track"] not in ("theory", "practice"):
             failures.append("%s %s - data-track missing or not theory|practice (%r)"
                             % (b["block"], b["title"][:38], b["track"]))
-        if not b["active"].isdigit():
+        try:
+            ok = float(b["active"]) >= 0
+        except (TypeError, ValueError):
+            ok = False
+        if not ok:                                  # whole or half minutes, as data-mins
             failures.append("%s %s - data-active missing or not a number (%r)"
                             % (b["block"], b["title"][:38], b["active"]))
     if failures:
@@ -199,7 +203,7 @@ def main():
         return 1
 
     for b in blocks:
-        b["active"] = int(b["active"])
+        b["active"] = (lambda f: int(f) if f.is_integer() else f)(float(b["active"]))
 
     # ---- TRACK A ------------------------------------------------------------
     built_t = sum(b["mins"] for b in blocks if b["track"] == "theory")
@@ -252,7 +256,7 @@ def main():
 
     for b in blocks:
         if b["active"] > b["mins"]:
-            failures.append("%s declares %d active minutes in a %d minute block"
+            failures.append("%s declares %g active minutes in a %g minute block"
                             % (b["block"], b["active"], b["mins"]))
         elif b["track"] == "practice" and b["active"] * 2 < b["mins"]:
             failures.append("%s is a practice block with %d of %d minutes active - "
