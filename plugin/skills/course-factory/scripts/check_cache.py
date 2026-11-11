@@ -10,7 +10,10 @@ THE FINGERPRINT of a slide (a deck's <section class="slide">) or a task page is 
 everything that judges it:
   - its own HTML (the slide's section, or the whole task page), its place in the deck (slide 4 of 17)
   - the rest of the page around it - head, chrome, scripts (the deck without its slides)
-  - every file of the module's assets\\ folder except the pictures (gb_*.css, kit.js, kit_parts.js, fonts ...)
+  - every file of the module's assets\\ folder except the pictures (gb_*.css, kit.js, fonts ...)
+  - the module's own parts for a figure kit (kit_parts.js, kit3d_parts.js) only for a slide or page that draws a figure of
+    that kit: they add parts to the kit and change nothing else on a screen. A trial's fix round added one 3D part, and the
+    walk judge's look after it was shown every slide and task page of the module again
   - every file the slide, the page or those files name (its photos, a 3D scene and what that scene names ...)
   - the checker: its probe scripts, its own code, the window size and the browser (path, size, date)
 A cached result is only ever a CLEAN one: a slide with a finding, a page that did not finish, a run that aborted is never
@@ -33,6 +36,8 @@ NAME = re.compile(r"[^\s\"'`()<>=,;:*?|\\/\[\]{}]+\.(?:%s)(?![\w.])" % EXT, re.I
 TEXT = (".html", ".htm", ".js", ".mjs", ".css", ".json", ".svg", ".txt", ".csv")
 PAGE_DIRS = ("tasks", "assessment", "instructor")
 MAX_FILES = 5000                     # a folder this big is not a module: nothing is cached
+# a kit's parts written for the module (course-visuals PARTS.md "Adding a part") -> what marks a figure that can use them
+PART_FILES = {"kit_parts.js": re.compile(r'\bdata-kit2?d?="'), "kit3d_parts.js": re.compile(r'\bdata-(?:kit3d|3d)\b')}
 
 
 def sha(*parts):
@@ -114,20 +119,28 @@ class Module(object):
         return sha(own, *[self.file_hash(p, seen) for p in names])
 
     def names(self, text):
-        """the module files a piece of text names (by file name, wherever in the module it is)"""
+        """the module files a piece of text names (by file name, wherever in the module it is) - never a kit's parts file,
+        which counts only where a figure of its kit is drawn (refs)"""
         out = set()
         for tok in NAME.findall(text):
+            if unquote(tok).lower() in PART_FILES:
+                continue
             for p in self.by_name.get(unquote(tok).lower(), []):
                 if not self.is_page(p):
                     out.add(p)
         return sorted(out)
 
+    def kit_parts(self, text):
+        """the module's kit parts files a piece of markup can use: those of the kits it draws a figure of"""
+        return sorted(p for name, drawn in PART_FILES.items() if drawn.search(text)
+                      for p in self.by_name.get(name, []) if not self.is_page(p))
+
     def refs(self, text):
         seen = set()
-        return sha(*[os.path.relpath(p, self.dir) + ":" + self.file_hash(p, seen) for p in self.names(text)])
+        return sha(*[os.path.relpath(p, self.dir) + ":" + self.file_hash(p, seen) for p in self.names(text) + self.kit_parts(text)])
 
     def shared(self):
-        """every file of assets\\ but the pictures (and what those files name)"""
+        """every file of assets\\ but the pictures and the kits' parts (and what those files name)"""
         if self._shared is None:
             assets, seen, parts = os.path.join(self.dir, "assets"), set(), []
             for root, dirs, files in os.walk(assets):
@@ -137,6 +150,8 @@ class Module(object):
                     continue
                 dirs.sort()
                 for f in sorted(files):
+                    if f.lower() in PART_FILES:
+                        continue
                     p = os.path.join(root, f)
                     parts.append(os.path.relpath(p, self.dir) + ":" + self.file_hash(p, seen))
             self._shared = sha(*parts)

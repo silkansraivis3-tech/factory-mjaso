@@ -273,8 +273,8 @@ script (`build_module.py`).
 
   | Job | Model |
   |---|---|
-  | Build loop (`build_module.py` until PASS, a carry-on), Phase A, photo search, figure shots, gate, assembly, the whole-course cross-check | `sonnet` |
-  | 3D scenes and their review, figure review and figure fixes, the walk review (the one screenshot review), QA, the fixes and the polish round the judges' findings ask for | `opus`, high effort |
+  | Build loop (`build_module.py` until PASS, a carry-on, the one build after the figure fixers), Phase A, photo search, figure shots, the 3D check's command, gate, assembly, the whole-course cross-check | `sonnet` |
+  | 3D review, figure review and figure fixes, the walk review (the one screenshot review), QA, the fixes and the polish round the judges' findings ask for | `opus`, high effort |
   | Reader, script writer | the session's own |
 
 ## Auto build — after the expert's Ready (L70)
@@ -300,10 +300,17 @@ A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobod
   (`compile/GUIDE.md` step 6) - each helper agent on its model in *Building* (a Sonnet builder per module, its judges,
   fixers and polish on Opus). Never push to git; never write outside the course folder - a file only you need (a batch, a
   command's saved output) goes in `working_claude/scratch/`, never the system temp folder or `/tmp`.
-- Brief each helper from `build_course.js` - `build`, `qa`, `fixAll`, `fixFig`, `fixBuild` and their caps: a builder never
-  asks and builds to PASS, MODULE CLEAN or the build's STOP; ONE fix round; after it only what was BROKEN is judged again
-  (`qa(m, first)`, the 3D reviewer on those scenes' pictures alone). Ask each for a report of at most 30 lines, the rest in
-  a file: every report stays in your context to the end of the run.
+- Once every script is approved, the build's helpers come from `build_course.js` through
+  `orchestration/workflows/brief.mjs`, never from briefs of your own: write the workflow's args once to
+  `working_claude/_build/agents/args.json` (`course`, `factory` = the skills folder, `modules` = the approved table,
+  `notes` = this run's rules), run `node brief.mjs <args.json>`, start each agent it lists on its model and effort with the
+  prompt `Read <its brief>: it is your whole brief.`, and run it again when one ends. A builder never asks and builds to
+  PASS, MODULE CLEAN or the build's STOP; ONE fix round; after it only what was BROKEN is judged again (`qa(m, first)`,
+  the 3D reviewer on those scenes' pictures alone) - brief.mjs follows the workflow, so you decide none of it. Each helper
+  writes its answer to its file and ends with one line. Never read a brief or `build_course.js`, and say nothing between
+  helpers: every word stays in your context to the end of the run. One that ended without its answer: `--again <label>`
+  and start it once more; twice: `--none <label>`. When brief.mjs says DONE, its `result.json` is the build's answer - the
+  blocking modules, the walk, the operator's list - for your last report.
 - Every brief that runs a long command (Phase A, a build, the 3D check, `scene3d_check.py`, `smoke3d.py`, QA, the walk)
   carries `build_course.js`'s `FOREGROUND`: each command in the foreground, never in the background, and the helper never
   ends its turn while a command it started still runs; a long one answers `STILL BUILDING` / `STILL CHECKING` /

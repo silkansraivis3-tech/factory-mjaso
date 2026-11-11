@@ -58,7 +58,8 @@
  *
  * Models (2.51.0, the M01 benchmark: the mechanical loop was most of the bill): the reader and the script writer
  * keep the session's model - that is where the words come from. The repetitive loop (build_module.py until PASS,
- * Phase A, the photo pass, the figure shots) runs on Sonnet at medium effort (MECHANICAL); the gate and the assembly,
+ * Phase A, the photo pass, the figure shots, the 3D check's command, the one build after the figure fixers) runs on
+ * Sonnet at medium effort (MECHANICAL); the gate and the assembly,
  * one command each, at low. The judgement jobs - the 3D scenes and their review, the figure review and the figure
  * fixes, QA, the walk judge and the fix and polish rounds that act on their findings - run on the best model at high
  * effort (JUDGEMENT): on Sonnet the review passed weak slides and modules shipped with labels off their parts and
@@ -95,6 +96,17 @@ read as the job's result, and an agent waiting on its own background work has st
 limit and goes on by itself - "STILL BUILDING", "STILL CHECKING" or "STILL RUNNING": then run the SAME command with --wait,
 again, until it prints its answer. A command's output you keep, or any file only you need, goes in
 ${A.course}/working_claude/scratch/ - never /tmp or the system temp folder: nothing is written outside the course folder.`
+/* every brief that changes a module - the builder, the fixers, the polish round. A trial's fix round spent half its turns
+   reading the factory's own code (task_pages.py, compile_module.py, kit3d.js, kit2d.js up to five times) and writing three
+   screenshot scripts and a web server of its own, each read and picture carried in every later turn */
+const HANDS_ON = `THE FACTORY'S TOOLS ARE YOURS, ITS CODE IS NOT: never open a .py, .js, .mjs or .css file of the factory's skills
+folder - this brief, the card, SPEC.md, PARTS.md, CATALOGUE.md and each tool's --help say what you need - and never write a
+tool of your own (a screenshot or probe script, a web server, a copy of a page). Look with the factory's: studio.py <spec>
+--quick, then --step all, for a figure; build_module.py <course> --module <N> --slides <ids> for a layout; for a 3D scene you
+changed, python ${A.factory ? `${A.factory}/course-visuals/kit3d/scripts` : '<the course-visuals skill folder>/kit3d/scripts'}/scene3d_check.py <course> --module <N> --slides <ids> --no-perf
+(its pictures in a minute); and the pictures the build and the judges already made. What no setting you are given can
+fix is the factory's: say so in your report as "FACTORY: <what>" and go on. Open pictures up to 4 in one message, and
+chain commands in one shell call.`
 const CARD = A.factory ? `${SCRIPTS}/compile/BUILDER_CARD.md`
   : 'compile/BUILDER_CARD.md in the course-factory skill\'s folder (the Skill tool, name "course-factory", names the folder)'
 const SEED = A.seed_from ? ` --seed-from "${A.seed_from}"` : ''
@@ -400,6 +412,8 @@ A slide that has a picture leads with it (L23): the source files and the knowled
 the figure kit. A slide whose words read on their own needs none (L61). An image you cannot produce: its brief in
 _visual_briefs/, and keep going.
 
+${HANDS_ON}
+
 ${FOREGROUND}
 
 Report as the card says.`
@@ -587,6 +601,8 @@ the rest of the slide is the module fixer's:
 
 ${ws.map((f) => `  - ${f.what}`).join('\n')}` : ''}
 
+${HANDS_ON}
+
 Report: the spec's path, what you changed, how many studio runs, and what is still not clean.${NOTES}`
 /* the build after the split round: ONE build of what the fixers changed, at most two runs, then STOP */
 const fixBuild = (m, b3, figs, other) => `${build(m)}
@@ -755,8 +771,11 @@ const onlyScenes = (s, ids) => {
 /* the 3D check (a script; it fixes only what the check itself prints) and its reviewer; tag '+fix': after the fix round, when
    the reviewer judges again only the scenes that had a BROKEN finding (first) - the trial's re-reviews opened every picture
    of the module a second time (M08: 43 of them) */
+/* the check itself is one command that fixes only what the command prints - the build loop's kind of job, on Sonnet; the
+   pictures are judged by review3d on the best model (a trial's two 3D check runners on Opus: the command, its --wait and
+   one spec edit) */
 async function threeD(m, tag, first) {
-  const s = await agent(scene3d(m, !!tag), { label: `3d:${m.id}${tag || ''}`, phase: 'Build', schema: SCENE_SCHEMA, ...JUDGEMENT })
+  const s = await agent(scene3d(m, !!tag), { label: `3d:${m.id}${tag || ''}`, phase: 'Build', schema: SCENE_SCHEMA, ...MECHANICAL })
   if (!s || !s.has_scene) return null
   const ids = first && slidesOf(first)
   const judged = ids ? onlyScenes(s, ids) : s
@@ -979,6 +998,8 @@ back). Never run build_module.py yourself: polish check runs it. Write only in t
 figures/M${two(m)}/. At the end: python ${FIXPY} polish end "${A.course}" --module ${m.id}, then take the KEPT items off
 M${two(m)}_POLISH.md when there is one - what is left stays there for the course office.
 
+${HANDS_ON}
+
 POLISH lines:
 ${items.map((x) => `  - ${x}`).join('\n')}
 
@@ -1043,7 +1064,8 @@ async function oneModule(m) {
       const figs = [...new Set(bf.map((f) => f.slide))]
       await Promise.all([fixFigures(m, bf, bw), b3.length || bq.length || bw.length
         ? agent(fixAll(m, b3, [], bq, figs, bw), { label: `fix:${m.id}`, phase: 'Build', ...JUDGEMENT }) : null])
-      const fb = await place(() => agent(fixBuild(m, b3, figs, bq.length || bw.length), { label: `fixbuild:${m.id}`, phase: 'Build', ...JUDGEMENT }))
+      /* the build after the fixers: build_module.py once or twice, fixing only what it prints - the builder's loop, on Sonnet */
+      const fb = await place(() => agent(fixBuild(m, b3, figs, bq.length || bw.length), { label: `fixbuild:${m.id}`, phase: 'Build', ...MECHANICAL }))
       reachedPass = reachedPass || passed(fb)
       fixers.push(...figs.map((s) => `fixfig:${m.id}:${s} (workflow figure fixer)`),
         ...(b3.length || bq.length || bw.length ? [`fix:${m.id} (workflow fixer)`] : []), `fixbuild:${m.id} (workflow fix build)`)

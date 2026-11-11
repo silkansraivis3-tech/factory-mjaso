@@ -236,8 +236,13 @@ def first_part(tmp):
         check("... and current again once it is as it was", wr.verify(course, 1)[0], wr.verify(course, 1))
     (assets / "kit_parts.js").write_text("var parts = []", encoding="utf-8")
     ok, kind, msg = wr.verify(course, 1)
-    check("a new file of assets\\ (kit_parts.js) -> every slide is stale", not ok and kind == "stale" and "5 of 5 slide(s)" in msg, msg)
+    check("a new kit part (kit_parts.js) on a deck that draws no kit figure -> no slide is stale (a trial's look after its fix "
+          "round was shown every slide again for one new part)", ok, msg)
     os.remove(assets / "kit_parts.js")
+    (assets / "extra.js").write_text("var more = 1", encoding="utf-8")
+    ok, kind, msg = wr.verify(course, 1)
+    check("... any other new file of assets\\ -> every slide is stale", not ok and kind == "stale" and "5 of 5 slide(s)" in msg, msg)
+    os.remove(assets / "extra.js")
     (assets / "img" / "p3.jpg").write_bytes(b"another photograph")
     ok, kind, msg = wr.verify(course, 1)
     check("a photograph is replaced -> the slide that shows it is stale and no other", not ok and kind == "stale" and "1 of 5 slide(s)" in msg

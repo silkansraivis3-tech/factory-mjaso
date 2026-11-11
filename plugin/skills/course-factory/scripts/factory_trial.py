@@ -3,7 +3,8 @@
 """The factory trial - a few modules of a real course built from scratch after every major update, and scored.
 
     factory_trial.py setup  --from <course master folder> [--modules 1,4,8,19] [--home <folder>]
-    factory_trial.py run    [--modules 1,4] [--plugin-dir <plugin folder>] [--dry-run] [--home <folder>]
+    factory_trial.py setup  --reuse <an earlier trial's home or run> [--from ...] [--plugin-dir <plugin folder>] [--dry-run]
+    factory_trial.py run    [--modules 1,4] [--plugin-dir <plugin folder>] [--fresh] [--dry-run] [--home <folder>]
     factory_trial.py report [--run <runs\\folder>] [--course <trial course>] [--against <scorecard.json>] [--no-browser] [--home <folder>]
     factory_trial.py compare <scorecard.json before> <scorecard.json now>
     factory_trial.py status [--home <folder>]
@@ -27,6 +28,13 @@ the way the office PC builds. Then it scores what was built and sets the score b
           each agent it starts, the minutes since the start and the cost so far). A run that ends without its last line
           and not on the usage limit is carried on in the same session (claude -p --resume), up to 3 times, in the same
           log. Then report.
+          REUSE: a release that changes only the build need not pay for the intake, the Stage 2 page and the scripts
+          again. A run takes them from the last trial (the home's last run, or the trial setup --reuse named) when every
+          factory file the stage reads (STAGES, in one place below) is what it was when that trial ran - by the hashes
+          the trial recorded, or for a trial before them by the commit its version names - and the copied files still pass
+          the stage's own checks with this factory: the gate (course_gate.py) for Stage 1-2, approval for a script (no
+          must-fix, its claims proved, its questions covered - content_script.approval_blockers). Anything else, and
+          --fresh, runs the stage. The prompt, the marker and the scorecard say which stage was reused and why.
   report  the scorecard of each trial module, and what changed since the last trial:
             built, passed (its last build said PASS or MODULE CLEAN) and that build's verdict; minutes to its first PASS
             (the build's clock, cf_timing.py); slides cut or pictures cropped at 1280 x 800 and at 1024 x 768, every Next
@@ -51,6 +59,7 @@ The trial lives in %USERPROFILE%\\factory-trial (NOVIKONTAS_TRIAL_HOME, or --hom
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import json
 import os
@@ -58,6 +67,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime
 from html.parser import HTMLParser
 
@@ -83,16 +93,28 @@ LIBRARIES_OFF = {"NOVIKONTAS_COURSE_LIBRARIES": "off", "NOVIKONTAS_SUBJECT_LIBRA
 TRIAL_PROMPT = """You are the NOVIKONTAS course factory on a FACTORY TRIAL: a test build of a few modules after a factory update.
 Nobody is there to answer. The course in this folder is "FACTORY TRIAL"; its source_files, old course and knowledge base are
 here, and its decisions are already in course/working_claude (intake.json, kb_sources.json) - do not ask them again.
-Use the course-factory skill and build it from scratch by its "Auto build" rules (SKILL.md), with these differences:
-- Stage 1 and Stage 2 cover the whole programme as usual. Only modules {modules} get a content script, the fact-checker,
-  a build and its checks; leave every other module unscripted.
+Use the course-factory skill and build it by its "Auto build" rules (SKILL.md), with these differences:
+{stages}
 - There is no expert: sign every STOP --by "Factory trial" (NOVIKONTAS_TRIAL=1 allows it). Never call course_portal.py -
   a trial never goes to the training app.
 - Generate no paid pictures or videos; fill picture spaces from the free sources, and a space nobody could fill keeps its
   brief. Never push to git and never change a file outside this folder: a temporary file or a command's saved output goes
   in course/working_claude/scratch, never /tmp or the system temp folder. The shared course libraries are off for a trial
   (NOVIKONTAS_COURSE_LIBRARIES=off) - nothing is read from or saved to them.
+- The build's helpers come from brief.mjs (SKILL.md Auto build); the "notes" of its args.json carry the picture and folder
+  rules above, word for word. Never start the photo pass it lists (photos:course, photos:drafts - it makes pictures):
+  record each with --none <label>.
+- This folder and the factory are as said here and in SKILL.md: list no folders and read no factory script's source (its
+  --help says how to run it).
 End with one line: TRIAL DONE, or TRIAL STOPPED: <why>."""
+FRESH = """- Stage 1 and Stage 2 cover the whole programme as usual. Only modules {modules} get a content script, the fact-checker,
+  a build and its checks; leave every other module unscripted."""
+READ_REUSED = """- Stage 1 and Stage 2 are DONE and approved, taken from the last trial ({why}): do not run them again. COURSE_STATE.md and
+  FEEDBACK_LOG.md are new; say there that Stage 1-2 came from the last trial."""
+SCRIPTS_REUSED = """- The content scripts of modules {done} are DONE - approved, fact-checked and task-covered, taken from the last trial the
+  same way: do not write, check or approve them again; build them."""
+SCRIPTS_TO_WRITE = """- Only modules {modules} get a content script, the fact-checker, a build and its checks; leave every other module
+  unscripted."""
 
 
 def home_of(given=None):
@@ -185,22 +207,428 @@ def remove_run(master):
     shutil.rmtree(master)
 
 
-def prepare_run(home, cfg, modules, plugin_dir=None):
-    """the new trial course: -> (master folder, run folder, prompt)"""
+# ------------------------------------------------------------------ the stages a trial may reuse
+# What each stage reads of the factory, in one place - paths under the plugin folder. A folder counts every file in it but
+# the tests; "file#Heading" counts one section of a guide, from its "## Heading" to the next "## " ("file#": the part before
+# the first). Left out on purpose, as none decides what a stage writes: the words of the pages (knowledge/page-labels.json),
+# the laws' reasoning (references/), the builder's part lists (kit CATALOGUE.md, kit3d PARTS.md), and for Stage 1-2 two
+# modules its scripts import only as helpers - content_script.py to read a script, compile's additional_materials.py to
+# write a Word file - the gate check on the copied files judges what Stage 1-2 left.
+CF = "skills/course-factory/"
+SKILL_MD = CF + "SKILL.md#"
+STAGES = {
+    "read": [SKILL_MD] + [SKILL_MD + h for h in ("Every reply", "The operator's request wins", "Owner decisions in force",
+                                                "The course remembers", "Mode first", "The brief", "The gate")]
+            + [CF + "knowledge/" + k for k in ("intake.json", "course-type.json", "bloom.json", "active-learning.json",
+                                               "media-and-tasks.json", "theory-rules.json", "instructor-led.json")]
+            + [CF + d for d in ("hours/GUIDE.md", "hours/knowledge/", "hours/scripts/check_hours.py", "coverage/", "kb/",
+                                "bloom/GUIDE.md", "active/GUIDE.md", "instructor-led/GUIDE.md", "templates/")]
+            + [CF + "scripts/" + s for s in ("workspace.py", "old_course.py", "ilo_map.py", "make_architecture_page.py",
+                                            "pedagogy_review.py", "course_gate.py", "active_plan.py",
+                                            "bloom_map.py", "course_memory.py", "instructor_led.py")]
+            + ["skills/course-visuals/scripts/subject_library.py"],
+    "script": [SKILL_MD + h for h in ("Owner decisions in force", "Stage 3", "Auto build")]
+              + [CF + "script/", CF + "kb/scripts/kb_tool.py"]
+              + [CF + "knowledge/" + k for k in ("theory-rules.json", "media-and-tasks.json", "slide-text-rules.json",
+                                                 "design-rules.json", "classroom-system.json", "active-learning.json", "bloom.json")]
+              + [CF + "scripts/" + s for s in ("content_script.py", "fact_check.py", "task_cover.py", "figure_why.py",
+                                              "check_slide_text.py", "design_choices.py", "interact_formats.py", "ilo_map.py",
+                                              "bloom_map.py", "old_course.py", "course_gate.py", "workspace.py")]
+              + ["skills/course-module-ui/knowledge/layout-templates.json", "skills/course-visuals/SKILL.md",
+                 "agents/fact-checker.md", "agents/task-coverage-checker.md"],
+}
+STAGE_NAMES = {"read": "Stage 1-2 (intake, programme, architecture, ILO map, pedagogy review)",
+               "script": "the content scripts (written, task-covered, fact-checked, approved)"}
+# what each stage leaves in the course folder (paths under course\); MNN is the module's. A missing one is not copied
+OUTPUTS = {
+    "read": ["to_review/ARCHITECTURE_REVIEW.html", "to_review/pedagogy/"]
+            + ["working_claude/" + f for f in ("architecture.json", "ilo_map.json", "programme.json", "plan.json",
+                                                "pedagogy_review.json", "old_course_inventory.json", "OLD_COURSE_INVENTORY.md",
+                                                "old_course_images/", "intake.json", "kb_sources.json", "STANDARDS.md",
+                                                "reader_report.md", "instructor_led.json", "simulators.json",
+                                                "model_course_syllabus.json")],
+    "script": ["working_claude/script/MNN.json", "working_claude/fact_check/MNN.json", "working_claude/fact_check/MNN.changes.json",
+               "working_claude/task_cover/MNN.json", "working_claude/task_cover/MNN.changes.json",
+               "to_review/MNN_SCRIPT.docx", "to_review/MNN_SCRIPT_REVIEW.html", "to_review/MNN_INSTRUCTOR_NOTES.md"],
+}
+REFRESHED = ("where_taught", "checked_by", "taught_on", "checked_on")      # the ILO map's columns ilo_map.py refresh writes
+REUSE = "reuse"                                                           # <home>\reuse\: the last trial's stages, kept
+
+
+def git(cwd, *args):
+    """git's output as bytes, or None (no git, not a repository, a failed command)"""
+    try:
+        r = subprocess.run(["git", "-C", cwd] + list(args), capture_output=True)
+    except OSError:
+        return None
+    return r.stdout if r.returncode == 0 else None
+
+
+class OnDisk(object):
+    """the plugin's files as they are now"""
+
+    def __init__(self, plugin_dir):
+        self.root = os.path.abspath(plugin_dir)
+
+    def read(self, rel):
+        try:
+            return io.open(os.path.join(self.root, rel), "rb").read()
+        except OSError:
+            return None
+
+    def files(self, rel):
+        top = os.path.join(self.root, rel)
+        return sorted(os.path.relpath(os.path.join(r, f), self.root).replace("\\", "/")
+                      for r, _, fs in os.walk(top) for f in fs)
+
+
+class AtCommit(object):
+    """the plugin's files as one commit of its repository holds them"""
+
+    def __init__(self, plugin_dir, commit):
+        self.dir, self.commit = os.path.abspath(plugin_dir), commit
+        self.prefix = (git(self.dir, "rev-parse", "--show-prefix") or b"").decode("utf-8").strip()
+        self.cat = None
+
+    def read(self, rel):
+        """one file at the commit, through one git cat-file --batch for all of them"""
+        if self.cat is None:
+            self.cat = subprocess.Popen(["git", "-C", self.dir, "cat-file", "--batch"], stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        self.cat.stdin.write(("%s:%s%s\n" % (self.commit, self.prefix, rel)).encode("utf-8"))
+        self.cat.stdin.flush()
+        head = self.cat.stdout.readline().split()
+        if len(head) != 3 or head[1] != b"blob":
+            return None
+        data = self.cat.stdout.read(int(head[2]))
+        self.cat.stdout.read(1)
+        return data
+
+    def close(self):
+        if self.cat:
+            self.cat.stdin.close()
+            self.cat.wait()
+            self.cat = None
+
+    def files(self, rel):
+        out = git(self.dir, "ls-tree", "-r", "--name-only", "--full-tree", self.commit, "--", self.prefix + rel.rstrip("/"))
+        n = len(self.prefix)
+        return sorted(x[n:] for x in (out or b"").decode("utf-8").splitlines() if x)
+
+
+def section(text, heading):
+    """one "## " section of a guide, its heading line included; heading "" - the part before the first; None: not there"""
+    lines = text.split("\n")
+    if not heading:
+        return "\n".join(lines[:next((i for i, x in enumerate(lines) if x.startswith("## ")), len(lines))])
+    start = next((i for i, x in enumerate(lines) if x.startswith("## " + heading)), None)
+    if start is None:
+        return None
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+    return "\n".join(lines[start:end])
+
+
+def counted(rel):
+    """a file a stage reads - not a test, its fixtures or a compiled copy"""
+    parts = rel.split("/")
+    return not (parts[-1].startswith("test_") or parts[-1].endswith(".pyc") or "__pycache__" in parts or "fixtures" in parts)
+
+
+def digest(data):
+    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()[:16] if data is not None else "missing"
+
+
+def stage_hashes(src, stage):
+    """{entry: hash} of every entry a stage reads, from src (OnDisk or AtCommit)"""
+    out = {}
+    for entry in STAGES[stage]:
+        path, _, heading = entry.partition("#")
+        if "#" in entry:
+            data = src.read(path)
+            part = section(data.replace(b"\r\n", b"\n").decode("utf-8", "replace"), heading) if data is not None else None
+            out[entry] = digest(part.encode("utf-8")) if part is not None else "missing"
+        elif entry.endswith("/"):
+            files = [f for f in src.files(path) if counted(f)]
+            out[entry] = hashlib.sha256("\n".join("%s %s" % (f[len(path):], digest(src.read(f))) for f in files)
+                                        .encode("utf-8")).hexdigest()[:16] if files else "missing"
+        else:
+            out[entry] = digest(src.read(path))
+    return out
+
+
+def factory_record(plugin_dir=None):
+    """what a trial records of the factory it ran: its commit and each stage's hashes"""
+    d = plugin_dir or PLUGIN
+    head = (git(d, "rev-parse", "HEAD") or b"").decode("utf-8").strip()
+    return {"commit": head, "stages": {s: stage_hashes(OnDisk(d), s) for s in STAGES}}
+
+
+def version_commit(plugin_dir, version):
+    """(the one commit whose plugin.json first says this version, why) - (None, why) when none or several do"""
+    prefix = (git(plugin_dir, "rev-parse", "--show-prefix") or b"").decode("utf-8").strip()
+    log = git(plugin_dir, "log", "--format=%H", "--", ".claude-plugin/plugin.json")
+    if log is None:
+        return None, "the factory at %s is not a git checkout, so its version %s names no commit" % (plugin_dir, version)
+    said = []
+    for sha in log.decode("utf-8").split():
+        try:
+            if json.loads(git(plugin_dir, "show", "%s:%s.claude-plugin/plugin.json" % (sha, prefix)) or b"{}").get("version") == version:
+                said.append(sha)
+        except ValueError:
+            continue
+    if len(said) != 1:
+        return None, "version %s names %s commit(s) of the factory, not one" % (version, len(said))
+    return said[0], "matched by its version %s to commit %s (that trial recorded no hashes)" % (version, said[0][:7])
+
+
+def then_hashes(mark, stage, plugin_dir):
+    """(the hashes of a stage as the earlier trial ran it, how they were found) - (None, why) when they cannot be known"""
+    rec = ((mark.get("factory") or {}).get("stages") or {}).get(stage)
+    if rec:
+        return rec, "by the hashes it recorded"
+    commit = (mark.get("factory") or {}).get("commit")
+    why = "by its commit %s" % commit[:7] if commit else ""
+    if not commit:
+        commit, why = version_commit(plugin_dir, mark.get("plugin", "?"))
+        if not commit:
+            return None, why
+    if git(plugin_dir, "cat-file", "-e", commit + "^{commit}") is None:
+        return None, "its commit %s is not in the factory's repository" % commit[:7]
+    src = AtCommit(plugin_dir, commit)
+    try:
+        return stage_hashes(src, stage), why
+    finally:
+        src.close()
+
+
+def previous_trial(path):
+    """the trial course (master folder, its marker) an earlier trial left: a trial home, its run\\ or runs\\<run> folder, or
+    the trial course itself; (None, why) when there is none - a home keeps only its last run's course"""
+    path = os.path.abspath(path)
+    run = os.path.basename(os.path.dirname(path)) == "runs"
+    master = (os.path.join(os.path.dirname(os.path.dirname(path)), "run", TITLE) if run
+              else path if os.path.isfile(os.path.join(path, MARKER)) else os.path.join(path, "run", TITLE))
+    mark = load(os.path.join(master, MARKER))
+    if not isinstance(mark, dict):
+        return None, "%s holds no trial course (no %s)" % (path, MARKER)
+    if run:
+        try:
+            ran = datetime.strptime(str(mark.get("started")), "%Y-%m-%d %H:%M").strftime("%Y%m%d-%H%M")
+        except ValueError:
+            ran = ""
+        if not os.path.basename(path).startswith(ran or "-"):
+            return None, "%s is not its home's last run (that started %s) - only the last run's course is kept" % (
+                os.path.basename(path), mark.get("started"))
+    return master, mark
+
+
+def snapshot(master, mark, home):
+    """the stages' files of a trial course kept in <home>\\reuse\\ - the course is deleted by the next run"""
+    dest = os.path.join(home, REUSE)
+    shutil.rmtree(dest, ignore_errors=True)
+    course = os.path.join(master, "course")
+    mids = [cs.mid(m) for m in mark.get("modules") or []]
+    for rel in OUTPUTS["read"] + [x.replace("MNN", mid) for x in OUTPUTS["script"] for mid in mids]:
+        src, to = os.path.join(course, rel), os.path.join(dest, "course", rel)
+        if os.path.isdir(src):
+            shutil.copytree(src, to)
+        elif os.path.isfile(src):
+            os.makedirs(os.path.dirname(to), exist_ok=True)
+            shutil.copy2(src, to)
+    save(os.path.join(dest, MARKER), dict(mark, kept_from=master))
+    return dest
+
+
+def decide(kept, modules, plugin_dir=None, fresh=False):
+    """{stage: {"reuse": bool, "why": str, "changed": [...]}} for the stages an earlier trial left in kept (a folder holding
+    its course\\ and marker: <home>\\reuse\\, or the trial course itself) - the script stage also {"modules": [...]}"""
+    mark = load(os.path.join(kept, MARKER))
+    out = {}
+    for stage in STAGES:
+        if fresh:
+            out[stage] = {"reuse": False, "why": "--fresh: every stage runs"}
+            continue
+        if not isinstance(mark, dict):
+            out[stage] = {"reuse": False, "why": "no earlier trial to take it from"}
+            continue
+        if stage == "script" and not out["read"]["reuse"]:
+            out[stage] = {"reuse": False, "why": "the scripts are written against Stage 1-2, which runs"}
+            continue
+        then, how = then_hashes(mark, stage, plugin_dir or PLUGIN)
+        trial = "the trial of course-factory %s, %s" % (mark.get("plugin", "?"), mark.get("started", "?"))
+        if then is None:
+            out[stage] = {"reuse": False, "why": "the factory files %s read when %s ran cannot be known: %s" % (stage, trial, how)}
+            continue
+        now = stage_hashes(OnDisk(plugin_dir or PLUGIN), stage)
+        changed = [e for e in STAGES[stage] if then.get(e) != now.get(e)]
+        if changed:
+            out[stage] = {"reuse": False, "changed": changed, "why": "%d of the %d factory files and sections it reads changed "
+                          "since %s (%s): %s" % (len(changed), len(now), trial, how, ", ".join(changed))}
+            continue
+        out[stage] = {"reuse": True, "from": mark.get("kept_from", ""), "why": "from %s - the %d factory files and sections it "
+                      "reads are unchanged (%s)" % (trial, len(now), how)}
+        if stage == "script":
+            have = [m for m in modules if m in (mark.get("modules") or [])
+                    and os.path.isfile(os.path.join(kept, "course", "working_claude", "script", cs.mid(m) + ".json"))]
+            out[stage]["modules"] = have
+            if not have:
+                out[stage].update(reuse=False, why="the last trial scripted none of modules %s" % ", ".join(map(str, modules)))
+    return out
+
+
+CHECK_COPIED = r"""
+import json, sys
+sys.path.insert(0, sys.argv[1])
+import course_gate, content_script as cs
+course, mods = sys.argv[2], json.loads(sys.argv[3])
+out = {"gate": course_gate.problems(course), "modules": {}}
+for m in mods:
+    s = cs.load(cs.paths(course, m)["script"])
+    probs = cs.validate(s)
+    if not (s.get("status") == "approved" and s.get("approved_hash") == cs.content_hash(s)):
+        probs.append("not approved as it is")
+    if not probs:
+        probs = ["%s: %s" % (f["where"], f["detail"]) for f in cs.approval_blockers(course, s)[0]]
+    out["modules"][str(m)] = probs
+print(json.dumps(out))
+"""
+
+
+def check_copied(course, modules, plugin_dir=None):
+    """the copied stages judged by the factory that will build: {"gate": [problems], "modules": {"1": [problems]}}"""
+    scripts = os.path.join(plugin_dir or PLUGIN, "skills", "course-factory", "scripts")
+    r = subprocess.run([sys.executable, "-c", CHECK_COPIED, scripts, course, json.dumps(modules)], capture_output=True,
+                       text=True, encoding="utf-8", errors="replace", env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    try:
+        return json.loads(r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return {"gate": ["the check of the copied files did not run: %s" % (r.stderr.strip().splitlines() or ["?"])[-1]], "modules": {}}
+
+
+def reuse_into(kept, course, plan, plugin_dir=None):
+    """copy the stages the plan reuses from kept into the new trial course and judge them with this factory; a stage that
+    fails is taken out again and runs. Changes plan in place"""
+    kept = os.path.join(kept, "course")
+    copied = {"read": [], "script": {}}
+
+    def put(rel):
+        """(the path, what was there before - a decision file the run already has) or None when there is nothing to copy"""
+        src, to = os.path.join(kept, rel), os.path.join(course, rel)
+        was = io.open(to, "rb").read() if os.path.isfile(to) else None
+        if os.path.isdir(src):
+            shutil.rmtree(to, ignore_errors=True)
+            shutil.copytree(src, to)
+        elif os.path.isfile(src):
+            os.makedirs(os.path.dirname(to), exist_ok=True)
+            shutil.copy2(src, to)
+        else:
+            return None
+        return to, was
+
+    def take_out(paths):
+        for p, was in paths:
+            if os.path.isdir(p):
+                shutil.rmtree(p, ignore_errors=True)
+            elif was is not None:
+                io.open(p, "wb").write(was)
+            elif os.path.isfile(p):
+                os.remove(p)
+
+    if not plan["read"]["reuse"]:
+        return plan
+    copied["read"] = [p for p in map(put, OUTPUTS["read"]) if p]
+    mods = plan["script"].get("modules", []) if plan["script"]["reuse"] else []
+    for m in mods:
+        copied["script"][m] = [p for p in (put(x.replace("MNN", cs.mid(m))) for x in OUTPUTS["script"]) if p]
+    ilo = os.path.join(course, "working_claude", "ilo_map.json")
+    m = load(ilo)
+    if isinstance(m, dict):                    # the slide and question columns of a module whose script is not reused
+        keep = {cs.mid(x) for x in mods}
+        for row in m.get("rows") or []:
+            if isinstance(row, dict) and str(row.get("module")) not in keep:
+                for k in REFRESHED:
+                    row.pop(k, None)
+        save(ilo, m)
+    said = check_copied(course, mods, plugin_dir)
+    if said["gate"]:
+        take_out(copied["read"] + [p for ps in copied["script"].values() for p in ps])
+        plan["read"].update(reuse=False, why="taken from the last trial, the copy does not pass the gate with this factory: "
+                            + " / ".join(said["gate"]))
+        plan["script"] = {"reuse": False, "why": "the scripts are written against Stage 1-2, which runs"}
+        return plan
+    left = []
+    for x in mods:
+        probs = said["modules"].get(str(x), ["not judged"])
+        if probs:
+            take_out(copied["script"][x])
+            plan["script"].setdefault("not", {})[x] = "not approvable with this factory: " + " / ".join(probs[:5])
+        else:
+            left.append(x)
+    if mods:
+        plan["script"]["modules"] = left
+    if mods and not left:
+        plan["script"].update(reuse=False, why="no copied script is approvable with this factory: " + "; ".join(
+            "M%02d %s" % (k, v) for k, v in plan["script"].get("not", {}).items()))
+    memory = os.path.join(plugin_dir or PLUGIN, "skills", "course-factory", "scripts", "course_memory.py")
+    subprocess.run([sys.executable, memory, "start", course, "--title", TITLE], capture_output=True)
+    return plan
+
+
+def stages_prompt(plan, modules):
+    """the prompt's lines on what this run does of Stage 1-3"""
+    mods = ", ".join(str(m) for m in modules)
+    if not plan or not plan["read"]["reuse"]:
+        return FRESH.format(modules=mods)
+    done = plan["script"].get("modules", []) if plan["script"]["reuse"] else []
+    out = [READ_REUSED.format(why=plan["read"]["why"])]
+    if done:
+        out.append(SCRIPTS_REUSED.format(done=", ".join(map(str, done))))
+    todo = [m for m in modules if m not in done]
+    out.append(SCRIPTS_TO_WRITE.format(modules=", ".join(map(str, todo))) if todo else "- Leave every other module unscripted.")
+    return "\n".join(out)
+
+
+def reuse_lines(plan):
+    """the plan in words, one line a stage"""
+    out = []
+    for stage in STAGES:
+        p = (plan or {}).get(stage)
+        if not p:
+            continue
+        what = STAGE_NAMES[stage]
+        if p["reuse"] and stage == "script":
+            what += " of modules %s" % ", ".join(map(str, p.get("modules", [])))
+        out.append("  %s %s - %s" % ("REUSED" if p["reuse"] else "RUNS  ", what, p["why"]))
+        out += ["         module %s runs: %s" % (k, v) for k, v in sorted((p.get("not") or {}).items())]
+    return out
+
+
+def prepare_run(home, cfg, modules, plugin_dir=None, fresh=False):
+    """the new trial course: -> (master folder, run folder, prompt). The last run's stages are kept first (snapshot), then
+    taken where nothing they depend on changed (decide, reuse_into)"""
     master = os.path.join(home, "run", TITLE)
+    last = load(os.path.join(master, MARKER))
+    if isinstance(last, dict):
+        snapshot(master, last, home)
     remove_run(master)
-    os.makedirs(os.path.join(master, "course", "working_claude"))
-    save(os.path.join(master, MARKER), {"trial": True, "modules": modules, "from": cfg["from"],
-                                        "plugin": plugin_version(plugin_dir), "started": datetime.now().strftime("%Y-%m-%d %H:%M")})
+    course = os.path.join(master, "course")
+    os.makedirs(os.path.join(course, "working_claude"))
+    mark = {"trial": True, "modules": modules, "from": cfg["from"], "plugin": plugin_version(plugin_dir),
+            "started": datetime.now().strftime("%Y-%m-%d %H:%M"), "factory": factory_record(plugin_dir)}
+    save(os.path.join(master, MARKER), mark)
     for name in ("source_files", "old_course"):
         link(cfg["inputs"][name], os.path.join(master, name))
     for name in DECISIONS:
         src = os.path.join(home, "decisions", name)
         if os.path.isfile(src):
-            shutil.copy2(src, os.path.join(master, "course", "working_claude", name))
+            shutil.copy2(src, os.path.join(course, "working_claude", name))
+    kept = os.path.join(home, REUSE)
+    plan = reuse_into(kept, course, decide(kept, modules, plugin_dir, fresh), plugin_dir)
+    mark["reused"] = plan
+    save(os.path.join(master, MARKER), mark)
     run_dir = os.path.join(home, "runs", datetime.now().strftime("%Y%m%d-%H%M") + "_" + plugin_version(plugin_dir))
     os.makedirs(run_dir, exist_ok=True)
-    prompt = TRIAL_PROMPT.format(modules=", ".join(str(m) for m in modules))
+    prompt = TRIAL_PROMPT.format(stages=stages_prompt(plan, modules))
     io.open(os.path.join(run_dir, "prompt.txt"), "w", encoding="utf-8").write(prompt)
     return master, run_dir, prompt
 
@@ -497,6 +925,8 @@ def show(card, before=None):
     stop = card.get("stopped")
     if stop:
         print("STOPPED: %s - the run ended before the factory finished; a module that did not pass is unfinished, not failed" % stop)
+    if card.get("reused"):
+        print("Taken from the last trial, or run again:\n" + "\n".join(reuse_lines(card["reused"])))
     old = {r["module"]: r for r in (before or {}).get("modules", [])}
     if before:
         print("  %-24s %-16s %s" % ("", "before %s" % before.get("plugin"), "now %s" % card.get("plugin")))
@@ -559,6 +989,8 @@ def report(home, run_dir=None, no_browser=False, course=None, against=None):
         return 2
     card = {"plugin": mark.get("plugin"), "started": mark.get("started"), "scored": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "course": course, "modules": [score_module(course, m, no_browser) for m in mark.get("modules") or []]}
+    if mark.get("reused"):
+        card["reused"] = mark["reused"]
     logf = os.path.join(run_dir, "build.log") if run_dir else ""
     stop = stopped_by(io.open(logf, encoding="utf-8", errors="replace").read()) if os.path.isfile(logf) else None
     if stop:
@@ -576,6 +1008,54 @@ def report(home, run_dir=None, no_browser=False, course=None, against=None):
     return code
 
 
+def setup_cmd(home, a):
+    """setup, and setup --reuse <an earlier trial>: its inputs and modules unless --from / --modules say otherwise, and its
+    Stage 1-3 kept for the next run (--dry-run: what that run would take, judged in a copy, and nothing written)"""
+    master, mark = previous_trial(a.reuse) if a.reuse else (None, None)
+    if a.reuse and not master:
+        print("Stopped - " + mark)
+        return 2
+    earlier = (load(os.path.join(os.path.dirname(os.path.dirname(master)), "trial.json")) or {}) if master else {}
+    source = a.source or earlier.get("from") or (mark or {}).get("from")
+    mods = modules_of(a.modules or ",".join(map(str, earlier.get("modules") or (mark or {}).get("modules") or [])) or "1,4,8,19")
+    if not source or not mods:
+        print("Stopped - setup needs --from <the course's master folder> and --modules like 1,4,8,19")
+        return 2
+    if a.dry_run:
+        if not master:
+            print("Stopped - --dry-run shows what --reuse would take: name the earlier trial")
+            return 2
+        plan = decide(master, mods, a.plugin_dir)
+        inputs = earlier.get("inputs") or {}
+        if plan["read"]["reuse"]:
+            tmp = os.path.join(tempfile.mkdtemp(prefix="trial_reuse_"), TITLE)
+            course = os.path.join(tmp, "course")
+            os.makedirs(os.path.join(course, "working_claude"))
+            save(os.path.join(tmp, MARKER), {"trial": True, "dry_run": True})
+            try:
+                for name in ("source_files", "old_course"):
+                    if os.path.isdir(inputs.get(name) or ""):
+                        link(inputs[name], os.path.join(tmp, name))
+                plan = reuse_into(master, course, plan, a.plugin_dir)
+            finally:
+                remove_run(tmp)
+                shutil.rmtree(os.path.dirname(tmp), ignore_errors=True)
+        print("A run of modules %s with course-factory %s would take from the trial of %s (%s), judged in a copy:\n%s\n"
+              "Nothing written (--dry-run)." % (", ".join(map(str, mods)), plugin_version(a.plugin_dir), mark.get("plugin"),
+                                                 mark.get("started"), "\n".join(reuse_lines(plan))))
+        return 0
+    cfg, probs = setup(home, source, mods)
+    if probs:
+        print("Stopped - " + "\n  ".join(probs))
+        return 2
+    if master:
+        snapshot(master, mark, home)
+        print("Kept for the next run - it would take:\n" + "\n".join(reuse_lines(decide(os.path.join(home, REUSE), mods, a.plugin_dir))))
+    print("Trial ready in %s - modules %s, from %s. Run it after every major update: factory_trial.py run"
+          % (home, ", ".join(map(str, mods)), cfg["from"]))
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("cmd", choices=("setup", "run", "report", "compare", "status"))
@@ -589,20 +1069,12 @@ def main(argv=None):
     ap.add_argument("--run")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--no-browser", action="store_true")
+    ap.add_argument("--reuse")
+    ap.add_argument("--fresh", action="store_true")
     a = ap.parse_args(argv)
     home = home_of(a.home)
     if a.cmd == "setup":
-        mods = modules_of(a.modules or "1,4,8,19")
-        if not a.source or not mods:
-            print("Stopped - setup needs --from <the course's master folder> and --modules like 1,4,8,19")
-            return 2
-        cfg, probs = setup(home, a.source, mods)
-        if probs:
-            print("Stopped - " + "\n  ".join(probs))
-            return 2
-        print("Trial ready in %s - modules %s, from %s. Run it after every major update: factory_trial.py run"
-              % (home, ", ".join(map(str, mods)), cfg["from"]))
-        return 0
+        return setup_cmd(home, a)
     cfg = load(os.path.join(home, "trial.json"))
     if a.cmd == "status":
         if not cfg:
@@ -628,11 +1100,12 @@ def main(argv=None):
         print("Stopped - --modules like 1,4")
         return 2
     try:
-        master, run_dir, prompt = prepare_run(home, cfg, mods, a.plugin_dir)
+        master, run_dir, prompt = prepare_run(home, cfg, mods, a.plugin_dir, a.fresh)
     except OSError as err:
         print("Stopped - %s" % err)
         return 2
     cmd = claude_command(prompt, a.plugin_dir)
+    print("\n".join(reuse_lines((load(os.path.join(master, MARKER)) or {}).get("reused"))))
     if a.dry_run:
         print("Trial course made in %s (modules %s). Not started (--dry-run) - it would run:\n  %s\n  in %s"
               % (master, ", ".join(map(str, mods)), " ".join(cmd[:2]) + " <the trial prompt> " + " ".join(cmd[3:6]) + " ...", master))
