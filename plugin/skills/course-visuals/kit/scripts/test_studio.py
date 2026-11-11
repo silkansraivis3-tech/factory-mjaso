@@ -191,7 +191,8 @@ EVALS = {
          "children": ["Barge person in charge", "Bridge", "SIMOPS supervisor", "Company", "Port authority"]}],
         "steps": [{"title": "On board", "play": [["T", 4, 300]]}]},
         "f.layout(true);var ys={},right=0;[].forEach.call(svg.querySelectorAll('.kit-tree-box'),function(r){ys[Math.round(+r.getAttribute('y'))]=1;"
-        "right=Math.max(right,+r.getAttribute('x')+(+r.getAttribute('width')));});return {rows:Object.keys(ys).length,right:right};"),
+        "right=Math.max(right,+r.getAttribute('x')+(+r.getAttribute('width')));});var vb=svg.viewBox.baseVal;"
+        "return {rows:Object.keys(ys).length,right:right,frame:vb.x+vb.width};"),
     "layers": ({"size": [416, 254], "label": "a dryer and its pipes", "parts": [
         {"id": "R", "type": "space", "x": 10, "y": 10, "w": 396, "h": 234, "label": "room"},
         {"id": "X", "type": "exchanger", "x": 200, "y": 120, "r": 30, "label": "dryer"},
@@ -480,7 +481,8 @@ def main():
               v and v["A"] == [100, 80] and v["B"] == [100, 80] and v["C"] == [90, 20] and v["D"] == [125, 72], v)
         v = kit_eval(*EVALS["tree_rows"], width=290)    # shown at 0.7 as on the 1024 x 768 slide: the words grown 1.4x
         check("tree: five children in 400 wide go to two rows below the root, inside the width (IGF Advanced M16 s03: one row, "
-              "zoomed out, words at 10.5 px)", v and v.get("rows") == 3 and v.get("right", 1e9) <= 401, v)
+              "zoomed out, words at 10.5 px) - inside the drawing's frame, its words grown to the floor (they stopped at 9.2 px once the frame "
+              "had grown 1.3x)", v and v.get("rows") == 3 and v.get("right", 1e9) <= v.get("frame", 0) - 4, v)
         v = kit_eval(*EVALS["layers"])
         check("layers: the room at the back, the pipe over it, the equipment and words on top - though the spec lists the "
               "dryer before its pipe (IGF Advanced M04 s02: the dryer under its pipes)", v and v.get("order") == "RPXN", v)
@@ -631,10 +633,11 @@ def small_only_part(tmp):
                           small_only=((1024, 768),))
     small = lambda r: sorted(x for x in studio.problems(r) if x[2] == "small text") if r else None
     other = lambda r: sorted({x[2] for x in studio.problems(r)} - {"small text"}) if r else None
-    check("the small-text-only probe finds exactly the full audit's small-text findings (%d here)" % len(small(full) or []),
-          full and quick and small(full) and small(quick) == small(full), (small(full), small(quick)))
-    check("... and measures nothing else: no other check, no part boxes (the full one: %s)" % other(full),
-          other(quick) == [] and not ((quick or {}).get("sizes", {}).get("1024x768") or {}).get("parts"), (other(quick), quick and list(quick["sizes"])))
+    check("the small-text-only probe finds exactly the full audit's small-text findings (%d here: the floor is a clamp, a 200 x 130 "
+          "panel too)" % len(small(full) or []), full and quick and small(quick) == small(full) == [], (small(full), small(quick)))
+    check("... and measures nothing else: no other check, no part boxes - only the kit's own label places (the full one: %s)" % other(full),
+          set(other(quick) or []) <= {"label"} and not ((quick or {}).get("sizes", {}).get("1024x768") or {}).get("parts"),
+          (other(quick), quick and list(quick["sizes"])))
     out = os.path.join(tmp, "so_cli")
     code = studio.main([p, "--panel", "200x130", "--quick", "--out", out])
     check("studio.py --quick: the findings (exit %s), no screenshot taken" % code,

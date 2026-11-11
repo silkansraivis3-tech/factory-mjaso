@@ -36,7 +36,7 @@ Tints (hull spaces, panels): amber, green, blue, grey, red, violet - or any `#he
 |---|---|---|---|
 | `tank_c` | axis centre, axis along x | `r`, `len` (cylindrical part), `head` (end depth, r/2), `rings` [x] or a count, `ring_t` (band thickness), `saddles` [x], `saddle_w`, `base` (floor y, local), `cut` (front half away), `fill` (0..1 of the diameter; sub-part **liquid**), `insulation` (thickness, seen at the cut), `dome`, `liquid_color` | M01, M02, M07 |
 | `tank_sphere` | centre | `r`, `base`, `cut`, `fill` (sub-part **liquid**), `insulation`, `dome` | Moss |
-| `tank_prism` | centre, length along x | `size` [L, H, B], `chamfer`, `kind` "membrane" / "type_b" / "type_a" or `layers` [{`id`, `name`, `t`, `mat`}] from the inner hull inwards (each with an id is a sub-part), `hull` (inner hull plate 0.2), `cut` "end" (default: the section shows every layer) / "front" / false, `fill` (sub-part **liquid**) | containment |
+| `tank_prism` | centre, length along x | `size` [L, H, B], `chamfer`, `kind` "membrane" / "semi_membrane" (rounded corners, a tank plate for the membrane: a semi-membrane tank is drawn as one, never as a membrane) / "type_b" / "type_a" or `layers` [{`id`, `name`, `t`, `mat`}] from the inner hull inwards (each with an id is a sub-part), `hull` (inner hull plate 0.2), `cut` "end" (default: the section shows every layer) / "front" / false, `fill` (sub-part **liquid**) | containment |
 
 ## Piping
 

@@ -7,7 +7,7 @@
     {"words": ["tank connection space", "tcs"], "parts": ["space", "zone"]},
     {"words": ["fuel preparation room", "fuel preparation space"], "parts": ["space", "zone"]},
     {"words": ["engine room", "machinery space"], "parts": ["space", "zone"]},
-    {"words": ["fuel storage hold", "hold space", "hold"], "parts": ["space", "ga", "zone"]},
+    {"words": ["fuel storage hold", "hold space", "hold"], "parts": ["space", "ga", "midship", "zone"]},
     {"words": ["gas valve unit", "gas valve train", "gas regulating unit", "gvu"], "parts": ["gvu"], "kin": ["valve"], "equipment": true},
     {"words": ["main switchboard", "switchboard", "switchgear"], "parts": ["switchboard"], "equipment": true},
     {"words": ["propulsion motor", "electric motor", "motor"], "parts": ["motor"], "equipment": true},

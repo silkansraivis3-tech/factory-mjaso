@@ -441,6 +441,20 @@
       integral_tank: function (p) { var w = n(p.w, 160), h = n(p.h, 110); return { box: [0, 0, w, h], foot: [w / 2, h], ports: edges(0, 0, w, h) }; },
       boil_off: function (p) { var w = n(p.w, 260), h = n(p.h, 150); return { box: [0, 0, w, h], foot: [w / 2, h], ports: edges(0, 0, w, h) }; },
       tank_type: function (p) { var w = n(p.w, 150), h = n(p.h, 110); return { box: [0, 0, w, h], foot: [w / 2, h], ports: edges(0, 0, w, h) }; },
+      /* a midship section seen from forward (midship): the deck at 0 at the side, its camber above, the keel at h. The hold is
+         what the double bottom, the hoppers, the top-side tanks and a double side leave: "in" stands a cargo tank on its floor
+         (the inner bottom), "at" across the flat of it. The part draws from these same numbers */
+      midship: function (p) {
+        var w = n(p.w, 360), d = n(p.h, 200), cam = n(p.camber, w * 0.02), ib = d - d * n(p.bottom, 0.12);
+        var xl = Math.max(4, w * n(p.side, 0)), hop = p.hopper === false ? 0 : w * n(p.hopper, 0.14);
+        var top = p.topside === false ? 0 : w * n(p.topside, 0.16), hopY = ib - hop * 0.7, topY = top * 0.62;
+        return { box: [0, -cam, w, d], foot: [w / 2, d], floor: ib, room: true, span: [xl + hop, w - xl - hop], ib: ib, xl: xl, cam: cam,
+                 hopY: hopY, topY: topY, hold: [[xl + hop, ib], [w - xl - hop, ib], [w - xl, hopY], [w - xl, topY], [w - xl - top, 0],
+                                                [xl + top, 0], [xl, topY], [xl, hopY]],
+                 ports: edges(0, 0, w, d, { deck: [w / 2, -cam, 'up'], keel: [w / 2, d, 'down'], floor: [w / 2, ib, 'up'],
+                                            hold: [w / 2, (topY + ib) / 2, null], waterline: [w / 2, d * n(p.draft, 0.55), null],
+                                            side: [0, d * 0.4, 'left'] }) };
+      },
       space: function (p) {
         var w = n(p.w, 120), h = n(p.h, 90);
         return { box: [0, 0, w, h], foot: [w / 2, h], floor: h - 3, room: true, ports: edges(0, 0, w, h, { floor: [w / 2, h - 3, 'up'], ceiling: [w / 2, 3, 'down'] }) };
@@ -2121,10 +2135,20 @@
       P = PAD_PX / s;
       res = place(f, G, V, P);
     }
+    /* the floor is a clamp: a figure shown so small that UP_MAX, or a frame grown past GROW_MAX, stopped its words short
+       of it (M01 s10 at 1024 x 768: shown at 0.48, nine names at 12.1 px) has them grown to the floor all the same, once,
+       at the scale it is shown at - a crowded figure then shows in its labels' places, never in words too small to read */
+    var need = UP_MARGIN * (fl / FLOOR_PX) / s;
+    if (need > up + 1e-4) {
+      up = need; upTo(up);
+      G = gather(f, states);
+      P = PAD_PX / s;
+      res = place(f, G, V, P);
+    }
     inkOn(f);
     return { theme: f.tone, scale: +s.toFixed(3), up: +up.toFixed(3), zoom: +zoom.toFixed(3), view: V.map(function (v) { return +v.toFixed(1); }),
              minTextPx: G.minPx < 1e8 ? +(G.minPx * scaleNow(svg) / G.scale).toFixed(2) : null, labels: res.labels, moved: res.moved,
-             leaders: res.leaders, unplaced: res.unplaced, crowded: crowded, floorMet: !crowded && (up < upMax || s * UP_MAX >= 1), floorPx: fl };
+             leaders: res.leaders, unplaced: res.unplaced, crowded: crowded, floorMet: up * s * FLOOR_PX >= fl * 0.999, floorPx: fl };
   }
 
   /* ------------------------------------------------------------------ parts */
@@ -3069,7 +3093,7 @@
     mount: mount, controls: controls, Figure: Figure, types: TYPES, define: define, local: LOCAL, added: ADDED,
     reducedMotion: reducedMotion,
     /* 2.72.0 - a spec's relations ("on", "at", "from"/"to" ...) resolved to x / y / d, and every part's box and ports */
-    relate: RELATE.resolve, geometry: RELATE.geometry,
+    relate: RELATE.resolve, geometry: RELATE.geometry, shapes: RELATE.shapes,
     /* the drawing helpers every part uses - a new part uses these too, never its own */
     h: { el: el, lines: lines, label: label, gone: gone, widest: widest, readings: readings, clamp: clamp, num: num, fmt: fmt, polar: polar, arc: arc,
          drag: drag,
@@ -6298,6 +6322,14 @@ KIT.define('tank_type', function (fig, part, g, p) {
     h.el('path', { d: 'M' + (m0 + 12) + ' ' + (m1 + 12) + ' V' + (m1 + mh - 12) + ' M' + (m0 + mw - 12) + ' ' + (m1 + 12) + ' V' + (m1 + mh - 12), 'class': 'kit-tank-type-membrane' }, eq);
     barEl('rect', { x: m0 + 3, y: m1 + 3, width: mw - 6, height: mh - 6, rx: 3 });   // the second membrane: a complete barrier
     h.body('rect', { x: 4, y: m1 + mh + 6, width: w - 8, height: 8, rx: 2 }, eq, { mat: 'deck', shade: 'box' });
+  } else if (kind === 'semi_membrane') {
+    // semi-membrane tank: flat walls carried by the hull through the insulation, the corners rounded and standing free of it
+    var s0 = 10, sw = w - 20, sh = ht - 24, rr = Math.min(18, (sh - 24) / 3);
+    h.body('rect', { x: s0, y: s0, width: sw, height: sh, rx: 5 }, eq, { mat: 'hull', shade: 'box' });
+    h.body('rect', { x: s0 + 7, y: s0 + 7, width: sw - 14, height: sh - 14, rx: 2 }, eq, { mat: 'foam', shade: 'box' });
+    h.el('rect', { x: s0 + 12, y: s0 + 12, width: sw - 24, height: sh - 24, rx: rr, 'class': 'kit-tank-type-semi' }, eq);
+    barEl('rect', { x: s0 + 3, y: s0 + 3, width: sw - 6, height: sh - 6, rx: 3 });   // a complete secondary barrier, as a membrane's
+    h.body('rect', { x: 4, y: s0 + sh + 6, width: w - 8, height: 8, rx: 2 }, eq, { mat: 'deck', shade: 'box' });
   } else {
     // type C: a horizontal pressure vessel on two saddles - no secondary barrier
     var bh = Math.min(ht - 38, (w - 32) * 0.55);                  // always a horizontal vessel, whatever the box
@@ -6317,18 +6349,69 @@ KIT.define('tank_type', function (fig, part, g, p) {
   status: 'kit', merged_from: "IGF Basic M02",
   look: 'equipment',
   course: 'IGF Basic', module: 'M02', made: '2026-10-21',
-  why: 'M02 s07 and q05: the IMO tank types A, B and C and a membrane tank drawn side by side, the secondary barrier brought in by the value',
+  why: 'M02 s07 and q05: the IMO tank types A, B and C and a membrane tank drawn side by side, the secondary barrier brought in by the value; kind semi_membrane: flat walls on the insulation, rounded corners free of it',
   value: 'how much of the secondary barrier is drawn, 0..1',
   css: '.kit-tank-type-halo{fill:none;stroke:var(--deep);stroke-width:7;stroke-linejoin:round}' +
     '.kit-tank-type-barline{fill:none;stroke:var(--cold);stroke-width:3;stroke-dasharray:7 4;stroke-linecap:round}' +
     '.kit-tank-type-rib{stroke:var(--mat-edge-clad);stroke-width:1.5}' +
-    '.kit-tank-type-membrane{fill:none;stroke:var(--mat-edge-steel);stroke-width:2;stroke-linejoin:round}',
-  example: { size: [640, 190], parts: [
+    '.kit-tank-type-membrane{fill:none;stroke:var(--mat-edge-steel);stroke-width:2;stroke-linejoin:round}' +
+    '.kit-tank-type-semi{fill:var(--deep);stroke:var(--mat-edge-steel);stroke-width:3}',
+  example: { size: [800, 190], parts: [
     { id: 'A', type: 'tank_type', kind: 'a', x: 10, y: 20, label: 'type A' },
     { id: 'B', type: 'tank_type', kind: 'b', x: 170, y: 20, label: 'type B' },
     { id: 'C', type: 'tank_type', kind: 'c', x: 330, y: 20, label: 'type C' },
-    { id: 'M', type: 'tank_type', kind: 'membrane', x: 490, y: 20, label: 'membrane' } ],
-    steps: [ { title: 'The secondary barrier', play: [['A', 1, 800], ['B', 1, 800], ['M', 1, 800]] } ] }
+    { id: 'M', type: 'tank_type', kind: 'membrane', x: 490, y: 20, label: 'membrane' },
+    { id: 'S', type: 'tank_type', kind: 'semi_membrane', x: 650, y: 20, label: 'semi-membrane' } ],
+    steps: [ { title: 'The secondary barrier', play: [['A', 1, 800], ['B', 1, 800], ['M', 1, 800], ['S', 1, 800]] } ] }
+});
+/* end kit-part */
+/* kit-part: midship */
+KIT.define('midship', function (fig, part, g, p) {
+  /* a ship's midship section, seen from forward: the side shell round its bilges, the deck with its camber, the double
+     bottom, the hopper and top-side tanks (and a double side with "side") in their ballast tint, and the hold they leave,
+     where a cargo tank stands ("in": this part). A section, not a side view: no anchor, no propeller, no superstructure */
+  var h = KIT.h, w = p.w || 360, d = p.h || 200, S = KIT.shapes.midship(p), r = Math.min(w * 0.08, d * 0.2), wl = d * (p.draft != null ? p.draft : 0.55);
+  var shell = 'M0 0 Q' + (w / 2) + ' ' + (-2 * S.cam) + ' ' + w + ' 0 V' + (d - r) + ' Q' + w + ' ' + d + ' ' + (w - r) + ' ' + d +
+    ' H' + r + ' Q0 ' + d + ' 0 ' + (d - r) + ' Z';
+  var hold = 'M' + S.hold.map(function (q) { return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join(' L') + ' Z';
+  if (p.water !== false) {
+    h.el('rect', { x: -12, y: wl, width: w + 24, height: d - wl + 10, 'class': 'kit-ga-sea', 'data-no-contain': '', 'data-may-overlap': '', 'data-low-contrast': '' }, g);
+  }
+  var ship = h.equip(g, { shadow: false });
+  h.body('path', { d: shell }, ship, { mat: 'hull' });
+  var tanks = h.el('path', { d: shell + ' ' + hold, 'fill-rule': 'evenodd', 'class': 'kit-midship-tanks' }, ship);
+  var room = h.el('path', { d: hold, 'class': 'kit-midship-hold' }, ship);
+  var steel = 'M' + r + ' ' + S.ib + ' H' + (w - r);                                      // the inner bottom out to the bilges
+  if (S.xl > 4.5) steel += ' M' + S.xl + ' ' + S.topY + ' V' + S.ib + ' M' + (w - S.xl) + ' ' + S.topY + ' V' + S.ib;   // a double side
+  h.el('path', { d: steel, 'class': 'kit-midship-steel', 'data-no-contain': '' }, ship);         // lines of steel, never a box
+  h.el('path', { d: hold, 'class': 'kit-midship-steel', 'data-no-contain': '' }, ship);
+  h.el('path', { d: shell, 'class': 'kit-ga-hull' }, ship);
+  var lit = [h.el('path', { d: hold, 'class': 'kit-wash', 'data-no-contain': '' }, g),
+             h.el('path', { d: shell + ' ' + hold, 'fill-rule': 'evenodd', 'class': 'kit-wash', 'data-no-contain': '' }, g)];
+  var L = p.labels || {};
+  if (L.hold) h.label(fig, g, { x: w / 2, y: S.topY + 16, 'text-anchor': 'middle', 'class': 'kit-cap' }, L.hold, { inside: true, within: room });
+  /* the tanks are thin bands of the section: their names stand outside the hull, a leader to the tank they name */
+  if (L.bottom) h.label(fig, g, { x: w * 0.3, y: d + 22, 'text-anchor': 'middle', 'class': 'kit-cap' }, L.bottom, { at: [w * 0.3, (S.ib + d) / 2] });
+  if (L.topside) h.label(fig, g, { x: S.xl, y: -S.cam - 14, 'class': 'kit-cap' }, L.topside, { at: [S.xl + (S.hold[5][0] - S.xl) * 0.3, S.topY * 0.3] });
+  if (L.hopper) h.label(fig, g, { x: 0, y: d + 22, 'class': 'kit-cap' }, L.hopper, { at: [S.xl + (S.hold[0][0] - S.xl) * 0.3, S.ib - (S.ib - S.hopY) * 0.3] });
+  if (p.label) h.label(fig, g, { x: w / 2, y: d + 26, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    lit[0].style.opacity = h.clamp(1 - Math.abs(v - 1), 0, 1).toFixed(3);         // 1 the hold
+    lit[1].style.opacity = h.clamp(1 - Math.abs(v - 2), 0, 1).toFixed(3);         // 2 the double bottom and the side tanks
+    tanks.classList.toggle('kit-lit', v > 1.5);
+  };
+}, {
+  family: 'spaces',
+  status: 'kit',
+  look: 'equipment',
+  why: 'a midship section was drawn on a side-view ship (ga): an anchor and a propeller in a section, a cargo tank placed in the double bottom by a guessed y. A section of its own: the hold a tank stands in, the ballast tanks round it',
+  value: '0 at rest, 1 the hold picked out, 2 the double bottom, hopper and top-side tanks picked out; options w h bottom (0.12 of h) hopper (0.14 of w, false: none) topside (0.16 of w, false: none) side (a double side, a share of w) camber draft water labels:{hold,bottom,topside,hopper} label',
+  css: '.kit-midship-tanks{fill:var(--cold);opacity:.16;transition:opacity .3s}.kit-midship-tanks.kit-lit{opacity:.32}' +
+    '.kit-midship-hold{fill:var(--deep)}.kit-midship-steel{fill:none;stroke:var(--dim-d);stroke-width:2;stroke-linejoin:round}',
+  example: { size: [420, 280], parts: [
+    { id: 'M', type: 'midship', x: 40, y: 30, w: 340, h: 200, labels: { hold: 'hold' } },
+    { id: 'K', type: 'tank_type', kind: 'a', 'in': 'M', at: 0.5, w: 200, h: 112, label: 'cargo tank' } ],
+    steps: [ { title: 'The hold', play: [['M', 1, 600]] }, { title: 'The ballast tanks round it', play: [['M', 2, 600]] } ] }
 });
 /* end kit-part */
 /* kit-part: gvu */
