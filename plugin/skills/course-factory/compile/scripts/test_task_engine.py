@@ -282,6 +282,9 @@ DECK_DRIVER = r"""
         document.getElementById('startBtn').click();
         document.getElementById('btnCue').click();
         out.cue = txt('#cue .tag');
+        var ct = q('#counter');
+        out.counter = [txt('#counter'), getComputedStyle(ct.querySelector('b') || ct).fontVariantNumeric,
+                       document.querySelectorAll('.slide').length, txt('.slide.active .slide-kind')];
       } catch (err) { out.errors.push(String(err && err.stack || err)); }
       var pre = document.createElement('pre'); pre.id = 'gbtest'; pre.textContent = JSON.stringify(out);
       document.body.appendChild(pre);
@@ -340,6 +343,10 @@ def deck_language_part(exe, tmp):
     check("the same deck as an English page keeps the frame's own English words",
           not r.get("errors") and (r.get("labels") or {}).get("btnNext") == "Next|Next (→)" and r.get("cue") == "Instructor cue"
           and r.get("back") == "Back", r)
+    ct = r.get("counter") or ["", "", 0, ""]
+    check("the footer counter says the header's slide number, in lining figures as the header has them (M19: Raleway's "
+          "old-style \"1\" of \"1 / 17\" was read as \"5\")",
+          ct[0] == "1 / %d" % ct[2] and "lining-nums" in ct[1] and (" 1 / %d" % ct[2] in (ct[3] or "") or not re.search(r"\d+ / \d+", ct[3] or "")), ct)
     eng = io.open(os.path.join(tcm.SKILLS, "course-module-ux", "assets", "gb_deck.js"), encoding="utf-8").read()
     check("the deck engine has its words in lv and ru, chosen by <html lang>, marked PROVISIONAL",
           "Tālāk" in eng and "Далее" in eng and "PROVISIONAL" in eng and 'documentElement.getAttribute("lang")' in eng)
@@ -620,6 +627,62 @@ def lum(css):
     """the luminance of an rgb() colour, 0 .. 255"""
     v = [float(x) for x in re.findall(r"[\d.]+", css or "")[:3]] or [0, 0, 0]
     return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+
+SWAP = MC_PLAN[1][1][0][1]                  # two labels of the drawing swapped, the third in its own box
+EVENTS = ["The compressor tripped", "Pressure rose", "The alarm was silenced", "Nobody reported it",
+          "The relief valve lifted", "Gas reached the deck", "The crew mustered"]
+MC_WRONG = [["eval", "document.getElementById('go').click();"], ["m01", [["eval", SWAP]]], ["m02", [["tap", ".opt", "open"]]],
+            ["m03", [["card", t, n] for n, t in enumerate(EVENTS, 1)] + [["dock"], ["dock"], ["stop", "Pressure rose"]]]]
+NO_MOVE = "var nm=document.createElement('style');nm.textContent='*,*::before,*::after{transition:none!important;animation:none!important}';document.head.appendChild(nm);"
+# the top bar on the screen on show: its ground, where the screen's first box starts at the top of the page, and the bar
+# again with the page scrolled to its end
+BAR_AT = ("var st=document.querySelector('header.state'),sc=document.querySelector('.scr.on'),f=sc.firstElementChild;"
+          "function a(x){var m=getComputedStyle(x).backgroundColor.match(/[\\d.]+/g)||[];return m.length>3?+m[3]:m.length?1:0;}"
+          "window.scrollTo(0,0);var o={bg:getComputedStyle(st).backgroundColor,alpha:a(st),body:getComputedStyle(document.body).backgroundColor,"
+          "bar:st.getBoundingClientRect().bottom,first:f.getBoundingClientRect().top};"
+          "window.scrollTo(0,1e6);o.y=scrollY;o.top=st.getBoundingClientRect().top;o.alpha2=a(st);window.scrollTo(0,0);out['%s']=o;")
+LONG = "var lg=document.createElement('style');lg.textContent='.res li{min-height:240px}';document.head.appendChild(lg);"
+
+
+def result_part(exe, page, tmp):
+    """the result screen after a wrong run, at the three tablet sizes: each card's real place in words (a label box on a
+    picture has no name: where it is), never "?"; the top bar the ground's own colour on white and on Navy, the screen
+    starting below it and hidden under it when scrolled - never crossed by its line; and the dial's number from the start"""
+    print("\n-- the result screen: where each card was put, below a top bar that is never see-through")
+    os.makedirs(os.path.join(tmp, "rs"))
+    c, md = tcm.new_course(os.path.join(tmp, "rs"), tcm.script(screens=FIXES), build=False)
+    io.open(os.path.join(md, "assets", "fig", "prep.svg"), "w", encoding="utf-8").write(PREP)
+    io.open(os.path.join(md, "assets", "fig", "ga.svg"), "w", encoding="utf-8").write(tcm.GA)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "t01": {"try_tablet": False}, "q01": {"figure": "assets/fig/prep.svg"}, "m01": {"figure": "assets/fig/ga.svg"}}})
+    tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    mc = os.path.join(md, "assessment", "check.html")
+    check("the module check is built with feedback off (the debrief rule)", 'data-reveal="debrief"' in io.open(mc, encoding="utf-8").read())
+    for n, size in enumerate(((1280, 800), (1024, 768), (1280, 720))):
+        r = drive(exe, mc, [["eval", NO_MOVE + BAR_AT % "intro"]] + MC_WRONG + [["eval", LONG + RES_LOOK + BAR_AT % "result"]],
+                  tmp, look=False, size=size)
+        i, o, at = r.get("intro") or {}, r.get("result") or {}, "%d x %d" % size
+        if not n:
+            res, its = r.get("res") or [], (r.get("report") or {}).get("items") or []
+            lab = res[0].get("fix", "") if res else ""
+            check("label the drawing, two swapped: the result says where the trainee put each card - which label box, above "
+                  "or below the picture - never \"?\" (the trial's \"Type B spherical tank: ?\")",
+                  not r.get("errors") and "Fuel tank: the label" in lab and "Tank connection space: the label" in lab
+                  and "?" not in json.dumps(res) and its and "?" not in its[0].get("a", "?") and "the label" in its[0].get("a", ""),
+                  (r.get("errors"), res, its[:1]))
+        check(at + ": the top bar is the ground's own colour on a white screen and on the Navy result - never see-through",
+              i.get("alpha") == 1 and i.get("bg") == i.get("body") and o.get("alpha2") == 1 and o.get("bg") == o.get("body")
+              and o.get("body") == "rgb(10, 36, 99)", (i, o))
+        check(at + ": the screen starts below the bar, and scrolled to its end the bar stays on top of it",
+              i.get("first", -1) >= i.get("bar", 9e9) - 1 and o.get("first", -1) >= o.get("bar", 9e9) - 1
+              and o.get("y", 0) > 0 and abs(o.get("top", 9)) < 1, (i, o))
+    r = drive(exe, page, RIGHT[:3] + [["q04", [["eval", "out.dial0 = [s.querySelector('.dial-val').textContent,"
+                                                       " s.querySelector('.dial-scale span').textContent, document.getElementById('go').disabled];"],
+                                                ["plus", 9]]]], tmp, look=False)
+    d = r.get("dial0") or ["", "", None]
+    check("set the value: the number shows the value the thumb sits at from the start (the trial's \"- °C\" at -170), and "
+          "Check waits until it is moved", d[0] and d[1].split()[0] == d[0] and d[2] is True, d)
 
 
 def fixes_part(exe, tmp):
@@ -1493,6 +1556,10 @@ REVIEW = [
     {"id": "m02", "kind": "module-check", "set": "MC", "mechanic": "single_choice", "question": "Is venting acceptable?",
      "options": ["Yes", "No, only in an emergency"], "correct": "B", "feedback": "Only in an emergency."},
 ]
+REVIEW_WRONG = [["r01", [["card", "the tank valves", 1], ["card", "pumps and vaporizers", 2], ["card", "the vapour outlet", 3]]],
+                ["r02", [["card", "Connect the hose", 1], ["card", "Safety meeting", 2], ["card", "Transfer", 3], ["card", "Disconnect", 4]]],
+                ["r03", [["tap", ".opt", "Coal"]]],
+                ["r04", [["tap", ".opt", "No, only in an emergency"]]]]
 RES_LOOK = ("var L=[].slice.call(document.querySelectorAll('#resList > li'));"
             "out.res=L.map(function(li){var o={cls:li.className,fix:li.querySelector('.fix')?li.querySelector('.fix').textContent.replace(/\\s+/g,' ').trim():''};"
             "o.mine=[].map.call(li.querySelectorAll('s.mine'),function(x){return x.textContent;});"
@@ -1518,12 +1585,7 @@ def review_part(exe, tmp):
     check("the self-check and module-check pages are built", code == 0 and sc and os.path.isfile(mc), out[-800:])
     if not sc or not os.path.isfile(mc):
         return
-    plan = [["r01", [["card", "the tank valves", 1], ["card", "pumps and vaporizers", 2], ["card", "the vapour outlet", 3]]],
-            ["r02", [["card", "Connect the hose", 1], ["card", "Safety meeting", 2], ["card", "Transfer", 3], ["card", "Disconnect", 4]]],
-            ["r03", [["tap", ".opt", "Coal"]]],
-            ["r04", [["tap", ".opt", "No, only in an emergency"]]],
-            ["eval", RES_LOOK]]
-    r = drive(exe, sc[0], plan, tmp, look=False)
+    r = drive(exe, sc[0], REVIEW_WRONG + [["eval", RES_LOOK]], tmp, look=False)
     res, rep = r.get("res") or [], r.get("report") or {}
     check("no script error", not r.get("errors"), r.get("errors"))
     check("the classroom hears the report (1 of 4) - its fields, and since 2.67.0 detail: 2 (each question whole)",
@@ -1739,6 +1801,7 @@ THEME_LOOK = ("document.body.style.transition='none';var a=[].slice.call(documen
               "getComputedStyle(document.getElementById('go')).backgroundColor,o?getComputedStyle(o).borderTopLeftRadius:'']);});out.theme=r;")
 
 
+# every word on every screen and its top bar, the screen tried white AND Navy, against what is behind it: WCAG 4.5:1
 CONTRAST = r"""var nt=document.createElement('style');nt.textContent='*,*::before,*::after{transition:none!important;animation:none!important}';document.head.appendChild(nt);
 function rgb(s){var m=s.match(/[\d.]+/g)||[0,0,0,0];return {r:+m[0],g:+m[1],b:+m[2],a:m.length>3?+m[3]:1};}
 function lum(c){return [c.r,c.g,c.b].map(function(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);}).reduce(function(s,v,i){return s+v*[.2126,.7152,.0722][i];},0);}
@@ -1747,13 +1810,14 @@ function ground(e){var st=[];for(var x=e;x&&x.nodeType===1;x=x.parentElement){va
   var gi=cx.backgroundImage.match(/rgba?\([^)]*\)/);if(c.a===0&&gi){c=rgb(gi[0]);}   /* a gradient: its first colour */
   if(c.a>0){st.push(c);if(c.a>=1)break;}}
   var b=rgb(getComputedStyle(document.body).backgroundColor);for(var i=st.length-1;i>=0;i--){b=over(st[i],b);}return b;}
-var bad=[],seen=0;[].forEach.call(document.querySelectorAll('section.scr'),function(s){var own=/th-n/.test(s.className)?'th-n':'th-w';
-  (s.hasAttribute('data-script')?['th-w','th-n']:[own]).forEach(function(th){
+var bad=[],seen=0;[].forEach.call(document.querySelectorAll('section.scr'),function(s){
+  ['th-w','th-n'].forEach(function(th){
   [].forEach.call(document.querySelectorAll('section.scr'),function(y){y.classList.remove('on');});s.classList.remove('th-w','th-n');s.classList.add('on',th);
-  var w=document.createTreeWalker(s,NodeFilter.SHOW_TEXT);for(var n=w.nextNode();n;n=w.nextNode()){if(!n.nodeValue.trim())continue;var e=n.parentElement;
+  [s,document.querySelector('header.state')].forEach(function(root){if(!root)return;
+  var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);for(var n=w.nextNode();n;n=w.nextNode()){if(!n.nodeValue.trim())continue;var e=n.parentElement;
     var r=e.getBoundingClientRect(),cs=getComputedStyle(e);if(!r.width||cs.visibility==='hidden'||+cs.opacity===0||e.closest('svg,.vh,[hidden]'))continue;
     var f=rgb(cs.color),g=ground(e);f=over(f,g);var L1=lum(f),L2=lum(g),cr=(Math.max(L1,L2)+.05)/(Math.min(L1,L2)+.05);seen++;
-    if(cr<3)bad.push([s.getAttribute('data-script')||s.id,th,n.nodeValue.trim().slice(0,30),Math.round(cr*10)/10,e.tagName.toLowerCase()+'.'+(e.className||'').toString().replace(/ /g,'.'),(e.parentElement.className||'').toString()]);}});});
+    if(cr<4.5)bad.push([s.getAttribute('data-script')||s.id,th,n.nodeValue.trim().slice(0,30),Math.round(cr*10)/10,e.tagName.toLowerCase()+'.'+(e.className||'').toString().replace(/ /g,'.'),(e.parentElement.className||'').toString()]);}});});});
 out.contrast={seen:seen,bad:bad};"""
 
 
@@ -2222,6 +2286,7 @@ def look_part(exe, page, tmp):
           navy and white and all(x[1] == "rgb(10, 36, 99)" for x in navy) and all(x[1] == "rgb(247, 248, 250)" for x in white)
           and {x[2] for x in navy}.isdisjoint({x[2] for x in white}), got)
     pages = [page]
+    answered = {page: WRONG}            # answered wrong too: the verdicts, a scenario's folded steps, the result's list
     for name, screens in (("cr", REVIEW), ("cf", FIXES)):       # the other ways of answering: order, match, sort, tap, label ...
         os.makedirs(os.path.join(tmp, name))
         c, md = tcm.new_course(os.path.join(tmp, name), tcm.script(screens=screens), build=False)
@@ -2234,19 +2299,28 @@ def look_part(exe, page, tmp):
         tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
         pages += [os.path.join(md, d, f) for d in ("tasks", "assessment") if os.path.isdir(os.path.join(md, d))
                   for f in sorted(os.listdir(os.path.join(md, d))) if f.endswith(".html") and "answer_key" not in f]
+        # built with feedback off: the debrief's words under each wrong question of the result
+        if name == "cr":
+            answered[os.path.join(md, "tasks", "sc1_self_check_1.html")] = REVIEW_WRONG
+        else:
+            answered[os.path.join(md, "assessment", "check.html")] = MC_WRONG
     import test_interact_types as tit                          # the ten interactive types
     c, md, _, _ = tit.course(os.path.join(tmp, "ci"))
     pages += [os.path.join(md, "tasks", f) for f in sorted(os.listdir(os.path.join(md, "tasks"))) if f.endswith(".html")]
-    bad, seen = [], 0
-    for pg in pages:
-        con = drive(exe, pg, [["eval", CONTRAST]], tmp, look=False).get("contrast") or {}
+    bad, seen, runs = [], 0, [(pg, None) for pg in pages] + list(answered.items())
+    for pg, plan in runs:
+        r = drive(exe, pg, (plan or []) + [["eval", CONTRAST]], tmp, look=False)
+        con = r.get("contrast") or {}
         seen += con.get("seen", 0)
-        bad += [[os.path.basename(pg)] + x for x in con.get("bad") or []]
+        bad += [[os.path.basename(pg) + (" answered" if plan else "")] + x for x in con.get("bad") or []]
+        if plan and not (r.get("report") or {}).get("total"):
+            bad.append([os.path.basename(pg), "the answered run did not reach the result", r.get("errors")])
     for x in bad[:80]:
         print("    " + " | ".join(str(v) for v in x))
-    check("every word on every screen of every way of answering, each tried white AND Navy, stands out from what is behind it "
-          "(contrast 3:1 or more) - on a Navy screen a part on its own pale card keeps dark words, and a table drops its white",
-          len(pages) >= 5 and seen > 300 and not bad, bad[:30] or (len(pages), seen))
+    check("every word on every screen of every way of answering, and on its top bar, each screen tried white AND Navy, stands "
+          "out from what is behind it (WCAG 4.5:1) - as asked and as answered wrong, with the result's list under each wrong "
+          "question (the answer, the brief reason, the debrief line) - on a Navy screen a part on its own pale card keeps dark words",
+          len(pages) >= 5 and len(answered) == 3 and seen > 300 and not bad, bad[:30] or (len(pages), seen))
     css_look = io.open(os.path.join(tcm.SKILLS, "course-task-ux", "assets", "gb_task_look.css"), encoding="utf-8").read()
     rules = re.sub(r":root\{[^}]*\}", "", re.sub(r"/\*.*?\*/", "", css_look, flags=re.S))
     check("the look changes no size or place - no width, height, padding, margin, grid, position, font size or weight of "
@@ -2322,6 +2396,7 @@ def main():
         ship_plan_part(exe, tmp)
         figures_part(exe, tmp)
         fixes_part(exe, tmp)
+        result_part(exe, page, tmp)
         picture_part(exe, tmp)
         corner_part(exe, tmp)
         last_parts_part(exe, tmp)
