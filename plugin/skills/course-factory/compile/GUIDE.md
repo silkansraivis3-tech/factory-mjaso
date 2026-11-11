@@ -863,6 +863,9 @@ course\
     practical-kit\EMPLOYER_SHEET_<course>.pdf / .docx   one page for the company (`instructor-led/GUIDE.md`)
   modules\_course_shell\advanced_course_plan.html      the ACP on the instructor's tablet
   modules\moduleNN\instructor\advanced_module_plan.html   the module explained step by step, for the tablet
+  modules\moduleNN\instructor\papers\     the module's simulator and equipment papers again (trainee card and
+                                          instructor sheet, HTML and PDF): the plan's step links each, so the
+                                          instructor opens it on the tablet and prints the PDF
 ```
 
 - **The ACP** follows the school's ACP: the course's facts (programme, standard, model course, hours and days, group,
@@ -877,9 +880,23 @@ course\
   programme's timetable when that splits a module differently.
 - **A task's kind on paper**: simulator / equipment / room, from its own words and its practical's equipment
   (`architecture.json` `"practicals"`); `course.build.json` `"paper_tasks": {"M09.A02": "equipment"}` when the words
-  mislead. Only simulator and equipment exercises go into `simulator-and-equipment\`.
-- **The two tablet pages stand alone** - their style inline, no stylesheet, script or link out - so the instructor
-  panel can open them over itself and close them again. Both are instructor-only by their folder.
+  mislead. Only simulator and equipment exercises go into `simulator-and-equipment\`. A simulator is a simulator: a
+  "simulated" gas fire on the fire ground or a "real-life simulation" on the rescue rig is real equipment (or a room).
+  `coverage/scripts/sim_coverage.py practical <course>` lists by the same rule which modules have which.
+- **The tablet pages stand alone** - their style inline, no stylesheet or script, no link but the module plan's to its
+  own papers - so the instructor panel can open them over itself and close them again. All are instructor-only by their
+  folder: the app's import never copies them to a trainee.
+- **Steps that carry their own numbers** ("1. Switch on ...") are printed as they are, never numbered again.
+- **One paper per practical.** The activity screens of one practical carry the same `"paper"` (`script/GUIDE.md`):
+  one trainee card (the trainees' parts) and one instructor sheet (every part, the brief, demonstration and debrief
+  marked as the instructor's, each part's notes), one step in the module plan, one line in the Prepare list. The
+  practical kit stays per screen. A screen with no `"paper"` is a paper of its own.
+- **An approved exercise form is the paper** of the screen that names it (`"exercise"`): printed from its content
+  files, never from the slide (a simulator draft only once the course director accepted it - `coverage/SIMULATORS.md`).
+- **The instructor sheet ends** with the approved `instructor_led.json`'s criteria for its Sub-ILOs (must pass, at
+  which step), what each part's debrief must observe, the IMO model course's part in it and the module's sources.
+- **English only on the papers**: a practical's equipment the course files hold only in the programme's language is
+  named by the programme's codes (M8, M9) and said on the build - write `"equipment_en"` beside it in architecture.json.
 - **PDF** is printed by the hidden Chrome or Edge (`browser_slots`) from a copy kept in
   `working_claude\additional_materials\`, and only when its page changed (`working_claude\additional_materials.json`):
   the first build of a 21-module course about 2 minutes, a rebuild seconds. `--no-pdf` skips it (said as a problem).

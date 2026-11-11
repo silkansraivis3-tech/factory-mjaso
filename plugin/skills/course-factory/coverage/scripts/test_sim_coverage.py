@@ -177,6 +177,61 @@ def main():
               code == 0 and task.get("accepted_by") == "A. Director" and task.get("accepted")
               and sim_coverage.pending(adv) == [] and "to_review\\exercises\\M29" in msg, (msg, task))
 
+        print("\n-- practical: which modules have simulator or equipment exercises, and which none")
+        gas = os.path.join(tmp, "gas", "course")
+        gw = os.path.join(gas, "working_claude")
+        write(os.path.join(gw, "programme.json"), {
+            "title": "Basic training for liquefied gas tanker cargo operations", "imo_model_course": "1.04", "academic_hour_min": 40,
+            "topics": {"1": {"title": "Gas tankers", "theory": 2, "practical": 0}, "8": {"title": "Gas measuring", "theory": 2, "practical": 2},
+                       "9": {"title": "Safety equipment", "theory": 2, "practical": 2}, "16": {"title": "Foam", "theory": 0.25, "practical": 2},
+                       "23": {"title": "Final", "theory": 2, "practical": 1, "assessment": True}}})
+        write(os.path.join(gw, "plan.json"), {"modules": [{"module": 1, "topics": ["1"]}, {"module": 8, "topics": ["8"]},
+                                                         {"module": 9, "topics": ["9"]}, {"module": 16, "topics": ["16"]}]})
+        write(os.path.join(gw, "architecture.json"), {"course": {"title": "Basic training for liquefied gas tanker cargo operations"}, "modules": [
+            {"module": 8, "practicals": [{"task": "Personal and portable gas detectors: bump test", "equipment": "portable gas detectors", "place": "practical room"}]},
+            {"module": 16, "practicals": [{"task": "Foam applicator on a liquid fire, in teams", "equipment": "M18 gas-fire simulation equipment", "place": "fire-ground"}]}]})
+        manual = os.path.join(tmp, "gas", "source_files", "Simulator Manuals", "LCHS-TechSim_LPG_Tanker_Generic_v.1.0_Trainee_Manual.pdf")
+        write(manual, "x")
+        p = sim_coverage.practical(gas)
+        got = {n: (r["minutes"], r["kind"]) for n, r in p["modules"].items()}
+        check("the programme's practice minutes and the architecture's practicals, module by module - the final assessment is "
+              "not a practical", got == {8: (80, "equipment"), 9: (80, "unnamed"), 16: (80, "equipment")}, got)
+        check("a gas fire on the fire ground's \"simulation equipment\" is real equipment, never a simulator",
+              p["modules"][16]["practicals"][0]["kind"] == "equipment", p["modules"][16])
+        sys.path.insert(0, os.path.join(HERE, "..", "..", "compile", "scripts"))
+        import additional_materials as am
+        check("... by the same rule the additional materials print the papers by",
+              (sim_coverage.SIM_WORDS.pattern, sim_coverage.EQUIPMENT_WORDS.pattern) == (am.SIM_WORDS.pattern, am.EQUIPMENT_WORDS.pattern)
+              and am.classify("M18 gas-fire simulation equipment") == "equipment" and am.classify("real-life simulation (K3)") == "room"
+              and am.classify("Wärtsilä LCHS simulator room") == "simulator")
+        lines = sim_coverage.practical_lines(p)
+        check("a module with practice minutes and no practical named is said", any(x.startswith("M09") and "no practical named" in x
+                                                                                  for x in lines), lines)
+        check("a basic course: L66's map does not apply, and it is said", not p["l66"]["needed"]
+              and any(x.startswith("No simulator exercise in the architecture") for x in lines), lines)
+        check("... but its IMO model course asks for simulator exercises (MC 1.04, the topics marked *), and the manual in its "
+              "sources is named", p["l66"].get("model_course", {}).get("id") == "1.04" and p["l66"]["codes"] == ["LPG", "LNG-MEM", "LNG-SPH"]
+              and any("2.4 Emergency shutdown" in x for x in lines) and any(x.startswith("Manuals in the sources: LPG") for x in lines), lines)
+        os.remove(manual)
+        lines = sim_coverage.practical_lines(sim_coverage.practical(gas))
+        check("without a simulator manual in the sources the factory asks for it and never writes a procedure without it",
+              any(x.startswith("No simulator manual in the sources") and "never write a simulator procedure" in x for x in lines), lines)
+        cat = {s["code"]: s for s in sim_coverage.catalogue()["simulators"]}
+        write(os.path.join(tmp, "gas", "source_files", "Simulator - LCHS 5000 VLCC Tanker and Crude Oil Terminal - Trainee Manual.pdf"), "x")
+        check("the oil and chemical simulators whose manuals are in the sources are catalogued (VLCC 105 p, PROD 82 p, CHEM 109 p), "
+              "and a manual is found under the other name a course gave it",
+              [cat[c]["manuals"][0]["pages"] for c in ("VLCC", "PROD", "CHEM")] == [105, 82, 109]
+              and {"VLCC", "PROD"} <= set(sim_coverage.catalogue()["courses"]["oil-advanced"]["simulators"])
+              and sim_coverage.catalogue()["courses"]["chemical-advanced"]["simulators"] == ["CHEM"]
+              and bool(sim_coverage.manuals_in_sources(gas, ["VLCC"])["found"].get("VLCC")))
+        none = os.path.join(tmp, "pm", "course")
+        write(os.path.join(none, "working_claude", "programme.json"), {"title": "Project management", "academic_hour_min": 45,
+                                                                       "topics": {"1": {"title": "Planning", "theory": 4, "practical": 0}}})
+        p = sim_coverage.practical(none)
+        lines = sim_coverage.practical_lines(p)
+        check("a course with no practical work gets none, and says so", p["modules"] == {} and len(lines) == 1
+              and lines[0].startswith("No practical work in this course"), lines)
+
         print("\n-- course_gate says it, never stops on it")
         note = course_gate.sim_note(course(tmp, "Advanced k", None))
         check("the gate names L66 on an advanced course with no map", note and "L66" in note, note)

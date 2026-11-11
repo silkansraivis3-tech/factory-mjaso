@@ -108,6 +108,43 @@ def main():
         check("... and copies the decisions, the course named FACTORY TRIAL", intake["course_name"] == "FACTORY TRIAL"
               and intake["asked"][0]["answer"] == "FACTORY TRIAL" and os.path.isfile(os.path.join(home, "decisions", "kb_sources.json")), intake)
 
+        print("\n-- the trial's modules: one with practical work, unless told")
+        gas = os.path.join(tmp, "GAS PRACTICAL")
+        for d in ("source_files", "old_course"):
+            os.makedirs(os.path.join(gas, d))
+        gw = os.path.join(gas, "course", "working_claude")
+        os.makedirs(gw)
+        shutil.copy2(os.path.join(wc, "intake.json"), gw)
+        topics = {str(n): {"title": "Topic %d" % n, "theory": 2, "practical": 0} for n in range(1, 20)}
+        topics["8"]["practical"] = topics["16"]["practical"] = 2
+        topics["16"]["theory"] = 0.25
+        dump = lambda name, obj: io.open(os.path.join(gw, name), "w", encoding="utf-8").write(json.dumps(obj))
+        dump("programme.json", {"title": "Basic training for liquefied gas tanker cargo operations", "academic_hour_min": 40, "topics": topics})
+        dump("plan.json", {"modules": [{"module": n, "topics": [str(n)], "built_min": 40 * (topics[str(n)]["theory"] + topics[str(n)]["practical"])}
+                                       for n in range(1, 20)]})
+        dump("architecture.json", {"course": {"title": "Basic training"}, "modules": [
+            {"module": 8, "practicals": [{"task": "Portable gas detectors: bump test", "equipment": "portable gas detectors"}]},
+            {"module": 16, "practicals": [{"task": "Foam applicator on a liquid fire", "equipment": "gas-fire simulation equipment, hoses"}]}]})
+        home2 = os.path.join(tmp, "home2")
+        code, out = cli("setup", "--home", home2, "--from", gas)
+        cfg2 = json.load(io.open(os.path.join(home2, "trial.json"), encoding="utf-8"))
+        check("setup without --modules builds the first module and the cheapest one with practical work (the 2.128 trial's "
+              "modules 1 and 19 had none: no paper exercise was ever built)", code == 0 and cfg2["modules"] == [1, 16], (out, cfg2))
+        code, out = cli("setup", "--home", home2, "--from", gas, "--modules", "1,19")
+        check("... modules given by hand that build no practical work are said, with the one that would",
+              code == 0 and "Modules 1, 19 have no simulator or equipment exercise" in out and "M16 would" in out, out)
+        arch = json.load(io.open(os.path.join(gw, "architecture.json"), encoding="utf-8"))
+        arch["modules"].append({"module": 4, "practicals": [{"task": "Loading on the LPG cargo handling simulator", "equipment": "LCHS"}]})
+        dump("architecture.json", arch)
+        check("... a simulator exercise comes before real equipment", ft.default_modules(os.path.join(gas, "course")) == [1, 4],
+              ft.default_modules(os.path.join(gas, "course")))
+        dump("architecture.json", {"course": {"title": "Basic training"}, "modules": []})
+        for t in topics.values():
+            t["practical"] = 0
+        dump("programme.json", {"title": "Project management", "academic_hour_min": 40, "topics": topics})
+        check("... a course with no practical work: the first and the middle module", ft.default_modules(os.path.join(gas, "course")) == [1, 10]
+              and ft.lane_note(os.path.join(gas, "course"), [1, 19]) is None, ft.default_modules(os.path.join(gas, "course")))
+
         print("\n-- run")
         code, out = cli("run", "--home", home, "--modules", "1,4", "--dry-run")
         master = os.path.join(home, "run", "FACTORY TRIAL")
@@ -275,6 +312,9 @@ def main():
               and "Module 1 - stopped: usage limit, unfinished" in out, out)
         check("... and the scorecard counts the simulator drafts still awaiting the course director",
               card["modules"][0].get("simulator_drafts_pending") == 0, card["modules"][0])
+        check("... and says the course's practical work, here none: \"No practical work in this course\"",
+              (card.get("practical") or [""])[0].startswith("No practical work in this course") and "Practical work in the course:" in out
+              and card["modules"][0].get("practical_kind") == "none", (card.get("practical"), out[-600:]))
         node = shutil.which("node")
         if node:
             core = os.path.join(ft.PLUGIN, "skills", "course-tablet-publisher", "vendor", "package-core.mjs").replace("\\", "/")

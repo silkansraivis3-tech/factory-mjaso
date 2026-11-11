@@ -236,6 +236,19 @@ tablets (L35), and the script says which screen is where:
   final-assessment script (`--module final`, the last module, L34) holds a task slide and `final` questions.
   An `activity`'s minutes count in the module's practice hours; when the architecture takes them from the theory
   (a simulator exercise in a topic the programme gives no practical hours), the screen says `"track": "theory"`.
+- **A practical on paper.** Every simulator and real-equipment exercise is printed for the room - a trainee card and
+  an instructor sheet (`compile/scripts/additional_materials.py`). A practical that runs over several activity screens
+  (the brief, a demonstration, the trainees' turns, the debrief) is one paper: give each of its screens, one after
+  another, the same `"paper": "<the practical's name>"`, and mark the instructor's parts `"paper_part": "brief"`,
+  `"show"` or `"debrief"` - they go on the instructor sheet only, the trainees' parts on both. A screen with no
+  `"paper"` is a paper of its own. Write the trainees' steps as they will read them on the card ("1. Connect the
+  probe ..."); the screen's notes are the instructor's for that part. The check fails screens of one practical with
+  another screen between them, a `"paper_part"` that is none of the three, and a practical with no part for the trainees.
+- **A simulator exercise's screen is only the handover.** Its paper is its approved exercise form (`"exercise": "<no>"`,
+  written from the simulator's manual and the model course - `coverage/SIMULATORS.md`); the screen says where the class
+  goes, for how long and that the instructor hands out the papers - three lines at most, no steps: "We now go to the
+  LPG cargo simulator, room K2 - 40 minutes.", "The instructor hands out the exercise papers.". The check fails a
+  simulator screen naming an exercise that lists steps.
 - **A team task** (the classroom rulebook 4b) is a task slide with `"team": {"size": "3", "roles":
   ["Leader", "Recorder", "Checker"], "scope": "team"}` - `"3-4"` for a range; `"scope"` `team` (one answer per team)
   or `member` (everyone answers, the team's average shown); roles are optional. The review page and the Word file say

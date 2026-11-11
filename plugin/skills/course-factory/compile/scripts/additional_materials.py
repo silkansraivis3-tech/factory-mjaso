@@ -28,8 +28,12 @@ WHAT IT WRITES
                                                   fastest, an on-board drill at 1-3 months, what to watch for
   course\\modules\\_course_shell\\advanced_course_plan.html   the same plan for the instructor's tablet
   course\\modules\\moduleNN\\instructor\\advanced_module_plan.html   one module explained step by step, for the tablet
-  The two tablet pages are self-contained (their style inline, no link out, no script): the instructor panel opens them
-  over itself and closes them again. Both are instructor-only by their folder (_course_shell, instructor).
+  course\\modules\\moduleNN\\instructor\\papers\\M04_A01_<title>_TRAINEE.html / .pdf   the module's simulator and
+      ..._INSTRUCTOR.html / .pdf                  equipment papers again, on the instructor's tablet: the module plan's
+                                                  step links each, to open in the viewer and to print the PDF
+  The tablet pages are self-contained (their style inline, no script, no link but the module plan's to its papers): the
+  instructor panel opens them over itself and closes them again. All are instructor-only by their folder (_course_shell,
+  instructor) - the app's import never copies them to a trainee.
 
 EVERY WORD IS FROM AN APPROVED FILE, NOTHING IS TYPED
   the course, its hours, days, rooms, equipment, literature, films, group and assessment   programme.json
@@ -45,6 +49,10 @@ EVERY WORD IS FROM AN APPROVED FILE, NOTHING IS TYPED
   who answers for the programme     course.build.json "responsible" - else a line to sign
   a task's kind on paper            simulator / equipment / room from its words and its practical's equipment;
                                     course.build.json "paper_tasks": {"M09.A02": "equipment"} when the words mislead
+  one paper for a practical's screens   the script's "paper" (its name) and "paper_part" (brief, show, debrief: the
+                                    instructor sheet only)
+  a simulator exercise's paper      its approved exercise form, working_claude\\exercises\\[sim_drafts\\]MNN\\content\\
+  the instructor sheet's criteria   the approved instructor_led.json; the IMO model course and the sources: the script
 A module whose script is not approved gets nothing and is said. The words of the documents are English only so far; a
 course in another language is said, never silently written in English.
 
@@ -78,6 +86,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "..", "scripts"))
 import answer_key as ak  # noqa: E402
+import classroom_files as cf  # noqa: E402
 import compile_module as cm  # noqa: E402
 import content_script as cs  # noqa: E402
 import ilo_map  # noqa: E402
@@ -89,10 +98,14 @@ FOLDER = workspace.ADDITIONAL
 RECORD = "additional_materials.json"
 COURSE_PLAN = os.path.join("_course_shell", "advanced_course_plan.html")
 MODULE_PLAN = os.path.join("instructor", "advanced_module_plan.html")
-SIM_WORDS = re.compile(r"simulat|симулят|тренаж", re.I)
+PAPERS = os.path.join("instructor", "papers")       # beside the module plan, which opens them
+# a simulator, never a "simulated" fire or a "real-life simulation" on the fire ground or the rescue rig
+SIM_WORDS = re.compile(r"simulator|симулятор|тренаж", re.I)
 EQUIPMENT_WORDS = re.compile(r"\b(?:rig|bench|detectors?|meters?|apparatus|instruments?|equipment|facility|monitor|"
                              r"tripod|stretcher|resuscitator|extinguisher|hoses?|iekārt\w*|aprīkojum\w*|mērinstrument\w*|"
                              r"оборудован\w*|прибор\w*|стенд\w*)\b", re.I)
+OWN_NUMBER = re.compile(r"^\s*(?:\d{1,2}|[a-z])[.)]\s")
+INSTRUCTOR_PARTS = ("brief", "show", "debrief")     # a practical's parts that go on the instructor sheet only
 OPTION_MECHS = ("single_choice", "multi_select", "read_instrument", "choose_and_justify", "investigate")
 W = {
     "acp": "Advanced Course Plan", "programme": "Programme", "standard": "Standard", "model": "IMO model course",
@@ -117,7 +130,14 @@ W = {
     "tablets": "A trainee tablet for each trainee: {codes}.", "film": "Film on slide {n}: {what}",
     "step": "Step {k}", "mins": "minutes {a}-{b}", "teach": "You teach", "they_do": "The trainees do",
     "on_tablets": "On the tablets", "say": "The trainees are told", "you": "You", "exercise_h": "Practical exercise",
-    "paper": "Paper for the trainees: {f} (print it at the start of the day)", "questions_n": "{n} questions",
+    "papers": "To print at the start of the day", "instructor_sheet": "Instructor sheet",
+    "parts": "Its parts", "how_runs": "How the practical runs, part by part",
+    "part_roles": {"brief": "the brief - the instructor's", "show": "the demonstration - the instructor's",
+                   "debrief": "the debrief - the instructor's"},
+    "criteria": "Assessment criteria", "must_pass": "must pass", "at_step": "step {n} of {code}",
+    "observe": "Must observe ({code}):", "model_ref": "IMO model course", "sources_h": "Sources",
+    "form_made": "The approved exercise form {no}, printed from its own fields.",
+    "equip_codes": "equipment: the programme's {codes} (their English names are not in the course files yet)", "questions_n": "{n} questions",
     "plan_made": "Made from the approved content script ({m}.json) by course-factory {v}. Never edit it by hand.",
     "active": {"explain-then-reveal": "explain, then see the answer", "predict-then-reveal": "predict, then see what happens",
                "worked-example": "a worked example, then their own attempt", "scenario": "a scenario",
@@ -294,7 +314,68 @@ def tasks_of(m, sheet):
         for q in [x["slide"]] + x["questions"]:
             subs += [i for i in cs.sub_ilos_of(q) if i not in subs]
         x["sub_ilos"] = subs
+    return group_papers(m, out)
+
+
+def paper_of(x):
+    """the practical an activity screen is part of ("paper": its name, the script's), "" for a screen on its own"""
+    return str(x["slide"].get("paper") or "").strip() if x["slide"].get("kind") == "activity" else ""
+
+
+def group_papers(m, tasks):
+    """the activity screens of one practical (the same "paper", one after another) become one task with one paper - its
+    parts in order; the brief, show and debrief parts go on the instructor sheet only. A screen with no "paper" is a
+    task and a paper of its own, as the scripts before the field are"""
+    out = []
+    for x in tasks:
+        name, prev = paper_of(x), (out[-1] if out else None)
+        if name and prev and prev.get("paper") == name:
+            prev["parts"].append(x)
+            continue
+        out.append(dict(x, paper=name, parts=[dict(x)]))
+    for t in out:
+        parts = t["parts"]
+        if len(parts) < 2:
+            continue
+        kinds = [p["where"] for p in parts]
+        where = "simulator" if "simulator" in kinds else "equipment" if "equipment" in kinds else "room"
+        code = "%s-%s" % (parts[0]["code"], parts[-1]["code"])
+        subs = []
+        for p in parts:
+            subs += [i for i in p["sub_ilos"] if i not in subs]
+        t.update(code=code, title=t["paper"], kind=where, where=where, minutes=sum(p["minutes"] for p in parts),
+                 practical=next((p["practical"] for p in parts if p.get("practical")), {}), sub_ilos=subs,
+                 stem="%s_%s_%s" % (m["mid"], code, cm.slug(t["paper"])))
     return out
+
+
+def role(part):
+    """what a part of a practical is: brief, show, debrief (the instructor's) or do (the trainees')"""
+    r = str(part["slide"].get("paper_part") or "").strip().lower()
+    return r if r in INSTRUCTOR_PARTS else "do"
+
+
+def exercise_form(course, m, t):
+    """{"no", "trainee", "instructor"} - the approved exercise form (its content file, the form's own fields) of the
+    exercise a screen of this task names ("exercise": "<no>"), or None. A simulator draft counts only once the course
+    director has accepted it (L66): working_claude\\exercises\\MNN\\content\\ first, then sim_drafts\\MNN\\content\\"""
+    nos = [str(p["slide"].get("exercise") or "").strip() for p in t["parts"]]
+    no = next((x for x in nos if x), "")
+    if not no:
+        return None
+    accepted = {str(x.get("draft") or "").strip() for x in (load_or(workspace.claude_path(course, "SIM_COVERAGE.json"), {})
+                                                            .get("proposed_tasks") or []) if (x.get("accepted_by") or "").strip()}
+    dirs = [workspace.claude_path(course, "exercises", m["mid"], "content")]
+    if no in accepted:
+        dirs.append(workspace.claude_path(course, "exercises", "sim_drafts", m["mid"], "content"))
+    for d in dirs:
+        both = [load_or(os.path.join(d, "EX_%s_%s.json" % (no, who)), None) for who in ("trainee", "instructor")]
+        if all(isinstance(x, dict) for x in both):
+            return {"no": no, "trainee": both[0], "instructor": both[1]}
+        one = load_or(os.path.join(d, "EX_%s.json" % no), None)
+        if isinstance(one, dict) and isinstance(one.get("trainee"), dict) and isinstance(one.get("instructor"), dict):
+            return {"no": no, "trainee": one["trainee"], "instructor": one["instructor"]}
+    return None
 
 
 def modules_of(course, arch, infos, probs):
@@ -393,15 +474,16 @@ def inline_html(x):
     return str(x) if isinstance(x, H) else e(x)
 
 
-def to_html(title, blocks, lang="en", screen=False):
-    """screen: a tablet page that stands alone (no link, no script - the instructor's viewer shows it and closes it); it
-    says so with <meta name="gb-standalone">, so check_navigation does not call it a trap (Project Management, 2026-11-06:
-    every module failed navigation on advanced_module_plan.html)"""
+def to_html(title, blocks, lang="en", screen=False, viewer=False):
+    """screen: a tablet page that stands alone (no script, no link but to its module's papers - the instructor's viewer
+    shows it and closes it); it says so with <meta name="gb-standalone">, so check_navigation does not call it a trap
+    (Project Management, 2026-11-06: every module failed navigation on advanced_module_plan.html). viewer: a paper the
+    module plan opens in that viewer - the same mark, the paper's A4 print style"""
     o = ["<!DOCTYPE html>", '<html lang="%s">' % lang, "<head>",
          "<!-- GENERATED by course-factory %s additional_materials.py - never edit by hand: change the course files "
          "and build again -->" % cm.plugin_version(), '<meta charset="utf-8">',
          '<meta name="viewport" content="width=device-width, initial-scale=1">', "<title>%s</title>" % e(title)]
-    if screen:
+    if screen or viewer:
         o.append('<meta name="gb-standalone" content="viewer">')
     o += ["<style>%s</style>" % (CSS + (SCREEN_CSS if screen else PAPER_CSS)), "</head>", "<body>", '<div class="wrap">']
     for b in blocks:
@@ -653,6 +735,7 @@ def module_plan(m, days, subs, v):
     if prep:
         blocks += [("card", ""), ("h3", w["prepare"]), ("ul", prep), ("end",)]
     by_slide = {t["slide"]["id"]: t for t in m["tasks"]}
+    later = {p["slide"]["id"] for t in m["tasks"] for p in t["parts"][1:]}     # a practical's parts are its one step
     k, group = 0, []
 
     def teach_step(group, start):
@@ -671,6 +754,8 @@ def module_plan(m, days, subs, v):
 
     start, day = 0.0, None
     for s in screens:
+        if s["id"] in later:
+            continue
         now = day_of(days, m, start + sum(cs.minutes(x) for x in group)) if len(on) > 1 else None
         if now != day:                              # a module over two days says where each day starts
             blocks += teach_step(group, start)
@@ -689,13 +774,22 @@ def module_plan(m, days, subs, v):
             if t["questions"]:
                 blocks.append(("p", w["questions_n"].format(n=len(t["questions"]))))
             lines = cs.lines_of(s.get("text"))
+            if len(t["parts"]) > 1:
+                blocks += [("p", b_(w["parts"])), ("ol", ["%s (%s)%s" % (p["title"], w["min"].format(m=num(p["minutes"])),
+                                                                         (" - " + w["part_roles"][role(p)]) if role(p) != "do" else "")
+                                                         for p in t["parts"]])]
+                lines = []
             if lines:
                 blocks += [("p", b_(w["say"] if t["where"] == "tablet" else w["steps"])), ("ul", lines)]
-            notes = [x[2:].strip() for x in cs.note_lines(s.get("notes"))]
+            notes = ["%s%s" % (("%s: " % p["code"]) if len(t["parts"]) > 1 else "", x[2:].strip())
+                     for p in t["parts"] for x in cs.note_lines(p["slide"].get("notes"))]
             if notes:
                 blocks += [("p", b_(w["you"])), ("ul", notes)]
             if t["where"] in ("simulator", "equipment"):
-                blocks.append(("p", w["paper"].format(f=t["stem"] + "_TRAINEE.pdf")))
+                a = lambda f, label: '<a href="%s">%s</a>' % (html.escape("papers/" + t["stem"] + f), e(label))
+                blocks.append(("p", H("<b>%s:</b> %s (%s) · %s (%s)" % (
+                    e(w["papers"]), a("_TRAINEE.html", w["trainee_card"]), a("_TRAINEE.pdf", "PDF"),
+                    a("_INSTRUCTOR.html", w["instructor_sheet"]), a("_INSTRUCTOR.pdf", "PDF")))))
             blocks.append(("end",))
             start += t["minutes"]
         else:
@@ -706,23 +800,118 @@ def module_plan(m, days, subs, v):
 
 
 # ------------------------------------------------------------------ one task on paper
+def steps(lines, numbered=True):
+    """a list of lines; lines that carry their own numbers are printed as they are - a numbered list would count twice"""
+    if any(OWN_NUMBER.match(x) for x in lines):
+        return [("p", x) for x in lines]
+    return [("ol" if numbered else "ul", lines)]
+
+
+def place_line(p):
+    """the practical's place and equipment in English: equipment the course files hold only in the programme's language
+    is left out and named by the programme's codes"""
+    eq, codes = cf.english_equipment(p)
+    if not eq and codes:
+        eq = W["equip_codes"].format(codes=", ".join(codes))
+    return " - ".join(x for x in (cf.english(p.get("place")), eq) if x)
+
+
+def practical_parts(t, trainee):
+    """a practical of several screens, part by part: the trainee card holds what the trainees do, the instructor sheet
+    every part - the brief, the demonstration and the debrief marked as the instructor's - with its notes"""
+    out = [("h2", W["steps"] if trainee else W["how_runs"])]
+    for p in t["parts"]:
+        r = role(p)
+        if trainee and r != "do":
+            continue
+        out.append(("h3", " · ".join([p["title"], W["min"].format(m=num(p["minutes"]))] + ([W["part_roles"][r]] if r != "do" else []))))
+        out += steps(cs.lines_of(p["slide"].get("text")))
+        notes = [x[2:].strip() for x in cs.note_lines(p["slide"].get("notes"))]
+        if notes and not trainee:
+            out += [("p", b_(W["you"])), ("ul", notes)]
+    return out
+
+
+MODEL_SOURCE = re.compile(r"model course", re.I)
+MODEL_PAREN = re.compile(r"\(((?:IMO )?(?:MC|Model Course) \d+\.\d+[^)]*)\)", re.I)
+
+
+def criteria_and_sources(m, t):
+    """the instructor sheet's last part: the approved instructor_led.json's criteria for the Sub-ILOs it serves (must pass
+    and its step marked) and what each part's debrief must observe; the IMO model course's part in it; the module's
+    sources - each as the approved files say it"""
+    w, data = W, m.get("il") or {}
+    out, crit = [], []
+    for i in t["sub_ilos"]:
+        for c in ((data.get("register") or {}).get(i) or {}).get("criteria") or []:
+            c = c if isinstance(c, dict) else {"text": str(c)}
+            if not str(c.get("text") or "").strip():
+                continue
+            extra = [w["must_pass"]] if c.get("must_pass") else []
+            at = re.match(r"^\s*M\d+\.(\w+)\s+(\d+)\s*$", str(c.get("step") or ""))
+            if at:
+                extra.append(w["at_step"].format(n=at.group(2), code=at.group(1).upper()))
+            crit.append(H("<b>%s</b> %s%s" % (e(i), e(c["text"]), (" - <b>%s</b>" % e(", ".join(extra))) if extra else "")))
+    for p in t["parts"]:
+        entry = (data.get("practicals") or {}).get(il.key(m["mid"], p["slide"]["id"])) or {}
+        crit += [H("<b>%s</b> %s" % (e(w["observe"].format(code=p["code"])), e(x)))
+                 for x in (entry.get("debrief") or {}).get("must_observe") or [] if str(x).strip()]
+    if crit:
+        out += [("h3", w["criteria"]), ("ul", crit)]
+    srcs = [str(x) for x in m["script"].get("sources") or [] if str(x).strip()]
+    words = " ".join(str(x or "") for p in t["parts"] for x in (p["slide"].get("title"), p["slide"].get("text"))) + \
+        " " + str((t.get("practical") or {}).get("task") or "")
+    model = [x for x in srcs if MODEL_SOURCE.search(x)] + [x for x in MODEL_PAREN.findall(words)]
+    if model:
+        out += [("h3", w["model_ref"]), ("ul", list(dict.fromkeys(model)))]
+    rest = [x for x in srcs if x not in model]
+    if rest:
+        out += [("h3", w["sources_h"]), ("ul", rest)]
+    return out
+
+
+def form_paper(form, trainee):
+    """an approved exercise form as the paper: its own fields in its own order - the short ones as the facts, the rest
+    each under its own heading (the performance criteria, the steps from the simulator's manual ...)"""
+    d = form["trainee" if trainee else "instructor"]
+    short = lambda v: isinstance(v, (str, int, float)) and len(str(v)) <= 160
+    facts = [(k, str(v)) for k, v in d.items() if not str(k).startswith("_") and short(v)]
+    blocks = [("h1", "%s %s" % (W["trainee_card"] if trainee else W["instructor_sheet"], form["no"])),
+              ("p", b_(d.get("Title") or "")), ("facts", facts)]
+    for k, v in d.items():
+        if str(k).startswith("_") or short(v) or v in (None, "", []):
+            continue
+        blocks.append(("h2", k[:1] + k[1:].lower() if k.isupper() else k))
+        if isinstance(v, dict):
+            v = ["%s: %s" % (a, b) for a, b in v.items()]
+        blocks += steps([str(x) for x in v] if isinstance(v, list) else [str(v)], numbered=False)
+    blocks.append(("small", W["form_made"].format(no=form["no"])))
+    return blocks + ([("small", W["no_answers"]), ("p", W["sign"])] if trainee else [])
+
+
 def task_paper(m, t, course_title, subs, trainee=False):
     w = W
+    if t.get("form"):
+        return form_paper(t["form"], trainee)
     facts = [(w["course"], course_title), (w["module"], "%d - %s" % (m["n"], m["title"])),
              (w["code"], "%s - %s" % (t["code"], t["title"])), (w["kind"], w["kinds"][t["kind"]]),
              (w["minutes"], w["min"].format(m=num(t["minutes"])))]
-    p = t.get("practical") or {}
-    if p.get("equipment") or p.get("place"):
-        facts.append((w["place"], " - ".join(x for x in (p.get("place"), p.get("equipment")) if x)))
+    place = place_line(t.get("practical") or {})
+    if place:
+        facts.append((w["place"], place))
     team = t["slide"].get("team")
     if isinstance(team, dict) and team:
         facts.append((w["kinds"]["team"], w["team_v"].format(size=team.get("size", "-"), roles=", ".join(cs.team_roles(team)) or "-")))
     blocks = [("h1", "%s %s" % (w["trainee_card"] if trainee else w["task"], t["code"])), ("p", b_(t["title"])), ("facts", facts)]
     if t["sub_ilos"]:
         blocks += [("h2", w["outcomes"]), ("ul", ["%s %s" % (i, subs.get(i, "")) for i in t["sub_ilos"]])]
+    grouped = len(t.get("parts") or []) > 1
     lines = cs.lines_of(t["slide"].get("text"))
-    if lines:
-        blocks += [("h2", w["intro"] if t["questions"] else w["steps"]), ("ul" if t["questions"] else "ol", lines)]
+    if grouped:
+        blocks += practical_parts(t, trainee)
+    elif lines:
+        blocks.append(("h2", w["intro"] if t["questions"] else w["steps"]))
+        blocks += [("ul", lines)] if t["questions"] else steps(lines)
     sheet = m["build"].get("screens") or {}
     for n, q in enumerate(t["questions"], 1):
         mech = cs.mech(q)
@@ -744,7 +933,7 @@ def task_paper(m, t, course_title, subs, trainee=False):
             blocks.append(("ul", info))
     if trainee:
         return blocks + [("small", w["no_answers"]), ("p", w["sign"])]
-    notes = [x[2:].strip() for x in cs.note_lines(t["slide"].get("notes"))]
+    notes = [] if grouped else [x[2:].strip() for x in cs.note_lines(t["slide"].get("notes"))]
     blocks.append(("h2", w["instructor_h"]))
     if notes:
         blocks += [("h3", w["notes"]), ("ul", notes)]
@@ -753,7 +942,8 @@ def task_paper(m, t, course_title, subs, trainee=False):
         mark = w["mark_final"].format(p=pm, need=-(-len(t["questions"]) * pm // 100), total=len(t["questions"]))
     else:
         mark = {"self-check": w["mark_self"], "team": w["mark_self"], "module-check": w["mark_check"]}.get(t["kind"], w["mark_room"])
-    return blocks + [("h3", w["marking"]), ("p", mark)]
+    blocks += [("h3", w["marking"]), ("p", mark)]
+    return blocks + (criteria_and_sources(m, t) if t["where"] != "tablet" else [])
 
 
 # ------------------------------------------------------------------ the practical kit (L68)
@@ -770,7 +960,7 @@ def kit(course, title, mods, days, root, probs):
     out = []
     pair = lambda path, name, doc: [(path + ".pdf", "pdf", to_html(name, doc)), (path + ".docx", "docx", doc)]
     for m in mods:
-        for t in m["tasks"]:
+        for t in [p for x in m["tasks"] for p in x["parts"]]:          # a screen of a practical has its own cycle
             entry = pracs.get(il.key(m["mid"], t["slide"]["id"])) if t["slide"].get("kind") == "activity" else None
             if not entry:
                 continue
@@ -885,9 +1075,23 @@ def plan(course, infos, title, probs):
                      "again (L19: everything in the course is English)"
                      % (prog.get("language"), ", ".join(no_en), "has" if len(no_en) == 1 else "have"))
     mods = modules_of(course, arch, infos, probs)
+    il_data = il.load(course)
     for m in mods:
         m["hour"] = float(prog.get("academic_hour_min") or 45)
         m["tasks"] = tasks_of(m, sheet)
+        m["il"] = il_data if il.approved(il_data or {}) else {}
+        for t in m["tasks"]:
+            if t["where"] == "tablet":
+                continue
+            form = exercise_form(course, m, t)
+            if form:                                   # the approved form is the paper (simulator exercises, L66)
+                t["form"] = form
+                t["where"] = t["kind"] = classify(json.dumps(form, ensure_ascii=False), (sheet.get("paper_tasks") or {}).get(
+                    "%s.%s" % (m["mid"], t["code"])))
+            p = t.get("practical") or {}
+            if (p.get("equipment") or p.get("equipment_en")) and not cf.english_equipment(p)[0]:
+                probs.append("%s %s: its practical's equipment is in the programme's language only - the papers name the "
+                             "programme's codes; write \"equipment_en\" beside it in architecture.json" % (m["mid"], t["code"]))
     final = sum(float(x.get("hours") or 0) for x in plan_j.get("outside_modules") or []) * float(prog.get("academic_hour_min") or 45)
     days = days_of(mods, prog, sheet, final, probs) if mods else []
     v = cm.plugin_version()
@@ -913,10 +1117,14 @@ def plan(course, infos, title, probs):
                 out.append((os.path.join(dd, t["stem"] + "_TRAINEE.pdf"), "pdf", to_html("%s %s - %s" % (m["mid"], t["code"], W["trainee_card"]), card)))
                 out.append((os.path.join(dd, t["stem"] + "_TRAINEE.docx"), "docx", card))
                 out.append((os.path.join(dd, t["stem"] + "_INSTRUCTOR.pdf"), "pdf", to_html("%s %s - %s" % (m["mid"], t["code"], t["title"]), doc)))
+                # the same two papers on the instructor's tablet: the module plan opens each, and its PDF is there to print
+                pd = os.path.join(course, workspace.MODULES, m["code"], PAPERS, t["stem"])
+                for who, name, d in (("_TRAINEE", W["trainee_card"], card), ("_INSTRUCTOR", t["title"], doc)):
+                    page = to_html("%s %s - %s" % (m["mid"], t["code"], name), d, viewer=True)
+                    out += [(pd + who + ".html", "html", page), (pd + who + ".pdf", "pdf", page)]
     out += kit(course, title, mods, days, root, probs)
     # the instructor-only classroom files the tablet app reads on publish (classroom_files.py): the Prepare lists and the
     # recorded runs' assessment forms - in the modules folder, beside _course_shell, never in additional-materials
-    import classroom_files as cf                      # here, not at the top: it reads this file's helpers only through the build
     out += cf.files(course, title, infos, mods, il.load(course), il)
     if mods:
         out.append((os.path.join(root, "INDEX.html"), "html", to_html(W["index"], index_blocks(title, root, out, mods))))
@@ -1000,7 +1208,10 @@ def build(course, infos, title, pdf=True, check=False, quiet=False):
                 if not os.path.isfile(path) or files.get(k) != sig:
                     missing.append(k)
                 continue
-            src = os.path.join(src_dir, os.path.relpath(path, root))[:-4] + ".html"
+            rel = os.path.relpath(path, root)
+            if rel.startswith(".."):                      # a paper on the tablet, beside its module plan (its name says the module)
+                rel = os.path.join("tablet", os.path.basename(path))
+            src = os.path.join(src_dir, rel)[:-4] + ".html"
             write(src, payload)
             if pdf and (files.get(k) != sig or not os.path.isfile(path)):
                 to_print.append((src, path, k, sig))
