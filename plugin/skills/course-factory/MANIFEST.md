@@ -7,7 +7,7 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
-## 2.129.0 · Builders that count their own builds, render shows approve's list, verdicts that stand, a trial off the shared libraries (2026-11-11)
+## 2.130.0 · Builders that count their own builds, render shows approve's list, verdicts that stand, a trial off the shared libraries (2026-11-11)
 
 - `compile/scripts/phase_a.py`: Phase A's streak forgotten after its build; `BUILDER_CARD.md` and `build_course.js` say a builder counts its own builds.
 - `scripts/content_script.py`: `approval_blockers()` is approve's one list; `render` and `apply` print it; the minutes must equal the programme's.
@@ -16,7 +16,7 @@ this up cold, including one with no memory of why any of it is the way it is.
 - `course-module-ux/measure/scripts/walk_review.py`: each task page's feedback switch read and given to the judge.
 - Tests beside each script, new `tablet/scripts/test_verify_course.py`; known failures unchanged.
 
-## 2.128.0 · No person in a request, why read where it belongs, task pages walked, credits that name every author (2026-11-11)
+## 2.129.0 · No person in a request, why read where it belongs, task pages walked, credits that name every author (2026-11-11)
 
 - `scripts/check_script_match.py`: `why` compared only on a scenario; `scripts/content_script.py`: `why` is the figure's reason on other slides; `t_overfull_under` (a worked example's question and answer under its picture).
 - `compile/scripts/build_module.py`: the task pages photographed on every build; `walk_review.py prepare` photographs any not yet shot.
@@ -25,7 +25,7 @@ this up cold, including one with no memory of why any of it is the way it is.
 - `scripts/factory_trial.py`: cut slides counted from cut, spill, picture and figure findings only.
 - Tests beside each script; known failures unchanged (test_task_engine tap area, test_patterns fuel_space_access, test_figure_checks photograph answer over).
 
-## 2.127.0 · Wide photographs on top, parts that turn like pages, runs that finish, 3D speed in the build (2026-11-10)
+## 2.128.0 · Wide photographs on top, parts that turn like pages, runs that finish, 3D speed in the build (2026-11-10)
 
 - `compile/scripts/compile_module.py`: the `figure-top` variant chosen from the photos' real shape (a build sheet's `variant` wins), `"part_figures"`, lines ending ":" as subheadings, a worked example's question and answer under its picture; refuses a card over a whole picture or a picture box with only words.
 - `scripts/content_script.py`: `t_overfull_rows` (each line counted as a card).
@@ -33,6 +33,28 @@ this up cold, including one with no memory of why any of it is the way it is.
 - `scripts/course_portal.py`: `run_print` - streams the log, resumes a print-mode session that ended without its last line; `scripts/factory_trial.py` uses it, its progress line shows minutes and cost so far, and its deck scan counts a 2D-kit figure.
 - `scripts/check_course_package.py`: `blueprints()` / `off_blueprint()` - a slide off its blueprint fails the build.
 - Tests beside each script; known failures unchanged (test_task_engine tap area, test_patterns fuel_space_access).
+
+## 2.127.0 · The slide for the information: the factory says which template a plain slide fits (2026-11-10)
+
+- WHY (operator Aleksis Vejs: "the factory doesn't really want to use the template"): counted on the built decks, 42 of 57
+  teaching slides of Project Management and 150 of 150 of the safety course were ordinary lines beside a picture, and ten
+  of the twenty-one templates were in no deck. The picking table was an invitation; `"blocks"` without `"template"` did
+  nothing; the starter build sheet's `"composition": "two-col"` is on 291 entries.
+- `scripts/content_script.py`: `plain_slide`, `template_fit`, `template_findings` (called from `build_findings`, so the
+  review page and the compiler both show them). Rules `t_fits_template` (a suggestion on the slide, with the exact
+  fields or `"blocks"` to write) and `t_template_mix` (the module: a must-fix above `max_plain_share` when some plain
+  slides fit a template; a note when none fits or the script says `"plain_why"`). Labels `t_*`, `fit_*` in
+  `knowledge/page-labels.json` (English; lv / ru fall back to it).
+- `course-module-ui/knowledge/layout-templates.json` `"mix"`: `max_plain_share` 0.6, `min_slides` 6, `label_words` 4 and the
+  sign words by course language (English only) - starting values, not measured ones.
+- `compile/scripts/compile_module.py`: `implied_template` (`"blocks"` of three ranges beside a picture is
+  three-content-blocks; of two with `"figure_b"` is compare-two - a named template or a layout other than two-col keeps
+  its own way), `template_mix` (the line "Templates in M02: ..." on every build), and the must-fix printed with
+  `v_paged_slide`'s.
+- Tests: `scripts/test_content_script.py`, `compile/scripts/test_compile_module.py`.
+- Not done: the starter build sheet still writes `"composition": "two-col"` for every figure, which keeps a wide drawing
+  off the stage; no course was rebuilt; the threshold has not been tried on a new course's first draft. (2.126.0 is the
+  kit's flow layer on `aleksis/kit-flow-layer`, not merged when this was written.)
 
 ## 2.126.0 · The templates hold the words, the theory covers the task, 3D that does not lag, builds that finish (2026-11-10)
 

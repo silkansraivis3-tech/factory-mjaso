@@ -6,7 +6,7 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
-## 2.129.0 · A result screen that reads on Navy, placements by name, a bar nothing runs under (2026-11-11)
+## 2.130.0 · A result screen that reads on Navy, placements by name, a bar nothing runs under (2026-11-11)
 
 `assets/gb_task_look.css`: the result screen's answer, reason and debrief lines, a folded scenario step and a check's opening card readable on
 Navy; the top bar takes the ground's colour. `gb_answer.css`: `scroll-padding-top` below the bar. `gb_answer.js`: `placeName()` names a label
