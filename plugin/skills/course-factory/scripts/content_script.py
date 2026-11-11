@@ -1098,6 +1098,8 @@ def overfull(s):
         parts = (("t_part_steps", wc(s.get("text", ""), as_text(s.get("ask"))), B["worked_steps"]),)
     else:
         return []
+    whole = wc(s.get("title", ""), s.get("text", ""), *[as_text(s.get(f)) for f in SHOWN_TOO])
+    parts += (("t_part_whole", whole, RULES["slide"]["steps_from"]),)
     return [(p, w, most) for p, w, most in parts if w > most]
 
 
@@ -1210,10 +1212,10 @@ def theory_check(script):
         elif w_lines > R["slide"]["picture_from"] and picture_of(s)["kind"] in ("", "none"):
             add(s["id"], "text", NOTE, "t_dense_slide", w=w_lines, max=R["slide"]["picture_from"])
         for part, w, most in overfull(s):
-            tid = "worked-example" if part == "t_part_steps" else "scenario"
+            tid = shaped_kind(s)
             add(s["id"], "text", FAIL, "t_overfull", part=T(script, part), w=w, max=most,
                 tpl="%s (%s)" % (tid, LAYOUT_RULES["templates"][tid]["name"]))
-            found[-1]["fix"] = T(script, "t_fix_scenario" if part != "t_part_steps" else "t_fix_worked")
+            found[-1]["fix"] = T(script, "t_fix_worked" if tid == "worked-example" else "t_fix_scenario")
         rows = None if overfull(s) else worked_rows(s)
         if rows:
             add(s["id"], "text", FAIL, "t_overfull_rows", n=len(lines_of(s.get("text"))), h=rows[0], max=rows[1],

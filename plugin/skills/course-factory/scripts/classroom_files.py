@@ -69,7 +69,7 @@ def load(path):
 
 def label(text, n=MAX_LABEL):
     t = re.sub(r"\s+", " ", str(text or "")).strip()
-    return t if len(t) <= n else t[:n].rstrip()
+    return t if n is None or len(t) <= n else t[:n].rstrip()
 
 
 def cap(text):
@@ -88,18 +88,19 @@ NOT_ENGLISH = re.compile(r"[āčēģīķļņšūžĀČĒĢĪĶĻŅŠŪŽЀ-ӿ]")
 PROGRAMME_CODE = re.compile(r"\bM\d{1,2}\b")
 
 
-def english_equipment(p):
+def english_equipment(p, n=MAX_LABEL):
     """(a practical's equipment in English, the programme's equipment codes when it has no English) - "equipment_en" first;
-    words in the programme's own language never reach an English paper or list"""
+    words in the programme's own language never reach an English paper or list. n: the most characters (the app's list
+    label; a paper takes None - its words whole)"""
     whole = str(p.get("equipment_en") or p.get("equipment") or "")
     if not NOT_ENGLISH.search(whole):
-        return label(whole), []
+        return label(whole, n), []
     return "", list(dict.fromkeys(PROGRAMME_CODE.findall(whole)))
 
 
-def english(text):
+def english(text, n=MAX_LABEL):
     """the text, or "" when it is in another language"""
-    return "" if NOT_ENGLISH.search(str(text or "")) else label(text)
+    return "" if NOT_ENGLISH.search(str(text or "")) else label(text, n)
 
 
 def kind_of(text):

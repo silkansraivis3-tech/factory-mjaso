@@ -42,6 +42,9 @@
     {"id": "esd", "type": "esd_button", "at": [10, 0, 24]},
     {"id": "detector", "type": "detector", "at": [13, 2.5, 24]},
     {"id": "person", "type": "person", "at": [16, 0, 24]},
+    {"id": "foam_can", "type": "foam_extinguisher", "at": [19, 0, 24]},
+    {"id": "inductor", "type": "foam_inductor", "at": [22, 0.6, 24]},
+    {"id": "branch", "type": "foam_branch_pipe", "at": [25, 0, 24], "rot": 90},
     {"id": "intake", "type": "air_intake", "at": [20, 1, 24]},
 
     {"id": "dim", "type": "dimension", "at": [24, 0, 24], "a": [0, 0, 0], "b": [0, 3, 0], "tick": [0.4, 0, 0], "text": "3 m"},

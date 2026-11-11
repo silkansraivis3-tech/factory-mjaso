@@ -159,7 +159,7 @@ def main():
               "Only modules 1, 4 get" in prompt and '--by "Factory trial"' in prompt and "Never call course_portal.py" in prompt, prompt)
         check("... the build's helpers come from brief.mjs, the trial's rules in its notes, and the session explores nothing",
               "helpers come from brief.mjs" in prompt and "list no folders and read no factory script's source" in prompt
-              and "Never start the photo pass" in prompt and "--none <label>" in prompt, prompt)
+              and "only catalogues the old course's own photographs" in prompt and "--none" not in prompt, prompt)
         io.open(os.path.join(master, "course", "working_claude", "left_over.txt"), "w").write("x")
         code, out = cli("run", "--home", home, "--dry-run")
         check("a second run starts from an empty course again", code == 0 and not os.path.isfile(os.path.join(master, "course", "working_claude", "left_over.txt")), out)
