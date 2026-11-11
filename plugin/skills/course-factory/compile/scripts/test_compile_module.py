@@ -79,6 +79,11 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)[:600]) if detail and not ok else ""))
 
 
+def picture_findings(c, sc):
+    """the build sheet's picture findings - without 2.127.0's suggestions on the fixture's plain slides (t_fits_template)"""
+    return [f for f in cs.build_findings(c, sc) if not f["rule"].startswith("t_")]
+
+
 def run(*args):
     """the fixtures' drawings are bare shapes, not L54-clean drawings: the drawing check runs only where a test asks
     for it (--drawing-check), so every other test sees the build alone"""
@@ -1431,6 +1436,27 @@ def layouts_part(tmp):
           and s8.count('class="lt-card"') == 2 and s8.count("<svg") >= 2, s8[:900])
     check("... and all of it still says exactly the approved words",
           run(MATCH, c2, "--module", "1", "--part", "instructor")[0] == 0, run(MATCH, c2, "--module", "1", "--part", "instructor")[1])
+    # 2.127.0 - "blocks" (and "figure_b") ask for their template without naming it; the starter's two-col does not stop them
+    c4, md4, code4, out4 = fresh("implied", scr, {
+        "s05": {"figure": "assets/fig/scale.svg", "template": "content-in-parts"}, "s06": {"figure": "assets/fig/scale.svg"},
+        "s07": {"figure": "assets/fig/scale.svg", "composition": "two-col", "blocks": [[1, 2], [3, 4], [5, 6]]},
+        "s08": {"figure": "assets/fig/scale.svg", "figure_b": "hull.svg", "blocks": [[1, 2], [3, 4]]}})
+    p4 = deck(md4)
+    check("2.127.0: \"blocks\" of three line ranges beside a picture is three-content-blocks without \"template\"",
+          'data-template="three-content-blocks.v1"' in section(p4, "s07") and section(p4, "s07").count('class="lt-block"') == 3,
+          section(p4, "s07")[:500])
+    check("2.127.0: \"blocks\" of two with \"figure_b\" is compare-two without \"template\"",
+          'data-template="compare-two.v1"' in section(p4, "s08") and section(p4, "s08").count('class="lt-card"') == 2,
+          section(p4, "s08")[:500])
+    check("2.127.0: ... a sheet that names its own layout or template keeps it, and so does a slide with no blocks",
+          cm.implied_template({}, {"figure": "a.svg", "composition": "stage", "figure_b": "b.svg", "blocks": [[1, 2], [3, 4]]},
+                              ["a", "b", "c", "d"]).get("template") is None
+          and cm.implied_template({}, {"figure": "a.svg", "template": "figure-stage", "blocks": [[1, 1], [2, 2], [3, 3]]},
+                                  ["a", "b", "c"])["template"] == "figure-stage"
+          and cm.implied_template({}, {"figure": "a.svg"}, ["a", "b", "c"]).get("template") is None
+          and cm.implied_template({}, {"blocks": [[1, 1], [2, 2], [3, 3]]}, ["a", "b", "c"]).get("template") is None)
+    check("2.127.0: every build says which templates the deck is built in, most used first",
+          re.search(r"Templates in M01: .*three-content-blocks.*\(\d+ of %d templates\)" % len(cm.TEMPLATES), out4), out4[-900:])
 
 
 def variety_part(tmp):
@@ -2196,7 +2222,7 @@ def v2497_part(tmp):
     c, code, out = built("f1", {"figure": "hull.svg", "dark": True})
     check("s04 (model_3d) given a 2D drawing: the build says it - \"asks for a 3D scene; it has a 2D figure\" - exit 1",
           code == 1 and "(s04) asks for a 3D scene (model_3d); it has a 2D figure (hull.svg)" in out and "declined_3d" in out, out)
-    found = cs.build_findings(c, script())
+    found = picture_findings(c, script())
     check("... and the script's review page shows it beside the picture findings, as a note",
           [f["screen"] for f in found] == ["s04"] and found[0]["level"] != "fail" and "hull.svg" in found[0]["detail"]
           and found[0]["detail"] in html.unescape(cs.render_html(c, script())), found)
@@ -2207,7 +2233,7 @@ def v2497_part(tmp):
     check("an .html figure holding a scene ([data-stage]) is the 3D scene - nothing said", "asks for a 3D scene" not in out, out)
     c4, code, out = built("f4", {"figure": "hull.svg", "dark": True, "declined_3d": "the operator: a flat section reads better here"})
     check("the 2D figure kept with the operator's reason (\"declined_3d\") is not flagged again - build and review page",
-          code == 0 and "asks for a 3D scene" not in out and not cs.build_findings(c4, script()), out)
+          code == 0 and "asks for a 3D scene" not in out and not picture_findings(c4, script()), out)
     _c, code, out = built("f5", {"figure": "hull.svg", "dark": True, "declined_3d": " "})
     check("... a \"declined_3d\" with no reason keeps it said", code == 1 and "asks for a 3D scene" in out, out)
 
@@ -2241,7 +2267,7 @@ def v2497_part(tmp):
     cs.save(sp(c6), sheet)
     code, out = run(COMPILE, c6, "--module", "1", "--only", "deck", "--no-drawing-check")
     check("... \"declined_3d\" stays an optional note: nothing is proposed, nothing is flagged",
-          "RECOMMENDED (L60)" not in out and not cs.build_findings(c6, script(screens=flat)), out)
+          "RECOMMENDED (L60)" not in out and not picture_findings(c6, script(screens=flat)), out)
 
     # 2.63.2 (item 9): IGF M02 s07 became a 3D scene in the 2.62.0 build - the slide where the instructors asked for a photo
     sc9 = script(screens=flat)

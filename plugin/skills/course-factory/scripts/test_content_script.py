@@ -285,6 +285,56 @@ def main():
               and not cs.media_findings(SCRIPT) and lv("s_media_clean") not in page)
         check("F1: the same slides with the build sheet's \"parts\" are not found",
               not cs.paged_findings(SCRIPT, {"screens": {x: {"parts": [[1, 2], [3, 9]]} for x in ("s01", "s02", "s03")}}))
+        # 2.127.0 - the slide for the information: a plain slide whose words fit a template is told so, and a module of
+        # plain slides is a must-fix only when some of them fit one
+        def sl(i, text, **kw):
+            return dict({"id": "p%02d" % i, "kind": "slide", "title": "Slide %d" % i, "visual_kind": "schematic",
+                         "visual": "A drawing.", "text": text, "notes": "- n", "minutes": 2}, **kw)
+
+        def mod(slides, **kw):
+            return dict({"module": 1, "course_language": "English", "operator_language": "en", "screens": slides}, **kw)
+        dull = "The tank holds the fuel.\nThe pump moves it to the engine.\nThe valve stops it."
+        fits = [("A leak is found in the tank room.\nWhat would you do first?", "scenario"),
+                ("The valve closes.\nWhy does the pressure rise?", "worked-example"),
+                ("Many people think LNG burns as a liquid.\nOnly the vapour burns.", "true-false"),
+                ("Cost is quantity times rate.\nDock hire: 10 days x EUR 4,000 = EUR 40,000.", "worked-example"),
+                ("First isolate the line.\nThen vent it.\nNext purge it.\nFinally test it.", "procedure"),
+                ("Methanol tank:\n• kept inerted\n• breathes through valves\nGas cylinders:\n• relief valves\n• on open deck", "compare-two"),
+                ("Detection: the gas is found.\nShutdown: the valve closes.\nVentilation: the gas is cleared.", "three-content-blocks"),
+                ("The phases in order.\nInitiating: why.\nPlanning: how.\nExecuting: the work.\nClosing: the handover.", "reference-table"),
+                ("The tank is filled to 98 % at most.\nThe relief valve opens at 10 bar.\nThe LNG is at -162 °C.", "key-numbers")]
+        got = [(cs.template_fit(mod([]), sl(1, t)) or ("",))[0] for t, _ in fits]
+        check("2.127.0: a plain slide's words say which template they fit - a situation, a question, a wrong belief, a "
+              "calculation, steps, two groups, three parts, named rows, numbers", got == [w for _, w in fits], got)
+        f6 = cs.template_fit(mod([]), sl(1, fits[5][0]))
+        f7 = cs.template_fit(mod([]), sl(1, fits[6][0]))
+        check("... with the build sheet's \"blocks\" worked out for it", f6[2]["blocks"] == "[[1, 3], [4, 6]]"
+              and f7[2]["blocks"] == "[[1, 1], [2, 2], [3, 3]]", (f6, f7))
+        check("... ordinary lines fit none, and a course in another language is read by the lines' shape only",
+              cs.template_fit(mod([]), sl(1, dull)) is None
+              and cs.template_fit(mod([], course_language="Latvian"), sl(1, fits[2][0])) is None
+              and cs.template_fit(mod([], course_language="Latvian"), sl(1, fits[6][0]))[0] == "three-content-blocks")
+        check("2.127.0: a slide already written or built as a template is not plain",
+              cs.plain_slide(sl(1, dull)) and cs.plain_slide(sl(1, dull), {"template": "reading-with-figure.v1", "composition": "two-col"})
+              and not cs.plain_slide(sl(1, "1 Isolate.\n2 Vent.\n3 Purge."))
+              and not cs.plain_slide(sl(1, "LNG | -162 °C\nLPG | -42 °C"))
+              and not cs.plain_slide(sl(1, dull, claim="LNG burns as a liquid.", claim_is="false"))
+              and not cs.plain_slide(sl(1, dull), {"blocks": [[1, 1], [2, 2], [3, 3]]})
+              and not cs.plain_slide(sl(1, dull), {"template": "compare-two"}))
+        six = [sl(i, dull) for i in range(1, 5)] + [sl(5, fits[4][0]), sl(6, fits[6][0])]
+        tf = cs.template_findings(mod(six))
+        check("2.127.0: six plain slides, two of which fit a template - the module is a must-fix that names them, each with its suggestion",
+              [f["rule"] for f in tf] == ["t_template_mix", "t_fits_template", "t_fits_template"] and tf[0]["level"] == cs.FAIL
+              and "Slide 5, Slide 6" in tf[0]["detail"].replace("slide", "Slide") and all(f["level"] == cs.NOTE for f in tf[1:])
+              and "three-content-blocks" in tf[2]["detail"], tf)
+        check("... a note when the operator says why the module stays plain, or when no slide fits a template",
+              cs.template_findings(mod(six, plain_why="An old course kept as it was."))[0]["level"] == cs.NOTE
+              and [(f["rule"], f["level"]) for f in cs.template_findings(mod([sl(i, dull) for i in range(1, 7)]))] == [("t_template_mix", cs.NOTE)])
+        mixed = six[:3] + [sl(7, dull, claim="LNG burns as a liquid.", claim_is="false"), sl(8, "1 Isolate.\n2 Vent.\n3 Purge."),
+                           sl(9, "LNG | -162 °C\nLPG | -42 °C\nMethanol | 20 °C")]
+        check("... and nothing about the mix when the module is short, or 60 % of it or less is plain",
+              not [f for f in cs.template_findings(mod(six[1:])) if f["rule"] == "t_template_mix"]
+              and not cs.template_findings(mod(mixed)), cs.template_findings(mod(mixed)))
         check("operator-stated facts listed once - from the script and from FEEDBACK_LOG.md",
               "left console" in page and "tested to 7 bar" in page and page.count(lv("s_facts_title")) == 1)
         doc = zipfile.ZipFile(p["docx"]).read("word/document.xml").decode("utf-8")

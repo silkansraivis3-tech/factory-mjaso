@@ -159,6 +159,16 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   (`shape_problems`). Beside a picture a scenario's situation holds 60 words and its question, choices and whys 85;
   a worked example's lines and question 85 (`theory-rules.json` `beside_picture`, `t_overfull`) - an active slide's
   question, choices, whys and answer count toward its 50 words, so trim the situation, not the teaching.
+
+  **The check reads the plain slides for you (2.127.0).** A slide left as ordinary lines beside its picture is read by
+  `content_script.template_findings`: when its words already have the shape of a template - a question to the room, a
+  situation, a wrong belief, a calculation, steps in order, two or three headed groups, lines `Label: text`, a number on
+  every line - the review page says which template, and the exact fields or build-sheet `"blocks"` to write
+  (`t_fits_template`, a suggestion). When more than 60 % of a module's teaching slides are plain and some of them fit a
+  template, the module is a must-fix that names those slides (`t_template_mix`): write them as suggested until the module
+  is at 60 % or under, or say why it stays plain - `"plain_why"` at the top of the script - and it is a note. A module
+  where no plain slide fits a template gets a note only. The sign words are English; a course in another language is read
+  by the shape of its lines (`layout-templates.json` `"mix"`).
 - **3D and AI pictures.**
   - **3D** only where the figure's why is spatial - a shape, an inside or a layout in space (a tank and its barriers, a
     space and what is around it, a pipe between its valves); set the slide's `visual_kind` to `model_3d` and describe the

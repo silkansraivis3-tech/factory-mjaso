@@ -32,13 +32,13 @@
     "explain-figure":       {"version": 1, "name": "Text + figure", "variants": ["figure-right", "figure-left", "text-only"], "needs": "figure (or none: text-only, short text)", "auto": "a split or column layout with a picture, up to 60 words; text-only: a short slide with no picture"},
     "figure-stage":         {"version": 1, "name": "Large figure", "variants": ["figure", "figure-top"], "needs": "figure", "auto": "layout visual_full or visual_wide with a drawing and few words"},
     "photo-explain":        {"version": 1, "name": "Photo + explanation", "variants": ["full", "split", "column"], "needs": "photograph", "auto": "a photograph: full screen, beside the words, or in its own column"},
-    "compare-two":          {"version": 1, "name": "Comparison", "variants": ["two-visuals"], "needs": "figure + figure_b + \"blocks\": two line ranges", "auto": "never - asked for in the build sheet"},
+    "compare-two":          {"version": 1, "name": "Comparison", "variants": ["two-visuals"], "needs": "figure + figure_b + \"blocks\": two line ranges", "auto": "a build sheet with \"figure_b\" and \"blocks\" of two line ranges (2.127.0 - \"template\" is not needed)"},
     "procedure":            {"version": 1, "name": "Sequence of actions", "variants": ["with-figure", "figure-left", "text-only"], "needs": "steps the script numbers itself, 1, 2, 3 ...", "auto": "a slide whose lines are numbered steps"},
     "task-launch":          {"version": 1, "name": "Task opening", "variants": ["tablet", "room", "check"], "needs": "a task slide or a room activity", "auto": "every task slide and room activity"},
     "recap":                {"version": 1, "name": "Summary", "variants": ["cards"], "needs": "the module's closing slide (\"recap\": true)", "auto": "the recap slide - one design for every module (L51)"},
     "opening":              {"version": 1, "name": "Module opening", "variants": ["statement", "photo"], "needs": "composition opener", "auto": "the opener composition"},
     "long-explanation":     {"version": 1, "name": "Long explanation + 3D", "variants": ["model", "figure-left", "points"], "needs": "a 3D figure and more than 60 words; points: the script's \"points\"", "auto": "a 3D slide with dense text; points: a slide with \"points\" - the short points beside the picture, the full words in the instructor's notes"},
-    "three-content-blocks": {"version": 1, "name": "Three content blocks", "variants": ["with-figure", "figure-left"], "needs": "figure + \"blocks\": three line ranges", "auto": "never - asked for in the build sheet"},
+    "three-content-blocks": {"version": 1, "name": "Three content blocks", "variants": ["with-figure", "figure-left"], "needs": "figure + \"blocks\": three line ranges", "auto": "a build sheet with \"blocks\" of three line ranges (2.127.0 - \"template\" is not needed)"},
     "reference-table":      {"version": 1, "name": "Table + conclusion", "variants": ["with-figure", "figure-left"], "needs": "figure + lines with cells separated by \" | \"", "auto": "a slide whose lines are table rows"},
     "reading-with-figure":  {"version": 1, "name": "A lot of text + figure", "variants": ["figure-right", "figure-left"], "needs": "figure and more than 60 words", "auto": "a split or column layout with a picture and dense text"},
     "content-in-parts":     {"version": 1, "name": "One slide, several parts", "variants": ["with-figure", "figure-left"], "needs": "figure; \"parts\": line ranges, or more than 135 words", "auto": "a slide with a picture and more than 135 words"},
@@ -66,5 +66,17 @@
       {"info": "the end of the module", "template": "recap", "how": "\"recap\": true, and \"asks\": one question for each line"},
       {"info": "just before a self-check", "template": "task-launch", "how": "\"before\" on the task slide that opens it: 2-4 things to check"},
       {"info": "before the module check, every second or third module", "template": "drill", "how": "\"drill\": quick-fire, say-it or find-it, after the module's last teaching slide"}
-    ]}
+    ]},
+  "mix": {"_why": "2.127.0 (operator Aleksis Vejs, 2026-11-10: 'the factory doesn't really want to use the template'). Counted on the built decks: Project Management 42 of 57 teaching slides plain (a picture beside ordinary lines), the safety course 150 of 150; ten of the twenty-one templates in no deck at all. The picking table was an invitation only - nothing said when a slide's own words already had the shape of a template. Now the script check (content_script.template_findings) reads every PLAIN teaching slide - no field or line shape of a template, no template asked for in the build sheet - and names the template its words fit and how to write them (t_fits_template, a suggestion). The module is a MUST-FIX (t_template_mix) only when more than max_plain_share of its teaching slides are plain AND the check can name slides that fit a template: there is always something concrete to do, and no rule to satisfy by guessing. The operator who wants the module plain says why (\"plain_why\" at the top of the script): then a note.",
+    "max_plain_share": 0.6, "min_slides": 6,
+    "_values": "starting values - 0.6: the two courses counted above are over it, a module with four plain slides in ten is not. min_slides: a module too short to judge is left alone.",
+    "label_words": 4, "_label_words": "a line 'Label: text' or 'Label - text' is a named part when its label is this many words or fewer",
+    "signs": {"_why": "words that say what a piece of information is, by course language. Only English is listed; a course in another language gets the checks that read the lines' shape (headings, labels, numbers, a calculation, a question), which need no words.",
+      "en": {
+        "predict": ["predict", "guess", "think first"],
+        "belief": ["myth", "misconception", "common mistake", "many people think", "many believe", "often thought", "it is not true", "contrary to"],
+        "scenario": ["what would you do", "what do you do", "what should you do", "you are the", "imagine", "suppose"],
+        "sequence": ["first", "second", "third", "then", "next", "after that", "finally", "lastly", "step"],
+        "compare": [" vs ", " vs. ", " versus ", "compared", "difference between", "before and after"]
+      }}}
 }

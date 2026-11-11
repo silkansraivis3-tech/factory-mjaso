@@ -1356,6 +1356,148 @@ def paged_findings(script, build=None):
     return found
 
 
+# ------------------------------------------------------------------ the slide for the information (2.127.0)
+# Operator, 2026-11-10: "the factory doesn't really want to use the template". Counted on the built decks, three of four
+# teaching slides (Project Management) and every one (the safety course) were ordinary lines beside a picture, and ten of the
+# twenty-one templates were in no deck: the picking table (script/GUIDE.md) was an invitation, and nothing said when a
+# slide's own words already had the shape of a template. template_findings reads each PLAIN slide and says which template
+# its words fit and how to write them. Rules and sign words: course-module-ui/knowledge/layout-templates.json "mix".
+PLAIN_TEMPLATES = ("explain-figure", "reading-with-figure", "photo-explain", "figure-stage", "long-explanation", "content-in-parts")
+BULLET = re.compile(r"^[•\-–—*·]\s+")
+LABEL_LINE = re.compile(r"^([^:|]{2,60}?)(?::\s+|\s+[-–—]\s+)\S")
+CALC_LINE = re.compile(r"\d[^=]*=\s*[^=]*\d")
+
+
+def bare(x):
+    """a line without its bullet"""
+    return BULLET.sub("", x.strip())
+
+
+def numbered_steps(lines):
+    """the script numbers its own steps 1, 2, 3 ... - all lines but at most one (compile_module.is_steps: the procedure slide)"""
+    nums = [int(re.match(r"\d+", x).group(0)) for x in lines if STEP_LINE.match(x)]
+    return len(nums) >= 2 and nums == list(range(1, len(nums) + 1)) and len(nums) >= len(lines) - 1
+
+
+def table_rows(lines):
+    """table rows (compile_module.is_table: the table slide, or numbers to remember)"""
+    rows = [x for x in lines if " | " in x]
+    return len(rows) >= 2 and len({len(x.split(" | ")) for x in rows}) == 1
+
+
+def plain_slide(s, b=None):
+    """a teaching slide built as ordinary lines beside its picture: its fields and its lines have the shape of no template,
+    and the build sheet asks for none (a second picture, blocks, or a template that is not one of the plain ones)"""
+    b = b or {}
+    if s.get("kind") != "slide" or s.get("recap") or shape_of(s) or (s.get("ask") and b.get("spots")):
+        return False
+    if b.get("blocks") or b.get("figure_b") or (b.get("template") or "").split(".v")[0] not in ("",) + PLAIN_TEMPLATES:
+        return False
+    lines = lines_of(s.get("text"))
+    return not (numbered_steps(lines) or table_rows(lines))
+
+
+def sign_in(words, text):
+    return any(re.search(r"\b%s\b" % re.escape(w.strip()), text) for w in words)
+
+
+def headed_groups(lines):
+    """[(first line, last line)] of the groups a heading opens - a line ending with ":" and the lines under it"""
+    heads = [i for i, x in enumerate(lines, 1) if bare(x).endswith(":")]
+    ends = heads[1:] + [len(lines) + 1]
+    groups = [(h, e - 1) for h, e in zip(heads, ends)]
+    return groups if all(hi > lo for lo, hi in groups) else []
+
+
+def label_run(lines, most):
+    """(first, last) of the longest run of lines "Label: text" / "Label - text" whose label is `most` words or fewer"""
+    best, start = (0, 0), None
+    for i, x in enumerate(list(lines) + [""], 1):
+        m = LABEL_LINE.match(bare(x))
+        if m and wc(m.group(1)) <= most and not re.search(r"[.,;?!]", m.group(1)):
+            start = start or i
+        else:
+            if start and i - start > best[1] - best[0] + (1 if best[0] else 0):
+                best = (start, i - 1)
+            start = None
+    return best
+
+
+def template_fit(script, s):
+    """(template, label key, its values) - the template a PLAIN slide's own words already have the shape of, or None. The
+    lines' shape is read first (it needs no language); the sign words are the course language's, English only so far"""
+    M = LAYOUT_RULES["mix"]
+    S = M["signs"].get(course_lang(script)) or {}
+    lines = lines_of(s.get("text"))
+    low = [bare(x).lower() for x in lines]
+    text = " ".join([str(s.get("title") or "").lower()] + low)
+    pic = picture_of(s)["kind"] not in ("", "none")
+    blocks = lambda rs: json.dumps([list(r) for r in rs])
+    if sign_in(S.get("scenario", ()), text):
+        return "scenario", "fit_scenario", {}
+    for i, x in enumerate(low, 1):
+        if x.endswith("?") or any(x.startswith(w + ":") for w in S.get("predict", ())):
+            return "worked-example", "fit_question", {"n": i}
+    if sign_in(S.get("belief", ()), text):
+        return "true-false", "fit_belief", {}
+    for i, x in enumerate(low, 1):
+        if CALC_LINE.search(x):
+            return "worked-example", "fit_calc", {"n": i}
+    steps = sum(1 for x in lines if STEP_LINE.match(x))
+    seq = sum(1 for x in low if any(re.match(r"%s\b" % re.escape(w), x) for w in S.get("sequence", ())))
+    if len(lines) >= 3 and (steps >= 2 or seq >= max(3, len(lines) - 1)):
+        return "procedure", "fit_steps", {"k": max(steps, seq), "n": len(lines)}
+    groups = headed_groups(lines)
+    if pic and len(groups) == 2:
+        return "compare-two", "fit_two_groups", {"a": groups[0][0], "b": groups[1][0], "blocks": blocks(groups)}
+    if pic and len(groups) == 3:
+        return "three-content-blocks", "fit_three_groups", {"blocks": blocks(groups)}
+    a, b_ = label_run(lines, M["label_words"])
+    k = b_ - a + 1 if a else 0
+    if pic and k == 3:
+        return "three-content-blocks", "fit_three_labels", {"a": a, "b": b_, "blocks": blocks((i, i) for i in range(a, b_ + 1))}
+    if pic and k >= 4:
+        return "reference-table", "fit_table", {"a": a, "b": b_, "k": k}
+    if pic and k == 2 and len(lines) <= 4:
+        return "compare-two", "fit_two_labels", {"a": a, "b": b_, "blocks": blocks(((a, a), (b_, b_)))}
+    if 3 <= len(lines) <= 8 and all(re.search(r"\d", x) and wc(x) <= 14 for x in lines):
+        return "key-numbers", "fit_numbers", {}
+    if pic and (sign_in(S.get("compare", ()), text) or (s.get("visual_kind") or "") == "comparison"):
+        return "compare-two", "fit_compare", {}
+    return None
+
+
+def template_findings(script, build=None):
+    """a suggestion on every plain slide whose words fit a template (t_fits_template), and the module's mix (t_template_mix):
+    a MUST-FIX when more of its teaching slides are plain than layout-templates.json "mix" allows AND some of them fit a
+    template - there is then something concrete to do; a note when none fits, or the operator says why ("plain_why")"""
+    M, names = LAYOUT_RULES["mix"], LAYOUT_RULES["templates"]
+    teach = [s for s in script.get("screens", []) if s.get("kind") == "slide" and not s.get("recap")]
+    found, plain, fits = [], 0, []
+    for s in teach:
+        if not plain_slide(s, ((build or {}).get("screens") or {}).get(s.get("id")) or {}):
+            continue
+        plain += 1
+        fit = template_fit(script, s)
+        if fit:
+            fits.append(place(script, s["id"]))
+            found.append({"where": fits[-1], "screen": s["id"], "field": "text", "level": NOTE, "rule": "t_fits_template", "fix": "",
+                          "detail": T(script, "t_fits_template", name=names[fit[0]]["name"], template=fit[0],
+                                      how=T(script, fit[1], **fit[2]))})
+    if len(teach) >= M["min_slides"] and plain > M["max_plain_share"] * len(teach):
+        kw = dict(plain=plain, n=len(teach), pct=round(100.0 * plain / len(teach)), max=round(100 * M["max_plain_share"]))
+        why = str(script.get("plain_why") or "").strip()
+        if fits and not why:
+            level, detail = FAIL, T(script, "t_template_mix", k=len(fits), where=", ".join(fits), **kw)
+        elif fits:
+            level, detail = NOTE, T(script, "t_template_mix_kept", k=len(fits), why=why, **kw)
+        else:
+            level, detail = NOTE, T(script, "t_template_mix_none", **kw)
+        found.insert(0, {"where": T(script, "s_the_module"), "screen": "", "field": "", "level": level,
+                         "rule": "t_template_mix", "fix": "", "detail": detail})
+    return found
+
+
 def build_findings(course, script):
     """what the module's build sheet does to the planned pictures, shown with the script's own findings on the review page:
     a 3D slide built as a 2D figure, and (L60) a module built with no 3D scene at all - its best candidate named, until the
@@ -1369,7 +1511,7 @@ def build_findings(course, script):
             build = load(bp) if os.path.isfile(bp) else None
         except (OSError, ValueError):
             build = None
-    paged = paged_findings(script, build)
+    paged = paged_findings(script, build) + template_findings(script, build)       # 2.127.0: the slide for the information
     if not build or not course:
         return paged
     figdir, found, scene = workspace.claude_path(course, "figures", m), list(paged), False

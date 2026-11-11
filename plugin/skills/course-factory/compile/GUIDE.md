@@ -210,6 +210,14 @@ and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `
 `"box"` (the picture's box, below), `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.
 
+**`"blocks"` ask for their template without naming it (2.127.0).** Beside a picture, `"blocks"` of three line ranges is
+`three-content-blocks`, and `"blocks"` of two with `"figure_b"` is `compare-two` - `"template"` is not needed (before, the
+blocks did nothing without it). A sheet that names a template, or a layout other than the starter's `two-col`, keeps its
+own way. Every build prints the templates the deck is built in, most used first - `Templates in M02: 9
+reading-with-figure, 4 photo-explain, ... (5 of 21 templates)` - and, when the script check finds the module mostly plain
+with slides that fit a template, `MUST FIX (the slide for the information)`: the writer's finding, as `v_paged_slide` is
+(`script/GUIDE.md`, "The check reads the plain slides for you").
+
 **A repeat of a look is a note (L62).** The compiler never builds a slide another way to avoid a repeat; a repeat, or more
 than a fifth of slides on the dark ground, is a `Note:` line, never a problem. A slide whose OWN layout does not fit (the
 larger logo can cost a long title its first line beside it) is yours: give it `"parts"` or a shorter picture column, as for

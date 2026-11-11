@@ -7,6 +7,28 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.127.0 · The slide for the information: the factory says which template a plain slide fits (2026-11-10)
+
+- WHY (operator Aleksis Vejs: "the factory doesn't really want to use the template"): counted on the built decks, 42 of 57
+  teaching slides of Project Management and 150 of 150 of the safety course were ordinary lines beside a picture, and ten
+  of the twenty-one templates were in no deck. The picking table was an invitation; `"blocks"` without `"template"` did
+  nothing; the starter build sheet's `"composition": "two-col"` is on 291 entries.
+- `scripts/content_script.py`: `plain_slide`, `template_fit`, `template_findings` (called from `build_findings`, so the
+  review page and the compiler both show them). Rules `t_fits_template` (a suggestion on the slide, with the exact
+  fields or `"blocks"` to write) and `t_template_mix` (the module: a must-fix above `max_plain_share` when some plain
+  slides fit a template; a note when none fits or the script says `"plain_why"`). Labels `t_*`, `fit_*` in
+  `knowledge/page-labels.json` (English; lv / ru fall back to it).
+- `course-module-ui/knowledge/layout-templates.json` `"mix"`: `max_plain_share` 0.6, `min_slides` 6, `label_words` 4 and the
+  sign words by course language (English only) - starting values, not measured ones.
+- `compile/scripts/compile_module.py`: `implied_template` (`"blocks"` of three ranges beside a picture is
+  three-content-blocks; of two with `"figure_b"` is compare-two - a named template or a layout other than two-col keeps
+  its own way), `template_mix` (the line "Templates in M02: ..." on every build), and the must-fix printed with
+  `v_paged_slide`'s.
+- Tests: `scripts/test_content_script.py`, `compile/scripts/test_compile_module.py`.
+- Not done: the starter build sheet still writes `"composition": "two-col"` for every figure, which keeps a wide drawing
+  off the stage; no course was rebuilt; the threshold has not been tried on a new course's first draft. (2.126.0 is the
+  kit's flow layer on `aleksis/kit-flow-layer`, not merged when this was written.)
+
 ## 2.125.0 · Scanned pages read whole; the walk review cannot pass what it was not shown (2026-11-10)
 
 - `kb/builder/ocr.py`: `grey_copy` (moved from `pdf.py`), lines cut at `GAP_CUT`, column reflow, the print-cell coverage
