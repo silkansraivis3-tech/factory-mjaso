@@ -146,6 +146,10 @@ lane, `trace` and `region` on charts, and the minified copy modules ship (`min/k
 changing the kit - `test_minify_engines.py` fails a stale copy).
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
+## 2.131.2 · Foam equipment in the 3D kit (2026-11-11)
+
+- `kit3d`: `foam_extinguisher`, `foam_inductor`, `foam_branch_pipe` (PARTS.md, the catalogue); minified copy rebuilt.
+
 ## 2.131.0 · A fixer's quick look at its 3D scenes (2026-11-11)
 
 - `kit3d/scripts/scene3d_check.py --slides <ids> --no-perf`: shoots only the scenes a fixer changed into `review/MNN_3d_look/`, never the reviewer's pictures.

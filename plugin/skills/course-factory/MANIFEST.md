@@ -7,6 +7,10 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.131.2 · The whole slide counted, the old photos catalogued, briefs that say their shape, the walk after the 3D check (2026-11-11)
+
+- `scripts/content_script.py` `overfull()`: the whole slide against 120 (`t_part_whole`). `compile/scripts/phase_a.py` `catalogue()`. `orchestration/workflows/brief.mjs` `checkModules()`, `minutesOf()`. `build_course.js`: the walk after the 3D and figure checks; a trial's photo pass only catalogues. `compile/scripts/additional_materials.py` `stem_title()`; `scripts/classroom_files.py` full place and equipment on papers.
+
 ## 2.131.1 · The papers listed for the instructor's control (2026-11-11)
 
 - `compile/scripts/additional_materials.py`: `papers_list()` writes `moduleNN/instructor/papers/papers.json` (id, title, kind, the trainee and instructor HTML and PDF names, in teaching order); `--check` covers it. Tests: test_additional_materials, test_publisher.
