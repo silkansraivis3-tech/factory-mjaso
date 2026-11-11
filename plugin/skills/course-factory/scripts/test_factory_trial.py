@@ -19,7 +19,12 @@ Pinned:
     package counts it; the words the room sees at once (the longest part, never the compiler's own words); a number that
     cannot be measured is None;
   * report --course scores any trial course and saves only where --run says; --against and compare set two scorecards
-    side by side; nearer the 3D band is better.
+    side by side; nearer the 3D band is better;
+  * reuse: a stage's hashes move only with what it reads (a section of a guide, a script it runs, not a test); a run keeps
+    the last run's Stage 1-3 before deleting it and takes them only while every file they read is unchanged (by the hashes
+    the trial recorded, or the commit its version names) AND the copy passes this factory's gate and approval - else the
+    stage runs, its copy taken out and the decisions put back; the prompt, the run's lines and the scorecard say which and
+    why; --fresh takes nothing; setup --reuse <an earlier trial> keeps its stages, --dry-run only says what it would take.
 """
 from __future__ import annotations
 
@@ -115,6 +120,8 @@ def main():
         prompt = io.open(os.path.join(home, "runs", runs[-1], "prompt.txt"), encoding="utf-8").read()
         check("... the prompt names the trial's modules, its signer and that the training app is never called",
               "Only modules 1, 4 get" in prompt and '--by "Factory trial"' in prompt and "Never call course_portal.py" in prompt, prompt)
+        check("... the build's helpers come from brief.mjs, the trial's rules in its notes, and the session explores nothing",
+              "helpers come from brief.mjs" in prompt and "list no folders and read no factory script's source" in prompt, prompt)
         io.open(os.path.join(master, "course", "working_claude", "left_over.txt"), "w").write("x")
         code, out = cli("run", "--home", home, "--dry-run")
         check("a second run starts from an empty course again", code == 0 and not os.path.isfile(os.path.join(master, "course", "working_claude", "left_over.txt")), out)
@@ -367,15 +374,197 @@ def main():
               and (1, "build_minutes", 45, 30, "better") in moved, moved)
         moved = ft.compare({"modules": [{"module": 1, "interactive_3d_share": 75}]}, {"modules": [{"module": 1, "interactive_3d_share": 70}]})
         check("... and inside the band neither", moved == [(1, "interactive_3d_share", 70, 75, "-")], moved)
+        reuse_part(tmp, src)
     finally:
         os.environ.clear()
         os.environ.update(old_env)
-        master = os.path.join(tmp, "home", "run", "FACTORY TRIAL")
-        if os.path.isdir(master):
-            ft.remove_run(master)
+        for h in ("home", "home2", "home3"):
+            master = os.path.join(tmp, h, "run", "FACTORY TRIAL")
+            if os.path.isdir(master):
+                ft.remove_run(master)
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0
+
+
+def write(path, text):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    io.open(path, "w", encoding="utf-8", newline="\n").write(text)
+
+
+def git(cwd, *args):
+    return subprocess.run(["git", "-C", cwd] + list(args), capture_output=True, text=True)
+
+
+def reuse_part(tmp, src):
+    """a release that changes only the build takes the last trial's Stage 1-3 - and only then"""
+    print("\n-- reuse: the last trial's Stage 1-3, when nothing they read changed")
+    text = "front\n## The brief\nbrief words\n## The gate\ngate words\n## Building\nbuild words\n"
+    check("a guide's section runs from its heading to the next; the part before the first; a heading not there is None",
+          ft.section(text, "The gate") == "## The gate\ngate words" and ft.section(text, "") == "front"
+          and ft.section(text, "Stage 3") is None)
+    plug = os.path.join(tmp, "plug")
+    skill = os.path.join(plug, "skills", "course-factory")
+    write(os.path.join(plug, ".claude-plugin", "plugin.json"), '{"version": "1.0.0"}')
+    write(os.path.join(skill, "SKILL.md"), text)
+    write(os.path.join(skill, "scripts", "content_script.py"), "# the script checks\n")
+    write(os.path.join(skill, "coverage", "scripts", "sim_coverage.py"), "# simulators\n")
+    write(os.path.join(skill, "coverage", "scripts", "test_sim_coverage.py"), "# a test\n")
+    h1 = {s: ft.stage_hashes(ft.OnDisk(plug), s) for s in ft.STAGES}
+    write(os.path.join(skill, "SKILL.md"), text.replace("build words", "other build words"))
+    write(os.path.join(skill, "coverage", "scripts", "test_sim_coverage.py"), "# another test\n")
+    write(os.path.join(skill, "SKILL.md.bak"), "x")
+    h2 = {s: ft.stage_hashes(ft.OnDisk(plug), s) for s in ft.STAGES}
+    check("a section a stage does not read, a test or a file not on the list changes no stage", h1 == h2,
+          [(s, k) for s in h1 for k in h1[s] if h1[s][k] != h2[s][k]])
+    write(os.path.join(skill, "SKILL.md"), text.replace("gate words", "the gate, said otherwise"))
+    write(os.path.join(skill, "scripts", "content_script.py"), "# a new must-fix\n")
+    h3 = {s: ft.stage_hashes(ft.OnDisk(plug), s) for s in ft.STAGES}
+    check("... a section it reads, or a script it runs, changes that entry alone",
+          [k for k in h1["read"] if h1["read"][k] != h3["read"][k]] == ["skills/course-factory/SKILL.md#The gate"]
+          and [k for k in h1["script"] if h1["script"][k] != h3["script"][k]] == ["skills/course-factory/scripts/content_script.py"],
+          [(s, k) for s in h1 for k in h1[s] if h1[s][k] != h3[s][k]])
+    check("every entry of the stage lists names a file or folder of the factory as it is now (a renamed file would never "
+          "match again, silently)", all(ft.OnDisk(ft.PLUGIN).read(e.split("#")[0]) is not None
+                                        or ft.OnDisk(ft.PLUGIN).files(e.split("#")[0]) for s in ft.STAGES for e in ft.STAGES[s]),
+          [e for s in ft.STAGES for e in ft.STAGES[s] if ft.OnDisk(ft.PLUGIN).read(e.split("#")[0]) is None
+           and not ft.OnDisk(ft.PLUGIN).files(e.split("#")[0])])
+    real = {s: ft.stage_hashes(ft.OnDisk(ft.PLUGIN), s) for s in ft.STAGES}
+    check("... and every section named is in its guide", not [e for s in ft.STAGES for e in ft.STAGES[s] if real[s][e] == "missing"],
+          [e for s in ft.STAGES for e in ft.STAGES[s] if real[s][e] == "missing"])
+
+    kept = os.path.join(tmp, "kept")
+    write(os.path.join(kept, "course", "working_claude", "script", "M01.json"), "{}")
+    mark = {"plugin": "1.0.0", "started": "2026-11-11 02:13", "modules": [1, 19], "factory": {"commit": "", "stages": h3}}
+    write(os.path.join(kept, ft.MARKER), json.dumps(mark))
+    plan = ft.decide(kept, [1, 4], plug)
+    check("decide: both stages taken when every file they read is as it was, the scripts only of modules the last trial "
+          "scripted", plan["read"]["reuse"] and plan["script"]["reuse"] and plan["script"]["modules"] == [1]
+          and "unchanged (by the hashes it recorded)" in plan["read"]["why"], plan)
+    write(os.path.join(skill, "scripts", "content_script.py"), "# yet another must-fix\n")
+    plan = ft.decide(kept, [1, 4], plug)
+    check("... a script the stage runs changed: that stage runs, its why names the file",
+          plan["read"]["reuse"] and not plan["script"]["reuse"] and plan["script"]["changed"] == ["skills/course-factory/scripts/content_script.py"]
+          and "content_script.py" in plan["script"]["why"], plan)
+    write(os.path.join(skill, "SKILL.md"), text)
+    plan = ft.decide(kept, [1, 4], plug)
+    check("... Stage 1-2 runs: the scripts, written against it, run too", not plan["read"]["reuse"] and not plan["script"]["reuse"]
+          and "#The gate" in plan["read"]["why"] and "Stage 1-2, which runs" in plan["script"]["why"], plan)
+    plan = ft.decide(kept, [1], plug, fresh=True)
+    check("... --fresh runs every stage; no earlier trial, the same", not plan["read"]["reuse"] and "--fresh" in plan["read"]["why"]
+          and not ft.decide(os.path.join(tmp, "nothing"), [1], plug)["read"]["reuse"], plan)
+
+    print("   (a trial before the hashes: its version's commit)")
+    write(os.path.join(skill, "SKILL.md"), text)
+    write(os.path.join(skill, "scripts", "content_script.py"), "# the script checks\n")
+    ok = git(plug, "init", "-q").returncode == 0
+    if ok:
+        git(plug, "-c", "user.email=t@t", "-c", "user.name=t", "add", "-A")
+        git(plug, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "1.0.0")
+        write(os.path.join(plug, ".claude-plugin", "plugin.json"), '{"version": "1.1.0"}')
+        write(os.path.join(skill, "scripts", "content_script.py"), "# 1.1.0 checks more\n")
+        git(plug, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qam", "1.1.0")
+        old = dict(mark, factory=None)
+        write(os.path.join(kept, ft.MARKER), json.dumps(old))
+        plan = ft.decide(kept, [1], plug)
+        check("an old trial with no hashes is matched by its version to the one commit that says it: what changed since runs, "
+              "the rest is taken", plan["read"]["reuse"] and "matched by its version 1.0.0" in plan["read"]["why"]
+              and plan["script"]["changed"] == ["skills/course-factory/scripts/content_script.py"], plan)
+        write(os.path.join(kept, ft.MARKER), json.dumps(dict(old, plugin="0.9.0")))
+        plan = ft.decide(kept, [1], plug)
+        check("... a version no commit says: nothing is taken, and it says why", not plan["read"]["reuse"]
+              and "names 0 commit(s)" in plan["read"]["why"], plan)
+    else:
+        check("git is on this computer (the version match needs it)", False)
+
+    print("   (a run takes them, judged by this factory)")
+    home = os.path.join(tmp, "home2")
+    code, out = cli("setup", "--home", home, "--from", src, "--modules", "1,4")
+    code, out = cli("run", "--home", home, "--dry-run")
+    master = os.path.join(home, "run", "FACTORY TRIAL")
+    first = json.load(io.open(os.path.join(master, ft.MARKER), encoding="utf-8"))
+    check("a run records the factory it ran - its commit and each stage's hashes - and that it took nothing, the first time",
+          set(first["factory"]["stages"]) == set(ft.STAGES) and not first["reused"]["read"]["reuse"]
+          and "no earlier trial" in first["reused"]["read"]["why"] and "RUNS   Stage 1-2" in out, (first.get("reused"), out))
+    wc = os.path.join(master, "course", "working_claude")
+    write(os.path.join(wc, "architecture.json"), '{"modules": []}')
+    write(os.path.join(wc, "intake.json"), '{"course_name": "FACTORY TRIAL", "knowledge_base_decision": {"answer": "yes"}}')
+    write(os.path.join(wc, "ilo_map.json"), json.dumps({"rows": [
+        {"module": "M01", "sub_ilo_id": "1.a", "where_taught": "slide 3", "taught_on": ["s03"]},
+        {"module": "M04", "sub_ilo_id": "4.a", "where_taught": "slide 5", "checked_on": ["q01"]}]}))
+    for f in ("script/M01.json", "fact_check/M01.json", "task_cover/M01.json", "script/M04.build.json"):
+        write(os.path.join(wc, f), '{"module": 1}')
+    write(os.path.join(wc, "COURSE_STATE.md"), "built - every module done")
+    real_check = ft.check_copied
+    said = {"gate": [], "modules": {"1": []}}
+    ft.check_copied = lambda course, mods, plugin_dir=None: {"gate": said["gate"], "modules": {str(m): said["modules"].get(str(m), []) for m in mods}}
+    try:
+        code, out = cli("run", "--home", home, "--dry-run")
+        mark2 = json.load(io.open(os.path.join(master, ft.MARKER), encoding="utf-8"))
+        prompt = io.open(os.path.join(home, "runs", sorted(os.listdir(os.path.join(home, "runs")))[-1], "prompt.txt"), encoding="utf-8").read()
+        wc2 = os.path.join(master, "course", "working_claude")
+        ilo = json.load(io.open(os.path.join(wc2, "ilo_map.json"), encoding="utf-8"))
+        check("the next run keeps the last one's stages before deleting it, and takes them: Stage 1-2 and module 1's script with "
+              "its fact check and task cover - never a build sheet or the old run's state of the course",
+              mark2["reused"]["read"]["reuse"] and mark2["reused"]["script"]["modules"] == [1]
+              and all(os.path.isfile(os.path.join(wc2, f)) for f in ("architecture.json", "script/M01.json", "fact_check/M01.json",
+                                                                      "task_cover/M01.json"))
+              and not os.path.isfile(os.path.join(wc2, "script", "M04.build.json"))
+              and "every module done" not in io.open(os.path.join(wc2, "COURSE_STATE.md"), encoding="utf-8").read()
+              and os.path.isfile(os.path.join(home, ft.REUSE, ft.MARKER)), (mark2.get("reused"), os.listdir(wc2)))
+        check("... the ILO map keeps the slides and questions of module 1's script, not of module 4's, which is written again",
+              ilo["rows"][0].get("where_taught") == "slide 3" and "where_taught" not in ilo["rows"][1] and "checked_on" not in ilo["rows"][1], ilo)
+        check("... the prompt says Stage 1-2 and module 1's script are done, and only module 4 gets a script",
+              "Stage 1 and Stage 2 are DONE" in prompt and "content scripts of modules 1 are DONE" in prompt
+              and "Only modules 4 get a content script" in prompt and "cover the whole programme" not in prompt, prompt)
+        check("... and the run says so: REUSED and why, a line a stage", "REUSED Stage 1-2" in out and "REUSED the content scripts "
+              "(written, task-covered, fact-checked, approved) of modules 1 - from the trial of" in out, out)
+        lines = io.StringIO()
+        with contextlib.redirect_stdout(lines):
+            ft.show({"plugin": "x", "modules": [], "reused": mark2["reused"]})
+        check("... and so does the scorecard", "Taken from the last trial" in lines.getvalue() and "REUSED Stage 1-2" in lines.getvalue(),
+              lines.getvalue())
+
+        said["modules"] = {"1": ["q02: the answer is not proved in the sources"]}
+        code, out = cli("run", "--home", home, "--dry-run")
+        mark3 = json.load(io.open(os.path.join(master, ft.MARKER), encoding="utf-8"))
+        wc3 = os.path.join(master, "course", "working_claude")
+        check("a copied script this factory would not approve is taken out again and written: the run says which and why",
+              mark3["reused"]["read"]["reuse"] and not mark3["reused"]["script"]["reuse"]
+              and not os.path.isfile(os.path.join(wc3, "script", "M01.json")) and "q02: the answer is not proved" in out, (mark3["reused"], out))
+
+        said["gate"] = ["The operator has not approved the Stage 2 page yet"]
+        code, out = cli("run", "--home", home, "--dry-run")
+        mark4 = json.load(io.open(os.path.join(master, ft.MARKER), encoding="utf-8"))
+        intake = json.load(io.open(os.path.join(master, "course", "working_claude", "intake.json"), encoding="utf-8"))
+        check("a copy that does not pass the gate is taken out again - the decisions back as setup copied them - and Stage 1-2 runs",
+              not mark4["reused"]["read"]["reuse"] and "does not pass the gate" in mark4["reused"]["read"]["why"]
+              and not os.path.isfile(os.path.join(master, "course", "working_claude", "architecture.json"))
+              and "knowledge_base_decision" not in intake and intake["course_name"] == "FACTORY TRIAL", (mark4["reused"], intake))
+        said["gate"] = []
+        code, out = cli("run", "--home", home, "--dry-run", "--fresh")
+        mark5 = json.load(io.open(os.path.join(master, ft.MARKER), encoding="utf-8"))
+        check("--fresh takes nothing", not mark5["reused"]["read"]["reuse"] and "--fresh" in out, out)
+    finally:
+        ft.check_copied = real_check
+    gate = ft.check_copied(os.path.join(master, "course"), [])
+    check("the real check judges a copy by the gate of the factory that builds: an architecture never approved does not pass",
+          gate["gate"] and any("approved" in x or "architecture" in x for x in gate["gate"]), gate)
+
+    print("   (setup --reuse an earlier trial)")
+    old_run = os.path.join(home, "runs", "20200101-0000_0.1.0")
+    os.makedirs(old_run)
+    code, out = cli("setup", "--home", os.path.join(tmp, "home3"), "--reuse", old_run)
+    check("a run folder that is not its home's last run is refused: only the last run's course is kept",
+          code == 2 and "not its home's last run" in out, out)
+    code, out = cli("setup", "--home", os.path.join(tmp, "home3"), "--reuse", home, "--dry-run")
+    check("setup --reuse --dry-run says what a run would take, and writes nothing",
+          code == 0 and "Nothing written" in out and "Stage 1-2" in out and not os.path.exists(os.path.join(tmp, "home3")), out)
+    code, out = cli("setup", "--home", os.path.join(tmp, "home3"), "--reuse", home)
+    cfg3 = json.load(io.open(os.path.join(tmp, "home3", "trial.json"), encoding="utf-8"))
+    check("setup --reuse takes the earlier trial's course and modules, and keeps its stages for the next run",
+          code == 0 and cfg3["modules"] == [1, 4] and os.path.isfile(os.path.join(tmp, "home3", ft.REUSE, ft.MARKER))
+          and "Kept for the next run" in out, out)
 
 
 if __name__ == "__main__":

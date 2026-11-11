@@ -236,7 +236,14 @@ A module builder reads `compile/BUILDER_CARD.md` and nothing else, and builds an
 pages). The builder stops at MODULE CLEAN and reviews nothing of its own; the walk judge does the one visual review - the
 deck's slides at every stop and every question of every task page - and signs (Rule 4), and the QA agent beside it
 looks at no screen. The words come from the session's model (the reader, the script writer); building an approved
-script, the mechanical loop, runs on Sonnet at medium effort (`MECHANICAL`), and the gate (one command) at low; the 3D,
-figure, walk and QA judges and the fixes and polish that act on them run on Opus at high effort (`JUDGEMENT`) - the
-job -> model table in SKILL.md, *Building*. `args.factory` pins the factory's skills folder for a benchmark,
-`args.notes` passes the operator's words for the run to every module agent.
+script, the mechanical loop, runs on Sonnet at medium effort (`MECHANICAL`) - the 3D check's command and the one build
+after the figure fixers too - and the gate (one command) at low; the 3D, figure, walk and QA judges and the fixes and
+polish that act on them run on Opus at high effort (`JUDGEMENT`) - the job -> model table in SKILL.md, *Building*.
+`args.factory` pins the factory's skills folder for a benchmark, `args.notes` passes the operator's words for the run to
+every module agent.
+
+**A session that hands out the agents itself** (the Auto build, the factory trial) runs the same script step by step:
+`node orchestration/workflows/brief.mjs <args.json>` replays it with the answers its agents wrote into
+`working_claude/_build/agents/` and lists the agents to start now - each with its model, effort and brief file, the
+workflow's own words. The session starts each with that file's path, runs brief.mjs again as they end, and writes no
+brief of its own; the gate's three commands are run by brief.mjs itself. Its `result.json` is the workflow's answer.

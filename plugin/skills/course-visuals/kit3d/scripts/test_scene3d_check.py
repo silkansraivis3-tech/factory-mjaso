@@ -127,6 +127,22 @@ def main():
               code == 1 and any("not built yet" in p for p in s.get("problems") or []) and r.get("ok") is False, (code, s.get("problems")))
         check("the pictures are not the same picture (the steps change what the scene shows)",
               len({io.open(p, "rb").read() for p in s.get("shots") or []}) == len(s.get("shots") or []), s.get("shots"))
+        two = course(os.path.join(tmp, "two"), {"s09": {"figure": "s09.kit3d.json"}, "s10": {"figure": "s10.kit3d.json"}},
+                     {"s09.kit3d.json": tank, "s10.kit3d.json": tank})
+        run(two, "--module", "2", "--no-perf", "--json")
+        whole = sorted(os.listdir(os.path.join(two, "working_claude", "review", "M02_3d")))
+        code, out = run(two, "--module", "2", "--slides", "s10", "--no-perf", "--json")
+        try:
+            r = json.loads(out[out.index("{"):])
+        except ValueError:
+            r = {}
+        look = [x for sc_ in r.get("scenes") or [] for x in sc_.get("shots") or []]
+        check("--slides: a look at only the scenes named, in its own folder - the reviewer's pictures of the whole module stay",
+              [x.get("slide") for x in r.get("scenes") or []] == ["s10"] and look
+              and all(os.sep + "M02_3d_look" + os.sep in os.path.normpath(p) for p in look)
+              and sorted(os.listdir(os.path.join(two, "working_claude", "review", "M02_3d"))) == whole and whole, (out[-600:], whole))
+        code, out = run(two, "--module", "2", "--slides", "s04", "--no-perf")
+        check("... a slide with no scene: nothing to check, said with the slide", code == 2 and "on s04" in out, out)
         bad = json.load(io.open(tank, encoding="utf-8"))
         bad["parts"][0]["type"] = "no_such_part"
         io.open(os.path.join(c, "working_claude", "figures", "M02", "s09.kit3d.json"), "w", encoding="utf-8").write(json.dumps(bad))

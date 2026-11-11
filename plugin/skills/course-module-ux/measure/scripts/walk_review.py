@@ -38,10 +38,11 @@ judge several slides at once:
            again as they are.
 
 ONE SLIDE, ONE FINGERPRINT - the same one the audits use (course-factory/scripts/check_cache.py): the slide's own markup, its
-place in the deck, the deck around the slides, every file of the module's assets\\ but the pictures (stylesheets, gb_*.js,
-kit_parts.js, kit3d_parts.js ...) and every file the slide names (its photographs, a 3D scene). A fix to one slide leaves
-every other slide's verdict standing; a changed stylesheet or script makes them all stale; a replaced photograph makes the
-slides that show it stale.
+place in the deck, the deck around the slides, every file of the module's assets\\ but the pictures (stylesheets, gb_*.js
+...), the module's kit parts (kit_parts.js, kit3d_parts.js) only where a figure of that kit is drawn, and every file the
+slide names (its photographs, a 3D scene). A fix to one slide leaves every other slide's verdict standing; a changed
+stylesheet or script makes them all stale; a new kit part the slides with that kit's figures; a replaced photograph makes
+the slides that show it stale.
 
 THE TASK PAGES ARE WALKED TOO (operator Aleksis Vejs, 2026-11-10: "add trainee task pages as well"). Every page of
 tasks\\ and assessment\\ (self-checks, the module check, the final assessment - never an answer key) is answered like a

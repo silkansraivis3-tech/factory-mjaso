@@ -12,6 +12,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -599,11 +600,13 @@ def main():
               and la.count("qa:1+fix") == 1 and "fix:2" not in la, la)
         oa, src = allx.get("opts", {}), open(WORKFLOW, encoding="utf-8").read()
         best, loop = {"model": "opus", "effort": "high"}, {"model": "sonnet", "effort": "medium"}
-        judged = [x for x in oa if x.split(":", 1)[0] in ("3d", "review3d", "fixfig", "reviewfig", "qa", "fix", "fixbuild", "walk")]
-        check("the judgement jobs - 3D, its review, the figure fixes and review, QA and the fix round - run on the best "
-              "model at high effort; the build loop and the figure shots stay on Sonnet; one constant each, in one place",
+        judged = [x for x in oa if x.split(":", 1)[0] in ("review3d", "fixfig", "reviewfig", "qa", "fix", "walk")]
+        check("the judgement jobs - the 3D review, the figure fixes and review, QA and the fix round - run on the best "
+              "model at high effort; the build loop, the figure shots, the 3D check's command and the one build after the "
+              "figure fixers stay on Sonnet; one constant each, in one place",
               len(judged) >= 10 and all(oa[x] == best for x in judged)
               and oa.get("build:1") == loop and oa.get("figshots:1") == loop and oa.get("figshots:1+fix") == loop
+              and oa.get("3d:1") == loop and oa.get("3d:1+fix") == loop and oa.get("fixbuild:1") == loop
               and nine.get("opts", {}).get("fix:3") == best
               and src.count("const JUDGEMENT = { model: 'opus', effort: 'high' }") == 1
               and src.count("const MECHANICAL = { model: 'sonnet', effort: 'medium' }") == 1
@@ -620,10 +623,15 @@ def main():
               and not any(w in t for t in said.values() for w in ("model haiku", "model `haiku`", "haiku or sonnet",
                                                                   "`haiku` or `sonnet`", "`haiku` subagent")), table)
         auto = said["SKILL.md"].split("## Auto build", 1)[-1].split("\n## ", 1)[0].replace("\r", "")
-        check("... and an Auto build session briefs its helpers from this workflow: builders never ask, one fix round, only "
-              "what was BROKEN judged again, short reports; a simulator draft is never accepted there (the factory trial ran "
-              "out of its usage limit in the fix rounds)", "build_course.js" in auto and "never\n  asks" in auto
-              and "qa(m, first)" in auto and "at most 30 lines" in auto and "A simulator task (L66) is never accepted" in auto, auto)
+        flat = re.sub(r"\s+", " ", auto)
+        check("... and an Auto build session takes its helpers' briefs from this workflow through brief.mjs, never its own: "
+              "builders never ask, one fix round, only what was BROKEN judged again, answers in files, nothing said between "
+              "helpers; a simulator draft is never accepted there (the factory trial ran out of its usage limit in the fix "
+              "rounds; its session wrote 43 briefs of its own)", "build_course.js" in auto and "brief.mjs <args.json>" in auto
+              and "never from briefs of your own" in flat and "builder never asks" in flat and "qa(m, first)" in auto
+              and "Read <its brief>: it is your whole brief." in flat and "say nothing between helpers" in flat
+              and "--again <label>" in auto and "result.json" in auto
+              and "A simulator task (L66) is never accepted" in auto, auto)
         walk_part(tmp, mods, two, six, allx)
         many = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_figs": ["1"], "_manyfigs": ["1"],
                          "factory": "C:/f/skills"})
@@ -740,10 +748,120 @@ def main():
         nopass = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_polishonly": ["1"], "_listed": ["1"]})
         check("... and a module whose build never printed PASS gets none", "polish:1" not in nopass.get("labels", []),
               nopass.get("labels"))
+        hands = {k: p for k, p in allx.get("prompts", {}).items() if k.split(":", 1)[0] in ("build", "fix", "fixfig", "fixbuild")}
+        hands["polish:1"] = pp
+        check("every brief that changes a module - builder, fixers, the build after them, polish - keeps it to the factory's "
+              "tools: never the factory's code, never a tool of its own, a 3D scene looked at with scene3d_check.py --slides, "
+              "pictures 4 to a message (a trial's fix round spent half its turns in kit2d.js, task_pages.py and screenshot "
+              "scripts of its own)",
+              len(hands) >= 5 and all("ITS CODE IS NOT" in p and "never write a\ntool of your own" in p and "--slides <ids> --no-perf" in p
+                                      and "FACTORY: <what>" in p and "up to 4 in one message" in p for p in hands.values()),
+              sorted(k for k, p in hands.items() if "ITS CODE IS NOT" not in p))
+        brief_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
+
+
+BRIEF = os.path.join(HERE, "brief.mjs")
+
+
+def brief_part(tmp):
+    """brief.mjs: the workflow run step by step by a session that hands out the agents itself - the agents to start now,
+    each brief the workflow's own in a file, each answer read from a file"""
+    course = os.path.join(tmp, "bc", "course")
+    agents = os.path.join(course, "working_claude", "_build", "agents")
+    os.makedirs(agents)
+    args = os.path.join(tmp, "bc", "args.json")
+    with open(args, "w", encoding="utf-8") as f:
+        json.dump({"course": course, "factory": "C:/f/skills", "notes": "FACTORY TRIAL: no paid pictures",
+                   "modules": [{"id": 1, "title": "A", "minutes": 60, "theory": 40, "practical": 20}]}, f)
+
+    def answer(label, value):
+        name = re.sub(r"[^\w.-]+", "_", label)
+        with open(os.path.join(agents, name + (".txt" if isinstance(value, str) else ".json")), "w", encoding="utf-8") as f:
+            f.write(value if isinstance(value, str) else json.dumps(value))
+
+    def step(*extra):
+        p = subprocess.run(["node", BRIEF, args] + list(extra), capture_output=True, text=True, encoding="utf-8", errors="replace")
+        out = p.stdout + p.stderr
+        return out, re.findall(r"^  (\S+)  model (\S+), effort (\S+)", out, re.M)
+
+    def read(label):
+        with open(os.path.join(agents, re.sub(r"[^\w.-]+", "_", label) + ".brief.md"), encoding="utf-8") as f:
+            return f.read()
+
+    answer("gate:ilo-map+kb", {"open": True, "output": "open", "approved": ["1"], "order": []})
+    out, now = step()
+    check("brief.mjs: the gate answered, the first agents the workflow starts are listed - Phase A and the photo pass, each "
+          "with its model, its brief and its answer file", [x[0] for x in now] == ["phase-a:modules", "photos:course"]
+          and now[0][1:] == ("sonnet", "low") and "phase_a.py" in read("phase-a:modules")
+          and os.path.join(agents, "phase-a_modules.json") in out, out)
+    pa = read("phase-a:modules")
+    check("... the brief is the workflow's own, then where its answer goes and its schema - the session passes a path",
+          pa.startswith("Run, in the FOREGROUND") and "YOUR ANSWER GOES IN A FILE" in pa and '"modules"' in pa.split("schema", 1)[-1]
+          and "ANSWERED phase-a:modules" in pa and "FACTORY TRIAL: no paid pictures" in read("photos:course"), pa[-900:])
+    out, now = step()
+    check("... run again before they answer: nothing to start twice, both said to be running", now == []
+          and "RUNNING, no answer yet: phase-a:modules, photos:course" in out, out)
+    out, now = step("--again", "photos:course")
+    check("... one that ended without its answer is listed again with --again", [x[0] for x in now] == ["photos:course"], out)
+    answer("phase-a:modules", {"modules": [{"module": "1", "line": "FAIL M01 - audits (90 s)"}]})
+    answer("photos:course", "no rows to find")
+    out, now = step()
+    check("... Phase A left work: the builder, on Sonnet", [x[0] for x in now] == ["build:1"] and now[0][1] == "sonnet"
+          and "PHASE A HAS RUN" in read("build:1"), out)
+    answer("build:1", "PASS M01 - figures, compile, audits (300 s)\nTIME M01: 33 min")
+    out, now = step()
+    check("... built: its judges at the same time - the 3D check (Sonnet), the figure shots, QA and the walk judge (Opus)",
+          sorted(x[0] for x in now) == ["3d:1", "figshots:1", "qa:1", "walk:1"]
+          and dict((x[0], x[1]) for x in now) == {"3d:1": "sonnet", "figshots:1": "sonnet", "qa:1": "opus", "walk:1": "opus"}, out)
+    answer("3d:1", {"has_scene": False, "ok": True, "shots": []})
+    answer("figshots:1", {"has_figures": False, "manifest": ""})
+    answer("qa:1", {"module": "1", "classification": "A", "blocking": True,
+                    "findings": [{"severity": "BROKEN", "where": "s03", "what": "an oxygen monitor on a %LEL slide"}]})
+    answer("walk:1", {"walked": True, "ok": True, "round": 1, "state": "OK: walk review passed for M01", "fails": []})
+    out, now = step()
+    check("... a BROKEN finding: ONE fixer, on Opus, told exactly that finding", [x[0] for x in now] == ["fix:1"]
+          and now[0][1] == "opus" and "s03: an oxygen monitor on a %LEL slide" in read("fix:1") and "module 1: BROKEN" in out, out)
+    answer("fix:1", "PASS M01 - (120 s)")
+    out, now = step()
+    check("... then only what was BROKEN is judged again: QA on its finding, the walk on what changed",
+          sorted(x[0] for x in now) == ["qa:1+fix", "walk:1+fix"] and "an oxygen monitor" in read("qa:1+fix")
+          and "only the slides and task pages it changed" in read("walk:1+fix"), out)
+    answer("qa:1+fix", {"module": "1", "classification": "A", "blocking": False, "findings": []})
+    out, now = step("--none", "walk:1+fix")
+    check("... a judge that brought back nothing twice is recorded so (--none) and the run goes on: the assembly",
+          [x[0] for x in now] == ["assemble:course"] and os.path.isfile(os.path.join(agents, "walk_1_fix.none")), out)
+    answer("assemble:course", "compile_course.py: done")
+    out, now = step()
+    check("... then the whole-course cross-check", [x[0] for x in now] == ["crosscheck:course"], out)
+    answer("crosscheck:course", "not JSON")
+    out, now = step()
+    check("... an answer that is not the JSON its schema asks for is said, and the agent is listed again",
+          [x[0] for x in now] == ["crosscheck:course"] and "is not JSON" in out, out)
+    answer("crosscheck:course", {"module": "course", "classification": "OK", "blocking": False, "findings": []})
+    out, now = step()
+    with open(os.path.join(agents, "result.json"), encoding="utf-8") as f:
+        res = json.load(f)
+    check("... nothing left: the workflow's answer in result.json - the module's walk not passed (its judge brought back "
+          "nothing), its fix round's TIME kept", "DONE" in out and not now and res.get("walk", {}).get("not_passed")
+          and res.get("gold_standard", {}).get("minutes") == [{"module": "1", "minutes": 33}], (out, res.get("walk")))
+    shut = os.path.join(tmp, "bc", "shut.json")
+    with open(shut, "w", encoding="utf-8") as f:
+        json.dump({"course": os.path.join(tmp, "bc", "nothing", "course"), "factory": os.path.dirname(os.path.dirname(os.path.dirname(HERE))),
+                   "modules": [{"id": 1, "title": "A", "minutes": 60, "theory": 40, "practical": 20}]}, f)
+    os.makedirs(os.path.join(tmp, "bc", "nothing", "course", "working_claude"))
+    p = subprocess.run(["node", BRIEF, shut], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    check("... the gate is run by brief.mjs itself (course_gate.py, content_script.py status, build_order.py), no agent: a "
+          "course with no approved Stage 2 stops there, with the gate's words", "stopped at the GATE" in p.stdout
+          and "architecture" in p.stdout and "START" not in p.stdout, p.stdout + p.stderr)
+    with open(os.path.join(tmp, "bc", "bad.json"), "w", encoding="utf-8") as f:
+        json.dump({"course": course}, f)
+    p = subprocess.run(["node", BRIEF, os.path.join(tmp, "bc", "bad.json")], capture_output=True, text=True)
+    check("... args without the factory or the approved table stop with what is missing", p.returncode == 2
+          and "needs course, factory" in p.stdout, p.stdout)
 
 
 if __name__ == "__main__":

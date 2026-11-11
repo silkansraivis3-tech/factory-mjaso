@@ -2,6 +2,11 @@
 """scene3d_check.py - a module's 3D-kit scenes checked and photographed for a reviewer who did not build them (2.71.0).
 
   scene3d_check.py <course> --module 2 [--out <folder>] [--size 720x450] [--no-perf]
+  scene3d_check.py <course> --module 2 --slides s05,s07 --no-perf     a look at the scenes you changed, in a minute
+
+--slides checks and photographs only those slides' scenes, into working_claude\\review\\MNN_3d_look\\ - never the
+reviewer's pictures - beside a check of the whole module, never waiting for it. A fixer looks at a scene it changed this
+way, not with a screenshot script of its own (a trial's fixers wrote three).
 
 WHY (the 3D kit, 2.64.0 - "the 3D is shit compared to the handmade"): a builder judged its own scene, and the 2.63.2
 whole-course run's scenes passed every check while showing "a bare pipe" and "labels as buttons below". The workflow's
@@ -232,9 +237,9 @@ def lagging(deck):
     return {}
 
 
-def check(course, module, out=None, size=(720, 450), perf=True):
-    """{"scenes": [...], "ok": bool} or None when the module has no 3D-kit scene"""
-    specs = scenes(course, module)
+def check(course, module, out=None, size=(720, 450), perf=True, only=None):
+    """{"scenes": [...], "ok": bool} or None when the module has no 3D-kit scene (of the slides in only, when given)"""
+    specs = [(sid, sp) for sid, sp in scenes(course, module) if not only or sid in only]
     if not specs:
         return None
     mid = "M%02d" % int(module)
@@ -242,7 +247,7 @@ def check(course, module, out=None, size=(720, 450), perf=True):
     parts = os.path.join(mdir, "assets", "kit3d_parts.js")
     parts = parts if os.path.isfile(parts) else None
     deck = os.path.join(mdir, "presentation", "index.html")
-    out = out or workspace.claude_path(course, "review", mid + "_3d")
+    out = out or workspace.claude_path(course, "review", mid + ("_3d_look" if only else "_3d"))
     shutil.rmtree(out, ignore_errors=True)
     os.makedirs(out, exist_ok=True)
     res = {sid: {"slide": sid, "spec": sp, "problems": []} for sid, sp in specs}
@@ -315,10 +320,11 @@ def report(r):
     return "\n".join(lines)
 
 
-def running_files(course, module):
-    """(its record, its answer) in working_claude\\review - where the check that said STILL CHECKING is found again"""
-    mid = "M%02d" % int(module)
-    return workspace.claude_path(course, "review", mid + "_3d_running.json"), workspace.claude_path(course, "review", mid + "_3d_answer.txt")
+def running_files(course, module, look=False):
+    """(its record, its answer) in working_claude\\review - where the check that said STILL CHECKING is found again; a
+    look at some slides (--slides) has its own, so it never waits for the whole module's check"""
+    mid = "M%02d" % int(module) + ("_3d_look" if look else "_3d")
+    return workspace.claude_path(course, "review", mid + "_running.json"), workspace.claude_path(course, "review", mid + "_answer.txt")
 
 
 def entry(argv=None):
@@ -331,10 +337,11 @@ def entry(argv=None):
     ap = argparse.ArgumentParser(add_help=False)
     ap.add_argument("course")
     ap.add_argument("--module", required=True)
+    ap.add_argument("--slides")
     known, _ = ap.parse_known_args(argv)
     try:
         m = int(known.module)
-        rec_path, ans_path = running_files(workspace.work_folder(known.course, create=False), m)
+        rec_path, ans_path = running_files(workspace.work_folder(known.course, create=False), m, bool(known.slides))
     except Exception:                                    # noqa: BLE001 - main says what is wrong with the course or module
         return main([a for a in argv if a != "--wait"])
     import browser_slots
@@ -397,13 +404,16 @@ def main(argv=None):
     ap.add_argument("--no-perf", action="store_true")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--wait", action="store_true", help="wait for this module's check that said STILL CHECKING")
+    ap.add_argument("--slides", help="only these slides' scenes, e.g. s05,s07 - a look after a change (with --no-perf: a minute)")
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     course = workspace.work_folder(o.course, create=False)
     size = tuple(int(v) for v in o.size.lower().split("x"))
-    r = check(course, o.module, o.out, size, not o.no_perf)
+    only = [x.strip() for x in o.slides.split(",") if x.strip()] if o.slides else None
+    r = check(course, o.module, o.out, size, not o.no_perf, only)
     if r is None:
-        print("No 3D-kit scene in M%02d's build sheet (no *.kit3d.json figure) - nothing to check" % int(o.module))
+        print("No 3D-kit scene in M%02d's build sheet%s (no *.kit3d.json figure) - nothing to check"
+              % (int(o.module), " on %s" % ", ".join(only) if only else ""))
         return 2
     print(json.dumps(r, ensure_ascii=False, indent=1) if o.json else report(r))
     return 0 if r["ok"] else 1

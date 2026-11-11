@@ -6,7 +6,8 @@ files in assets\\), in a real hidden browser -
   * the first run judges every slide and page; a run with nothing changed judges none and still passes;
   * a defect planted on ONE slide re-checks that slide only - and the defect IS found, naming the slide;
   * a failing slide is never recorded clean: the next run, unchanged, judges it again and finds it again;
-  * a picture a slide shows, changed, re-checks that slide; a design file in assets\\ changed re-checks every slide;
+  * a picture a slide shows, changed, re-checks that slide; a design file in assets\\ changed re-checks every slide; a
+    kit's parts file (kit_parts.js, kit3d_parts.js) only the slides and task pages that draw a figure of that kit;
   * --full / full=True judges everything; a defect planted on the task page is found the same way;
   * the audits (run_audits.py --cache) do the same per slide and viewport: a slide given text too small is measured
     again and FAILS, the unchanged ones are not measured, and its failure is never recorded clean.
@@ -211,11 +212,56 @@ def audits_part(root):
     check("--full measures every slide", code == 1 and n == (4, 4), out)
 
 
+def parts_part(root):
+    """a kit's parts file counts for the units that draw a figure of that kit, and for no other"""
+    mdir = os.path.join(root, "parts", "module01")
+    for d in ("presentation", "assets", "tasks"):
+        os.makedirs(os.path.join(mdir, d), exist_ok=True)
+    write(os.path.join(mdir, "assets", "extra.css"), "/* fixture */\n")
+    write(os.path.join(mdir, "assets", "kit_parts.js"), "KIT.define('bilobe_tank', function () {});\n")
+    head = ('<html><head><link rel="stylesheet" href="../assets/extra.css"><script src="../assets/kit_parts.js"></script>'
+            '<script src="../assets/kit3d_parts.js"></script></head><body><main>%s</main></body></html>')
+    write(os.path.join(mdir, "presentation", "index.html"), head % (
+        '<section class="slide" id="s01"><div data-stage data-3d data-kit3d="#k3-s01"></div></section>'
+        '<section class="slide" id="s02"><svg data-kit="#kit-s02"></svg></section>'
+        '<section class="slide" id="s03"><div class="kit2d-stage" data-kit2d="#k2-s03"></div></section>'
+        '<section class="slide" id="s04"><p>Words only</p></section>'))
+    write(os.path.join(mdir, "tasks", "t1.html"), head % '<svg class="taskfig" data-kit="#kit-task-q01"></svg>')
+    write(os.path.join(mdir, "tasks", "t2.html"), head % '<p>A question in words</p>')
+    deck_p = os.path.join(mdir, "presentation", "index.html")
+
+    def prints():
+        each = {k.split("(")[-1].rstrip(")"): v for k, v in check_cache.fingerprints(deck_p, True, "t")}
+        for t in ("t1", "t2"):
+            each[t] = check_cache.fingerprints(os.path.join(mdir, "tasks", t + ".html"), False, "t")[0][1]
+        return each
+
+    def moved(before):
+        now = prints()
+        return sorted(k for k in now if now[k] != before.get(k))
+
+    a = prints()
+    write(os.path.join(mdir, "assets", "kit3d_parts.js"), "KIT3D.define('esd_valve_cut', function () {});\n")
+    check("a new 3D part (kit3d_parts.js) changes only the slides with a 3D scene", moved(a) == ["s01"], moved(a))
+    b = prints()
+    write(os.path.join(mdir, "assets", "kit_parts.js"), "KIT.define('bilobe_tank', function () { return 2; });\n")
+    check("... a changed 2D part (kit_parts.js) only the slides and task pages that draw a kit figure",
+          moved(b) == ["s02", "s03", "t1"], moved(b))
+    c = prints()
+    write(os.path.join(mdir, "assets", "extra.css"), "/* fixture, edited */\n")
+    check("... and any other file of assets\\ still changes every slide and task page", len(moved(c)) == 6, moved(c))
+
+
 def main():
+    root = tempfile.mkdtemp(prefix="cf_cache_test_")
+    try:
+        parts_part(root)
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
     exe = drawing_check.find_browser()
     if not exe:
         print("skip  no Chrome or Edge found - the cache was not tried in a browser")
-        return 0
+        return 1 if FAILS else 0
     root = tempfile.mkdtemp(prefix="cf_cache_test_")
     try:
         drawing_part(root)
