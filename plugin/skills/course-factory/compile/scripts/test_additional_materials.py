@@ -196,6 +196,16 @@ def main():
     tmp = tempfile.mkdtemp(prefix="additional_materials_")
     try:
         # ---- the days, the kinds, the practicals
+        long = "Practical - foam applicator and foam extinguisher on the training ship's deck"
+        short_stem = am.stem_title(long)
+        check("a long paper title is cut at a whole word to %d letters, and a short one is left as it is (a path past 260 "
+              "characters could not be written)" % am.STEM_TITLE,
+              len(short_stem) <= am.STEM_TITLE and short_stem == "practical_foam_applicator_and_foam" and long.lower().startswith(
+                  "practical - foam applicator and foam") and am.stem_title("Bunkering") == "bunkering", short_stem)
+        eq = ("Portable foam applicator set (medium-expansion branch pipe, inline inductor with pick-up tube, foam concentrate "
+              "container, hose) and a portable foam extinguisher; the spare concentrate drums are kept in the foam store on deck")
+        check("the paper's 'Place and equipment' shows the equipment whole, never cut mid-sentence",
+              am.place_line({"place": "Training ship deck", "equipment": eq}).endswith(eq.replace("  ", " ")))
         mods = [{"n": 1, "minutes": 300.0}, {"n": 2, "minutes": 200.0}]
         probs = []
         d = am.days_of(mods, {"academic_hour_min": 40, "max_hours_per_day": 10}, {}, 0, probs)

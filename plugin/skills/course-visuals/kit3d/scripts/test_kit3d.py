@@ -193,6 +193,8 @@ check("the catalogue builds every part with no warning and no page error", not a
 check("the catalogue has one of every part type the kit defines", set(a.get("all") or ["?"]) <= set(a.get("types") or []),
       sorted(set(a.get("all") or []) - set(a.get("types") or [])))
 check("every part draws something (a box to frame)", a.get("empty") == [], a.get("empty"))
+check("the foam equipment has parts: a portable foam extinguisher, an in-line inductor, a foam branch pipe (stand-ins before)",
+      {"foam_extinguisher", "foam_inductor", "foam_branch_pipe"} <= set(a.get("types") or []), a.get("types"))
 check("every state a step sets arrives (cut, open, alarm, shut, gas, flow)", all(b.get(k) == 1 for k in
       ("pipe_dw.cut", "tcs.open", "detector.alarm", "valve_act.shut", "gas.on", "plume.on", "flow.on", "relief.open", "tank_c.ghost")), b)
 

@@ -2067,6 +2067,9 @@
     "pump": {"family": "equipment", "at": "base centre", "about": "a pump: casing, motor, base"},
     "drip_tray": {"family": "equipment", "at": "base centre", "about": "a stainless drip tray on insulating pads"},
     "esd_button": {"family": "equipment", "at": "base", "about": "an emergency shutdown push button on a yellow post"},
+    "foam_extinguisher": {"family": "equipment", "at": "base", "about": "a portable foam extinguisher with hose and nozzle"},
+    "foam_inductor": {"family": "equipment", "at": "centre", "about": "an in-line foam inductor (eductor) with pick-up tube"},
+    "foam_branch_pipe": {"family": "equipment", "at": "handle foot", "about": "a foam branch pipe with handle, air slots and outlet"},
     "detector": {"family": "equipment", "at": "where it is fixed", "states": ["alarm"], "about": "a gas detector head; its lamp lights in alarm"},
     "person": {"family": "equipment", "at": "between the feet", "about": "a person for scale"},
     "air_intake": {"family": "equipment", "at": "centre", "about": "an air intake with louvres"},
@@ -2820,6 +2823,48 @@
     k.cyl('z', 0.085, 0.07, red, 0, h, 0.14, { seg: 24 });
     k.add(new T.SphereGeometry(0.085, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), red, 0, h, 0.175, { rx: Math.PI / 2 });
     k.anchor('label', [0, h + 0.16, 0]);
+  });
+
+  /* a portable foam extinguisher: a red cylinder with a carrying handle, a valve head, a hose and a foam nozzle; at = its
+     foot; the hose leaves toward +z */
+  define('foam_extinguisher', function (k, p) {
+    var h = num(p.h, 0.6), r = h * 0.2, red = M(k, p, 'red'), dark = k.mat('steel_dark'), blk = k.mat('steel_black');
+    k.cyl('y', r, h, red, 0, h / 2, 0, { seg: 24 });
+    k.ball(r, red, 0, h, 0, { seg: 24 });
+    k.cyl('y', r * 0.4, 0.06, dark, 0, h + r * 0.9, 0, { seg: 14 });
+    k.box(r * 1.5, 0.025, 0.05, dark, 0, h + r * 0.9 + 0.045, 0);
+    k.cyl('x', 0.02, r * 1.1, dark, r * 0.55, h + r * 0.9, 0, { seg: 10 });
+    k.run([[r * 0.8, h + r * 0.85, 0], [r * 1.4, h * 0.7, r * 0.7], [r * 0.9, h * 0.35, r * 1.5], [0, h * 0.3, r * 1.4]], 0.014, blk);
+    k.cyl('z', 0.04, 0.16, dark, 0, h * 0.3, r * 1.4 + 0.08, { seg: 12 });
+    k.anchor('label', [0, h + r * 1.4, 0]);
+  });
+
+  /* an in-line foam inductor (eductor): the water passes through its body, the foam concentrate is drawn in by the pick-up
+     tube and the metering knob; at = the middle of the body, along x */
+  define('foam_inductor', function (k, p) {
+    var len = num(p.len, 0.4), r = num(p.r, 0.04), brass = k.mat({ color: '#b8923a', rough: 0.4, metal: 0.8 }), steel = k.mat('steel');
+    k.cyl('x', r, len * 0.5, brass, 0, 0, 0, { seg: 20 });
+    k.cyl('x', r * 1.5, len * 0.2, brass, -len * 0.35, 0, 0, { seg: 20 });
+    k.cyl('x', r * 1.25, len * 0.18, brass, len * 0.34, 0, 0, { seg: 20 });
+    k.cyl('x', r * 1.7, 0.02, steel, -len * 0.5, 0, 0, { seg: 20 });
+    k.cyl('x', r * 1.7, 0.02, steel, len * 0.5, 0, 0, { seg: 20 });
+    k.cyl('y', r * 0.5, r * 2.2, brass, 0, -r * 1.6, 0, { seg: 12 });
+    k.cyl('y', r * 1.1, 0.03, k.mat('steel_dark'), 0, r * 2.2, 0, { seg: 16 });
+    k.run([[0, -r * 2.6, 0], [0, -r * 4.5, r * 1.5], [0, -r * 8, r * 3]], 0.016, k.mat('rubber'));
+    k.anchor('label', [0, r * 3.2, 0]);
+  });
+
+  /* a foam branch pipe (foam-making nozzle): a handle, the barrel with air-intake slots and the open outlet; at = the
+     handle's foot; the barrel points to +z */
+  define('foam_branch_pipe', function (k, p) {
+    var len = num(p.len, 0.9), r = num(p.r, 0.045), m = M(k, p, 'red'), dark = k.mat('steel_dark'), steel = k.mat('steel'), i;
+    k.cyl('z', r, len, m, 0, 0.25, len / 2, { seg: 20 });
+    k.cyl('z', r * 1.7, len * 0.22, steel, 0, 0.25, len * 0.89, { seg: 20 });
+    k.cyl('z', r * 1.15, 0.08, dark, 0, 0.25, 0.04, { seg: 16 });
+    k.cyl('y', 0.018, 0.25, dark, 0, 0.125, len * 0.35, { seg: 10 });
+    for (i = 0; i < 3; i++) { k.box(r * 2.1, r * 0.5, 0.06, dark, 0, 0.25 + r * 0.9, len * (0.45 + i * 0.1)); }
+    k.cyl('z', r * 0.7, 0.08, dark, 0, 0.25, -0.02, { seg: 12 });
+    k.anchor('label', [0, 0.25 + r * 2.5, len * 0.5]);
   });
 
   /* a gas detector head (IGF M09): base plate, yellow body, cap and a lamp that lights in alarm ("<id>.alarm" 0..1,

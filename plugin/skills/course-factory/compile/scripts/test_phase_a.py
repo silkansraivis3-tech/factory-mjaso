@@ -252,6 +252,16 @@ def main():
               "trial: M01 started while M04's run was going was never built)", code == 2 and "1 is not in that run" in buf.getvalue(),
               (code, buf.getvalue()))
         os.remove(run_p)
+        asked, real = [], phase_a.run
+        phase_a.run = lambda cmd, timeout=3600: asked.append(cmd[2]) or (0, "")
+        try:
+            if os.path.isfile(os.path.join(c, "working_claude", "photo_catalogue.json")):
+                os.remove(os.path.join(c, "working_claude", "photo_catalogue.json"))
+            phase_a.catalogue(c, os.path.join(c, "working_claude"))
+        finally:
+            phase_a.run = real
+        check("Phase A catalogues the course's own photographs itself, whoever starts it (the factory trial: the old course's "
+              "photos were never found)", asked == ["index", "assign"], asked)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))

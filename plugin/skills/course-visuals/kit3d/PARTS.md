@@ -60,6 +60,9 @@ Tints (hull spaces, panels): amber, green, blue, grey, red, violet - or any `#he
 | `pump` | base centre | `r` | |
 | `drip_tray` | base centre | `size` [w, d], `wall` | M03 |
 | `esd_button` | its foot, facing +z | `h` | M03 |
+| `foam_extinguisher` | its foot, hose to +z | `h` (0.6), `mat` | foam |
+| `foam_inductor` | its middle, along x | `len` (0.4), `r` (0.04) | foam |
+| `foam_branch_pipe` | the handle's foot, barrel to +z | `len` (0.9), `r`, `mat` | foam |
 | `detector` | where it is fixed | `face` down / up; state **alarm** (0.5 amber, 1 red) | M09 |
 | `person` | between the feet, facing +z | `h`, `wear` | scale |
 | `air_intake` | centre, louvres to +z | `size` | M15 |

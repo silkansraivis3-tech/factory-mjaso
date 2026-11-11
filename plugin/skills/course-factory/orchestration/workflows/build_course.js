@@ -310,6 +310,9 @@ const photoPass = (when) => `You are the course's ONE photo-sourcing pass (2.73.
   python ${SCRIPTS}/scripts/photo_catalogue.py index "${A.course}"     (only if working_claude/photo_catalogue.json is missing)
   python ${SCRIPTS}/scripts/photo_catalogue.py assign "${A.course}"
 
+When the operator's words below say no paid pictures, or a factory trial, stop here and report the catalogue's counts: the
+catalogue of the course's own photographs always runs, only the picture making stays off.
+
 Then work down working_claude/visuals/PHOTOS_TO_FIND.md: for each row MAKE ONE PHOTOREALISTIC GENERATED picture of what it
 must show (2.73.2, owner 2026-10-28: nobody is asked to take a photo; equipment is generated too - it is fixed afterwards):
 nano-banana's generate_image (or another image tool the session has), a prompt from the row's "must show" and its slot's
@@ -1048,9 +1051,12 @@ async function oneModule(m) {
   const builtBy = [built === null ? 'phase-a:modules (workflow Phase A, no builder)' : `build:${m.id} (workflow builder)`]
   const walkIt = (tag, fixers = [], used = false) => agent(walk(walkOf(m), builtBy.concat(fixers), !!tag, used),
     { label: `walk:${m.id}${tag || ''}`, phase: 'Verify', schema: WALK_SCHEMA, ...JUDGEMENT })
-  const [d3a, fga, q, w1] = await Promise.all([threeD(m), figures(m),
-    agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...JUDGEMENT }), walkIt()])
+  /* the 3D check and the figure check may rebuild the module: the walk looks at the module only after its last build of the
+     round, so no builder runs on it while the walk judge signs (M16's walk review could not be signed, a helper rebuilt it) */
+  const [d3a, fga, q] = await Promise.all([threeD(m), figures(m),
+    agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...JUDGEMENT })])
   const rebuilt3d = d3a && d3a.check && d3a.check.rebuilt ? [`3d:${m.id} (workflow 3D check, rebuilt the module)`] : []
+  const w1 = await walkIt('', rebuilt3d)
   /* a module that has had its two walk rounds sends no walk fail to a fixer: the fix could never be reviewed */
   const spent = walkSpent(w1)
   const b3 = broken3d(d3a), bf = brokenFigs(fga && fga.review), bq = fixable(q), bw = spent ? [] : walkFails(w1)
@@ -1075,12 +1081,12 @@ async function oneModule(m) {
       fixers.push(`fix:${m.id} (workflow fixer)`)
     }
     /* the walk judge after ANY fix round: a fix changes slides, and only those are stale - its second and last look */
-    const [d3b, fgb, q2, w2] = await Promise.all([
+    const [d3b, fgb, q2] = await Promise.all([
       b3.length ? threeD(m, '+fix', b3) : null,
       bf.length ? figures(m, [...new Set(bf.map((f) => f.slide))].join(',')) : null,
-      bq.length ? agent(qa(m, bq), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...JUDGEMENT }) : null,
-      walkIt('+fix', fixers, spent)])
-    wk = w2
+      bq.length ? agent(qa(m, bq), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...JUDGEMENT }) : null])
+    const fixed3d = d3b && d3b.check && d3b.check.rebuilt ? [`3d:${m.id}+fix (workflow 3D check, rebuilt the module)`] : []
+    wk = await walkIt('+fix', fixers.concat(fixed3d), spent)
     if (b3.length) d3 = { check: (d3b && d3b.check) || d3a.check, review: (d3b && d3b.review) || d3a.review, first_review: d3a.review.findings }
     /* NOTHING LOOPS (2.72.0, approved by Aleksis): what is still BROKEN after the one fix round goes to the operator's list,
        never back to a builder and never failing the module again */
@@ -1091,9 +1097,6 @@ async function oneModule(m) {
     /* 2.63.3 - QA once more after the fix; never a third */
     if (bq.length) out = q2 ? Object.assign({}, q2, { first_qa: q.findings,
       for_aleksis: fixable(q2).map((f) => `QA ${f.where}: ${f.what}`) }) : q
-  } else if (rebuilt3d.length) {
-    /* the 3D check rebuilt the module while the judges looked: the slides it changed are walked again */
-    wk = await walkIt('+3d', rebuilt3d, spent)
   }
   const ws = walkSum(walkOf(m), w1, wk)
   WALKS.push({ module: String(m.id), ok: ws.ok, state: ws.state, open: ws.open })

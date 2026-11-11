@@ -169,7 +169,14 @@ def main():
         scen["screens"][0]["why"] = "\n".join([" ".join(["because the oxygen reading comes first"] * 6)] * 3)
         got = sorted(f["detail"].split(" has ")[0] for f in cs.theory_check(scen)[0] if f["rule"] == "t_overfull")
         check("... and its question, choices and whys past %d in the other column - each part said on its own" % B["scenario_choices"],
-              got == sorted([cs.T(scen, "t_part_situation"), cs.T(scen, "t_part_choices")]), got)
+              got == sorted([cs.T(scen, "t_part_situation"), cs.T(scen, "t_part_choices"), cs.T(scen, "t_part_whole")]), got)
+        whole = {"module": 1, "operator_language": "en", "screens": [
+            slide("s01", " ".join(["a crew member carries a tool box"] * 8), "", picture=pic, ask="What must the crew member do now?",
+                  choices=" ".join(["remove the wedge"] * 10) + "\nStop\nWait",
+                  why=" ".join(["lost overpressure trips equipment"] * 10) + "\nNo.\nNo.", right="A")]}
+        got = [f["detail"].split(" has ")[0] for f in cs.theory_check(whole)[0] if f["rule"] == "t_overfull"]
+        check("a scenario whose parts each fit but whose words together pass %d is a must-fix too (the factory trial: M01 s21 showed 145)"
+              % cs.RULES["slide"]["steps_from"], got == [cs.T(whole, "t_part_whole")], got)
         claim = {"module": 1, "operator_language": "en", "screens": [
             slide("s01", sit, "", picture=pic, claim="Oxygen is measured first.", claim_is="true", ask="Why?", reveal="Right.")]}
         check("... a true-or-false is built in its own template (compile_module.shaped_template): not measured as a worked example",

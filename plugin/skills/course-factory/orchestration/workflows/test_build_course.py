@@ -230,12 +230,12 @@ def walk_part(tmp, mods, clean, qa_broken, all_broken):
     mods3 = mods + [{"id": 3, "title": "C", "minutes": 60, "theory": 40, "practical": 20}]
     reb = run(tmp, dict(base, modules=mods3, _approved=["1", "2", "3"], _scene=["3"], _rebuilt3d=["3"]))
     lr = reb.get("labels", [])
-    check("... a 3D check that rebuilt the module while the judges looked: the walk judge looks once more at what changed, "
-          "and signs against the builder and the check that rebuilt it",
-          lr.count("walk:3+3d") == 1 and lr.index("walk:3+3d") > lr.index("walk:3") and "walk:1+3d" not in lr
-          and not any(x.startswith("fix:") for x in lr)
+    check("... a 3D check that rebuilds the module finishes before the walk judge starts (M16: a helper rebuilt it while it was "
+          "being reviewed), and the walk signs against the builder and the check that rebuilt it",
+          lr.count("walk:3") == 1 and lr.index("walk:3") > lr.index("3d:3") and lr.index("walk:3") > lr.index("qa:3")
+          and lr.index("walk:3") > lr.index("figshots:3") and "walk:3+3d" not in lr and not any(x.startswith("fix:") for x in lr)
           and "--built-by \"build:3 (workflow builder)\" --built-by \"3d:3 (workflow 3D check, rebuilt the module)\"\n"
-          in reb.get("prompts", {}).get("walk:3+3d", ""), (lr, reb.get("prompts", {}).get("walk:3+3d", "")[:2500]))
+          in reb.get("prompts", {}).get("walk:3", ""), (lr, reb.get("prompts", {}).get("walk:3", "")[:2500]))
     # a second pass of the workflow over a module that has had its two rounds: no fixer for a walk fail, no third review
     used = run(tmp, dict(base, _spent=["1"]))
     lu = used.get("labels", [])
@@ -792,6 +792,28 @@ def brief_part(tmp):
         with open(os.path.join(agents, re.sub(r"[^\w.-]+", "_", label) + ".brief.md"), encoding="utf-8") as f:
             return f.read()
 
+    wd = os.path.join(course, "working_claude")
+    with open(os.path.join(wd, "architecture.json"), "w", encoding="utf-8") as f:
+        json.dump({"modules": [{"module": 1, "title": "A", "topics": ["1", "2"]}]}, f)
+    with open(os.path.join(wd, "programme.json"), "w", encoding="utf-8") as f:
+        json.dump({"academic_hour_min": 40, "topics": {"1": {"theory": 2, "practical": 0}, "2": {"theory": 1, "practical": 1}}}, f)
+    good = open(args, encoding="utf-8").read()
+    with open(args, "w", encoding="utf-8") as f:
+        json.dump({"course": course, "factory": "C:/f/skills", "modules": [{"id": "M01", "title": "A"}]}, f)
+    out, now = step()
+    check("brief.mjs: a modules table with a key it cannot read stops with the exact shape it wants, not a guess",
+          "Stopped" in out and 'modules[0]' in out and '"id": 1' in out and not now, out)
+    with open(args, "w", encoding="utf-8") as f:
+        json.dump({"course": course, "factory": "C:/f/skills", "modules": [{"id": 1, "title": "A"}]}, f)
+    out, now = step()
+    got = subprocess.run(["node", "-e", "import(%r).then(m => console.log(JSON.stringify(m.minutesOf({course: %r}, 1))))"
+                          % ("file:///" + BRIEF.replace(os.sep, "/"), course)], capture_output=True, text=True).stdout
+    check("... minutes, theory and practical left out are read from the architecture and the programme (160 min: 120 theory, "
+          "40 practical), never 'undefined'", "Stopped" not in out and json.loads(got) == {"minutes": 160, "theory": 120, "practical": 40}, (out, got))
+    shutil.rmtree(agents)
+    os.makedirs(agents)
+    with open(args, "w", encoding="utf-8") as f:
+        f.write(good)
     answer("gate:ilo-map+kb", {"open": True, "output": "open", "approved": ["1"], "order": []})
     out, now = step()
     check("brief.mjs: the gate answered, the first agents the workflow starts are listed - Phase A and the photo pass, each "
@@ -814,13 +836,16 @@ def brief_part(tmp):
           and "PHASE A HAS RUN" in read("build:1"), out)
     answer("build:1", "PASS M01 - figures, compile, audits (300 s)\nTIME M01: 33 min")
     out, now = step()
-    check("... built: its judges at the same time - the 3D check (Sonnet), the figure shots, QA and the walk judge (Opus)",
-          sorted(x[0] for x in now) == ["3d:1", "figshots:1", "qa:1", "walk:1"]
-          and dict((x[0], x[1]) for x in now) == {"3d:1": "sonnet", "figshots:1": "sonnet", "qa:1": "opus", "walk:1": "opus"}, out)
+    check("... built: the 3D check (Sonnet), the figure shots and QA (Opus) at the same time - the walk judge waits for them",
+          sorted(x[0] for x in now) == ["3d:1", "figshots:1", "qa:1"]
+          and dict((x[0], x[1]) for x in now) == {"3d:1": "sonnet", "figshots:1": "sonnet", "qa:1": "opus"}, out)
     answer("3d:1", {"has_scene": False, "ok": True, "shots": []})
     answer("figshots:1", {"has_figures": False, "manifest": ""})
     answer("qa:1", {"module": "1", "classification": "A", "blocking": True,
                     "findings": [{"severity": "BROKEN", "where": "s03", "what": "an oxygen monitor on a %LEL slide"}]})
+    out, now = step()
+    check("... and then the walk judge, Opus, on the module as the last build of the round left it",
+          [(x[0], x[1]) for x in now] == [("walk:1", "opus")], out)
     answer("walk:1", {"walked": True, "ok": True, "round": 1, "state": "OK: walk review passed for M01", "fails": []})
     out, now = step()
     check("... a BROKEN finding: ONE fixer, on Opus, told exactly that finding", [x[0] for x in now] == ["fix:1"]
@@ -828,9 +853,11 @@ def brief_part(tmp):
     answer("fix:1", "PASS M01 - (120 s)")
     out, now = step()
     check("... then only what was BROKEN is judged again: QA on its finding, the walk on what changed",
-          sorted(x[0] for x in now) == ["qa:1+fix", "walk:1+fix"] and "an oxygen monitor" in read("qa:1+fix")
-          and "only the slides and task pages it changed" in read("walk:1+fix"), out)
+          [x[0] for x in now] == ["qa:1+fix"] and "an oxygen monitor" in read("qa:1+fix"), out)
     answer("qa:1+fix", {"module": "1", "classification": "A", "blocking": False, "findings": []})
+    out, now = step()
+    check("... the walk judge after it, on what changed", [x[0] for x in now] == ["walk:1+fix"]
+          and "only the slides and task pages it changed" in read("walk:1+fix"), out)
     out, now = step("--none", "walk:1+fix")
     check("... a judge that brought back nothing twice is recorded so (--none) and the run goes on: the assembly",
           [x[0] for x in now] == ["assemble:course"] and os.path.isfile(os.path.join(agents, "walk_1_fix.none")), out)

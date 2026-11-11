@@ -8,7 +8,8 @@
  *   node brief.mjs <args.json> --none <label>    that agent brought back nothing (run twice, no answer): the workflow goes on
  *
  * args.json holds the workflow's own args: course, factory (the skills folder), modules [{id, title, minutes, theory,
- * practical}] - the approved table - and notes, wave, final as the workflow takes them.
+ * practical}] - the approved table: id a whole number, minutes left out are read from the architecture - and notes, wave,
+ * final as the workflow takes them.
  *
  * Each call runs build_course.js from its start. An agent whose answer is in <course>/working_claude/_build/agents/ gets it
  * back; the first one of a branch without an answer is listed and that branch waits - so the run takes exactly the
@@ -103,6 +104,46 @@ export async function step(args) {
   return { pending, logs, result }
 }
 
+/* the minutes the programme gives a module: its topics' academic hours (programme.json topics.<n>.theory / practical)
+   times the academic hour, the topics being the architecture's own for the module */
+export function minutesOf(args, id) {
+  const read = (f) => {
+    try { return JSON.parse(fs.readFileSync(path.join(args.course, 'working_claude', f), 'utf8')) } catch (e) { return null }
+  }
+  const arch = read('architecture.json'), prog = read('programme.json')
+  const m = ((arch || {}).modules || []).find((x) => Number(x.module) === id)
+  if (!m || !prog || !prog.topics) return null
+  const hour = Number(prog.academic_hour_min) || 45
+  let theory = 0, practical = 0
+  for (const t of m.topics || []) {
+    const row = prog.topics[String(t)]
+    if (!row) return null
+    theory += (Number(row.theory) || 0) * hour
+    practical += (Number(row.practical) || 0) * hour
+  }
+  return { minutes: theory + practical, theory, practical }
+}
+
+export const MODULES_SHAPE = 'modules: [ { "id": 1, "title": "Liquefied gas tankers", "minutes": 120, "theory": 80, "practical": 40 }, ... ] '
+  + '- id a whole number (1, not "M01"); title text; minutes, theory, practical numbers (left out, they are read from '
+  + 'working_claude/architecture.json and programme.json)'
+
+/* the args' modules table, checked and with its minutes filled - or the message that says what to write instead */
+export function checkModules(args) {
+  const bad = []
+  for (const [i, m] of (args.modules || []).entries()) {
+    if (!m || typeof m !== 'object' || !Number.isInteger(m.id) || !String(m.title || '').trim()) {
+      bad.push(`modules[${i}] is ${JSON.stringify(m)}: it needs "id" (a whole number) and "title"`)
+      continue
+    }
+    if (['minutes', 'theory', 'practical'].every((k) => typeof m[k] === 'number')) continue
+    const got = minutesOf(args, m.id)
+    if (!got) bad.push(`module ${m.id}: "minutes", "theory" and "practical" are numbers, and neither architecture.json nor programme.json gives them`)
+    else for (const k of ['minutes', 'theory', 'practical']) if (typeof m[k] !== 'number') m[k] = got[k]
+  }
+  return bad.length ? `args.json "modules" is wrong:\n  ${bad.join('\n  ')}\nIt is ${MODULES_SHAPE}` : ''
+}
+
 function main(argv) {
   const file = argv[0]
   if (!file || !fs.existsSync(file)) {
@@ -112,6 +153,11 @@ function main(argv) {
   const args = JSON.parse(fs.readFileSync(file, 'utf8'))
   if (!args.course || !args.factory || !(args.modules || []).length) {
     console.log('Stopped - args.json needs course, factory (the skills folder) and modules (the approved table)')
+    return Promise.resolve(2)
+  }
+  const wrong = checkModules(args)
+  if (wrong) {
+    console.log('Stopped - ' + wrong)
     return Promise.resolve(2)
   }
   fs.mkdirSync(agentsDir(args), { recursive: true })

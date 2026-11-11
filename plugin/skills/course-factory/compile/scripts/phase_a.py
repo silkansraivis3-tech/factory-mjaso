@@ -107,9 +107,21 @@ def status_paths(course):
     return os.path.join(d, "PHASE_A.json"), os.path.join(d, "PHASE_A_running.json")
 
 
+def catalogue(course, work):
+    """the course's own photographs catalogued and assigned to the slots before any module is built: a helper that skipped
+    the step meant --auto found no old-course photograph"""
+    tool = os.path.join(SKILLS, "course-factory", "scripts", "photo_catalogue.py")
+    if not os.path.isfile(os.path.join(work, "photo_catalogue.json")):
+        run([PY, tool, "index", course])
+    run([PY, tool, "assign", course])
+
+
 def inner(course, mods, jobs, auto):
     import workspace
-    course = workspace.work_folder(course, create=False)
+    work = workspace.work_folder(course, create=False)
+    if auto:
+        catalogue(course, work)
+    course = work
     res_p, run_p = status_paths(course)
     rows = {}
     with cf.ThreadPoolExecutor(max_workers=jobs) as ex:

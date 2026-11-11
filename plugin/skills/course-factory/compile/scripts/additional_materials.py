@@ -310,7 +310,7 @@ def tasks_of(m, sheet):
             out.append({"code": code, "title": s.get("title") or code, "kind": where, "where": where, "slide": s,
                         "questions": [], "minutes": cs.minutes(s), "start": start[s["id"]], "practical": p})
     for x in out:
-        x["stem"] = "%s_%s_%s" % (m["mid"], x["code"], cm.slug(x["title"]))
+        x["stem"] = "%s_%s_%s" % (m["mid"], x["code"], stem_title(x["title"]))
         subs = []
         for q in [x["slide"]] + x["questions"]:
             subs += [i for i in cs.sub_ilos_of(q) if i not in subs]
@@ -346,7 +346,7 @@ def group_papers(m, tasks):
             subs += [i for i in p["sub_ilos"] if i not in subs]
         t.update(code=code, title=t["paper"], kind=where, where=where, minutes=sum(p["minutes"] for p in parts),
                  practical=next((p["practical"] for p in parts if p.get("practical")), {}), sub_ilos=subs,
-                 stem="%s_%s_%s" % (m["mid"], code, cm.slug(t["paper"])))
+                 stem="%s_%s_%s" % (m["mid"], code, stem_title(t["paper"])))
     return out
 
 
@@ -808,13 +808,26 @@ def steps(lines, numbered=True):
     return [("ol" if numbered else "ul", lines)]
 
 
+STEM_TITLE = 40
+
+
+def stem_title(title):
+    """a paper's file name part from its title: whole words, at most STEM_TITLE letters - a long title made a path past the
+    260 characters Windows allows in a deep folder (the code beside it keeps each name its own)"""
+    s = cm.slug(title)
+    if len(s) <= STEM_TITLE:
+        return s
+    cut = s[:STEM_TITLE + 1].rsplit("_", 1)[0]
+    return cut if cut and "_" in s[:STEM_TITLE + 1] else s[:STEM_TITLE]
+
+
 def place_line(p):
     """the practical's place and equipment in English: equipment the course files hold only in the programme's language
     is left out and named by the programme's codes"""
-    eq, codes = cf.english_equipment(p)
+    eq, codes = cf.english_equipment(p, None)
     if not eq and codes:
         eq = W["equip_codes"].format(codes=", ".join(codes))
-    return " - ".join(x for x in (cf.english(p.get("place")), eq) if x)
+    return " - ".join(x for x in (cf.english(p.get("place"), None), eq) if x)
 
 
 def practical_parts(t, trainee):
