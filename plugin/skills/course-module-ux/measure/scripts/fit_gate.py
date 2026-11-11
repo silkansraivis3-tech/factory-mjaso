@@ -96,7 +96,8 @@ CURSIG = """(id) => { const s = document.getElementById(id); if (!s) { return ''
 LINES = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
   if (!/^(explain-figure|reading-with-figure|long-explanation|photo-explain|figure-stage|content-in-parts|procedure|reference-table|three-content-blocks)[.]/
       .test(s.getAttribute('data-template') || '') || s.hasAttribute('data-still') || s.hasAttribute('data-stops')
-      || s.querySelector('[data-k],[data-stop]')) { return null; }
+      || s.querySelector('[data-k],[data-stop]')
+      || [].some.call(s.querySelectorAll('.lt-part'), p => !p.querySelector('[data-i]'))) { return null; }
   const n = [].slice.call(s.querySelectorAll('[data-i]')).filter(x => !x.closest('svg')).map(x => x.getAttribute('data-i'));
   return n.length ? Array.from(new Set(n)) : null; }"""
 

@@ -307,9 +307,11 @@ var GBDeck = (function (w, d) {
     function walksLines(s) {
       if (!WALKS.test(s.getAttribute("data-template") || "") || s.hasAttribute("data-still") || s.hasAttribute("data-stops") ||
           s.querySelector("[data-k],[data-stop]")) { return false; }
-      var n = 0;
+      var n = 0, ok = true;
       each(s.querySelectorAll("[data-i]"), function (x) { if (!(x.closest && x.closest("svg"))) { n++; } });
-      return n > 0;
+      /* parts whose words are not the slide's lines turn as parts do (partStep); parts that hold the lines turn with them */
+      each(s.querySelectorAll(".lt-part"), function (p) { if (!p.querySelector("[data-i]")) { ok = false; } });
+      return n > 0 && ok;
     }
     function lockFor(i) {
       var s = slides[i], h = hookFor(i);
