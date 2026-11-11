@@ -236,7 +236,7 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
    above and under a picture */
 .slide[data-template] .slide-body.two-col > .copy{align-self:center}
 .slide[data-template] .slide-body.two-col:not(.fig-top):not(.fig-bottom) > .fill[style*="--ar"]{
-  height:auto;max-height:100%;aspect-ratio:var(--ar);align-self:center}
+  width:100%;height:auto;max-height:100%;aspect-ratio:var(--ar);align-self:center}
 .slide[data-template] .slide-body.two-col > .fill.kit3d-fig[style*="--ar"]{min-height:min(36vmin,288px)}
 .slide[data-template] .slide-body.two-col > .fill[style*="--ar"] .kit3d-stage{height:100%;min-height:0}
 /* a tall picture beside the words (figure-tall): its box as high as the body and as wide as its shape, centred in its
