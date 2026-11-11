@@ -320,6 +320,8 @@ def main() -> int:
               _gates.classify("/r", plat, ib + "additional-materials/acp/ACP_c.docx") == "INTERNAL"
               and _gates.classify("/r", plat, ib + "modules/_course_shell/advanced_course_plan.html") == "INSTRUCTOR"
               and _gates.classify("/r", plat, ib + "modules/module01/instructor/advanced_module_plan.html") == "INSTRUCTOR")
+        check("the papers' list sits with the papers, instructor-side - never a trainee file",
+              _gates.classify("/r", plat, ib + "modules/module01/instructor/papers/papers.json") == "INSTRUCTOR")
 
         # ---- 5 · gitpub commit / push on a real repository (2.49.4) ----------
         pr = os.path.join(tmp, "pubrepo")

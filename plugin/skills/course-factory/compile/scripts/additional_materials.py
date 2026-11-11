@@ -99,6 +99,7 @@ RECORD = "additional_materials.json"
 COURSE_PLAN = os.path.join("_course_shell", "advanced_course_plan.html")
 MODULE_PLAN = os.path.join("instructor", "advanced_module_plan.html")
 PAPERS = os.path.join("instructor", "papers")       # beside the module plan, which opens them
+PAPERS_LIST = "papers.json"                         # in it: the papers' names and kinds, for the instructor's list
 # a simulator, never a "simulated" fire or a "real-life simulation" on the fire ground or the rescue rig
 SIM_WORDS = re.compile(r"simulator|симулятор|тренаж", re.I)
 EQUIPMENT_WORDS = re.compile(r"\b(?:rig|bench|detectors?|meters?|apparatus|instruments?|equipment|facility|monitor|"
@@ -1055,6 +1056,15 @@ def print_pdf(exe, src, out):
 
 
 # ------------------------------------------------------------------ the build
+def papers_list(tasks):
+    """papers.json of a module's papers folder: each paper's code, name and kind and its four files, in teaching order"""
+    return json.dumps({"papers": [
+        {"id": t["code"], "title": t["title"], "kind": t["where"],
+         "trainee": {"html": t["stem"] + "_TRAINEE.html", "pdf": t["stem"] + "_TRAINEE.pdf"},
+         "instructor": {"html": t["stem"] + "_INSTRUCTOR.html", "pdf": t["stem"] + "_INSTRUCTOR.pdf"}} for t in tasks]},
+        ensure_ascii=False, indent=2) + "\n"
+
+
 def plan(course, infos, title, probs):
     """everything to write - [(path, kind, payload)], and the modules (for compile_course's module plans)"""
     arch = load_or(workspace.claude_path(course, "architecture.json"), {})
@@ -1107,6 +1117,7 @@ def plan(course, infos, title, probs):
     for m in mods:
         out.append((os.path.join(course, workspace.MODULES, m["code"], MODULE_PLAN), "html",
                     to_html("%s - %s" % (W["mplan"].format(n=m["n"]), m["title"]), module_plan(m, days, subs, v), screen=True)))
+        listed = []
         for t in m["tasks"]:
             doc = task_paper(m, t, title, subs)
             out.append((os.path.join(root, "practical-tasks", "pdf", t["stem"] + ".pdf"), "pdf", to_html("%s %s - %s" % (m["mid"], t["code"], t["title"]), doc)))
@@ -1122,6 +1133,9 @@ def plan(course, infos, title, probs):
                 for who, name, d in (("_TRAINEE", W["trainee_card"], card), ("_INSTRUCTOR", t["title"], doc)):
                     page = to_html("%s %s - %s" % (m["mid"], t["code"], name), d, viewer=True)
                     out += [(pd + who + ".html", "html", page), (pd + who + ".pdf", "pdf", page)]
+                listed.append(t)
+        if listed:                                     # the instructor app reads each paper's name and kind from this list
+            out.append((os.path.join(course, workspace.MODULES, m["code"], PAPERS, PAPERS_LIST), "json", papers_list(listed)))
     out += kit(course, title, mods, days, root, probs)
     # the instructor-only classroom files the tablet app reads on publish (classroom_files.py): the Prepare lists and the
     # recorded runs' assessment forms - in the modules folder, beside _course_shell, never in additional-materials

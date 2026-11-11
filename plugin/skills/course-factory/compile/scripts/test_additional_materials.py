@@ -291,8 +291,14 @@ def main():
         on_tablet = sorted(os.listdir(papers)) if os.path.isdir(papers) else []
         check("the simulator exercise's trainee card and instructor sheet are on the instructor's tablet too, beside the module "
               "plan, to open and to print (the instructor app had no way to reach the papers: additional-materials never ships)",
-              on_tablet == sorted(stem + x for x in ("_INSTRUCTOR.html", "_INSTRUCTOR.pdf", "_TRAINEE.html", "_TRAINEE.pdf"))
+              on_tablet == sorted(["papers.json"] + [stem + x for x in ("_INSTRUCTOR.html", "_INSTRUCTOR.pdf", "_TRAINEE.html", "_TRAINEE.pdf")])
               and all(open(os.path.join(papers, x), "rb").read(5) == b"%PDF-" for x in on_tablet if x.endswith(".pdf")), on_tablet)
+        listing = json.loads(read(papers, "papers.json")) if "papers.json" in on_tablet else {}
+        check("... papers.json names each paper for the instructor app: code, title, kind and its four files, all present",
+              listing == {"papers": [{"id": "A01", "title": "Practical - bunkering on the simulator", "kind": "simulator",
+                                      "trainee": {"html": stem + "_TRAINEE.html", "pdf": stem + "_TRAINEE.pdf"},
+                                      "instructor": {"html": stem + "_INSTRUCTOR.html", "pdf": stem + "_INSTRUCTOR.pdf"}}]}
+              and all(f in on_tablet for p in listing["papers"] for w in ("trainee", "instructor") for f in p[w].values()), listing)
         check("... the module plan's step for it links each one, and nothing else is linked",
               all('href="papers/%s%s"' % (stem, x) in mp for x in ("_TRAINEE.html", "_TRAINEE.pdf", "_INSTRUCTOR.html", "_INSTRUCTOR.pdf"))
               and len(re.findall(r"\bhref=", mp)) == 4, re.findall(r'href="[^"]*"', mp))
