@@ -328,6 +328,75 @@ def main():
         cs.save(il.path(c), d)
         code, out = run("status", c)
         check("a change after the approval is said", "changed since the approval" in out, out)
+
+        print("\n-- 2.128.0: a new course, its formats chosen while it is written (Aigars Kluga: 'the factory ... cannot vary')")
+        f = os.path.join(tmp, "fresh")
+        wc_ = os.path.join(f, "working_claude")
+        os.makedirs(os.path.join(wc_, "script"))
+        cs.save(os.path.join(wc_, "architecture.json"), {"course": {"title": "Fire party", "course_language": "English"}, "modules": [{"module": 3}]})
+        subs = [("3.1", "Decides whether the hot work permit may be signed"), ("3.2", "Responds to a fire alarm during bunkering"),
+                ("3.3", "Communicates the fire-team orders with closed-loop readback"), ("3.4", "Rigs a fire hose and tests the nozzle")]
+        cs.save(os.path.join(wc_, "ilo_map.json"), {"rows": [{"module": "M03", "main_ilo_ids": ["3"], "sub_ilo_id": i, "sub_ilo": t} for i, t in subs]})
+        code, out = run("plan", f, "--module", "3", "--json")
+        picks = {p["sid"]: p for p in json.loads(out)[0]["sub_ilos"]} if code == 0 else {}
+        check("plan, before any script: each Sub-ILO's task type from its verb and its formats - a case for the decision, the "
+              "scenario run for the real-time outcome, a closed-loop drill with observers for the team, the demonstration for "
+              "the hands-on one", code == 0 and [picks[i]["task_type"] for i, _ in subs] == ["decision", "real_time_judgement",
+                                                                                            "team_behaviour", "fixed_sequence"]
+              and [picks[i]["picks"][0] for i, _ in subs] == ["case-dilemma", "scenario-run", "closed-loop", "demonstration"]
+              and "observer-role" in picks["3.3"]["picks"], out[:900])
+        reg = il.load(f).get("register") or {}
+        check("... and writes them into the register as a draft (task type, where it came from, the TLA names)",
+              reg.get("3.2", {}).get("task_type") == "real_time_judgement" and reg["3.2"]["_task_type_from"] == "verb 'responds'"
+              and reg["3.3"]["tla"][0] == "Closed-loop communication drill", reg.get("3.2"))
+        code, out = run("plan", f)
+        check("... the plain report says how each format is written in the script", code == 0 and "[scenario-run]" in out
+              and "\"events\"" in out, out[:600])
+        # the module, written as the plan says (what the factory does at the content-script stage)
+        commit = "- Each trainee writes the answer on a card before the reveal."
+        sl_ = lambda sid, sub, **kw: dict({"id": sid, "kind": "slide", "title": "Slide " + sid, "text": "Words.", "visual_kind": "photo",
+                                           "visual": "A photo.", "notes": commit, "minutes": 5, "sub_ilo": sub,
+                                           "active": "explain-then-reveal", "ask": "Why?", "reveal": "Because."}, **kw)
+        screens = [sl_("s01", "3.1"),
+                   sl_("s02", "3.1", active="scenario", choices=["Sign", "Refuse"], why=["No", "Yes"], right="B", minutes=10),
+                   sl_("s03", "3.2"),
+                   {"id": "a01", "kind": "activity", "format": picks["3.2"]["picks"][0], "sub_ilo": "3.2", "minutes": 60,
+                    "title": "Fire alarm during bunkering", "text": "Teams of four run the alarm in the mock-up engine room.",
+                    "notes": "- Planned events as listed.", "events": ["Smoke reported at 5 min", "The bunker hose parts at 15 min"]},
+                   sl_("s04", "3.3"),
+                   {"id": "a02", "kind": "activity", "format": picks["3.3"]["picks"][0], "sub_ilo": "3.3", "minutes": 45,
+                    "title": "Fire-team orders", "text": "Groups of three: orders, readback, observer.", "notes": "- Rotate."},
+                   sl_("s05", "3.4"),
+                   {"id": "a03", "kind": "activity", "format": picks["3.4"]["picks"][0], "sub_ilo": "3.4", "minutes": 50,
+                    "title": "Rig the fire hose", "text": "At the fire station on deck: rig the hose and test the nozzle.",
+                    "notes": "- Six per hydrant.", "safety": ["Water pressure 7 bar: never point the nozzle at a person",
+                                                              "Wet deck: safety shoes"]}]
+        save_script(f, "M03", screens)
+        script = cs.load(os.path.join(wc_, "script", "M03.json"))
+        found = [x for x in cs.activity_findings(f, script) if x["level"] == cs.FAIL]
+        check("the module written in those formats is not one direction, and every task type has its kind of activity",
+              not found, found)
+        one = dict(script, screens=[dict(x, format="write-plan") if x["kind"] == "activity" else x for x in screens])
+        check("... the same module with every activity a project block is a must-fix - before anything is built",
+              {x["rule"] for x in cs.activity_findings(f, one) if x["level"] == cs.FAIL} >= {"a_one_direction", "a_type_unserved"},
+              cs.activity_findings(f, one))
+        code, out = run("draft", f)
+        d = il.load(f)
+        pr = d.get("practicals") or {}
+        check("draft makes a practical for every drill and team scenario - not only the simulator and equipment ones",
+              set(pr) == {"M03.A01", "M03.A02", "M03.A03"} and len({pr[k]["_format"] for k in pr}) == 3, (out, sorted(pr)))
+        check("... each cycle adds up to its screen's minutes; the team ones debrief 15-20 min, trainee-led; the scenario "
+              "run's planned events are on its run",
+              [sum(r["min"] for r in pr[k]["cycle"]) for k in ("M03.A01", "M03.A02", "M03.A03")] == [60, 45, 50]
+              and pr["M03.A01"]["team"] and pr["M03.A02"]["team"] and not pr["M03.A03"]["team"]
+              and "trainee-led" in pr["M03.A01"]["cycle"][-1]["what"]
+              and any("Smoke reported" in (r.get("what") or "") for r in pr["M03.A01"]["cycle"]), {k: pr[k]["cycle"] for k in pr})
+        check("... the hose drill's safety is the script's own lines, its intervention the Peyton stop-and-go",
+              pr["M03.A03"]["prebrief"]["safety"][0].startswith("Water pressure") and "stop-and-go" in pr["M03.A03"]["prebrief"]["intervention"].lower())
+        code, out = run("check", f, "--module", "3")
+        check("instructor_led.py check passes the fresh module with nothing filled by hand", code == 0 and "Nothing open" in out, out[-1500:])
+        code, out = run("draft", f)
+        check("a second draft adds and fills nothing", "0 entries added, 0 fields filled" in out, out)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

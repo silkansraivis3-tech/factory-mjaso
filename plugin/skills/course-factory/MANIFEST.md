@@ -7,6 +7,38 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.128.0 · Varied practical-activity formats, chosen while a module is written (2026-11-11)
+
+- WHY (course expert Aigars Kluga, 2026-11-11: "the factory is good but cannot vary - fine for one-direction courses like
+  Gas, but narrow"): the guideline's TLA pool was only checked after the course was written. Every practical of Project
+  Management was solo or pair project work until `instructor_led.json` was filled by hand; run on its approved scripts the
+  new check flags all three teaching modules one direction and Sub-ILOs 2.5 and 4.2 (real-time) with no activity of
+  their kind.
+- `knowledge/instructor-led.json` `"formats"`: how each of the pool's 28 TLAs is written in a content script (slide,
+  activity, tablet task, or a feature of a team practical), the activity ones with their roles, what the debrief
+  observes and the R10 intervention; `"verbs"` (task type from a Sub-ILO's verb, English, the earliest wins), `"core"` (the
+  format each task type's evidence names), `"one_direction"` thresholds, room defaults. The pool itself is unchanged.
+- `scripts/activity_formats.py` (new): `task_type_of`, `pick` / `plan` (nearest Bloom level, least used in the module, a
+  second TLA of another kind, team formats bring observers and a trainee-led debrief), `format_of` / `moments` (an
+  activity's `"format"` or sign words, else `exercise`; an active slide's technique), `cycle` / `practical` (rows that add up
+  to the screen's minutes; cards from the screen's own words, then the catalogue; no safety drafted for simulator or
+  equipment).
+- `scripts/instructor_led.py`: `plan <course> [--module N]` before a module's script (writes task type, `_task_type_from`
+  and TLA names into the register where empty); `draft` now makes a practical for every room drill, team scenario and
+  project block too, and fills the register's task type, TLAs and evidence where empty; it returns and prints what is still
+  to fill.
+- `scripts/content_script.py`: `activity_findings` in `all_findings` - `a_one_direction` (two activity screens, or three
+  practice moments, all one format) and `a_type_unserved` (a team, real-time or hands-on Sub-ILO with no activity of its
+  kind) are must-fixes, `"formats_why"` keeps them notes; `validate` refuses an unknown `"format"`; the review page shows an
+  activity's format and its card words. Labels `a_*`, `s_format*` in `knowledge/page-labels.json` (English).
+- Docs: `instructor-led/GUIDE.md` §0 and §1, `script/GUIDE.md` §0, `SKILL.md` Stage 3.
+- Tests: `scripts/test_activity_formats.py` (new, 29), `test_instructor_led.py` (+10, among them a new course from the ILO
+  map through `plan`, a script in the picked formats, `draft` and `check --module` passing with nothing filled by hand),
+  `test_content_script.py` (+10).
+- Not done: the verbs are English only (a Latvian or Russian Sub-ILO reads as a decision until the register says
+  otherwise); `show` vs `diagnostic` follows the course type, not each trainee's first exposure; recorded runs, their forms
+  and the employer sheet are still written by hand; no existing course was rebuilt.
+
 ## 2.127.0 · The slide for the information: the factory says which template a plain slide fits (2026-11-10)
 
 - WHY (operator Aleksis Vejs: "the factory doesn't really want to use the template"): counted on the built decks, 42 of 57

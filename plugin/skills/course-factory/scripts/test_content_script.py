@@ -335,6 +335,53 @@ def main():
         check("... and nothing about the mix when the module is short, or 60 % of it or less is plain",
               not [f for f in cs.template_findings(mod(six[1:])) if f["rule"] == "t_template_mix"]
               and not cs.template_findings(mod(mixed)), cs.template_findings(mod(mixed)))
+        # 2.128.0 - varied practical-activity formats (Aigars Kluga: "the factory ... cannot vary"): one direction is a must-fix
+        def act(i, title, text="Work in pairs on the task.", **kw):
+            return dict({"id": "a%02d" % i, "kind": "activity", "title": title, "text": text, "notes": "- n", "minutes": 40}, **kw)
+        two = [act(1, "Project work: the charter", "Your own project, in the template."),
+               act(2, "Project work: the schedule", "Your own project, in the template.")]
+        rules = lambda f: [(x["rule"], x["level"]) for x in f]
+        af_ = cs.activity_findings(None, mod(two))
+        check("2.128.0: two activities that are both project work are one direction - a must-fix that names the format and "
+              "what else to write", rules(af_) == [("a_one_direction", cs.FAIL)] and "Write the plan or brief" in af_[0]["detail"]
+              and "[" in af_[0]["detail"], af_)
+        unnamed = [act(1, "Exercise 1"), act(2, "Exercise 2")]
+        check("... two activities of no named format are one direction too ('exercise')",
+              rules(cs.activity_findings(None, mod(unnamed))) == [("a_one_direction", cs.FAIL)])
+        check("... \"formats_why\" at the top of the script keeps it a note",
+              rules(cs.activity_findings(None, mod(two, formats_why="One project carried through the course."))) == [("a_one_direction", cs.NOTE)])
+        varied = [two[0], act(3, "Change board", "Role-play: the board pushes back.", format="challenge-response")]
+        check("... a project block beside a role-play is varied - nothing to say",
+              cs.activity_findings(None, mod(varied)) == [], cs.activity_findings(None, mod(varied)))
+        same_slides = [sl(i, dull, active="scenario", ask="What do you do?", choices=["a", "b"], right="a") for i in range(1, 4)]
+        check("... three practice moments that are all the same slide technique (case dilemma) are one direction as well",
+              rules(cs.activity_findings(None, mod(same_slides))) == [("a_one_direction", cs.FAIL)]
+              and "practice moments" in cs.activity_findings(None, mod(same_slides))[0]["detail"])
+        check("... one activity alone, or a final assessment, is never one direction",
+              cs.activity_findings(None, mod(two[:1])) == [] and cs.activity_findings(None, dict(mod(two), module="final")) == [])
+        check("2.128.0: an activity naming a format the catalogue does not hold is a script problem",
+              any("unknown activity format" in x for x in cs.validate(mod([act(1, "X", format="lecture")]))),
+              cs.validate(mod([act(1, "X", format="lecture")])))
+        tmp_af = tempfile.mkdtemp(prefix="cs_formats_")
+        try:
+            c_af = os.path.join(tmp_af, "course")
+            os.makedirs(os.path.join(c_af, "working_claude"))
+            cs.save(os.path.join(c_af, "working_claude", "ilo_map.json"), {"rows": [
+                {"module": "M01", "main_ilo_ids": ["1"], "sub_ilo_id": "1.1", "sub_ilo": "Prepares the voyage plan"},
+                {"module": "M01", "main_ilo_ids": ["1"], "sub_ilo_id": "1.2", "sub_ilo": "Communicates helm orders with closed-loop readback"}]})
+            solo = [dict(two[0], sub_ilo="1.1"), act(4, "Read the plan", "Each trainee checks a plan.", format="walkthrough", sub_ilo="1.2")]
+            got = cs.activity_findings(c_af, mod(solo))
+            check("2.128.0: a team Sub-ILO (read from its verb 'communicates') trained only by solo work is a must-fix naming "
+                  "the team formats", rules(got) == [("a_type_unserved", cs.FAIL)] and "1.2" in got[0]["detail"]
+                  and "Closed-loop communication drill" in got[0]["detail"], got)
+            team = solo[:1] + [act(5, "Helm orders", "Groups of three at the console.", format="closed-loop", sub_ilo="1.2", minutes=45)]
+            check("... and served once an activity for it is a closed-loop drill", cs.activity_findings(c_af, mod(team)) == [],
+                  cs.activity_findings(c_af, mod(team)))
+            cs.save(os.path.join(c_af, "working_claude", "instructor_led.json"), {"register": {"1.2": {"task_type": "decision"}}})
+            check("... the register's task type comes first: set to a decision, it asks nothing more",
+                  cs.activity_findings(c_af, mod(solo)) == [], cs.activity_findings(c_af, mod(solo)))
+        finally:
+            shutil.rmtree(tmp_af, ignore_errors=True)
         check("operator-stated facts listed once - from the script and from FEEDBACK_LOG.md",
               "left console" in page and "tested to 7 bar" in page and page.count(lv("s_facts_title")) == 1)
         doc = zipfile.ZipFile(p["docx"]).read("word/document.xml").decode("utf-8")

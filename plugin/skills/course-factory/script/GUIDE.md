@@ -71,6 +71,20 @@ The ILO map's slide and question rows are **built from the scripts**, not typed 
 approved or its slides move, `python scripts/ilo_map.py refresh <course> [--module N]` writes each row's
 `where_taught` / `checked_by` from the `"sub_ilo"` tags (the approved Main ILO and Sub-ILO wording is never touched).
 
+**The module's activity formats come before its words (L68, 2.128.0).** Course expert Aigars Kluga: *"the factory is
+good but cannot vary - fine for one-direction courses like Gas, but narrow"* - every practical of Project Management was
+solo or pair project work. Before drafting a module run `python scripts/instructor_led.py plan <course> --module N`: each
+Sub-ILO's task type (its verb, or the register's) picks one or two TLAs of the guideline's pool, varied across the module,
+with how each is written (`instructor-led/GUIDE.md` §0). Write the module's active slides and activity screens in those
+formats: a decision as a case dilemma (`"active": "scenario"`), a refutation (`"claim"`), a contrast pair or a worked
+example; a real-time outcome as an activity `"format": "scenario-run"` with its `"events"`; a hands-on one as
+`"demonstration"` or `"planted-defect"` at the equipment; a team outcome as `"closed-loop"` or `"challenge-response"`
+with observers and a trainee-led debrief. An activity screen's `"roles"`, `"safety"`, `"observe"` and `"events"` are the
+words its practical's cards are drafted from - approved with the script; a simulator or real-equipment activity states its
+`"safety"` here, from the material. The check is a must-fix when the module came out one direction anyway (two activity
+screens of one format, or three practice moments of one format - `a_one_direction`) or a team, real-time or hands-on
+Sub-ILO has no activity of its kind (`a_type_unserved`); `"formats_why"` at the top of the script keeps both a note.
+
 ## 1 · Write the script
 
 `<course>/working_claude/script/M01.json` — the whole lesson **in the order it is taught**. It runs on two

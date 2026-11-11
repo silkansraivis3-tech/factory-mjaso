@@ -136,6 +136,7 @@ import design_choices  # noqa: E402  - the operator's design choices are theirs,
 import interact_formats  # noqa: E402  - the interactive task types' formats (2.74.0), read in one place
 import ilo_map  # noqa: E402  - what this module owes: its rows of the ILO map (2.42.0)
 import course_gate  # noqa: E402  - no module starts before the ILO map is approved and the KB decided (2.42.0)
+import activity_formats as af  # noqa: E402  - the practical-activity formats, chosen by task type (L68, 2.128.0)
 
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
 KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
@@ -760,6 +761,9 @@ def validate(script):
             probs.append("screen %s: unknown kind %r" % (sid, s.get("kind")))
         if s.get("kind") == "slide" and s.get("active") and s["active"] not in ACTIVE:
             probs.append("%s: unknown kind of active learning %r - use one of: %s" % (sid, s["active"], ", ".join(ACTIVE)))
+        if s.get("kind") == "activity" and s.get("format") and not af.get(str(s["format"])):
+            probs.append("%s: %s" % (sid, T(script, "a_unknown_format", fmt=s["format"], keys=", ".join(
+                k for k in af.ORDER if af.FORMATS[k]["drafts"] == "activity"))))
         if s.get("kind") == "slide" and s.get("visual_kind") and parse_kind(s["visual_kind"]) not in VISUAL_KINDS + ["none"]:
             probs.append("%s: unknown kind of visual %r - use one of: %s" % (sid, s["visual_kind"], ", ".join(VISUAL_KINDS)))
         if s.get("kind") in TASKS:
@@ -2221,7 +2225,87 @@ def clauses(text):
 def all_findings(script, course=None):
     th, _ = theory_findings(script)
     return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script) \
-        + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script)
+        + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script) \
+        + activity_findings(course, script)
+
+
+# ------------------------------------------------------------------ varied practical-activity formats (2.128.0, L68)
+# Aigars Kluga, course expert, 2026-11-11: "the factory is good but cannot vary - fine for one-direction courses like Gas,
+# but narrow". Every practical of Project Management was solo or pair project work until the guideline file was filled by
+# hand. The guideline picks the format by the task type (task type -> method -> modality); activity_formats.py does it while
+# the script is written (instructor_led.py plan), and this says, as a must-fix, when a module came out one direction anyway.
+def _course_json(course, name):
+    p = workspace.claude_path(course, name) if course else None
+    if not p or not os.path.isfile(p):
+        return {}
+    try:
+        d = load(p)
+    except (OSError, ValueError):
+        return {}
+    return d if isinstance(d, dict) else {}
+
+
+def activity_findings(course, script):
+    """MUST-FIX: a module whose activity screens (two or more) - or all its practice moments, activity screens and active
+    slides (three or more) - are one format (a_one_direction); a team, real-time or hands-on Sub-ILO that no activity of
+    the module trains in a format of its kind (a_type_unserved: a lecture or solo paperwork does not train a team). The
+    task type is the register's (instructor_led.json), else read from the Sub-ILO's verb. "formats_why" at the top of the
+    script keeps both a note. Thresholds and formats: knowledge/instructor-led.json "formats"."""
+    if str(script.get("module")).lower() == "final":
+        return []
+    O = af.F["one_direction"]
+    mom = af.moments(script)
+    acts = [(s, f) for s, f in mom if s.get("kind") == "activity"]
+    why = str(script.get("formats_why") or "").strip()
+    rows, reg, exp = [], {}, False
+    if course:
+        m = ilo_map.read(course)
+        lr = ilo_map.module_rows(m, script.get("module")) if m else []
+        ids = set(ilo_map.leaves(lr)) if lr else set()
+        rows = [r for r in lr if str(r.get("sub_ilo_id")) in ids]
+        reg = _course_json(course, "instructor_led.json").get("register") or {}
+        exp = str((_course_json(course, "architecture.json").get("course") or {}).get("course_type") or "").upper() == "EXPERIENCED"
+    plan = af.plan(rows, reg, bloom_map.lang_code(script.get("course_language") or "English"), exp) if rows else []
+    found, mod = [], T(script, "s_the_module")
+    add = lambda level, key, **kw: found.append({"where": mod, "screen": "", "field": "", "level": level, "rule": key.replace("_kept", ""),
+                                                 "fix": "", "detail": T(script, key, **kw)})
+    one = None
+    if len(acts) >= O["min_activities"] and len({f for _, f in acts}) == 1:
+        one = ("a_the_activities", len(acts), acts[0][1])
+    elif len(mom) >= O["min_moments"] and len({f for _, f in mom}) == 1:
+        one = ("a_the_moments", len(mom), mom[0][1])
+    if one:
+        what, fmt = T(script, one[0], n=one[1]), af.label(one[2])
+        if why:
+            add(NOTE, "a_one_direction_kept", what=what, fmt=fmt, why=why)
+        else:
+            kinds = ("activity",) if one[0] == "a_the_activities" else ("activity", "slide")
+            picks = []
+            for p in plan:
+                for k in p["picks"]:
+                    x = "[%s] %s (%s)" % (k, af.label(k), p["sid"])
+                    if k != one[2] and af.FORMATS[k]["drafts"] in kinds and not any(y.startswith("[%s]" % k) for y in picks):
+                        picks.append(x)
+            if not picks:                  # the plan picked none of that kind: the activity formats of the module's task types
+                tts = {p["task_type"] for p in plan} or set(af.TASK_TYPES)
+                picks = ["[%s] %s" % (k, af.label(k)) for k in af.ORDER if af.FORMATS[k]["drafts"] == "activity"
+                         and k != one[2] and af.FORMATS[k]["task_type"] in tts and af.FORMATS[k].get("only") is None][:4]
+            add(FAIL, "a_one_direction", what=what, fmt=fmt, picks="; ".join(picks[:4]))
+    for p in plan:
+        if p["task_type"] == "decision":
+            continue
+        tagged = [f for s, f in mom if p["sid"] in sub_ilos_of(s)]
+        pool = tagged or [f for _, f in mom]
+        if any(af.serves(f) == p["task_type"] for f in pool):
+            continue
+        tt = af.KNOW["task_types"][p["task_type"]]["label"].lower()
+        if why:
+            add(NOTE, "a_type_unserved_kept", sid=p["sid"], tt=tt, why=why)
+            continue
+        have = ", ".join(sorted({af.label(f) for f in pool})) or "none"
+        picks = "; ".join("[%s] %s" % (k, af.label(k)) for k in p["picks"] if af.FORMATS[k]["drafts"] != "feature")
+        add(FAIL, "a_type_unserved", sid=p["sid"], tt=tt, src=p["source"], have=have, picks=picks)
+    return found
 
 
 def blocking(findings):
@@ -2596,6 +2680,16 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             o.append("<dl>%s</dl>" % "".join("<dt>%s</dt><dd>%s</dd>" % (e(T(script, "s_" + f)), V(str(s[f]))) for f in extra))
         if s.get("active"):          # L49 - the trainees do something on this slide
             o.append('<p class="note"><b>%s:</b> %s</p>' % (e(T(script, "s_active")), e(T(script, "tech_" + s["active"]))))
+        if k == "activity":          # 2.128.0 - the activity's format, and the words its practical's cards are drafted from
+            fk = af.format_of(s)
+            f = af.get(fk) or af.UNNAMED
+            kind = ("s_format_kind_team" if f.get("team") or s.get("team") is True else
+                    "s_format_kind_solo" if af.needs_practical(fk, "room") else "s_format_kind_none")
+            o.append('<p class="note"><b>%s:</b> %s</p>' % (e(T(script, "s_format")), e(T(script, "s_format_line", label=af.label(fk)
+                                                                                                    + ("" if s.get("format") else " [%s]" % fk), kind=T(script, kind)))))
+            own = [(x, s[x]) for x in ("objective", "roles", "safety", "observe", "events") if s.get(x)]
+            if own:
+                o.append("<dl>%s</dl>" % "".join("<dt>%s</dt><dd>%s</dd>" % (e(x), V("\n".join(af.lines(v)))) for x, v in own))
         if s.get("from_old"):        # L41 - where in the old course this slide comes from, and what changed
             o.append('<p class="note"><b>%s:</b> %s</p>' % (e(T(script, "s_from_old")), e(s["from_old"])))
         if s.get("notes"):

@@ -235,7 +235,9 @@ instructor tablet** — each slide's exact words, picture slot, minutes, notes, 
 task begins; **part 2, the trainee tablet** — each task, one question a screen, answers, feedback, the trainee's own
 score. Begin from the module's ILO map rows (`ilo_map.py show`), the old course's keep / modernise / add and the
 knowledge base (`kb_tool.py search`). Before scripts are written in parallel, `STANDARDS.md` gets the course's
-`## Ship profile`.
+`## Ship profile`. Before each module is drafted, `instructor_led.py plan <course> --module N` picks its activity formats
+by each Sub-ILO's task type (L68, 2.128.0) - write the activities in them; a module that comes out one direction is a
+must-fix.
 
 - **Proved (L4):** one `fact-checker` agent per module; approval is refused while a claim is unjudged or unproved.
 - **Checked:** the theory, slide-text, pictures-and-tasks and ILO-map checks head the review page; a must-fix blocks
