@@ -7,6 +7,10 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.131.1 · The papers listed for the instructor's control (2026-11-11)
+
+- `compile/scripts/additional_materials.py`: `papers_list()` writes `moduleNN/instructor/papers/papers.json` (id, title, kind, the trainee and instructor HTML and PDF names, in teaching order); `--check` covers it. Tests: test_additional_materials, test_publisher.
+
 ## 2.131.0 · Slides that do not all look alike, a cheaper trial (2026-11-11)
 
 - `compile/scripts/layout_plan.py` (new): every blueprint a slide can take scored by its picture's real shape, its words and its names; the whole module planned by shape, seeded among near-equal fits; `problems` for the package check. `compile_module.py`: `photo_aspect`, `kit3d_aspect`, `plan_item`, the plan applied in `slide_html`, `Layout plan (Mxx)` printed; `CF_LAYOUT_PLAN=0` for tests.
