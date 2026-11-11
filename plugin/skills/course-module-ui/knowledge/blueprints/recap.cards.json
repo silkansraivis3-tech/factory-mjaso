@@ -1,0 +1,10 @@
+{
+ "id": "recap.cards",
+ "template": "recap",
+ "variant": "cards",
+ "shape": "",
+ "for": "the end of the module",
+ "grid": ["a b", "c d"],
+ "fill": {"a": ["Text", "asks[0], then line 1"], "b": ["Text", "asks[1], line 2"], "c": ["Text", "..."], "d": ["Text", "3-6 cards"]},
+ "ref": "slides#p17"
+}

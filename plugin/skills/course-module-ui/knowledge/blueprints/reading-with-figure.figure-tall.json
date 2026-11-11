@@ -1,0 +1,11 @@
+{
+ "id": "reading-with-figure.figure-tall",
+ "template": "reading-with-figure",
+ "variant": "figure-tall",
+ "shape": "beside",
+ "for": "more words beside a tall picture",
+ "grid": ["x p"],
+ "cols": "62fr 38fr",
+ "fill": {"x": ["Text", "text"], "p": ["Picture", "figure: its box the picture's own tall shape"]},
+ "fits": {"group": "text-figure", "pictures": ["photo", "drawing"], "aspect": {"photo": [0.3, 0.9], "drawing": [0.3, 0.9]}, "hard": true, "words": [61, 999], "budget": {"photo": "beside_tall", "drawing": "beside_tall"}}
+}

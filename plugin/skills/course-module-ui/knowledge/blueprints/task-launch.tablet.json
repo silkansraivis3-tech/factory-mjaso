@@ -1,0 +1,12 @@
+{
+ "id": "task-launch.tablet",
+ "template": "task-launch",
+ "variant": "tablet",
+ "shape": "",
+ "for": "a task slide (a self-check)",
+ "grid": ["x p", "i p"],
+ "cols": "50fr 50fr",
+ "rows": "3fr 1fr",
+ "fill": {"x": ["Text", "code, title, text"], "i": ["Info", "chips: minutes, questions, alone or team; before (2-4 ticks)"], "p": ["Picture", "the exercise's photo, else the tablet render"]},
+ "ref": "slides#p16"
+}

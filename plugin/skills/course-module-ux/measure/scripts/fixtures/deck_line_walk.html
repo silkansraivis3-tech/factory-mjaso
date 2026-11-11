@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - every line of a teaching slide lit in turn</title>
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_shell.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_compose.css">
+</head>
+<body>
+<!-- Regression fixture for gb_deck.js: w1 is a photograph beside four lines and no figure that steps - the deck walks the
+     lines itself, one each Next, every one lit. w2 has a figure hook that steps by itself and lights no line - fit_gate must
+     name its lines that no Next lit (the owner, 2026-11-11: only the lead line of a slide was ever lit). -->
+<div id="landing"><button id="startBtn" type="button">Start</button></div>
+<div id="progress"></div>
+<div id="blockTag"></div>
+<div id="overview"><button class="fbtn" id="ovClose" type="button">Close</button><div class="ov-grid" id="ovGrid"></div></div>
+<div id="cue"></div>
+<div id="chrome">
+  <button class="cbtn" id="btnPrev" type="button" aria-label="Back">&lt;</button>
+  <span id="counter"><b>1</b> / 1</span>
+  <button class="cbtn" id="btnNext" type="button" aria-label="Next">&gt;</button>
+</div>
+<main id="stage">
+  <section class="slide" id="w1" data-title="Walked" data-template="photo-explain.v1" data-variant="column">
+    <h2>Walked</h2>
+    <div class="slide-body two-col"><div class="copy">
+      <p class="lead" data-i="1">One</p><p class="lead" data-i="2">Two</p><p class="lead" data-i="3">Three</p><p class="lead" data-i="4">Four</p>
+    </div></div>
+  </section>
+  <section class="slide" id="w2" data-title="Not walked" data-template="explain-figure.v1" data-variant="figure-right">
+    <h2>Not walked</h2>
+    <div class="slide-body two-col"><div class="copy">
+      <p class="lead" data-i="1">One</p><p class="lead" data-i="2">Two</p>
+    </div></div>
+  </section>
+  <section class="slide" id="w3" data-title="End"><h2>End</h2></section>
+</main>
+<script>window.GB_HOOKS = { w2: { step: function () { return false; } } };</script>
+<script src="../../../assets/gb_steps.js"></script>
+<script src="../../../assets/gb_deck.js"></script>
+<script>GBDeck.init({ hooks: window.GB_HOOKS || {} });</script>
+</body></html>

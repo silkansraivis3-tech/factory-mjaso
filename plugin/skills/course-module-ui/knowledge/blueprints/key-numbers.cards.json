@@ -1,0 +1,10 @@
+{
+ "id": "key-numbers.cards",
+ "template": "key-numbers",
+ "variant": "cards",
+ "shape": "words",
+ "for": "several limits or values",
+ "grid": ["a b c", "d e f"],
+ "fill": {"a": ["Info", "value | what it means"], "b": ["Info", "..."], "c": ["Info", "..."], "d": ["Info", "..."], "e": ["Info", "..."], "f": ["Info", "3-8 cards"]},
+ "ref": "slides#p23"
+}

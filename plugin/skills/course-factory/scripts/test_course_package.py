@@ -405,6 +405,23 @@ def main():
         check("a compiled deck's slide off its blueprint stops the course package (the build): a template that needs a picture "
               "and holds none (a button's symbol is no picture), an unknown template - never a 2D-kit figure's slide",
               code == 1 and "bp1" in said and "bp3" in said and "bp2" not in said, said or out[-800:])
+        # the owner, 2026-11-11: 27 of 31 slides the same shape - a deck whose slides fit another shape and repeat one
+        def same(shapes):
+            return "".join('<section class="slide" id="v%02d" data-title="V" data-kind="Theory" data-cue="- x" data-visual="photo" '
+                           'data-template="explain-figure.v1" data-variant="figure-right" data-shapes="%s"><img src="../assets/img/a.jpg">'
+                           '</section>' % (k, shapes) for k in range(1, 13))
+        for name, shapes, bad in (("look", "beside top bottom", True), ("look-only", "beside", False)):
+            b = os.path.join(tmp, name, "modules")
+            shutil.copytree(c, b)
+            w(os.path.join(b, "module01", "presentation", "index.html"), deck.replace('<section class="slide active" id="s01"',
+              same(shapes) + '<section class="slide active" id="s01"'))
+            code, out = run(b, "--no-importer")
+            said = next((x for x in out.splitlines() if "the same shape twice in a row" in x), "")
+            if bad:
+                check("twelve slides beside in a row that fit a band too: a must-fix of the course package, naming the run "
+                      "(layout_plan.problems)", code == 1 and "v01-v02 beside" in said, said or out[-800:])
+            else:
+                check("... and no finding when they fit beside only - nothing the plan could have done", not said, said)
         b = os.path.join(tmp, "share70", "modules")
         shutil.copytree(c, b)
         three(b, ["model_3d", "model_3d", "photo", "model_3d", "model_3d", "model_3d", "model_3d", "model_3d", "photo"])

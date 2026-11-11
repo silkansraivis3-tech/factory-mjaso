@@ -1,0 +1,13 @@
+{
+ "id": "content-in-parts.with-figure",
+ "template": "content-in-parts",
+ "variant": "with-figure",
+ "shape": "beside",
+ "for": "more words than one view holds, kept together on purpose (script \"in_parts\"; otherwise two slides)",
+ "grid": ["x p", "i i"],
+ "cols": "45fr 55fr",
+ "rows": "5fr 1fr",
+ "fill": {"x": ["Text", "text in parts of about 75 words; Next turns to the next part like a page"], "i": ["Info", "the parts' tabs, a strip at the foot of the slide"], "p": ["3D", "figure, or each part its own (build sheet \"part_figures\")"]},
+ "ref": "slides#p10",
+ "fits": {"group": "parts", "pictures": ["drawing", "3d", "photo", "tiles"], "aspect": {"drawing": [0.8, 2.2], "3d": [0.8, 2.2], "tiles": [0.5, 4], "photo": [0.6, 1.3]}, "words": [0, 999], "budget": {"drawing": "part", "3d": "part", "photo": "part", "tiles": "part"}}
+}

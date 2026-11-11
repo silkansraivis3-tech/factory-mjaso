@@ -1,0 +1,7 @@
+{
+ "id": "three-content-blocks.figure-left",
+ "template": "three-content-blocks",
+ "variant": "figure-left",
+ "shape": "beside",
+ "mirror": "three-content-blocks.with-figure"
+}

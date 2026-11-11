@@ -1,0 +1,13 @@
+{
+ "id": "photo-explain.full",
+ "template": "photo-explain",
+ "variant": "full",
+ "shape": "photo-full",
+ "for": "a real photograph that is the lesson",
+ "bg": "p",
+ "grid": ["x ."],
+ "cols": "40fr 60fr",
+ "fill": {"p": ["Picture", "figure (a photograph); spots {line: [x, y]}"], "x": ["Text", "text, up to 50 words"]},
+ "ref": "slides#p1",
+ "fits": {"group": "text-figure", "pictures": ["photo"], "aspect": {"photo": [1.25, 3]}, "hard": true, "words": [0, 999], "budget": {"photo": "photo_full"}}
+}

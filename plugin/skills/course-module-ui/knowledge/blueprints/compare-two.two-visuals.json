@@ -1,0 +1,11 @@
+{
+ "id": "compare-two.two-visuals",
+ "template": "compare-two",
+ "variant": "two-visuals",
+ "shape": "two",
+ "for": "two things side by side, each named and boxed",
+ "grid": ["p q", "x y"],
+ "rows": "1fr 1fr",
+ "fill": {"p": ["Picture", "figure"], "q": ["Picture", "figure_b"], "x": ["Text", "blocks[0]: its name, then boxed lines"], "y": ["Text", "blocks[1]"]},
+ "ref": "slides#p14"
+}

@@ -1,0 +1,12 @@
+{
+ "id": "drill.find-it",
+ "template": "drill",
+ "variant": "find-it",
+ "shape": "photo-full",
+ "for": "before the module check: find it on the photo",
+ "bg": "p",
+ "grid": ["x .", "a ."],
+ "cols": "40fr 60fr",
+ "fill": {"p": ["Picture", "figure; spots"], "x": ["Text", "lines 'Point to ...'"], "a": ["Animation", "the clock"]},
+ "ref": "slides#p28"
+}

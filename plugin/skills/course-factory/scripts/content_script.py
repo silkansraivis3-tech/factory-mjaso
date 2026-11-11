@@ -3613,6 +3613,40 @@ def instructor_notes_md(script):
     return "\n".join(o).rstrip() + "\n"
 
 
+def shape_line(script):
+    """the module's planned shapes as one line, read from the script before its pictures exist (compile/scripts/layout_plan.py:
+    a picture still to be drawn is drawn for the shape it gets) - "beside top words beside stage bottom ... - longest run 1,
+    beside 9 of 20 (45 %), 5 shapes". The compile plans again from the pictures themselves"""
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "compile", "scripts"))
+    import compile_module as cm
+    import layout_plan as lp
+    items, seed = [], cm.plan_seed(script)
+    for s in [x for x in script.get("screens", []) if x.get("kind") in INSTRUCTOR]:
+        if s.get("kind") != "slide" or s.get("recap"):
+            items.append({"id": s["id"], "own": ""})
+            continue
+        lines = lines_of(s.get("text"))
+        vk = s.get("visual_kind") or "none"
+        fam = None if vk == "none" else "photo" if vk in ("photo", "annotated_photo", "photo_to_take") \
+            else "3d" if (MEDIA["visual_kinds"].get(vk) or {}).get("family") == "3d" else "drawing"
+        shaped, fixed = cm.shaped_template(s, {}, lines), None
+        if shaped:
+            tid, var = shaped
+            fixed = "its words make it the %s template" % tid
+        else:
+            comp = cm.composition(s, {}, fam == "photo", bool(fam))
+            split_photo, photo_col = fam == "photo" and comp == "two-col", fam == "photo" and comp in ("wide-left", "wide-right")
+            tid, var = cm.auto_template(s, {}, "photo" if split_photo else comp, fam == "photo", bool(fam), lines, split_photo, photo_col)
+            if not fam and (tid, var) not in cm.FIGURE_FREE:
+                var = "text-only" if "text-only" in lp.variants(tid) else var
+        own_bp = "%s.%s" % (tid, var)
+        opts, why = lp.options(own_bp, wc(" ".join(lines)), fam, None, 0, None, fixed, seed, s["id"])
+        items.append({"id": s["id"], "own": lp.MAP.get(own_bp) or "beside", "own_bp": own_bp, "options": opts, "why": why,
+                      "fixed": fixed, "echo": lp.comparison(tid, vk, s.get("title"))})
+    choice = lp.plan(items)
+    return lp.summary(items, lp.shapes_of(choice)) if choice else ""
+
+
 def render(course, module, quiet=False):
     p = paths(course, module)
     script = load(p["script"])
@@ -3645,6 +3679,12 @@ def render(course, module, quiet=False):
                     print("  - [%s] %s%s: %s%s" % ("must fix" if f["level"] == FAIL else "warning", f["where"],
                                                   (", " + f["field"]) if f["field"] else "", f["detail"],
                                                   (" - use instead: " + f["fix"]) if f["fix"] else ""))
+        try:
+            line = shape_line(script)
+        except Exception as err:                         # noqa: BLE001 - the line is a help for the writer, never a stop
+            line = "(not planned: %s)" % err
+        if line:
+            print("\nThe slides' shapes, planned from the script (the compile plans again from the pictures): %s" % line)
         sp = split_of(script)
         if sp["total"] and str(script.get("module")).lower() != "final":
             print("\nPlain theory %g min, active %g min (%.0f %% active; the aim is %.0f %%)." % (

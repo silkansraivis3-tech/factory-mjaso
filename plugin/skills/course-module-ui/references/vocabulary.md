@@ -33,6 +33,9 @@ The few classes of its own, all written by the compiler:
 | `.lt-parts` · `.lt-part` · `.lt-part.on` · `.lt-tabs` · `.lt-tab` | content-in-parts: the parts of one slide, the one shown, its numbered tabs - a strip at the foot of the slide body (`gb_deck.js` walks them with Next / Back, a part turning like a page); written only when the script asks for parts |
 | `.lt-pfigs` · `.lt-pfig` · `.lt-pfig.on` | each part's own picture (build sheet `"part_figures"`), the one of the part shown; it turns with its words |
 | `.fig-top` | the `figure-top` variant: wide photographs in a row on top, each box the photograph's own shape (its width over its height, written on the tile), the words under them |
+| `.fig-bottom` | the `figure-bottom` variant: the words first, the picture band across the slide under them |
+| `.fig-band` | a band (`.fig-top`, `.fig-bottom`) holding a drawing or a live 3D scene: it keeps its panel |
+| `.fig-tall` | the `figure-tall` variant: a tall picture beside the words, its box the picture's own shape |
 | `.kit-tap` | a line that is a way to its figure's step (kit.js, kit3d.js): tapped, the figure plays that step; it has its mark's gap above and under its words already |
 | `.lt-you` | the room's question card in the picture's column, under the picture; its answer opens under it on the last Next (`.lt-ans-under`) |
 | `.lt-tiles-fig` · `.lt-tiles` · `.lt-strips` · `.lt-tile` · `.lt-n` | 2.67.0 "tiles": several photographs on one slide, each opens full screen; "strips": cuts of one document, numbered (the compiler builds them - `tiles_figure`) |

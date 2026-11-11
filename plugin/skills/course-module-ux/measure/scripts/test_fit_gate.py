@@ -90,6 +90,15 @@ def main():
           [x[0] for x in fit_gate.walked_twice({"a": ["data-k0", "data-k1", "data-k0"]})] == ["a"])
     check("... lit stops in order, or one stop repeated, are not",
           not fit_gate.walked_twice({"a": ["data-k0", "data-k0", "data-k1", ""], "b": ["data-k0,data-k1", "data-k2"]}))
+    print("-- every line lit in turn (the owner, 2026-11-11: only the lead line was ever lit)")
+    check("unlit: a slide's line no stop lit is named, a slide whose lines were all lit is not",
+          [x[0] for x in fit_gate.unlit({"a": ["data-i1", "data-i2"], "b": ["data-i1"]}, {"a": ["1", "2", "3"], "b": ["1"]})] == ["a"])
+    code, out = cli(str(HERE / "fixtures" / "deck_line_walk.html"), "--viewport", "1280x800")
+    rows = out.splitlines()
+    check("a photograph beside four lines and no figure that steps: the deck walks every line itself (w1 passes); a figure "
+          "that steps and lights none fails, its lines named (w2)",
+          code == 1 and not any(x.strip().startswith("w1 ") for x in rows)
+          and any(x.strip().startswith("w2 ") and "unlit" in x and "line(s) 1, 2" in x for x in rows), out)
     KDECK = HERE / "fixtures" / "deck_kit_steps.html"
     code, out = cli(str(KDECK), "--viewport", "1280x800")
     check("a worked example's figure that never changes is named (k2), the one that moves is not (k1)",

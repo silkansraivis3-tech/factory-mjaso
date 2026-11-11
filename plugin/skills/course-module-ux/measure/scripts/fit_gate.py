@@ -14,6 +14,8 @@ Fails on, at each step of each slide:
   spill   a card, a line or a picture past the edge of the slide
   picture shown in part - less than --min-shown of it (0.8) - or stretched, or its box cut; a picture inside
           data-fit="cover" is a backdrop and may be cropped; a picture that does not load
+  unlit   a line of a teaching slide that no Next ever lights - every line is lit in turn (gb_deck.js walks the lines of
+          a slide with no figure steps itself)
 Sizes: 1280x800 (the tablets), 1024x768 and 1280x720 unless --viewport is given.
 
 It drives the Chrome or Edge already on the computer through Playwright (python -m pip install playwright - no browser
@@ -89,6 +91,29 @@ CURSIG = """(id) => { const s = document.getElementById(id); if (!s) { return ''
     .filter(Boolean).sort().join(','); }"""
 
 
+# the lines a teaching slide walks (gb_deck.js walksLines): every one is to be lit by some Next - None for a slide whose own
+# template steps it (a question, a vote, a drill), a slide shown whole (data-still) or one with no lines
+LINES = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
+  if (!/^(explain-figure|reading-with-figure|long-explanation|photo-explain|figure-stage|content-in-parts|procedure|reference-table|three-content-blocks)[.]/
+      .test(s.getAttribute('data-template') || '') || s.hasAttribute('data-still') || s.hasAttribute('data-stops')
+      || s.querySelector('[data-k],[data-stop]')) { return null; }
+  const n = [].slice.call(s.querySelectorAll('[data-i]')).filter(x => !x.closest('svg')).map(x => x.getAttribute('data-i'));
+  return n.length ? Array.from(new Set(n)) : null; }"""
+
+
+def unlit(seqs, lines):
+    """[(slide id, message)] for each slide with a line no Next ever lit"""
+    out = []
+    for sid, ls in lines.items():
+        seen = {x[len("data-i"):] for sig in seqs.get(sid, []) for x in (sig or "").split(",") if x.startswith("data-i")}
+        miss = [x for x in ls if x not in seen]
+        if miss:
+            out.append((sid, "Next never lights line(s) %s of %s (%d lines) - every line is lit in turn: point a figure step's "
+                             "\"line\" at it, or leave it to the deck's own walk (a slide with no figure steps)"
+                        % (", ".join(miss), sid, len(ls))))
+    return out
+
+
 def walked_twice(seqs):
     """[(slide id, message)] for each slide where a line lit at one stop is lit again after the walk moved on"""
     out = []
@@ -150,7 +175,7 @@ def save_shot(page, sid, path):
 def walk(page, deck, min_shown, shots=None, record=None):
     """[(slide id, step on that slide, kind, what)] for one deck at the page's size. shots: a folder - each stop is saved as
     <slide>_k<step>.png there (the walk review), record: a list that gets one dict per stop"""
-    found, at, states, seqs = [], {}, {}, {}
+    found, at, states, seqs, lines = [], {}, {}, {}, {}
     page.goto(deck.as_uri())
     page.wait_for_timeout(600)
     if page.locator("#startBtn").count():
@@ -172,6 +197,10 @@ def walk(page, deck, min_shown, shots=None, record=None):
         if r:
             step = at[r["id"]] = at.get(r["id"], 0) + 1
             seqs.setdefault(r["id"], []).append(page.evaluate(CURSIG, r["id"]))
+            if step == 1:
+                ls = page.evaluate(LINES, r["id"])
+                if ls:
+                    lines[r["id"]] = ls
             if shots is not None:
                 # 2.116.1 - the walk shot waits for the figure to stop moving (PM M02 s07-s12 were shot half-drawn)
                 for _ in range(20):
@@ -224,6 +253,8 @@ def walk(page, deck, min_shown, shots=None, record=None):
         found.append((sid, 1, "dead", what))
     for sid, what in walked_twice(seqs):
         found.append((sid, 1, "twice", what))
+    for sid, what in unlit(seqs, lines):
+        found.append((sid, 1, "unlit", what))
     return found
 
 

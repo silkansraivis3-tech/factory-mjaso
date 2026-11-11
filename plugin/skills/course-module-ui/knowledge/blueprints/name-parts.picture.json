@@ -1,0 +1,11 @@
+{
+ "id": "name-parts.picture",
+ "template": "name-parts",
+ "variant": "picture",
+ "shape": "beside",
+ "for": "parts of equipment taught earlier",
+ "grid": ["x p"],
+ "cols": "38fr 62fr",
+ "fill": {"x": ["Text", "ask; the names (text), hidden until Next"], "p": ["Picture", "figure with numbered spots"]},
+ "ref": "slides#p22"
+}

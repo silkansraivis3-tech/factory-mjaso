@@ -1,0 +1,8 @@
+{
+ "id": "content-in-parts.figure-left",
+ "template": "content-in-parts",
+ "variant": "figure-left",
+ "shape": "beside",
+ "mirror": "content-in-parts.with-figure",
+ "fits": {"group": "parts", "pictures": ["drawing", "3d", "photo", "tiles"], "aspect": {"drawing": [0.8, 2.2], "3d": [0.8, 2.2], "tiles": [0.5, 4], "photo": [0.6, 1.3]}, "words": [0, 999], "budget": {"drawing": "part", "3d": "part", "photo": "part", "tiles": "part"}}
+}

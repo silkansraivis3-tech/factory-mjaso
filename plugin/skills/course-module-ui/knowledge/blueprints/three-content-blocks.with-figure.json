@@ -1,0 +1,11 @@
+{
+ "id": "three-content-blocks.with-figure",
+ "template": "three-content-blocks",
+ "variant": "with-figure",
+ "shape": "beside",
+ "for": "three parts of one system",
+ "grid": ["a p", "b p", "c p"],
+ "cols": "40fr 60fr",
+ "fill": {"a": ["Text", "blocks[0]"], "b": ["Text", "blocks[1]"], "c": ["Text", "blocks[2]"], "p": ["3D", "one live scene; its reading"]},
+ "ref": "slides#p12"
+}

@@ -239,8 +239,22 @@ reading-with-figure, 4 photo-explain, ... (5 of 21 templates)` - and, when the s
 with slides that fit a template, `MUST FIX (the slide for the information)`: the writer's finding, as `v_paged_slide` is
 (`script/GUIDE.md`, "The check reads the plain slides for you").
 
-**A repeat of a look is a note (L62).** The compiler never builds a slide another way to avoid a repeat; a repeat, or more
-than a fifth of slides on the dark ground, is a `Note:` line, never a problem. A slide whose OWN layout does not fit (the
+**The layout plan (L62) - the deck's shapes, chosen like an engineer would.** Every slide blueprint is a file of
+`course-module-ui/knowledge/blueprints/` that says its shape and what it is good for: the pictures it takes, the picture
+shapes its box suits, the words it holds (measured budgets). Before it builds a slide the compiler scores, for each teaching
+slide, every blueprint of its kind against the picture's real shape (a photograph's pixels, a 2D drawing's size, a 3D
+scene's home view - `layout_plan.py`) and its words, then plans the whole deck: never the same shape twice in a row
+(beside, top, bottom, stage, photo-full, words, two - a picture left or right is one shape), beside on at most about half
+of the teaching slides, at least four shapes in ten where the slides fit them, near-equal fits settled by a choice seeded by
+the course and the module (a rebuild is the same). A wide photograph or a wide drawing / 3D scene takes a band across the
+slide with the words over or under it in two columns; a tall picture a tall box beside the words; a picture beside words
+gets a box of its own shape, the words and the picture centred. A slide whose build sheet names a template, a variant or a
+layout keeps it; so does a slide that fits one shape only - `Layout plan (M01): ...` and its `Note:` lines say each.
+Words are never cut or moved. A slide the plan moved carries `data-varied`, so `build_module.py`'s pre-check measures it
+and a shape it does not fit is not planned again (`MNN_layout_avoid.json`). The package check refuses a deck that breaks
+the shape rules where its slides fit another blueprint (`data-shapes`). `CF_LAYOUT_PLAN=0` builds each slide in its own
+template (the factory's own tests). More than a fifth of slides on the dark ground is a `Note:`, never a problem. A
+slide whose OWN layout does not fit (the
 larger logo can cost a long title its first line beside it) is yours: give it `"parts"` or a shorter picture column, as for
 any slide that spills. A photograph under
 1600 px on its long side is enlarged once (Lanczos, a light sharpening, at most four times; the original kept in

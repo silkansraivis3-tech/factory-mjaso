@@ -151,7 +151,16 @@ tablets (L35), and the script says which screen is where:
   | a guess or a finding before the answer | `"active": "predict-then-reveal"` or `"explain-then-reveal"`, the lines the situation, `"ask"`, `"reveal"` (one line or several; both, never one - on a `"points"` slide the room's turn shows under the points) | the lines, then the question, the answer on the last Next (the worked-example template) |
   | before the module check, every second or third module | `"drill"`: `quick-fire` (lines `"prompt \| answer"`), `say-it` (the situation, `"ask"`, `"reveal"`) or `find-it` (lines "Point to ...", `"spots"`); `"seconds"` 5-120 | a quick drill |
 
-  Each template's slots and what fills them, in one line: `course-module-ui/knowledge/blueprints.json`.
+  Each template's slots and what fills them, one file a blueprint: `course-module-ui/knowledge/blueprints/`.
+  **The shapes are the factory's, the information is yours.** Where the picture sits against the words (beside, a band
+  above or below, the stage, a full photograph) is planned by the compiler over the whole module from the blueprints each
+  slide fits - never the same shape twice in a row, beside on at most about half (`layout-templates.json` "shapes").
+  It can only choose among what the script gives it: a module of nothing but "a picture beside some lines" comes out
+  beside, band, beside, band. So write each piece of information in the template it is (the table above): limits and
+  values as key numbers, actions as numbered steps, two states as before / after, a decision as a scenario, a wrong belief
+  as true or false. Plan the picture for its shape: a ship's profile, a run of tanks, a pipeline or a deck plan is wide
+  and can take a band across the slide (up to 70 words with it); a tank or a section standing up is tall. `render`
+  prints the planned shapes as one line before approval ("bottom top beside stage ... - longest run 2, beside 9 of 20").
   A picture and a short explanation, two pictures, numbered steps and three parts of one system keep the templates
   they had (`compile/GUIDE.md` §2, §2h). Each picture by the picture rule (L67, `course-visuals` SKILL.md). A drill comes after the
   module's last teaching slide; minutes are the module's as before (L1). `content_script.py` checks each shape

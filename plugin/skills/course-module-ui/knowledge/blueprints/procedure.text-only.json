@@ -1,0 +1,10 @@
+{
+ "id": "procedure.text-only",
+ "template": "procedure",
+ "variant": "text-only",
+ "shape": "words",
+ "for": "numbered steps with no picture: step boxes",
+ "grid": ["a b c d"],
+ "fill": {"a": ["Text", "step 1"], "b": ["Text", "step 2"], "c": ["Text", "step 3"], "d": ["Text", "step 4 (up to 4 a row)"]},
+ "ref": "slides#p11"
+}

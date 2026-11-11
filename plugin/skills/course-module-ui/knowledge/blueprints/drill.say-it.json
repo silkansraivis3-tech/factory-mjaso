@@ -1,0 +1,11 @@
+{
+ "id": "drill.say-it",
+ "template": "drill",
+ "variant": "say-it",
+ "shape": "beside",
+ "for": "before the module check: say the actions aloud",
+ "grid": ["p x", "p a"],
+ "cols": "52fr 48fr",
+ "fill": {"p": ["Picture", "figure"], "x": ["Text", "situation; ask; reveal after the clock"], "a": ["Animation", "the clock"]},
+ "ref": "slides#p26"
+}

@@ -31,12 +31,13 @@ the way the office PC builds. Then it scores what was built and sets the score b
             built, passed (its last build said PASS or MODULE CLEAN) and that build's verdict; minutes to its first PASS
             (the build's clock, cf_timing.py); slides cut or pictures cropped at 1280 x 800 and at 1024 x 768, every Next
             pressed (fit_gate.py); slides off their blueprint - not a known template, version and variant
-            (course-module-ui blueprints.json, layout-templates.json), or a picture slot with no picture or a placeholder;
+            (course-module-ui knowledge/blueprints/, layout-templates.json), or a picture slot with no picture or a placeholder;
             picture spaces still holding a placeholder; % of the teaching slides with interactive 3D (L67, counted as the
             course package counts it); the most words the room sees at once on one slide, and the slides over 120; claims
             not proved in the sources (fact_check.py); old-course findings (order, slides left out, thinner theory); Bloom
             lifts of more than one level; must-fix findings left in the script; how many slide templates and the longest
-            run of one; the basic tasks of each self-check and the self-checks off their mix (t_sc_mix); simulator and
+            run of one; how many shapes the eye sees (layout-templates.json "shapes": a picture left or right is one,
+            beside), the longest run of one shape and the share of beside; the basic tasks of each self-check and the self-checks off their mix (t_sc_mix); simulator and
             equipment exercises written, and simulator drafts still awaiting the course director (L66). A number that
             cannot be measured is "-". A run that ended on Claude's usage limit is scored "stopped: usage limit": its
             modules are unfinished, not failed.
@@ -65,6 +66,8 @@ if hasattr(sys.stdout, "reconfigure"):
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import content_script as cs  # noqa: E402
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "compile", "scripts"))
+import layout_plan  # noqa: E402  - the shapes the eye sees, read the way the compiler plans them
 import course_portal  # noqa: E402
 import workspace  # noqa: E402
 
@@ -422,12 +425,14 @@ def score_module(course, m, no_browser=False):
                                       and (x["now"]["level"] or 0) >= 1 and x["proposed"]["level"] - x["now"]["level"] > 1
                                       and not (x.get("proposed") or {}).get("expert"))
     if row["built"]:
-        tpl = re.findall(r'data-template="([\w-]+)', io.open(deck, encoding="utf-8").read())
+        page = io.open(deck, encoding="utf-8").read()
+        tpl = re.findall(r'data-template="([\w-]+)', page)
         run = best = 0
         for i, t in enumerate(tpl):
             run = run + 1 if i and t == tpl[i - 1] else 1
             best = max(best, run)
         row["templates"], row["same_template_in_a_row"] = len(set(tpl)), best
+        row.update(layout_plan.stats(*layout_plan.deck_shapes(page)))     # look_shapes, same_look_in_a_row, beside_share
     sim = os.path.join(course, "additional-materials", "simulator-and-equipment")
     row["simulator_exercises"] = sum(1 for _, _, fs in os.walk(sim) for f in fs if re.match(r"%s_A\d+.*_TRAINEE\.pdf$" % mid, f))
     row["simulator_drafts_pending"] = measured(lambda: sum(1 for p in sim_pending(course) if p["module"] == m))
@@ -445,7 +450,8 @@ def sim_pending(course):
 
 
 LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped",
-                   "old_thinner", "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row", "build_minutes",
+                   "old_thinner", "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row", "same_look_in_a_row",
+                   "beside_share", "build_minutes",
                    "off_blueprint_slides", "pictures_pending", "max_words_slide", "slides_over_120_words", "self_checks_off_mix",
                    "simulator_drafts_pending")
 # a number that is best inside a band: closer to it is better (L67: 60-80 % of the teaching slides with interactive 3D)
@@ -453,7 +459,7 @@ BANDS = {"interactive_3d_share": (int(round(100 * cs.MEDIA["three_d"]["min_share
 SHOWN = ("built", "passed", "build_says", "build_minutes", "cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "off_blueprint_slides",
          "pictures_pending", "interactive_3d_share", "max_words_slide", "slides_over_120_words", "claims", "claims_unproven",
          "claims_unchecked", "old_moved", "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates",
-         "same_template_in_a_row", "self_check_basic_tasks", "self_checks_off_mix", "simulator_exercises", "simulator_drafts_pending")
+         "same_template_in_a_row", "look_shapes", "same_look_in_a_row", "beside_share", "self_check_basic_tasks", "self_checks_off_mix", "simulator_exercises", "simulator_drafts_pending")
 
 
 def compare(now, before):

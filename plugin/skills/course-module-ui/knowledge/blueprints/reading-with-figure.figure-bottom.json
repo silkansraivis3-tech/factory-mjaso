@@ -1,0 +1,11 @@
+{
+ "id": "reading-with-figure.figure-bottom",
+ "template": "reading-with-figure",
+ "variant": "figure-bottom",
+ "shape": "bottom",
+ "for": "more words first, then a wide picture across the slide under them",
+ "grid": ["x", "p"],
+ "rows": "auto 1fr",
+ "fill": {"x": ["Text", "text, its points two a row"], "p": ["Picture", "figure: wide, its box the picture's shape"]},
+ "fits": {"group": "text-figure", "pictures": ["photo", "tiles", "drawing"], "aspect": {"photo": [1.25, 8], "tiles": [1.25, 8], "drawing": [1.8, 8], "3d": [1.6, 8]}, "hard": true, "words": [61, 999], "budget": {"photo": "over_photo_row", "tiles": "over_photo_row", "drawing": "over_band", "3d": "over_band"}, "names": 15}
+}

@@ -319,6 +319,10 @@ def main():
               and row["off_blueprint_slides"] == 4 and row["pictures_pending"] == 1 and row["interactive_3d_share"] == 17
               and row["max_words_slide"] == 130 and row["slides_over_120_words"] == 1
               and row["cut_or_cropped_slides"] is None and row["cut_at_1024x768"] is None, row)
+        check("the shapes the eye sees, beside the templates: how many (a picture left or right is one shape, beside), the "
+              "longest run of one shape, and the share of beside - 4 of the 5 teaching slides here",
+              row["look_shapes"] == 2 and row["same_look_in_a_row"] == 2 and row["beside_share"] == 80
+              and "same_template_in_a_row" in row, row)
         io.open(os.path.join(build, "M01_answer.txt"), "w", encoding="utf-8").write("FAIL M01 - figures (80 s)\nFull log: x\n")
         io.open(os.path.join(build, "M01_clock.json"), "w", encoding="utf-8").write(json.dumps({"started": 1}))
         row = ft.score_module(oc, 1, no_browser=True)

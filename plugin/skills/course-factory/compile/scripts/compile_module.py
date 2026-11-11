@@ -128,6 +128,7 @@ if HERE not in sys.path:                                       # 2.49.1 - `pytho
     sys.path.insert(0, HERE)                                   # sys.path: task_pages, module_plan, answer_key, label_layout
 import content_script as cs  # noqa: E402
 import layout_fit  # noqa: E402
+import layout_plan  # noqa: E402
 import workspace  # noqa: E402
 
 SHELL = os.path.join(SKILLS, "course-module-ui", "templates", "gb_shell.html")
@@ -153,6 +154,8 @@ MC_WORDS = "You see how many you got right - it shows what to review, it is not 
 CHECK_PAGES = {"MC":"../assessment/check.html", "FA": "../assessment/final.html"}   # the module check and the (single) final
 LAYOUTS = json.load(io.open(os.path.join(SKILLS, "course-module-ui", "knowledge", "layout-templates.json"), encoding="utf-8"))
 TEMPLATES = LAYOUTS["templates"]
+for _t, _v in TEMPLATES.items():               # a blueprint file adds its variant (course-module-ui knowledge/blueprints/)
+    _v["variants"] = list(dict.fromkeys(_v["variants"] + layout_plan.variants(_t)))
 DENSE_WORDS = LAYOUTS["dense"]["words"]
 PARTS_FROM, PART_WORDS = LAYOUTS["parts"]["auto_from_words"], LAYOUTS["parts"]["part_words"]
 # the one word guideline for a slide (theory-rules.json "slide"): a picture beside more than PICTURE_FROM words, steps past STEPS_FROM
@@ -161,6 +164,9 @@ SPLIT_LO, SPLIT_HI = LAYOUTS["split"]["text"]
 # 2.116.0: the factory never flips a slide's layout to avoid a repeat (operator, 2026-11-09). CF_LAYOUT_FLIP=1 exists only so the
 # factory's own tests can still exercise the old choose_layout machinery; a real build never sets it.
 LAYOUT_FLIP = os.environ.get("CF_LAYOUT_FLIP") == "1"
+# the deck's shapes planned over the whole module (layout-templates.json "shapes", layout_plan.py) - on in every build;
+# CF_LAYOUT_PLAN=0 builds each slide in its own shape (the factory's own tests of one template), and the old flip replaces it
+LAYOUT_PLAN = os.environ.get("CF_LAYOUT_PLAN", "1") != "0" and not LAYOUT_FLIP
 FRAMED_PHOTO_WORDS = LAYOUTS["variety"]["photo_framed_max_words"]
 # 2.63.0 - the words each layout holds, measured at 1024 x 768 with the real templates (layout-templates.json "budgets")
 BUDGETS = LAYOUTS["budgets"]
@@ -178,8 +184,9 @@ def note_once(text):
         print(text)
 
 
-def word_budget(tid, variant, inset=False):
-    """(words the layout holds, what it is) - None for one with no measured budget (a recap, a task launch, a comparison)"""
+def word_budget(tid, variant, inset=False, family="photo"):
+    """(words the layout holds, what it is) - None for one with no measured budget (a recap, a task launch, a comparison).
+    family: the picture's (photo, tiles, drawing, 3d) - the words under or over a band of a drawing hold fewer"""
     if inset and tid not in ("photo-explain", "figure-stage"):
         return BUDGETS["beside_picture_with_inset"], "beside a picture with a photo under the words"
     if tid == "photo-explain":
@@ -187,8 +194,9 @@ def word_budget(tid, variant, inset=False):
                 "column": (BUDGETS["photo_column"], "beside a photo column")}.get(variant)
     if tid == "figure-stage" and variant == "figure-top":
         return BUDGETS["under_top_photo"], "under a photograph across the slide"
-    if variant == "figure-top":
-        return BUDGETS["under_top_row"], "under the photographs on top" if tid != "content-in-parts" else "in a part under the photographs on top"
+    if variant in ("figure-top", "figure-bottom"):
+        most, what = layout_plan.band_budget(variant, family)
+        return (BUDGETS["part_band"], "in a part " + what) if tid == "content-in-parts" else (most, what)
     if tid == "content-in-parts":
         return BUDGETS["part"], "in a part"
     if tid in ("explain-figure", "reading-with-figure", "long-explanation", "procedure", "three-content-blocks") and variant != "text-only":
@@ -198,6 +206,7 @@ STAGE_WORDS = LAYOUTS["variety"]["stage_max_words"]
 TOP_WORDS = LAYOUTS["variety"]["picture_top_max_words"]
 VARIETY_WINDOW = LAYOUTS["variety"]["window"]
 REPEAT_STOP = LAYOUTS["variety"]["stop_at"]     # the run of look-alike slides the layout flip acts on (LAYOUT_FLIP, factory tests)
+TALL_TEXT = 0.62            # the words' share beside a tall picture (blueprint figure-tall: 62fr 38fr)
 DARK_SHARE = 0.2            # 2.62.1 - 80 / 20 (owner, 2026-10-21): at most a fifth of a module's slides on the dark ground
 PHOTO_LONG, PHOTO_LOW = 1600, 800        # L62: a photograph is shipped at 1600 px on its long side or more; under 800 is low
 FIGURE_FREE = {("explain-figure", "text-only"), ("procedure", "text-only"), ("opening", "statement"), ("key-numbers", "cards"),
@@ -781,6 +790,9 @@ def hint_ignored(page):
 TOP_ASPECT, TOP_ROW = LAYOUTS["boxes"]["top_aspect"], LAYOUTS["boxes"]["top_row_aspect"]
 
 
+_ASPECTS = {}
+
+
 def photo_aspect(mdir, rel):
     """a photograph's width over its height, read from the file itself - None when it cannot be read"""
     rel = str(rel or "").replace("\\", "/")
@@ -788,10 +800,13 @@ def photo_aspect(mdir, rel):
     if not os.path.isfile(p) and rel.startswith("assets/img/"):
         p = img_file(mdir, rel[len("assets/img/"):])
     try:
-        from PIL import Image
-        with Image.open(p) as im:
-            w, h = im.size
-        return w / float(h) if h else None
+        key = (p, os.path.getmtime(p))
+        if key not in _ASPECTS:                         # read once a build: the layout plan asks for every slide's picture
+            from PIL import Image
+            with Image.open(p) as im:
+                w, h = im.size
+            _ASPECTS[key] = w / float(h) if h else None
+        return _ASPECTS[key]
     except Exception:                                  # noqa: BLE001 - an SVG, a missing or broken file: no shape
         return None
 
@@ -810,7 +825,7 @@ def wide_pictures(mdir, b, is_photo):
     return bool(asp) and all(x and x >= TOP_ASPECT for x in asp) and sum(asp) <= TOP_ROW
 
 
-TOP_TEMPLATES = ("explain-figure", "reading-with-figure", "content-in-parts")
+TOP_TEMPLATES = layout_plan.BAND_TEMPLATES
 
 
 def top_words(tid, lines, b):
@@ -2786,13 +2801,13 @@ def layout_key(slide):
     return (shape_of(t.group(1) if t else "", v.group(1) if v else "", left), ground)
 
 
-COMPARISON = re.compile(r"(?i)\b(compar\w*|versus|vs\.?|before\s*(?:and|/|&)\s*after)(?!\w)")
+COMPARISON = layout_plan.COMPARISON
 
 
 def comparison(tid, visual_kind, title):
     """a slide the script marks as a comparison: the compare-two or before-after template, a comparison picture, or a
     title that compares - it may take the look of the slide before it on purpose (L62)"""
-    return tid in ("compare-two", "before-after") or visual_kind == "comparison" or bool(COMPARISON.search(title or ""))
+    return layout_plan.comparison(tid, visual_kind, title)
 
 
 def comparison_slide(slide):
@@ -2863,6 +2878,56 @@ def layout_options(tid, variant, is_photo, words, b, comp, own_left, own_dark, d
             opts.append({"tid": "photo-explain", "variant": "split", "comp": "photo", "first": False, "dark": False,
                          "key": ("photo-framed", "dark")})
     return opts
+
+
+# build-sheet fields laid out for the slide's own shape: a slide with one of them keeps it (layout_plan)
+PLAN_KEEPS = ("inset", "aside", "legend", "figure_b", "photo_row", "spots", "zoom", "table", "part_figures", "photos")
+
+
+def picture_family(fig, is_photo, b):
+    """what kind of picture the slide shows, as the layout plan reads it: photo, tiles, 3d, drawing - None for none"""
+    if not fig:
+        return None
+    if is_photo:
+        return "photo"
+    if b.get("tiles"):
+        return "tiles"
+    return "3d" if " data-kit3d=" in fig or "data-3d-box" in fig else "drawing"
+
+
+def plan_seed(script):
+    """the seed of the layout plan's near-equal choices: the course and the module - the same on every build of the module,
+    another for the next module"""
+    return "%s|%s" % (script.get("course_title") or script.get("course") or "", cs.mid(script.get("module")))
+
+
+def plan_item(s, b, tid, variant, comp, fig, is_photo, lines, mdir, own_comp, want_t, ph_keys, act, avoid, ground, seed):
+    """the layout plan's item for one teaching slide (layout_plan.plan): its own blueprint, the blueprints it fits
+    (layout_plan.options - its picture's real shape against each box, its words against each budget) and why not the other
+    shapes, and why it keeps its own when it does"""
+    own_bp = "%s.%s" % (tid, variant)
+    own = layout_plan.shape_of(tid, variant) or "beside"
+    family = picture_family(fig, is_photo, b)
+    named = [k for k, v in (("template", want_t), ("variant", b.get("variant")), ("layout", own_comp)) if v]
+    laid = [k for k in PLAN_KEEPS if b.get(k)]
+    fixed = ("its build sheet names its %s" % " and ".join(named)) if named else "the module's opening" if comp == "opener"         else "a carousel of photographs" if ph_keys else "a room activity" if act         else ("its build sheet's \"%s\" is laid out for its own shape" % laid[0]) if laid else None
+    aspect = None
+    if family == "photo":
+        aspect = photo_aspect(mdir, b.get("figure")) or 1.0
+    elif family == "tiles":
+        asp = [photo_aspect(mdir, r) for r in tile_photos(b)]
+        aspect = min(asp) if asp and all(asp) and sum(asp) <= TOP_ROW else 1.0
+    elif family:
+        aspect = layout_plan.figure_aspect(fig) or 1.3                 # a figure that does not say its shape: a usual one
+    names = (layout_fit.names_shown(fig) if family in ("drawing", "3d") else 0) + len(b.get("spots") or [])
+    opts, why = layout_plan.options(own_bp, cs.wc(" ".join(lines)), family, aspect, names,
+                                    top_words(tid, lines, b) if tid == "content-in-parts" else None, fixed, seed, s["id"])
+    out = [k[0] for k in measured_out(avoid, s, b) if k[1] == ground]
+    for o in [o for o in opts if o["shape"] in out and o["bp"] != own_bp]:
+        opts.remove(o)
+        why.setdefault(o["shape"], "measured out: its words did not fit there at the last build")
+    return {"id": s["id"], "own": own, "own_bp": own_bp, "options": opts, "why": why, "fixed": fixed,
+            "echo": comparison(tid, s.get("visual_kind"), s.get("title")), "family": family, "aspect": aspect}
 
 
 def choose_layout(opts, recent, measured_out=(), prefer=None):
@@ -3546,7 +3611,9 @@ def last_layout(last, s, b=None):
 
 
 def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, pool=None, taken=None, build=None,
-               recent=None, avoid=None, last=None):
+               recent=None, avoid=None, last=None, plan=None, info=None):
+    """one slide's markup. plan: the shape the deck's layout plan gives it (layout_plan.py); info: {sid: the plan's item} -
+    the shape it is built in by itself and the shapes it fits, filled in for compile_deck's plan"""
     m = cs.mid(script.get("module"))
     sid, kind = s["id"], s["kind"]
     where = "%s (%s)" % (cs.place(script, sid), sid)
@@ -3557,6 +3624,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     # a room activity that has its own figure (trace a path on a drawing) is laid out like a teaching slide,
     # and keeps the classroom's Task marks: its code and how the room works
     act = kind == "activity" and bool(b.get("figure"))
+    if info is not None:                          # not a teaching slide until it is laid out as one below
+        info[sid] = {"id": sid, "own": ""}
     if kind in ("task-slide", "activity") and not act:
         code = (s.get("opens") or "").strip() or sid.upper()
         title = s.get("title") or ""
@@ -3658,6 +3727,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                       % (where, cs.T(script, part), w, shaped[0], most))
         out = shaped_html(script, s, b, shaped[0], shaped[1], fig, lines, base, m, n, total, mdir, figdir, probs, where, vkind)
         if out:
+            if info is not None and kind == "slide":
+                tv = re.search(r'\bdata-template="([\w-]+)\.v\d+"[^>]*\bdata-variant="([\w-]+)"', out)
+                own = (layout_plan.shape_of(*tv.groups()) if tv else None) or "beside"
+                info[sid] = {"id": sid, "own": own, "fits": {own: None}, "fixed": "its words make it the %s template" % shaped[0],
+                             "echo": comparison(shaped[0], s.get("visual_kind"), s.get("title"))}
             return out
     comp = composition(s, b, is_photo, bool(fig))
     if comp not in COMPOSITIONS + ("photo",):
@@ -3705,13 +3779,15 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     # wide photographs - every tile, or the one photograph of a photo column - go in a row on top, each box their own shape,
     # the words under them while they fit there (M01 s09: two wide photographs in tall boxes beside the words, white bands
     # above and under each). A build sheet's "variant" decides it either way, and its photo column ("composition") keeps it
-    top = comp in ("two-col", "wide-left", "wide-right") and tid in TOP_TEMPLATES and bool(fig) and (
-        "figure-top" in (variant, b.get("variant")) or not b.get("variant") and own_comp not in ("wide-left", "wide-right")
+    # the words over a band at the foot (figure-bottom) only when the build sheet or the layout plan asks for it
+    band = comp in ("two-col", "wide-left", "wide-right") and tid in TOP_TEMPLATES and bool(fig) and (
+        bool({"figure-top", "figure-bottom"} & {variant, b.get("variant")}) or not b.get("variant")
+        and own_comp not in ("wide-left", "wide-right")
         and (b.get("tiles") or photo_col)
         and wide_pictures(mdir, b, is_photo)
-        and top_words(tid, lines, b) <= BUDGETS["under_top_row"])
-    if top:
-        variant, fitc = "figure-top", None
+        and top_words(tid, lines, b) <= BUDGETS["part_band" if tid == "content-in-parts" else "under_top_row"])
+    if band:
+        variant, fitc = "figure-bottom" if "figure-bottom" in (variant, b.get("variant")) else "figure-top", None
     if kind == "slide" and not fig and not s.get("recap") and nwords_all > PICTURE_FROM:
         note_once("Note: %s - %d words and no picture beside them: over %d words a picture goes beside the words, or the slide "
                   "is shown in steps (theory-rules.json \"slide\"; past %d it is, by itself)" % (where, nwords_all, PICTURE_FROM, STEPS_FROM))
@@ -3740,6 +3816,24 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat. A
     # comparison keeps its own way: it may take the look of the slide before it on purpose
     varied, wkey = None, fit_key(s, b)                   # 2.72.7: the key build_module.py measures a way out by
+    # the deck's layout plan (layout_plan.py): the blueprints this slide fits, and the one the plan gives it - built that
+    # way, marked data-varied like a slide the old flip moved, so build_module.py's pre-check measures it and a misfit is not
+    # planned again
+    item, ground = None, "dark" if b.get("dark") or comp == "photo" else "light"
+    if LAYOUT_PLAN and kind == "slide" and not s.get("recap") and (info is not None or plan):
+        item = plan_item(s, b, tid, variant, comp, fig, is_photo, lines, mdir, own_comp, want_t, ph_keys, act, avoid, ground,
+                         plan_seed(script))
+        if info is not None:
+            info[sid] = item
+    if item and plan and plan != item["own_bp"] and any(o["bp"] == plan for o in item["options"]):
+        tid, variant, comp, first = layout_plan.way(plan, item["family"])
+        varied, b = (layout_plan.MAP[plan], ground), dict(b, figure_first=first)
+        split_photo, photo_col = False, is_photo and comp == "wide-left" and variant != "figure-tall"
+        band = variant in ("figure-top", "figure-bottom")
+        if layout_plan.MAP[plan] != "beside" or variant == "figure-tall":
+            fitc, part_w = None, None
+    if variant == "figure-tall":                # a tall picture: the words take the wide column (blueprint figure-tall)
+        split, photo_col = TALL_TEXT, False
     # 2.116.0 (operator, 2026-11-09): no automatic layout flipping - a repeat is reported as a note (compile_deck), the slide
     # is built the way its template and build sheet say. LAYOUT_FLIP stays for the factory's own tests of choose_layout.
     if LAYOUT_FLIP and recent is not None and kind == "slide" and not s.get("recap") and not (ph_keys and comp == "photo") \
@@ -3808,7 +3902,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                      "M09 s06: 79-105 px at 91-101 words). Cut the words, show the photograph on a task question or another slide, "
                      "or lay it over a blank part of a kit drawing (\"over\")" % (where, nwords, cap, round((nwords - cap) * 4.5)))
     # 2.63.0 - an early warning, before the audit measures it: the slide's words past the measured budget of its layout
-    bud = word_budget(tid, variant, bool(inset))
+    bud = word_budget(tid, variant, bool(inset), picture_family(fig, is_photo, b) or "photo")
     if bud and part_w and not inset and fitc["box"] != layout_fit.BOX["default"]:
         # beside a picture box of another size: that box's words
         if tid == "content-in-parts":
@@ -3843,7 +3937,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     d.update(base)
     if b.get("photo_badges") is False:          # 2.63.2: a part's camera badge is recommended, a builder may turn it off
         d["data-photo-badges"] = "off"
-    template_attrs(d, tid, variant, None if top else split)
+    template_attrs(d, tid, variant, None if band else split)
+    if item:                    # the shapes it fits: the package check judges the deck's plan by them (layout_plan.problems)
+        d["data-shapes"] = " ".join(dict.fromkeys(o["shape"] for o in item["options"]))
     if fitc and fitc["box"] and TEMPLATE_COMPOSITION.get(tid) == "two-col" and variant != "text-only":
         d["data-box"] = fitc["box"] if (split or layout_fit.BOX[layout_fit.BOX["default"]]["text"]) == fitc["text"] else "own"
     if varied:              # built another way for L62: build_module.py measures it out if the audit finds it does not fit
@@ -3933,9 +4029,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         # a drawing, an animation or a 3D model gets the wider column (owner, 2026-10-15: bigger pictures)
         cls = "two-col " + (comp if comp != "two-col" else "fig-wide")
         box, tabs = box_of(fig), ""
-        if top:                            # wide photographs in a row on top, the words under them
-            cls = "two-col fig-top"
-            ar = None if b.get("tiles") else photo_aspect(mdir, b.get("figure"))
+        if band:                           # a picture band across the slide, the words under it (figure-top) or over it
+            cls = "two-col " + ("fig-bottom" if variant == "figure-bottom" else "fig-top") + ("" if is_photo or b.get("tiles") else " fig-band")
+            ar = photo_aspect(mdir, b.get("figure")) if is_photo else None
             if ar:                         # the one photograph's box takes its shape
                 box = box.replace('class="fill fig', 'style="--ar:%.3f" class="fill fig' % ar, 1)
         elif photo_col:                    # the photograph is cropped to its column, which has the slide's height
@@ -3946,6 +4042,14 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                 # made 108-133 words spill at 1024 x 768)
                 head_, tail_ = box.rsplit("</div>", 1)
                 box, credit_html = head_ + credit_html.strip() + "</div>" + tail_, ""
+        if not band and tid != "content-in-parts" and not b.get("tiles"):
+            # beside the words the picture's box takes the picture's own shape (--ar): no empty band above and under it, and
+            # the box and the words are centred in the body (gb_layouts.css)
+            ar = photo_aspect(mdir, b.get("figure")) if is_photo else layout_plan.figure_aspect(fig)
+            if ar and " style=" not in box.split(">", 1)[0]:
+                box = box.replace('class="fill fig', 'style="--ar:%.3f" class="fill fig' % ar, 1)
+            if variant == "figure-tall":
+                cls = "two-col fig-tall"
         if tid == "content-in-parts":
             ranges = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
             if b.get("parts") and not ranges:
@@ -3963,8 +4067,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         # 2.54.0 (L23; built as 2.52.0 on its own branch) - the figure first in the markup: a portrait tablet (one column)
         # shows it in its first screen. On a landscape screen gb_compose.css (.dom-fig) puts the words back first, so the
         # template's text column (gb_layouts.css, L61) holds the words - the projector picture is unchanged
-        cols = [box, reading]
-        if top:
+        cols = [reading, box] if band and variant == "figure-bottom" else [box, reading]
+        if band:
             pass
         elif b.get("figure_first"):        # the drawing on the left, the words on the right
             cls = cls.replace("fig-wide", "fig-wide fig-first") if "fig-wide" in cls else cls + " fig-first"
@@ -5473,9 +5577,10 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     # photos in drawings): one shown twice, or already shown by an EARLIER module, is a problem to fix. Then the L57
     # thumbnails take only what no deck of the course shows yet.
     here, me, mine, reuse = {}, module_label(mdir), [], set()
+    info = {} if LAYOUT_PLAN else None             # each teaching slide's shape and the shapes it fits, for the layout plan
     for s in screens:
         b = (build.get("screens") or {}).get(s["id"]) or {}
-        page = slide_html(script, s, 0, total, b, mdir, figdir, foot, [])
+        page = slide_html(script, s, 0, total, settled(avoid, s, b), mdir, figdir, foot, [], avoid=avoid, info=info)
         if str(b.get("reuse_why") or "").strip():       # 2.116.0: a photograph may repeat when the slide says why ("reuse_why")
             reuse.add("%s %s" % (me, s["id"]))
         for rel in IMG_SRC.findall(page):
@@ -5514,10 +5619,20 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         hit = next((at for l2, at in seen if same_look(lk, l2)), None)
         if hit and item[3] not in taken:
             taken[item[3]] = hit
+    shapes = {}
+    if LAYOUT_PLAN:                                # the deck's shapes, planned over the whole module (layout_plan.py)
+        items = [info.get(s["id"]) or {"id": s["id"], "own": ""} for s in screens]
+        chosen_ = layout_plan.plan(items)
+        shapes = {items[i]["id"]: o["bp"] for i, o in chosen_.items()}
+        if chosen_:
+            note_once("Layout plan (%s): %s" % (m, layout_plan.summary(items, layout_plan.shapes_of(chosen_))))
+        for x in layout_plan.notes(items, chosen_):
+            note_once("Note: %s layout plan - %s" % (m, x))
     for n, s in enumerate(screens, 1):
         b = settled(avoid, s, (build.get("screens") or {}).get(s["id"]) or {})     # 2.72.7: the layout solver's settle
         recent =[layout_key(x) for x in slides[-VARIETY_WINDOW:]]   # L62: the look of the slides just before this one
-        page = slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent, avoid, last)
+        page = slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent, avoid, last,
+                          plan=shapes.get(s["id"]))
         if b.get("still"):                       # a definition, a limit or a quoted regulation: shown whole, no steps
             why = still_problem(s, b, page)
             if why:
@@ -5531,7 +5646,7 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         slides.append(mark_slot(page, s["id"]))
         if chosen is not None and s["kind"] == "slide" and not s.get("recap"):    # 2.62.1: kept for the next compile
             chosen[s["id"]] = {"words": words_key(s, b), "key": list(layout_key(slides[-1]))}
-    for i, _ in look_repeats(slides):           # a comparison slide may repeat the slide before it on purpose
+    for i, _ in ([] if LAYOUT_PLAN else look_repeats(slides)):    # the plan's own notes say what it could not vary
         note_once("Note: %s: looks exactly like the slide before it (%s, %s ground) - a note only (2.116.0): the factory does not "
                   "change a slide to avoid a repeat; ask for another template in the build sheet if you want one"
                   % ((cs.place(script, screens[i]["id"]),) + layout_key(slides[i])))

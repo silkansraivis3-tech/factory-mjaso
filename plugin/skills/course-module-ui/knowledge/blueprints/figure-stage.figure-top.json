@@ -1,0 +1,11 @@
+{
+ "id": "figure-stage.figure-top",
+ "template": "figure-stage",
+ "variant": "figure-top",
+ "shape": "top",
+ "for": "a photograph across the slide, the words under it",
+ "grid": ["p p", "x y"],
+ "rows": "3fr 2fr",
+ "fill": {"p": ["Picture", "figure (a photograph)"], "x": ["Text", "text, first half"], "y": ["Text", "text, second half"]},
+ "fits": {"group": "text-figure", "pictures": ["photo"], "aspect": {"photo": [1.4, 8]}, "hard": true, "words": [0, 999], "budget": {"photo": "under_top_photo"}}
+}

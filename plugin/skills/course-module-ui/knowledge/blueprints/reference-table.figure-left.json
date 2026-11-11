@@ -1,0 +1,7 @@
+{
+ "id": "reference-table.figure-left",
+ "template": "reference-table",
+ "variant": "figure-left",
+ "shape": "beside",
+ "mirror": "reference-table.with-figure"
+}
