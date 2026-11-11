@@ -93,6 +93,19 @@ def main():
         check("--module without --programme or minutes is refused", code == 1 and "--module needs --programme" in out, out)
         code, out = run(deck, "--theory-min", "40", "--practice-min", "20")
         check("--theory-min / --practice-min (the approved table's own minutes) judge the one module", code == 0, out)
+
+        full = os.path.join(tmp, "full", "module.html")
+        os.makedirs(os.path.dirname(full))
+        with open(full, "w", encoding="utf-8") as f:
+            f.write(DECK.replace('data-mins="40" data-track="theory" data-active="8"',
+                                 'data-mins="28" data-track="theory" data-active="8"')
+                    + '<section class="slide" data-block="b13" data-kind="teaching" data-title="Predict, then reveal" '
+                      'data-mins="12" data-track="theory" data-active="12"></section>')
+        code, out = run(full, "--theory-min", "40", "--practice-min", "20")
+        check("a 12-minute theory block declared 100 % active is a report line, never a FAIL - the owner's open decision "
+              "(the factory trial: M01 blocks 13, 16, 25 failed and QA called the module BROKEN)",
+              code == 0 and "FAIL" not in out and "report  b13 declares 100% of a 12 minute theory block active" in out
+              and "open decision" in out, out)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))

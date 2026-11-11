@@ -66,9 +66,11 @@ answer is not to give up but to make the theory hours active:
 Mandatory, not optional. A theory block with no trainee activity in it is a defect.
 
 Record both figures in the companion file with the reason for any shortfall. **Do not reach the
-target by renaming screens.** `check_balance.py` rejects the three ways people try: an active
-count above the block's own minutes, a practice block whose room is receiving for most of it, and
-a theory block claiming 100 % active — somebody has to set the task.
+target by renaming screens.** `check_balance.py` rejects two of the ways people try: an active
+count above the block's own minutes, and a practice block whose room is receiving for most of it. A
+theory block of more than 10 minutes claiming 100 % active (somebody has to set the task) it reports,
+never fails, until the owner decides that rule against the script's own count (MANIFEST, "Waiting on
+the owner's decision" 2).
 
 ### L7 · Nothing is useless until you have grepped for what depends on it
 

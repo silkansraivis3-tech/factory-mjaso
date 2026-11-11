@@ -20,8 +20,9 @@ You check one module's questions against the slides taught before them. Nothing 
 1. `C next <c> --module <n>` - each task set with the slides before it (`shows` is on the slide, `notes` only the
    instructor's) and the questions to judge. Read every question as the trainee meets it: could they answer it, or do
    it - apply the rule, work out the value, make the call - from these slides alone? Never from what you know.
-   - **covered** - the slides teach the topic and give every fact and step the task needs. `slides`: the ids;
-     `quote`: the line(s) that teach it, copied from `shows` or `picture`.
+   - **covered** - the slides teach the topic and give every fact and step the task needs. `slides`: the ids of every
+     slide the answer relies on - the verdict holds while those slides and the question are unchanged; `quote`: the
+     line(s) that teach it, copied from `shows` or `picture`.
    - **partly** - the topic is taught but a fact or step the task needs is missing, or only the notes say it.
    - **not_covered** - the slides teach another topic, or nothing the task needs.
    Read each question's answer as its type writes it. In a `line_up`, the `TAG: name = open | shut` lines are the
@@ -33,7 +34,9 @@ You check one module's questions against the slides taught before them. Nothing 
    when the course has a knowledge base). Only when no slide before it can hold it, or the question asks beyond its
    outcome, `question`: how to change the question, for the person.
 2. Write the batch as a JSON list `[{"id", "verdict", "slides", "quote", "missing", "add", "question"}]` to a file in
-   the system temp folder, then `C judge <c> --module <n> --file <file>`. A refused verdict says why - correct it.
+   `<c>/working_claude/scratch/` (made if missing; never the system temp folder or `/tmp` - nothing is written
+   outside the course folder),
+   then `C judge <c> --module <n> --file <file>`. A refused verdict says why - correct it.
 3. Repeat 1-2 until `next` prints `[]`. Then `C fixes <c> --module <n>` (in an unattended build, where
    `NOVIKONTAS_AUTO_BUILD` is 1: `C fixes <c> --module <n> --apply`) and `C status <c> --module <n>`.
 

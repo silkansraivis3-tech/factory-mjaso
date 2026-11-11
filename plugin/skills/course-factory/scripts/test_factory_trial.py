@@ -150,11 +150,20 @@ def main():
         check("course_portal.py refuses a trial course - it never goes to the training app", code == 2 and "factory trial" in buf.getvalue(), buf.getvalue())
 
         print("\n-- run, unattended, then the scorecard")
-        os.environ["NOVIKONTAS_CLAUDE_CMD"] = json.dumps([sys.executable, "-c", "import os; print('trial', os.environ.get('NOVIKONTAS_TRIAL')); print('TRIAL DONE')"])
+        os.environ["NOVIKONTAS_CLAUDE_CMD"] = json.dumps([sys.executable, "-c", "import os; print('trial', os.environ.get('NOVIKONTAS_TRIAL')); "
+                                                          "print('libraries', os.environ.get('NOVIKONTAS_COURSE_LIBRARIES'), "
+                                                          "os.environ.get('NOVIKONTAS_SUBJECT_LIBRARIES')); print('TRIAL DONE')"])
         code, out = cli("run", "--home", home, "--modules", "1")
         runs = sorted(os.listdir(os.path.join(home, "runs")))
         log = io.open(os.path.join(home, "runs", runs[-1], "build.log"), encoding="utf-8").read()
         check("run starts Claude Code in the trial course, unattended and marked a trial", "trial 1" in log and "TRIAL DONE" in log, log)
+        check("... with the shared course libraries off - a trial never writes to them (the factory trial: subject_library.py "
+              "ensure would have written to the shared Drive)", "libraries off off" in log, log)
+        sys.path.insert(0, os.path.join(ft.PLUGIN, "skills", "course-visuals", "scripts"))
+        import subject_library
+        lib_code, lib_res = subject_library.ensure("Liquefied gas tanker cargo operations", env=dict(os.environ, **ft.LIBRARIES_OFF))
+        check("... and with them off, subject_library.py ensure finds no place to write", lib_code == 3 and lib_res["parent"] is None
+              and lib_res["created"] == [], lib_res)
         card = json.load(io.open(os.path.join(home, "runs", runs[-1], "scorecard.json"), encoding="utf-8"))
         check("... then scores each trial module", [r["module"] for r in card["modules"]] == [1] and card["modules"][0]["built"] is False, card)
         before = {"plugin": "2.105.0", "modules": [{"module": 1, "cut_or_cropped_slides": 9, "claims_unproven": 0, "templates": 5}]}

@@ -413,12 +413,20 @@ def main():
               "for again; STOP when everything left is such a finding",
               "THE SAME FINDING THREE BUILDS RUNNING" in b2 and "SAME FINDING 3 BUILDS RUNNING" in b2
               and "SAME FINDING 3 BUILDS RUNNING" in card0 and "three builds running" in card0.split("## Stop", 1)[-1], b2[-1600:])
+        check("... counted over the builder's own builds - Phase A's are not (the factory trial: M01's builder stopped after two "
+              "of its own)", "Phase A's are not counted" in b2 and "Phase A's are not counted" in card0, b2[-1600:])
+        check("... and a file only the helper needs goes in the course's working_claude/scratch/, never /tmp",
+              "working_claude/scratch/ - never /tmp" in b2, b2[-900:])
         check("2.58.0 the final is built after the modules, then the course is assembled and its ILO map refreshed, "
               "and only then cross-checked",
               l4.index("build:final") > l4.index("qa:1") and l4.index("assemble:course") > l4.index("build:final")
               and l4.index("crosscheck:course") > l4.index("assemble:course")
               and "compile_course.py" in p4.get("assemble:course", "") and "ilo_map.py refresh" in p4.get("assemble:course", "")
               and "C:/f/skills/course-factory/scripts/check_course_package.py" in p4.get("assemble:course", ""), l4)
+        asm = p4.get("assemble:course", "")
+        check("... the ILO map is refreshed BEFORE compile_course.py, which makes _course_shell/ilo_coverage.json from it (the "
+              "factory trial: it said M01 1.1 and M19 5.1 were taught nowhere until a second compile)",
+              -1 < asm.find("ilo_map.py refresh") < asm.find("compile_course.py"), asm[:600])
         check("2.63.2 the assembly runs the course-wide terminology report (a report, never a failure) and the cross-check reads it",
               "C:/f/skills/course-factory/retrofit/scripts/check_terms.py" in p4.get("assemble:course", "")
               and "REPORTS, never a failure" in p4.get("assemble:course", "")

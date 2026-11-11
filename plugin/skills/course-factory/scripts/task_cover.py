@@ -17,8 +17,12 @@ it, and says covered, partly or not covered. The mechanical part is here - which
 refusing a quote no slide shows, turning "add this line to slide X" into a change list - so the agent's rules stay short.
 
 WHAT A VERDICT IS TIED TO
-The question as written and every slide before it (its words, its picture, its notes), as one hash. A changed question
-or a changed slide before it is judged again. The final assessment covers the whole course and is not judged here.
+The question as written and every slide before it (its words, its picture, its notes), as one hash. A covered verdict is
+also tied to the question and the slides it cites, as a second hash, and holds while they are unchanged and still before
+the question: a change to another slide does not take away what the cited slides teach (the factory trial: one corrected
+line voided all 14 verdicts of a module, four check rounds a module). A changed question, a changed cited slide, or - for
+partly and not covered - any changed slide before it is judged again. The final assessment covers the whole course and
+is not judged here.
 
 The verdicts are in working_claude/task_cover/MNN.json. Once a module has that file, content_script.py's check refuses
 the approval while a question is not judged, or is judged partly or not covered. Exit 0, 1 questions left or refused
@@ -118,6 +122,18 @@ def current(script):
     return {q["id"]: (stamp(q, slides), sid, slides, q) for sid, _, slides, qs in units(script) for q in qs}
 
 
+def holds(row, now_q):
+    """a verdict still stands for the question as it is now: its whole stamp is the same, or it is covered and the question
+    and the slides it cites are unchanged and still before it"""
+    h, _, slides, q = now_q
+    if row.get("hash") == h:
+        return True
+    if row.get("verdict") != "covered" or not row.get("taught"):
+        return False
+    cited = [s for s in slides if s["id"] in (row.get("slides") or [])]
+    return len(cited) == len(row.get("slides") or []) and stamp(q, cited) == row["taught"]
+
+
 def norm(text):
     return re.sub(r"\s+", "", re.sub(r"[^\w%.,-]+", " ", (text or "").lower()))
 
@@ -168,7 +184,7 @@ def judge(course, module, verdicts):
                                          "add it to the slide" % in_notes[0][:60] if in_notes else
                                          "the quote is not on the cited slides word for word - copy it from their words or picture"))
                 continue
-            row.update(slides=cited, quote=quotes)
+            row.update(slides=cited, quote=quotes, taught=stamp(now[qid][3], on))
         else:
             if not missing:
                 probs.append("%s: %s needs \"missing\" - the fact or step the trainee was not given" % (qid, verdict))
@@ -208,7 +224,7 @@ def fixes(course, module):
     now = current(script)
     adds, asks = {}, []
     for qid, row in st["questions"].items():
-        if qid not in now or row.get("hash") != now[qid][0] or row.get("verdict") == "covered":
+        if qid not in now or not holds(row, now[qid]) or row.get("verdict") == "covered":
             continue
         if row.get("add"):
             lines = adds.setdefault(row["add"]["slide"], [])
@@ -234,10 +250,11 @@ def status(course, module, script=None):
     st = load_store(course, module)
     have = (st or {}).get("questions") or {}
     out = {"started": st is not None, "questions": 0, "judged": 0, "unjudged": [], "open": [], "rows": {}, "lost": {}}
-    for qid, (h, _, slides, _) in current(script).items():
+    for qid, now_q in current(script).items():
+        slides = now_q[2]
         out["questions"] += 1
         row = have.get(qid)
-        if not row or row.get("hash") != h:
+        if not row or not holds(row, now_q):
             out["unjudged"].append(qid)
             gone = [x for x in (row or {}).get("quote") or [] if row.get("verdict") == "covered" and not quote_on(x, slides)]
             if gone:

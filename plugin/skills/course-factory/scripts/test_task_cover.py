@@ -130,7 +130,18 @@ def main():
               sorted(x["screen"] for x in f) == ["m01", "q02"] and all(x["level"] == cs.FAIL for x in f), f)
         changed = json.loads(json.dumps(script))
         changed["screens"][1]["notes"] += "\n- Point at the dome."                     # s02 - before every set
-        check("... a slide's notes too", sorted(x["screen"] for x in cs.task_cover_findings(c, changed)) == ["m01", "q01", "q02"])
+        check("... a slide's notes too - for the questions whose covered verdict cites it, and the partly one; m01 (covered "
+              "on s03) holds: a slide it does not cite takes nothing from what s03 teaches (the factory trial: one corrected line "
+              "voided all 14 verdicts, four check rounds a module)",
+              sorted(x["screen"] for x in cs.task_cover_findings(c, changed)) == ["q01", "q02"], cs.task_cover_findings(c, changed))
+        changed = json.loads(json.dumps(script))
+        changed["screens"][0]["text"] += "\nA diesel engine needs no spark."          # s01 - cited by no covered verdict
+        check("... a slide no covered verdict cites: only the partly question is judged again",
+              sorted(x["screen"] for x in cs.task_cover_findings(c, changed)) == ["q02"], cs.task_cover_findings(c, changed))
+        changed = json.loads(json.dumps(script))
+        changed["screens"][1], changed["screens"][5] = changed["screens"][5], changed["screens"][1]
+        check("... a cited slide moved after its question voids that verdict",
+              "q01" in [x["screen"] for x in cs.task_cover_findings(c, changed)], cs.task_cover_findings(c, changed))
         changed = json.loads(json.dumps(script))
         changed["screens"][3]["options"] = ["Type C", "Type B"]
         check("... and a changed question", sorted(x["screen"] for x in cs.task_cover_findings(c, changed)) == ["q01", "q02"])
@@ -154,11 +165,26 @@ def main():
         finally:
             del os.environ["NOVIKONTAS_AUTO_BUILD"]
         after = cs.load(cs.paths(c, 1)["script"])
-        check("an unattended build adds the theory itself", code == 0 and after["screens"][1]["text"].endswith("A truss is a frame.")
-              and not os.path.isfile(cs.paths(c, 1)["pending"]), after["screens"][1])
+        check("an unattended build adds the theory itself - exit 0, the apply worked", code == 0
+              and after["screens"][1]["text"].endswith("A truss is a frame.") and not os.path.isfile(cs.paths(c, 1)["pending"]),
+              after["screens"][1])
         s = tc.status(c, 1)
-        check("... and every question after the changed slide is judged again", sorted(s["unjudged"]) == ["m01", "q01", "q02"], s)
+        check("... and the questions that rely on the changed slide are judged again - m01, covered on s03, keeps its verdict",
+              sorted(s["unjudged"]) == ["q01", "q02"], s)
         check("the store is the module's own file", os.path.isfile(os.path.join(c, "working_claude", "task_cover", "M01.json")))
+
+        print("\n-- the briefs name the commands that exist")
+        skill = os.path.dirname(HERE)
+        briefs = {p: io.open(p, encoding="utf-8").read() for p in [os.path.join(skill, "SKILL.md"), os.path.join(skill, "script", "GUIDE.md")]
+                  + [os.path.join(skill, "..", "..", "agents", n) for n in ("task-coverage-checker.md", "fact-checker.md")]}
+        wrong = [os.path.basename(p) for p, t in briefs.items() if "content_script.py fixes" in t or "(unattended: `fixes --apply`)" in t]
+        guide = briefs[os.path.join(skill, "script", "GUIDE.md")]
+        check("no brief sends a checker to content_script.py fixes - the command is task_cover.py fixes / fact_check.py fixes "
+              "(the factory trial's checkers were sent there)", not wrong and "task_cover.py fixes --apply" in guide
+              and "fact_check.py fixes" in guide, wrong)
+        check("... and a checker's batch file goes in the course's working_claude/scratch/, never the system temp folder",
+              all("working_claude/scratch/" in t and "file in the system temp folder" not in t
+                  for p, t in briefs.items() if p.endswith("checker.md")))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

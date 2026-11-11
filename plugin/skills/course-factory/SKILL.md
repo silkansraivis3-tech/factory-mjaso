@@ -287,9 +287,10 @@ A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobod
 - Never ask: a question goes to `working_claude/OPEN_EXPERT_QUESTIONS.md` with the choice made, and the build goes on.
 - A request to any site names the tool, never a person: no name, e-mail address or account in a request, a header or a
   URL - say so in every brief that sends a helper to download.
-- Each script, before approval: the `task-coverage-checker`, then the `fact-checker`, each ending `fixes --apply`; a
+- Each script, before approval: the `task-coverage-checker`, then the `fact-checker`, each ending with its own script's
+  `fixes --apply` (`task_cover.py`, `fact_check.py` - `content_script.py` has no `fixes`); a
   question listed for the person goes to `OPEN_EXPERT_QUESTIONS.md`. When the fact-checker's apply says the task cover
-  must be judged again (its cuts changed the slides before a task), the `task-coverage-checker` runs on the module again.
+  must be judged again (its cuts changed a slide a verdict cites), the `task-coverage-checker` runs on the module again.
 - No paid pictures. Free sources first — Wikimedia Commons (`course-visuals/scripts/commons.py`, never a helper's own
   fetcher), DVIDS, USCG, NOAA, the old course, the knowledge base (the `visual-sourcer`; small ones enlarged) — then Nano Banana in the Gemini app if a signed-in browser is there
   (`gemini-browser`). `picture_briefs.py queue` / `place`. An unfilled space keeps its brief and does not stop the build.
@@ -297,7 +298,8 @@ A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobod
   awaiting the course director, and it goes to `OPEN_EXPERT_QUESTIONS.md`; `check_course_package.py` lists it.
 - Build every module, compile COURSE.html, run the checks, fix what they find, then each module's one polish round
   (`compile/GUIDE.md` step 6) - each helper agent on its model in *Building* (a Sonnet builder per module, its judges,
-  fixers and polish on Opus). Never push to git; never write outside the course folder.
+  fixers and polish on Opus). Never push to git; never write outside the course folder - a file only you need (a batch, a
+  command's saved output) goes in `working_claude/scratch/`, never the system temp folder or `/tmp`.
 - Brief each helper from `build_course.js` - `build`, `qa`, `fixAll`, `fixFig`, `fixBuild` and their caps: a builder never
   asks and builds to PASS, MODULE CLEAN or the build's STOP; ONE fix round; after it only what was BROKEN is judged again
   (`qa(m, first)`, the 3D reviewer on those scenes' pictures alone). Ask each for a report of at most 30 lines, the rest in

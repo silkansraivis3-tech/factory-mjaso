@@ -73,12 +73,23 @@ def one(course, n, auto):
         run([PY, os.path.join(HERE, "compile_module.py"), course, "--module", str(n), "--fill-slots"])
     cmd = [PY, os.path.join(HERE, "build_module.py"), course, "--module", str(n), "--no-course-pages", "--inner"]
     code, out = run(cmd + (["--auto"] if auto else []))
+    forget_streak(course, n)
     lines = LAST.findall(out)
     keys = [x for x in out.splitlines() if LAST.match(x)]
     key = keys[-1] if keys else (out.strip().splitlines() or ["(no answer)"])[-1]
     if "MODULE CLEAN" in out:
         key = "MODULE CLEAN M%02d - only the course package is left (judged after assembly)" % n
     return n, code, key, time.time() - t0
+
+
+def forget_streak(course, n):
+    """Phase A's builds are no builder's: the stop rule (build_module.py, "SAME FINDING 3 BUILDS RUNNING") counts from the
+    builder's own first build, so the count Phase A left is dropped"""
+    import workspace
+    try:
+        os.remove(workspace.claude_path(course, "_build", "M%02d_streak.json" % n))
+    except OSError:
+        pass
 
 
 def jobs_default():

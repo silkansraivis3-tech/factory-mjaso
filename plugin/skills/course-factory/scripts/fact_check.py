@@ -429,16 +429,16 @@ def main(argv=None):
             after = task_cover.status(course, a.module) if not code else None
             again = [q for q in (after or {}).get("unjudged", []) if q in before["rows"]]
             if again:
-                # a cut or a corrected line on a slide before a task voids its coverage verdict: the task-coverage-checker
-                # judges it again before approval, and a line it relied on that is gone is said here
-                print("\nThe task cover of module %s must be judged again - the slides before %d question(s) changed: %s\n"
+                # a cut or a corrected line on a slide a covered verdict cites (or before a task judged partly or not
+                # covered) voids that verdict: the task-coverage-checker judges it again before approval, and a line it relied
+                # on that is gone is said here. The apply itself succeeded - exit 0; the approval holds the rest
+                print("\nThe task cover of module %s must be judged again - a slide %d question(s) rely on changed: %s\n"
                       "    python %s next %s --module %s"
                       % (a.module, len(again), ", ".join(again), os.path.join(HERE, "task_cover.py"), a.course, a.module))
                 for q in again:
                     if q in after["lost"]:
                         print("  %s relied on \"%s\" - no slide before it shows that now: teach it again, or the question "
                               "changes" % (q, after["lost"][q][0][:100]))
-                code = 1
         else:
             code = 0
             print("%d slide field(s) to correct - shown to the operator first:\n    python %s propose %s --module %s --changes \"%s\" "
