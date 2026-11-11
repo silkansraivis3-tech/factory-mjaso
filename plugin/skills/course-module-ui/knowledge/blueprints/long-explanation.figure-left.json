@@ -1,0 +1,8 @@
+{
+ "id": "long-explanation.figure-left",
+ "template": "long-explanation",
+ "variant": "figure-left",
+ "shape": "beside",
+ "mirror": "long-explanation.model",
+ "fits": {"group": "text-figure", "pictures": ["3d"], "aspect": {"drawing": [0.8, 2.2], "3d": [0.8, 2.2], "tiles": [0.5, 4]}, "words": [61, 999], "budget": {"3d": "beside_3d"}}
+}

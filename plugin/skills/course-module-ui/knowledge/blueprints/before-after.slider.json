@@ -1,0 +1,11 @@
+{
+ "id": "before-after.slider",
+ "template": "before-after",
+ "variant": "slider",
+ "shape": "two",
+ "for": "two states of the same thing",
+ "grid": ["p x"],
+ "cols": "58fr 42fr",
+ "fill": {"p": ["Picture", "figure | figure_b, a slider between"], "x": ["Text", "'A | B', then 'what | in A | in B'"]},
+ "ref": "slides#p24"
+}

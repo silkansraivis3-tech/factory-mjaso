@@ -1,0 +1,9 @@
+{
+ "id": "task-launch.room",
+ "template": "task-launch",
+ "variant": "room",
+ "shape": "",
+ "for": "a room activity",
+ "grid": ["x"],
+ "fill": {"x": ["Text", "code, title, how the room works"]}
+}

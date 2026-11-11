@@ -1,0 +1,11 @@
+{
+ "id": "drill.quick-fire",
+ "template": "drill",
+ "variant": "quick-fire",
+ "shape": "words",
+ "for": "before the module check: quick recall",
+ "grid": ["x", "a"],
+ "rows": "4fr 1fr",
+ "fill": {"x": ["Text", "lines 'prompt | answer', one at a time"], "a": ["Animation", "the bar runs out, seconds"]},
+ "ref": "slides#p27"
+}

@@ -1,0 +1,10 @@
+{
+ "id": "task-launch.check",
+ "template": "task-launch",
+ "variant": "check",
+ "shape": "",
+ "for": "the module check",
+ "grid": ["x", "i"],
+ "fill": {"x": ["Text", "MC, title, text"], "i": ["Info", "the module's topics ticked off"]},
+ "ref": "slides#p18"
+}

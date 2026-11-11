@@ -1,0 +1,12 @@
+{
+ "id": "explain-figure.figure-right",
+ "template": "explain-figure",
+ "variant": "figure-right",
+ "shape": "beside",
+ "for": "a picture and a short explanation",
+ "grid": ["x p"],
+ "cols": "45fr 55fr",
+ "fill": {"x": ["Text", "text, up to 60 words"], "p": ["3D", "figure: a 3D model, or a photo"]},
+ "ref": "slides#p4",
+ "fits": {"group": "text-figure", "pictures": ["drawing", "3d", "tiles"], "aspect": {"drawing": [0.8, 2.2], "3d": [0.8, 2.2], "tiles": [0.5, 4]}, "words": [0, 60], "budget": {"drawing": "beside_picture", "3d": "beside_3d", "tiles": "beside_picture"}}
+}

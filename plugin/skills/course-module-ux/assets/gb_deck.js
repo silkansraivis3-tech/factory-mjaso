@@ -301,8 +301,19 @@ var GBDeck = (function (w, d) {
        A line no step names is a stop of its own (the figure stays); a step that names no line keeps the last line lit.
        Back mirrors it, and Back into the slide lands on its last stop. kit.js gives every deck figure such a hook; a 3D
        scene with steps joins by giving its hook lines and go. */
+    /* a teaching slide with no figure that walks its lines (a photograph, a still drawing): the deck walks them itself, one
+       line each Next - every line of a slide is lit in turn, never only the first */
+    var WALKS = /^(explain-figure|reading-with-figure|long-explanation|photo-explain|figure-stage|content-in-parts|procedure|reference-table|three-content-blocks)\./;
+    function walksLines(s) {
+      if (!WALKS.test(s.getAttribute("data-template") || "") || s.hasAttribute("data-still") || s.hasAttribute("data-stops") ||
+          s.querySelector("[data-k],[data-stop]")) { return false; }
+      var n = 0;
+      each(s.querySelectorAll("[data-i]"), function (x) { if (!(x.closest && x.closest("svg"))) { n++; } });
+      return n > 0;
+    }
     function lockFor(i) {
       var s = slides[i], h = hookFor(i);
+      if (s && (!h || !(h.lines && h.go) && !h.step) && walksLines(s)) { h = s.__walk || (s.__walk = { lines: [], go: function () {} }); }
       if (!s || !h || !h.lines || !h.go) { return null; }
       if (s.__lock && s.__lock.h === h) { return s.__lock; }
       var nums = [], named = {}, stops = [{ n: 0, line: (h.line0 || []).slice() }], k, j, any = false;

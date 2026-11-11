@@ -1,19 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""layout_plan - the deck's shapes, planned over the whole module (course-module-ui layout-templates.json "shapes").
+"""layout_plan - each slide's blueprint, chosen over the whole module like an engineer would (course-module-ui
+knowledge/blueprints/, layout-templates.json "shapes").
 
 A slide's look is its shape - where its picture sits against its words - not its template's name: a picture on the left
-and one on the right are one look (beside). Each teaching slide fits some shapes (its words within that shape's budget,
-its picture's natural shape, the names it shows); plan() chooses among them for the whole deck so that the same shape
-never comes twice in a row, beside is at most about half of the teaching slides, and a module of ten teaching slides or
-more uses at least four shapes - changing as few slides as it can. A slide whose build sheet names its layout keeps it,
-and so does a slide that fits only one shape. Words are never cut or moved: only the shapes a slide fits are chosen.
+and one on the right are one look (beside). Every blueprint file says what it is good for: the slides it can stand in for
+(its group), the pictures it takes and the picture shapes its box suits, the words it holds. For each teaching slide every
+blueprint of its group is scored - the picture's real shape (a photograph's pixels, a 2D drawing's size, a 3D scene's
+home view) against the box's, the words against the budget, the names it shows. plan() then chooses across the deck: the
+same shape never twice in a row, beside on at most about half of the teaching slides, at least four shapes in a module of
+ten teaching slides or more, and among near-equal fits a choice seeded by the course and the module, so a rebuild is the
+same and two modules do not look alike. A slide whose build sheet names its template, variant or layout keeps it; so does
+a slide that fits one blueprint only. Words are never cut or moved: only blueprints the slide already fits are chosen.
 
     python layout_plan.py <deck index.html | module folder>     the deck's shape line, its longest run and its beside share
     python test_layout_plan.py
 """
 from __future__ import annotations
 
+import glob
+import hashlib
 import html
 import io
 import json
@@ -24,26 +30,46 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILLS = os.path.normpath(os.path.join(HERE, "..", "..", ".."))
-LT = json.load(io.open(os.path.join(SKILLS, "course-module-ui", "knowledge", "layout-templates.json"), encoding="utf-8"))
+KNOW = os.path.join(SKILLS, "course-module-ui", "knowledge")
+with io.open(os.path.join(KNOW, "layout-templates.json"), encoding="utf-8") as _f:
+    LT = json.load(_f)
 SH = LT["shapes"]
-MAP, ORDER, PLAN = SH["map"], SH["order"], SH["plan"]
-BAND_TEMPLATES, BAND_ASPECT, BAND_NAMES = tuple(SH["band_templates"]), SH["band_aspect"], SH["band_names"]
+ORDER, PLAN = SH["order"], SH["plan"]
+BAND_TEMPLATES = tuple(SH["band_templates"])
 BUDGETS = LT["budgets"]
-STAGE_WORDS = LT["variety"]["stage_max_words"]
 DENSE_WORDS = LT["dense"]["words"]
-TOP_ASPECT, TOP_ROW = LT["boxes"]["top_aspect"], LT["boxes"]["top_row_aspect"]
-FULL_NAMES = LT["boxes"]["need"][-1][0]           # names that need the whole slide: no box beside words shows them
-MOVABLE = BAND_TEMPLATES + ("figure-stage", "photo-explain")
-RIGHT = {"explain-figure": "figure-right", "reading-with-figure": "figure-right", "long-explanation": "model",
-         "procedure": "with-figure", "content-in-parts": "with-figure"}
 COMPARISON = re.compile(r"(?i)\b(compar\w*|versus|vs\.?|before\s*(?:and|/|&)\s*after)(?!\w)")
 SECTION = re.compile(r"<section\b([^>]*)>", re.S)
 
 
+def library(folder=None):
+    """{blueprint id: blueprint} - every file of course-module-ui/knowledge/blueprints/, a mirror filled from its base"""
+    out = {}
+    for p in sorted(glob.glob(os.path.join(folder or os.path.join(KNOW, "blueprints"), "*.json"))):
+        with io.open(p, encoding="utf-8") as f:
+            b = json.load(f)
+        out[b["id"]] = b
+    for b in out.values():
+        base = out.get(b.get("mirror") or "")
+        if base:
+            for k in ("for", "fill", "grid", "cols", "rows"):
+                b.setdefault(k, base.get(k))
+    return out
+
+
+LIB = library()
+MAP = {k: b.get("shape", "") for k, b in LIB.items()}
+
+
 def shape_of(tid, variant):
     """the shape of a template and variant: beside, top, bottom, stage, photo-full, words, two - "" for a slide that is not
-    a teaching slide (a task launch, the recap), None for one the map does not know"""
+    a teaching slide (a task launch, the recap), None for one the library does not know"""
     return MAP.get("%s.%s" % (tid, variant))
+
+
+def variants(tid):
+    """the variants the library has for a template, in file order"""
+    return [b["variant"] for b in LIB.values() if b.get("template") == tid]
 
 
 def comparison(tid, visual_kind, title):
@@ -191,6 +217,11 @@ def figure_aspect(fig):
 
 
 # ------------------------------------------------------------------ what a slide fits
+def budget(key):
+    """a blueprint's budget: a number, or a key of layout-templates.json "budgets" (measured)"""
+    return key if isinstance(key, (int, float)) else BUDGETS.get(key)
+
+
 def band_budget(variant, family):
     """(words, what) the words under (figure-top) or over (figure-bottom) a band hold - measured, budgets"""
     if family in ("photo", "tiles"):
@@ -200,60 +231,94 @@ def band_budget(variant, family):
         (BUDGETS["over_band"], "over a picture band")
 
 
-def fits(own, tid, words, family=None, aspect=None, names=0, part_words=None, fixed=None):
-    """{shape: None when the slide fits it, else why not} for a teaching slide built as `tid` in the shape `own`, with
-    `words` words (part_words: its largest part, when its words are in parts), a picture of `family` (photo, tiles, drawing,
-    3d; None - no picture) whose natural shape is `aspect` (None: not known yet - a picture still to be drawn is drawn for
-    the shape it gets) and that shows `names` names at once. fixed: why the slide keeps its own shape."""
-    out = {own: None}
-    for s in ORDER:
-        if s == own:
+def aspect_score(rng, aspect, hard):
+    """how well a picture of this shape sits in a box made for rng [lo, hi]: 1 inside, less the further out (None: it
+    cannot - a band is never given a picture that is not wide); an unknown shape (a picture still to be drawn) 0.7"""
+    if aspect is None:
+        return 0.7
+    lo, hi = rng
+    if lo <= aspect <= hi:
+        return 1.0
+    if hard or aspect <= 0:
+        return None
+    return max(0.1, 1 - 1.2 * abs(math.log(aspect / (lo if aspect < lo else hi))))
+
+
+def jitter(seed, *keys):
+    """a number in [0, 1) fixed by the seed and the keys - the near-equal choice, the same on every build"""
+    h = hashlib.sha1(("|".join([str(seed)] + [str(k) for k in keys])).encode("utf-8")).hexdigest()
+    return int(h[:12], 16) / float(16 ** 12)
+
+
+def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None, fixed=None, seed="", sid=""):
+    """([{"bp", "shape", "cost"}], {shape: why not}) - the blueprints a teaching slide built as own_bp fits, cheapest first:
+    every blueprint of its group (blueprints/*.json "fits") that takes its picture (family: photo, tiles, drawing, 3d) and
+    its words (part_words: its largest part, when they are in parts), whose box suits the picture's shape (aspect, None
+    while it is not drawn yet) and that shows its names. The cost: 0 a perfect fit, up to 10, and a seeded fraction that
+    settles near-equal fits. fixed: why the slide keeps its own blueprint."""
+    own = LIB.get(own_bp) or {}
+    own_shape = own.get("shape") or "beside"
+    group = (own.get("fits") or {}).get("group")
+    why = {}
+    if fixed or not group or not family:
+        why.update({s: fixed or ("no picture" if not family else "its template, %s, has a layout of its own" % own_bp.split(".")[0])
+                    for s in ORDER if s != own_shape})
+        return [{"bp": own_bp, "shape": own_shape, "cost": 0.0}], why
+    out = []
+    for bid, b in LIB.items():
+        f = b.get("fits") or {}
+        if f.get("group") != group:
             continue
-        if fixed:
-            out[s] = fixed
-        elif not family:
-            out[s] = "no picture"
-        elif tid not in MOVABLE:
-            out[s] = "its template, %s, has a layout of its own" % tid
-        elif s == "beside":
-            out[s] = None if words <= BUDGETS["beside_picture"] and names < FULL_NAMES else \
-                ("%d words, beside a picture %d" % (words, BUDGETS["beside_picture"]) if names < FULL_NAMES
-                 else "%d names on the picture need the whole slide" % names)
-        elif s in ("top", "bottom"):
-            fam = "photo" if family == "tiles" else family
-            most, what = band_budget("figure-top" if s == "top" else "figure-bottom", family)
-            need = BAND_ASPECT.get(fam, BAND_ASPECT["drawing"])
-            w = part_words or words
-            out[s] = ("the picture is %.1f:1, a band needs %.2g:1" % (aspect, need)) if aspect is not None and aspect < need else \
-                ("%d words, %s %d" % (w, what, most)) if w > most else \
-                ("%d names on the picture, a band shows %d" % (names, BAND_NAMES)) if names > BAND_NAMES else None
-        elif s == "stage":
-            out[s] = "its words are in parts" if part_words else "several photographs" if family == "tiles" else \
-                ("%d words, the stage holds %d" % (words, STAGE_WORDS)) if words > STAGE_WORDS else None
-        elif s == "photo-full":
-            out[s] = "not a photograph" if family != "photo" else "its words are in parts" if part_words else \
-                ("%d words, on a full-screen photograph %d" % (words, BUDGETS["photo_full"])) if words > BUDGETS["photo_full"] else None
-        else:
-            out[s] = "a shape of its own template"
-    return out
+        shape, no, stage = b.get("shape"), None, 0
+        w = part_words if part_words is not None and group == "parts" else words
+        most = budget((f.get("budget") or {}).get(family))
+        lo, hi = f.get("words") or [0, 999]
+        if family not in (f.get("pictures") or []):
+            no = "takes no %s" % family
+        elif f.get("ground") == "dark" and bid != own_bp:
+            no = "on the dark ground"
+        elif not lo <= words <= hi:
+            no = "for %d-%d words" % (lo, hi)
+        elif most is not None and w > most:
+            no, stage = "%d words, it holds %d" % (w, most), 2
+        elif f.get("names") and names > f["names"]:
+            no, stage = "%d names on the picture, it shows %d" % (names, f["names"]), 3
+        sc = None
+        if not no:
+            sc = aspect_score((f.get("aspect") or {}).get(family) or [0, 99], aspect, f.get("hard"))
+            if sc is None:
+                no, stage = "the picture is %.1f:1, its box is for %s:1" % (aspect, "-".join("%g" % x for x in f["aspect"][family])), 4
+        if no and bid != own_bp:
+            if stage >= why.get(shape, (-1, ""))[0]:          # the reason of the blueprint that came nearest to fitting
+                why[shape] = (stage, "%s - %s" % (bid, no))
+            continue
+        cost = round((1 - (sc if sc is not None else 0.0)) * 10) + 0.9 * jitter(seed, sid, bid)
+        out.append({"bp": bid, "shape": shape, "cost": cost})
+    if not any(o["bp"] == own_bp for o in out):
+        out.append({"bp": own_bp, "shape": own_shape, "cost": 10.0})
+    out.sort(key=lambda o: o["cost"])
+    why = {s: w[1] for s, w in why.items() if s not in {o["shape"] for o in out}}
+    for s in ORDER:
+        if s not in {o["shape"] for o in out} and s not in ("words", "two"):     # a picture slide is never words-only
+            why.setdefault(s, "no blueprint of its kind")
+    return out, why
 
 
-def way(shape, tid, words, family):
-    """(template, variant, composition) that builds a slide of the template tid in `shape` - the compiler's own names"""
-    three_d, photo = family == "3d", family == "photo"
-    side = "long-explanation" if three_d and words > DENSE_WORDS else "reading-with-figure" if words > DENSE_WORDS else "explain-figure"
+def way(bp, family):
+    """(template, variant, composition, picture first) that builds a slide in the blueprint bp - the compiler's own names"""
+    b = LIB[bp]
+    tid, var, shape = b["template"], b["variant"], b.get("shape")
+    photo = family == "photo"
+    first = var == "figure-left" or b.get("mirror") is not None and var != "figure-right"
     if shape in ("top", "bottom"):
-        return (tid if tid in BAND_TEMPLATES else side), "figure-top" if shape == "top" else "figure-bottom", \
-            "wide-left" if photo else "two-col"
-    if shape == "beside":
-        if tid in RIGHT:
-            return tid, RIGHT[tid], "wide-left" if photo else "two-col"
-        return ("photo-explain", "column", "wide-left") if photo else (side, RIGHT[side], "two-col")
-    if shape == "stage":
-        return "figure-stage", "figure", "stage"
-    if shape == "photo-full":
-        return "photo-explain", "full", "photo"
-    return None
+        return tid, var, "wide-left" if photo else "two-col", False
+    if shape == "stage" or tid == "figure-stage":
+        return tid, var, "stage", False
+    if shape == "photo-full" or var == "split":
+        return tid, var, "photo", False
+    if var == "figure-tall":
+        return tid, var, "two-col", first
+    return tid, var, "wide-left" if photo else "two-col", first
 
 
 # ------------------------------------------------------------------ the plan
@@ -262,39 +327,33 @@ def _breaks(items, teach):
     return {b for a, b in zip(teach, teach[1:]) if b - a > 1}
 
 
+def _shape_opts(item):
+    """[(shape, cost, option)] - the cheapest blueprint of each shape the slide fits, cheapest shape first"""
+    best = {}
+    for o in item.get("options") or [{"bp": None, "shape": item["own"], "cost": 0.0}]:
+        if o["shape"] not in best or o["cost"] < best[o["shape"]]["cost"]:
+            best[o["shape"]] = o
+    return sorted(((s, o["cost"], o) for s, o in best.items()), key=lambda x: x[1])
+
+
 def _dp(items, teach, opts, cap, breaks):
-    """the choice with the fewest repeats, then the fewest beside past cap, then the fewest slides changed and the most
-    preferred shapes - (cost, {index: shape})"""
-    states = {(None, 0): ((0, 0, 0, 0), ())}
+    """the choice with the fewest repeats, then the fewest beside past cap, then the best fits - (cost, {index: option})"""
+    states = {(None, 0): ((0, 0, 0.0), ())}
     for i in teach:
         nxt = {}
         echo = bool(items[i].get("echo"))
         for (prev, nb), (cost, path) in states.items():
             prev = None if i in breaks else prev
-            for k, s in enumerate(opts[i]):
+            for s, c, o in opts[i]:
                 rep = 1 if s == prev and not echo else 0
                 over = 1 if s == "beside" and nb >= cap else 0
-                c = (cost[0] + rep, cost[1] + over, cost[2] + (1 if k else 0), cost[3] + k)
+                cc = (cost[0] + rep, cost[1] + over, round(cost[2] + c, 6))
                 key = (s, min(cap, nb + (s == "beside")))
-                if key not in nxt or c < nxt[key][0]:
-                    nxt[key] = (c, path + (s,))
+                if key not in nxt or cc < nxt[key][0]:
+                    nxt[key] = (cc, path + (o,))
         states = nxt
-    cost, path = min(states.values()) if states else ((0, 0, 0, 0), ())
+    cost, path = min(states.values(), key=lambda x: x[0]) if states else ((0, 0, 0.0), ())
     return cost, dict(zip(teach, path))
-
-
-def options(item, rules=None):
-    """the shapes a slide may be given, its own first, then the others it fits in the order the plan prefers them"""
-    r = dict(PLAN, **(rules or {}))
-    own = item["own"]
-    if item.get("fixed"):
-        return [own]
-    ok = [s for s, why in (item.get("fits") or {}).items() if why is None]
-    out = [own]
-    for s in list(r["prefer"]) + ORDER:
-        if s in ok and s not in out:
-            out.append(s)
-    return out
 
 
 def score(items, choice, rules=None):
@@ -304,38 +363,37 @@ def score(items, choice, rules=None):
     brk = _breaks(items, teach)
     reps = [(a, b) for a, b in zip(teach, teach[1:]) if b not in brk and choice[a] == choice[b] and not items[b].get("echo")]
     n = len(teach)
-    shapes = sorted({choice[i] for i in teach}, key=ORDER.index)
+    shapes = sorted({choice[i] for i in teach}, key=lambda s: ORDER.index(s) if s in ORDER else 99)
     want = r["min_shapes"] if n >= r["min_slides"] else 0
     return {"repeats": reps, "beside": sum(1 for i in teach if choice[i] == "beside"), "teaching": n,
             "cap": int(math.ceil(n * r["beside_share"])), "shapes": shapes, "missing": max(0, want - len(shapes))}
 
 
 def plan(items, rules=None):
-    """{index: shape} for the teaching slides of `items` (in deck order: {"id", "own" (its shape, "" for a slide that is
-    not a teaching slide), "fits" {shape: None or why not}, "fixed" (why it keeps its own), "echo" (a comparison)})"""
+    """{index: the chosen option {"bp", "shape", "cost"}} for the teaching slides of `items` (in deck order: {"id", "own"
+    (its own shape, "" for a slide that is not a teaching slide), "options" (options()), "why", "fixed", "echo" (a
+    comparison)})"""
     r = dict(PLAN, **(rules or {}))
     teach = [i for i, it in enumerate(items) if it.get("own")]
     if not teach:
         return {}
     brk = _breaks(items, teach)
-    opts = {i: options(items[i], r) for i in teach}
+    opts = {i: _shape_opts(items[i]) for i in teach}
     cap = int(math.ceil(len(teach) * r["beside_share"]))
     cost, choice = _dp(items, teach, opts, cap, brk)
     if len(teach) >= r["min_slides"]:
         while True:
-            used = {choice[i] for i in teach}
+            used = {choice[i]["shape"] for i in teach}
             if len(used) >= r["min_shapes"]:
                 break
             best = None
-            for s in list(r["prefer"]) + ORDER:
-                if s in used:
-                    continue
-                for i in teach:
-                    if s not in opts[i][1:] or choice[i] == s:
+            for i in teach:
+                for s, c, o in opts[i]:
+                    if s in used:
                         continue
-                    c, ch = _dp(items, teach, dict(opts, **{i: [s]}), cap, brk)
-                    if c[:2] <= cost[:2] and len({ch[j] for j in teach}) > len(used) and (best is None or c < best[0]):
-                        best = (c, ch, i, s)
+                    cc, ch = _dp(items, teach, dict(opts, **{i: [(s, c, o)]}), cap, brk)
+                    if cc[:2] <= cost[:2] and len({ch[j]["shape"] for j in teach}) > len(used) and (best is None or cc < best[0]):
+                        best = (cc, ch, i, (s, c, o))
             if not best:
                 break
             cost, choice = best[0], best[1]
@@ -343,22 +401,27 @@ def plan(items, rules=None):
     return choice
 
 
+def shapes_of(choice):
+    return {i: o["shape"] for i, o in choice.items()}
+
+
 def notes(items, choice, rules=None):
-    """the plan's notes: each rule it could not keep, naming the slides that fit only one shape and why"""
-    sc = score(items, choice, rules)
+    """the plan's notes: each rule it could not keep, naming the slides that fit one shape only and why"""
+    sh = shapes_of(choice)
+    sc = score(items, sh, rules)
     out = []
 
     def why(i, shape):
         it = items[i]
         if it.get("fixed"):
             return "%s keeps its %s shape - %s" % (it["id"], shape, it["fixed"])
-        f = it.get("fits") or {}
-        no = ["%s: %s" % (s, f[s]) for s in ORDER if s != shape and f.get(s)]
+        w = it.get("why") or {}
+        no = ["%s: %s" % (s, w[s]) for s in ORDER if s != shape and w.get(s)]
         return "%s fits only %s (%s)" % (it["id"], shape, "; ".join(no) if no else "no other shape")
     for a, b in sc["repeats"]:
-        out.append("%s and %s are both %s - %s; %s" % (items[a]["id"], items[b]["id"], choice[b], why(a, choice[a]), why(b, choice[b])))
+        out.append("%s and %s are both %s - %s; %s" % (items[a]["id"], items[b]["id"], sh[b], why(a, sh[a]), why(b, sh[b])))
     if sc["beside"] > sc["cap"]:
-        only = [i for i, s in choice.items() if s == "beside" and len(options(items[i], rules)) == 1]
+        only = [i for i, s in sh.items() if s == "beside" and len(_shape_opts(items[i])) == 1]
         out.append("beside on %d of %d teaching slides (at most about %d): %s" % (
             sc["beside"], sc["teaching"], sc["cap"], "; ".join(why(i, "beside") for i in only[:8]) + (" ..." if len(only) > 8 else "")))
     if sc["missing"]:
@@ -367,7 +430,7 @@ def notes(items, choice, rules=None):
     return out
 
 
-def line(items, choice):
+def line(items, shapes):
     """the plan as one line: each teaching slide's shape in deck order, "|" where a task launch or the recap breaks the run"""
     teach = [i for i, it in enumerate(items) if it.get("own")]
     brk = _breaks(items, teach)
@@ -375,26 +438,39 @@ def line(items, choice):
     for i in teach:
         if i in brk and out:
             out.append("|")
-        out.append(choice.get(i, items[i]["own"]))
+        out.append(shapes.get(i, items[i]["own"]))
     return " ".join(out)
 
 
-def summary(items, choice, rules=None):
-    """'beside top words ... - longest run 2 (s05-s06 top), beside 14 of 31 (45 %), 5 shapes'"""
-    sc = score(items, choice, rules)
+def summary(items, shapes, rules=None):
+    """'beside top words ... - longest run 2 (s05-s06 top), beside 14 of 31 (45 %), 5 shapes' for {index: shape}"""
+    sc = score(items, shapes, rules)
     teach = [i for i, it in enumerate(items) if it.get("own")]
     brk = _breaks(items, teach)
     best, run, start, at = 0, 0, None, None
     for k, i in enumerate(teach):
-        same = k and i not in brk and choice[teach[k - 1]] == choice[i]
+        same = k and i not in brk and shapes[teach[k - 1]] == shapes[i]
         run = run + 1 if same else 1
         start = start if same else i
         if run > best:
             best, at = run, (start, i)
-    where = " (%s-%s %s)" % (items[at[0]]["id"], items[at[1]]["id"], choice[at[1]]) if best > 1 else ""
+    where = " (%s-%s %s)" % (items[at[0]]["id"], items[at[1]]["id"], shapes[at[1]]) if best > 1 else ""
     return "%s - longest run %d%s, beside %d of %d (%d %%), %d shapes" % (
-        line(items, choice), best, where, sc["beside"], sc["teaching"],
+        line(items, shapes), best, where, sc["beside"], sc["teaching"],
         round(100.0 * sc["beside"] / sc["teaching"]) if sc["teaching"] else 0, len(sc["shapes"]))
+
+
+def stats(items, shapes):
+    """the scorecard's numbers: {"look_shapes", "same_look_in_a_row", "beside_share"} for {index: shape}"""
+    sc = score(items, shapes)
+    teach = [i for i, it in enumerate(items) if it.get("own")]
+    brk = _breaks(items, teach)
+    best = run = 0
+    for k, i in enumerate(teach):
+        run = run + 1 if k and i not in brk and shapes[teach[k - 1]] == shapes[i] else 1
+        best = max(best, run)
+    return {"look_shapes": len(sc["shapes"]), "same_look_in_a_row": best,
+            "beside_share": round(100.0 * sc["beside"] / sc["teaching"]) if sc["teaching"] else 0}
 
 
 # ------------------------------------------------------------------ a built deck
@@ -409,25 +485,29 @@ def deck_items(page):
         t = re.search(r'\bdata-template="([\w-]+)\.v\d+"', a)
         v = re.search(r'\bdata-variant="([\w-]+)"', a)
         i = re.search(r'\bid="([^"]+)"', a)
-        own = shape_of(t.group(1), v.group(1) if v else "") if t else ""
+        own = (shape_of(t.group(1), v.group(1) if v else "") if t else "") or ""
         sh = re.search(r'\bdata-shapes="([^"]*)"', a)
         ok = (sh.group(1).split() if sh else []) or [own]
         vis = re.search(r'\bdata-visual="([\w-]+)"', a)
         title = re.search(r'\bdata-title="([^"]*)"', a)
-        out.append({"id": i.group(1) if i else "", "own": own or "", "fits": {s: (None if s in ok else "-") for s in ORDER},
+        out.append({"id": i.group(1) if i else "", "own": own,
+                    "options": [{"bp": None, "shape": s, "cost": 0.0 if s == own else 1.0} for s in dict.fromkeys([own] + ok) if s],
                     "echo": comparison(t.group(1) if t else "", vis.group(1) if vis else "", html.unescape(title.group(1)) if title else "")})
-        out[-1]["fits"][own or ""] = None
     return out
+
+
+def deck_shapes(page):
+    """(items, {index: shape}) of a compiled deck as it is built"""
+    items = deck_items(page)
+    return items, {i: it["own"] for i, it in enumerate(items) if it["own"]}
 
 
 def problems(page, rules=None):
     """the shape rules a compiled deck breaks while the plan had another way that keeps them - each a must-fix line"""
-    items = deck_items(page)
-    teach = [i for i, it in enumerate(items) if it["own"]]
-    if not teach:
+    items, now = deck_shapes(page)
+    if not now:
         return []
-    now = {i: items[i]["own"] for i in teach}
-    a, b = score(items, now, rules), score(items, plan(items, rules), rules)
+    a, b = score(items, now, rules), score(items, shapes_of(plan(items, rules)), rules)
     out = []
     if len(a["repeats"]) > len(b["repeats"]):
         out.append("the same shape twice in a row where the slides fit another: %s" % ", ".join(
@@ -457,9 +537,8 @@ def main(argv=None):
         print("Stopped - no deck at %s" % args[0])
         return 2
     page = io.open(p, encoding="utf-8").read()
-    items = deck_items(page)
-    teach = [i for i, it in enumerate(items) if it["own"]]
-    print(summary(items, {i: items[i]["own"] for i in teach}))
+    items, now = deck_shapes(page)
+    print(summary(items, now))
     bad = problems(page)
     for x in bad:
         print("  MUST FIX: " + x)

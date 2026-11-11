@@ -1,0 +1,9 @@
+{
+ "id": "explain-figure.figure-left",
+ "template": "explain-figure",
+ "variant": "figure-left",
+ "shape": "beside",
+ "mirror": "explain-figure.figure-right",
+ "fill_note": "build sheet figure_first",
+ "fits": {"group": "text-figure", "pictures": ["drawing", "3d", "tiles"], "aspect": {"drawing": [0.8, 2.2], "3d": [0.8, 2.2], "tiles": [0.5, 4]}, "words": [0, 60], "budget": {"drawing": "beside_picture", "3d": "beside_3d", "tiles": "beside_picture"}}
+}

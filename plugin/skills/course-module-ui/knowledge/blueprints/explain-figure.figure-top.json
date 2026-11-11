@@ -1,0 +1,11 @@
+{
+ "id": "explain-figure.figure-top",
+ "template": "explain-figure",
+ "variant": "figure-top",
+ "shape": "top",
+ "for": "a wide picture across the slide, the words under it (a wide photograph or a row of them, a wide 2D drawing or 3D scene)",
+ "grid": ["p", "x"],
+ "rows": "1fr auto",
+ "fill": {"p": ["Picture", "tiles or a photograph in a row, each box its own shape"], "x": ["Text", "text, up to under_top_row words (layout-templates.json budgets), its points two a row"]},
+ "fits": {"group": "text-figure", "pictures": ["photo", "tiles", "drawing", "3d"], "aspect": {"photo": [1.25, 8], "tiles": [1.25, 8], "drawing": [1.8, 8], "3d": [1.6, 8]}, "hard": true, "words": [0, 60], "budget": {"photo": "under_top_row", "tiles": "under_top_row", "drawing": "under_band", "3d": "under_band"}, "names": 15}
+}

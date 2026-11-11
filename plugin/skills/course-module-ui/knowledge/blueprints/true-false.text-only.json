@@ -1,0 +1,9 @@
+{
+ "id": "true-false.text-only",
+ "template": "true-false",
+ "variant": "text-only",
+ "shape": "words",
+ "for": "a wrong belief, no picture",
+ "grid": ["x", "i"],
+ "fill": {"x": ["Text", "claim; why"], "i": ["Info", "vote"]}
+}

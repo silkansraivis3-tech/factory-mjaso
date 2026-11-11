@@ -1,17 +1,34 @@
 #!/usr/bin/env python
-"""The empty templates: every slide and task blueprint of knowledge/blueprints.json drawn with no words of its own - only
-where its Title, Text, Info, Picture, Animation and 3D go, what fills each, and its live reference.
+"""The empty templates: every slide blueprint (knowledge/blueprints/, one file each) and task blueprint
+(knowledge/blueprints.json) drawn with no words of its own - only where its Title, Text, Info, Picture, Animation and 3D
+go, what fills each, and its live reference.
 
     blueprints.py [--out <file>]     write it (default: <repo>/design/template-blueprints/index.html)
-    blueprints.py --check            exit 1 when the page is not what blueprints.json gives, or a blueprint is wrong
+    blueprints.py --check            exit 1 when the page is not what the blueprints give, or a blueprint is wrong
 """
-import argparse, html, io, json, os, re, sys
+import argparse, glob, html, io, json, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(SKILL)))
 BP = json.load(io.open(os.path.join(SKILL, "knowledge", "blueprints.json"), encoding="utf-8"))
 LAYOUTS = json.load(io.open(os.path.join(SKILL, "knowledge", "layout-templates.json"), encoding="utf-8"))
+
+
+def library():
+    """the slide blueprints, one file each in knowledge/blueprints/, in the templates' order (layout-templates.json)"""
+    out = []
+    for p in glob.glob(os.path.join(SKILL, "knowledge", "blueprints", "*.json")):
+        with io.open(p, encoding="utf-8") as f:
+            out.append(json.load(f))
+    order = list(LAYOUTS["templates"])
+    rank = lambda b: (order.index(b["template"]) if b.get("template") in order else len(order),
+                      (LAYOUTS["templates"].get(b.get("template"), {}).get("variants") or []).index(b.get("variant"))
+                      if b.get("variant") in (LAYOUTS["templates"].get(b.get("template"), {}).get("variants") or []) else 99, b["id"])
+    return sorted(out, key=rank)
+
+
+BP["slides"] = library()
 OUT = os.path.join(REPO, "design", "template-blueprints", "index.html")
 KINDS = list(BP["kinds"])
 e = html.escape
@@ -48,6 +65,19 @@ def problems():
         for v in t["variants"]:
             if "%s.%s" % (tid, v) not in have:
                 probs.append("the template %s.%s has no blueprint" % (tid, v))
+    shapes, budgets = LAYOUTS["shapes"]["order"] + [""], LAYOUTS["budgets"]
+    for b in slides:                    # a library file: its template and variant, its shape, and what it is good for
+        if b["id"] != "%s.%s" % (b.get("template"), b.get("variant")):
+            probs.append("%s: its file names the template %s and the variant %s" % (b["id"], b.get("template"), b.get("variant")))
+        if b.get("shape") not in shapes:
+            probs.append("%s: its shape \"%s\" is not one of %s (layout-templates.json \"shapes\")" % (b["id"], b.get("shape"), ", ".join(shapes[:-1])))
+        f = b.get("fits") or {}
+        for fam, key in (f.get("budget") or {}).items():
+            if not isinstance(key, (int, float)) and key not in budgets:
+                probs.append("%s: its budget for a %s, \"%s\", is not a measured budget (layout-templates.json \"budgets\")" % (b["id"], fam, key))
+        for fam in f.get("pictures") or []:
+            if fam not in (f.get("aspect") or {}):
+                probs.append("%s: it takes a %s and says no picture shape its box suits (\"aspect\")" % (b["id"], fam))
     for b in slides + tasks:
         cells = set(" ".join(b["grid"]).split()) - {"."}
         if b.get("bg"):

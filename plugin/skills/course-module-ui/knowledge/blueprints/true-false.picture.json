@@ -1,0 +1,12 @@
+{
+ "id": "true-false.picture",
+ "template": "true-false",
+ "variant": "picture",
+ "shape": "beside",
+ "for": "a common wrong belief",
+ "grid": ["x p", "i p"],
+ "cols": "48fr 52fr",
+ "rows": "2fr 1fr",
+ "fill": {"x": ["Text", "claim; then why (text)"], "i": ["Info", "True / False vote, the stamp"], "p": ["Picture", "figure"]},
+ "ref": "slides#p20"
+}

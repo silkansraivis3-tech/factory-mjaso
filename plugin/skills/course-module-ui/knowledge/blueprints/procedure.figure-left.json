@@ -1,0 +1,8 @@
+{
+ "id": "procedure.figure-left",
+ "template": "procedure",
+ "variant": "figure-left",
+ "shape": "beside",
+ "mirror": "procedure.with-figure",
+ "fits": {"group": "steps", "pictures": ["drawing", "3d", "photo"], "aspect": {"drawing": [0.8, 2.2], "3d": [0.8, 2.2], "tiles": [0.5, 4], "photo": [0.6, 1.3]}, "words": [0, 999], "budget": {"drawing": "beside_picture", "3d": "beside_3d", "photo": "beside_picture"}}
+}

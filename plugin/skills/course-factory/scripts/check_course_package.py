@@ -28,7 +28,7 @@ WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
   3D (L67): 60-80 % of a presentation's teaching slides are interactive 3D (each .slide says its kind in data-visual); and
     notes from the module's own scripts where a 3D scene would lag on the tablet (knowledge/media-and-tasks.json three_d)
   blueprints: every slide of a compiled deck (one with data-template) is a known template, version and variant
-    (course-module-ui knowledge/blueprints.json), and one whose template needs a picture holds one - a photo, a drawing, a
+    (course-module-ui knowledge/blueprints/, one file a blueprint), and one whose template needs a picture holds one - a photo, a drawing, a
     3D scene or a 2D-kit figure - and no Phase A placeholder (factory_trial.py counts the same slides)
   team tasks (rulebook 4b): a slide with data-mode="team" and its page with task-mode / task-scope metas, both or
     neither; the page listens for gb-team; scope team hands in with scope: 'team'; a sensible data-team-size
@@ -70,6 +70,8 @@ sys.path.insert(0, HERE)
 import workspace  # noqa: E402
 import design_choices  # noqa: E402  - the operator's design choices are theirs, not problems (L26, 2.30.0)
 import classroom_files  # noqa: E402  - the instructor-only classroom\ folder (prepare.json, forms\) the tablet app reads on publish
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "compile", "scripts"))
+import layout_plan  # noqa: E402  - the blueprint library and the deck's shape rules
 
 CONTRACT = json.load(io.open(os.path.join(os.path.dirname(HERE), "knowledge", "classroom-system.json"), encoding="utf-8"))
 LIM = CONTRACT["limits"]
@@ -208,13 +210,12 @@ def parse(p):
 
 
 def blueprints():
-    """({slide blueprint id: the picture slots it needs}, {template: its version}) - course-module-ui knowledge/blueprints.json
+    """({slide blueprint id: the picture slots it needs}, {template: its version}) - course-module-ui knowledge/blueprints/
     and layout-templates.json; a mirrored blueprint needs what its base needs"""
-    bp = json.load(io.open(os.path.join(UI, "blueprints.json"), encoding="utf-8"))
     lt = json.load(io.open(os.path.join(UI, "layout-templates.json"), encoding="utf-8"))
-    base = {b["id"]: b for b in bp["slides"]}
+    base = layout_plan.library()
     need = {}
-    for b in bp["slides"]:
+    for b in base.values():
         fill = b.get("fill") or (base.get(b.get("mirror")) or {}).get("fill") or {}
         need[b["id"]] = sum(1 for v in fill.values() if v[0] in ("Picture", "3D") or (len(v) > 1 and str(v[1]).startswith("figure")))
     return need, {k: v.get("version") for k, v in lt["templates"].items()}
@@ -483,15 +484,21 @@ def check(folder):
                         probs.append("%s sends the room to work but says neither where (data-task-href) nor how (data-link-hint)" % where)
                 elif kind in ("", "Theory") and not s.get("data-cue", "").strip():
                     notes.append("%s has no instructor notes (data-cue) - the instructor's panel shows them" % where)
-            # every slide built on its blueprint (course-module-ui blueprints.json): a known template, version and variant,
+            # every slide built on its blueprint (course-module-ui knowledge/blueprints/): a known template, version and variant,
             # and the picture its template needs - the 2.126.0 trial counted two slides off it that the build had passed
             if any(s.get("data-template") for s in pg.slides):
                 off = off_blueprint(deck_slides(pg))
                 if off:
                     probs.append("%s: slide(s) %s are off their blueprint - not a known template, version and variant "
-                                 "(course-module-ui knowledge/blueprints.json), or their template needs a picture and they "
+                                 "(course-module-ui knowledge/blueprints/), or their template needs a picture and they "
                                  "hold none or a placeholder: give each its picture, or the template's variant without one"
                                  % (mod, ", ".join(off)))
+                # the deck's shapes (layout-templates.json "shapes"): the same shape twice in a row, beside on more than
+                # about half of the teaching slides, fewer than four shapes in ten - a must-fix only where the slides fit
+                # another blueprint (data-shapes) and the plan would have kept the rule
+                for x in layout_plan.problems(read(deck)):
+                    probs.append("%s: %s - compile the module again (the layout plan chooses among the blueprints each slide "
+                                 "fits)" % (mod, x))
             # L67, the picture rule - 60-80 % of the teaching slides interactive 3D
             vis = [s.get("data-visual", "").strip() for s in pg.slides if s.get("data-visual", "").strip() not in ("", "none")]
             three, teach = three_d_share(pg.slides)

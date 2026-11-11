@@ -1,0 +1,12 @@
+{
+ "id": "reading-with-figure.figure-right",
+ "template": "reading-with-figure",
+ "variant": "figure-right",
+ "shape": "beside",
+ "for": "a lot of text beside a picture (60-85 words)",
+ "grid": ["x p"],
+ "cols": "55fr 45fr",
+ "fill": {"x": ["Text", "text, up to 85 words"], "p": ["Picture", "figure; a line and its part light together"]},
+ "ref": "slides#p8",
+ "fits": {"group": "text-figure", "pictures": ["drawing", "tiles"], "aspect": {"drawing": [0.8, 2.2], "3d": [0.8, 2.2], "tiles": [0.5, 4]}, "words": [61, 999], "budget": {"drawing": "beside_picture", "tiles": "beside_picture"}}
+}

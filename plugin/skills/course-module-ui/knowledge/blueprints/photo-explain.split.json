@@ -1,0 +1,12 @@
+{
+ "id": "photo-explain.split",
+ "template": "photo-explain",
+ "variant": "split",
+ "shape": "beside",
+ "for": "a photograph beside its words",
+ "grid": ["x p"],
+ "cols": "50fr 50fr",
+ "fill": {"x": ["Text", "text, up to 50 words"], "p": ["Picture", "figure (a photograph); zoom {line: [x, y, scale]}"]},
+ "ref": "slides#p9",
+ "fits": {"group": "text-figure", "pictures": ["photo"], "aspect": {"photo": [0.6, 1.3]}, "words": [0, 999], "budget": {"photo": "photo_framed"}, "ground": "dark"}
+}

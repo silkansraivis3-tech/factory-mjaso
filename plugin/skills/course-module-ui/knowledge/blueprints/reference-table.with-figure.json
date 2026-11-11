@@ -1,0 +1,12 @@
+{
+ "id": "reference-table.with-figure",
+ "template": "reference-table",
+ "variant": "with-figure",
+ "shape": "beside",
+ "for": "rows of values with a conclusion",
+ "grid": ["i p", "x p"],
+ "cols": "55fr 45fr",
+ "rows": "3fr 1fr",
+ "fill": {"i": ["Info", "lines 'cell | cell'"], "x": ["Text", "the line after the rows"], "p": ["Picture", "figure"]},
+ "ref": "slides#p13"
+}

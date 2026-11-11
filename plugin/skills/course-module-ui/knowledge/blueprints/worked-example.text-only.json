@@ -1,0 +1,9 @@
+{
+ "id": "worked-example.text-only",
+ "template": "worked-example",
+ "variant": "text-only",
+ "shape": "words",
+ "for": "a calculation with no picture",
+ "grid": ["x"],
+ "fill": {"x": ["Text", "steps; ask; reveal"]}
+}

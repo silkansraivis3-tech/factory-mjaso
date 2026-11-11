@@ -1,0 +1,9 @@
+{
+ "id": "explain-figure.text-only",
+ "template": "explain-figure",
+ "variant": "text-only",
+ "shape": "words",
+ "for": "a short slide with no picture (at most two in a row)",
+ "grid": ["x"],
+ "fill": {"x": ["Text", "text, up to 80 words; past 120 in steps (theory-rules.json slide)"]}
+}

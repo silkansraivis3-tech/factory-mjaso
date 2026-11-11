@@ -1,0 +1,11 @@
+{
+ "id": "procedure.figure-top",
+ "template": "procedure",
+ "variant": "figure-top",
+ "shape": "top",
+ "for": "numbered steps under a wide picture across the slide",
+ "grid": ["p", "x"],
+ "rows": "1fr auto",
+ "fill": {"p": ["3D", "figure: wide"], "x": ["Text", "lines 1 ..., 2 ..., 3 ..., two a row"]},
+ "fits": {"group": "steps", "pictures": ["photo", "drawing", "3d"], "aspect": {"photo": [1.25, 8], "tiles": [1.25, 8], "drawing": [1.8, 8], "3d": [1.6, 8]}, "hard": true, "words": [0, 999], "budget": {"photo": "under_top_row", "tiles": "under_top_row", "drawing": "under_band", "3d": "under_band"}, "names": 15}
+}

@@ -1,0 +1,11 @@
+{
+ "id": "content-in-parts.figure-bottom",
+ "template": "content-in-parts",
+ "variant": "figure-bottom",
+ "shape": "bottom",
+ "for": "words in parts over a wide picture across the slide",
+ "grid": ["x", "p", "i"],
+ "rows": "1fr 1.6fr auto",
+ "fill": {"x": ["Text", "a part, its points two a row"], "p": ["3D", "figure: wide, or each part its own (\"part_figures\")"], "i": ["Info", "the parts' tabs, a strip at the foot of the slide"]},
+ "fits": {"group": "parts", "pictures": ["photo", "tiles", "drawing", "3d"], "aspect": {"photo": [1.25, 8], "tiles": [1.25, 8], "drawing": [1.8, 8], "3d": [1.6, 8]}, "hard": true, "words": [0, 999], "budget": {"photo": "part_band", "tiles": "part_band", "drawing": "part_band", "3d": "part_band"}, "names": 15}
+}

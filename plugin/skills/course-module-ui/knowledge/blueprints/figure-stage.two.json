@@ -1,0 +1,11 @@
+{
+ "id": "figure-stage.two",
+ "template": "figure-stage",
+ "variant": "two",
+ "shape": "two",
+ "for": "two pictures to compare, each with its words",
+ "grid": ["p q", "x y"],
+ "rows": "3fr 2fr",
+ "fill": {"p": ["Picture", "figure"], "q": ["Picture", "figure_b"], "x": ["Text", "blocks[0] lines"], "y": ["Text", "blocks[1] lines"]},
+ "ref": "slides#p6"
+}

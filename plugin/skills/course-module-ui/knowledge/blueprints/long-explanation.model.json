@@ -1,0 +1,12 @@
+{
+ "id": "long-explanation.model",
+ "template": "long-explanation",
+ "variant": "model",
+ "shape": "beside",
+ "for": "a long explanation of a shape in space",
+ "grid": ["x p"],
+ "cols": "42fr 58fr",
+ "fill": {"x": ["Text", "text"], "p": ["3D", "a 3D model, 58 % of the width"]},
+ "ref": "slides#p7",
+ "fits": {"group": "text-figure", "pictures": ["3d"], "aspect": {"drawing": [0.8, 2.2], "3d": [0.8, 2.2], "tiles": [0.5, 4]}, "words": [61, 999], "budget": {"3d": "beside_3d"}}
+}

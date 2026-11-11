@@ -1,0 +1,11 @@
+{
+ "id": "opening.photo",
+ "template": "opening",
+ "variant": "photo",
+ "shape": "photo-full",
+ "for": "the module's first slide on a photograph",
+ "bg": "p",
+ "grid": ["x ."],
+ "cols": "50fr 50fr",
+ "fill": {"p": ["Picture", "figure"], "x": ["Text", "title, lines"]}
+}

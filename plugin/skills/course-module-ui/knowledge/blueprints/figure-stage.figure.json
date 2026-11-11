@@ -1,0 +1,12 @@
+{
+ "id": "figure-stage.figure",
+ "template": "figure-stage",
+ "variant": "figure",
+ "shape": "stage",
+ "for": "a large picture with few words",
+ "grid": ["p", "x"],
+ "rows": "3fr 1fr",
+ "fill": {"p": ["3D", "figure"], "x": ["Text", "text, up to 45 words"]},
+ "ref": "slides#p3",
+ "fits": {"group": "text-figure", "pictures": ["drawing", "3d", "photo"], "aspect": {"drawing": [1.2, 8], "3d": [1.2, 8], "photo": [1.2, 8]}, "words": [0, 45], "budget": {"drawing": "stage", "3d": "stage", "photo": "stage"}}
+}

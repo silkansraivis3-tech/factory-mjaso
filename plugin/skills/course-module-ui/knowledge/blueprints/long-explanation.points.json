@@ -1,0 +1,12 @@
+{
+ "id": "long-explanation.points",
+ "template": "long-explanation",
+ "variant": "points",
+ "shape": "beside",
+ "for": "a long explanation - short points, the full words for the instructor",
+ "grid": ["x p"],
+ "cols": "42fr 58fr",
+ "fill": {"x": ["Text", "points: 3-5, 14 words or fewer"], "p": ["3D", "figure"]},
+ "notes": "text goes to the notes",
+ "ref": "slides#p25"
+}

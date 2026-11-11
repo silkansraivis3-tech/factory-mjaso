@@ -1,0 +1,12 @@
+{
+ "id": "scenario.picture-left",
+ "template": "scenario",
+ "variant": "picture-left",
+ "shape": "beside",
+ "for": "what to do when something happens",
+ "grid": ["p x", "p i"],
+ "cols": "50fr 50fr",
+ "rows": "1fr 2fr",
+ "fill": {"p": ["Picture", "figure"], "x": ["Text", "the situation (text); ask"], "i": ["Info", "choices A-C, why each after Next"]},
+ "ref": "slides#p21"
+}

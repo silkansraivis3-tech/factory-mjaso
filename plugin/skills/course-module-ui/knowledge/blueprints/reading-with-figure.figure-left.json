@@ -1,0 +1,8 @@
+{
+ "id": "reading-with-figure.figure-left",
+ "template": "reading-with-figure",
+ "variant": "figure-left",
+ "shape": "beside",
+ "mirror": "reading-with-figure.figure-right",
+ "fits": {"group": "text-figure", "pictures": ["drawing", "tiles"], "aspect": {"drawing": [0.8, 2.2], "3d": [0.8, 2.2], "tiles": [0.5, 4]}, "words": [61, 999], "budget": {"drawing": "beside_picture", "tiles": "beside_picture"}}
+}

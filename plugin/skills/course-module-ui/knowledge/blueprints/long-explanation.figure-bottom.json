@@ -1,0 +1,11 @@
+{
+ "id": "long-explanation.figure-bottom",
+ "template": "long-explanation",
+ "variant": "figure-bottom",
+ "shape": "bottom",
+ "for": "a long explanation over a wide live 3D scene across the slide",
+ "grid": ["x", "p"],
+ "rows": "auto 1fr",
+ "fill": {"x": ["Text", "text, its points two a row"], "p": ["3D", "a wide 3D scene"]},
+ "fits": {"group": "text-figure", "pictures": ["3d"], "aspect": {"photo": [1.25, 8], "tiles": [1.25, 8], "drawing": [1.8, 8], "3d": [1.6, 8]}, "hard": true, "words": [61, 999], "budget": {"photo": "over_photo_row", "tiles": "over_photo_row", "drawing": "over_band", "3d": "over_band"}, "names": 15}
+}

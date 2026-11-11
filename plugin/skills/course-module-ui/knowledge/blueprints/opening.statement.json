@@ -1,0 +1,10 @@
+{
+ "id": "opening.statement",
+ "template": "opening",
+ "variant": "statement",
+ "shape": "words",
+ "for": "the module's first slide",
+ "grid": ["x"],
+ "fill": {"x": ["Text", "title large, lines"]},
+ "ref": "slides#p2"
+}

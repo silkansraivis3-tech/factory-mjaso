@@ -49,6 +49,8 @@ LAYOUTS = {   # layout -> (the picture, the build-sheet entry)
     "under-top-tiles": ("tiles", {"composition": "two-col", "variant": "figure-top"}),
     "parts-under-top-tiles": ("tiles", {"composition": "two-col", "template": "content-in-parts", "variant": "figure-top"}),
     "over-bottom-tiles": ("tiles", {"composition": "two-col", "variant": "figure-bottom"}),
+    "over-bottom-photo": ("photo", {"composition": "wide-left", "template": "explain-figure", "variant": "figure-bottom"}),
+    "beside-tall-photo": ("portrait", {"composition": "two-col", "template": "explain-figure", "variant": "figure-tall"}),
     "under-band-drawing": ("wide", {"composition": "two-col", "variant": "figure-top"}),
     "over-band-drawing": ("wide", {"composition": "two-col", "variant": "figure-bottom"}),
     "parts-under-band-drawing": ("wide", {"composition": "two-col", "template": "content-in-parts", "variant": "figure-top"}),
@@ -86,9 +88,9 @@ def measure(tcm, pool, lay, n0):
         for j in range(4):
             sid = "s%02d" % (j + 1)
             screens.append({"id": sid, "kind": "slide", "title": "The fuel system of an IGF ship", "layout": "split",
-                            "visual_kind": "photo" if pic == "photo" else "comparison", "text": text_of(pool, n0, 7 * j + 3 * n0),
+                            "visual_kind": "photo" if pic in ("photo", "portrait") else "comparison", "text": text_of(pool, n0, 7 * j + 3 * n0),
                             "visual": "A picture.", "notes": "- Say it.", "minutes": 2})
-            e = dict(entry, figure=("assets/img/p%02d.jpg" % j) if pic == "photo" else "w.kit.json" if pic == "wide" else "k.kit.json",
+            e = dict(entry, figure=("assets/img/p%02d.jpg" % j) if pic in ("photo", "portrait") else "w.kit.json" if pic == "wide" else "k.kit.json",
                      declined_3d="flat")
             if pic == "tiles":           # two wide photographs: a row on top, the words under them
                 e = dict(entry, figure="", tiles=["assets/img/p%02d.jpg" % j, "assets/img/i%02d.jpg" % j], declined_3d="flat")
@@ -109,7 +111,8 @@ def measure(tcm, pool, lay, n0):
         img, meta = os.path.join(md, "assets", "img"), {}
         for j in range(4):
             for f in ("p%02d.jpg" % j, "i%02d.jpg" % j):
-                io.open(os.path.join(img, f), "wb").write(tcm.png(1600, 1067, (60 + 3 * j, 90, 120)))
+                size = (1200, 1600) if pic == "portrait" else (1600, 1067)      # a tall photograph for the tall box
+                io.open(os.path.join(img, f), "wb").write(tcm.png(size[0], size[1], (60 + 3 * j, 90, 120)))
                 meta[f] = {"source": "Wikimedia Commons", "author": "A. Person", "licence": "CC BY 4.0", "description": "A ship."}
         tcm.cs.save(os.path.join(img, "_photo_meta.json"), meta)
         tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "k.kit.json"), KIT)

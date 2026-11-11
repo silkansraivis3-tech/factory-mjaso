@@ -1,0 +1,9 @@
+{
+ "id": "scenario.text-only",
+ "template": "scenario",
+ "variant": "text-only",
+ "shape": "words",
+ "for": "a situation with no picture",
+ "grid": ["x", "i"],
+ "fill": {"x": ["Text", "situation; ask"], "i": ["Info", "choices"]}
+}

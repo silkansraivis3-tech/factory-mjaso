@@ -1,0 +1,11 @@
+{
+ "id": "photo-explain.column",
+ "template": "photo-explain",
+ "variant": "column",
+ "shape": "beside",
+ "for": "a photograph in its own column, more words",
+ "grid": ["x p"],
+ "cols": "55fr 45fr",
+ "fill": {"x": ["Text", "text, up to 85 words"], "p": ["Picture", "figure; composition wide-left"]},
+ "fits": {"group": "text-figure", "pictures": ["photo"], "aspect": {"photo": [0.6, 1.3]}, "words": [0, 999], "budget": {"photo": "photo_column"}}
+}

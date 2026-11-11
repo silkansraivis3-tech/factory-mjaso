@@ -1,0 +1,11 @@
+{
+ "id": "worked-example.figure",
+ "template": "worked-example",
+ "variant": "figure",
+ "shape": "beside",
+ "for": "a calculation or a reading",
+ "grid": ["x p"],
+ "cols": "46fr 54fr",
+ "fill": {"x": ["Text", "steps 'what you do | what you get'; ask; reveal"], "p": ["Animation", "figure: a meter, a 3D model or a photo"]},
+ "ref": "slides#p19"
+}
