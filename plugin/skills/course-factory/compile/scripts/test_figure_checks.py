@@ -74,6 +74,39 @@ def main():
           and "twice" in cm.lines_twice_problems(page(back))[0][1])
     check("steps that stay on a line or move forward pass", not cm.lines_twice_problems(page(ok)))
 
+    print("-- a 2D kit figure whose steps change nothing (M01 s23: a table, all its rows shown from the start)")
+    table = {"size": [420, 300], "state": {"r": 4}, "parts": [{"id": "C", "type": "compare", "at": "@r", "cols": [{"title": "Type"}],
+             "rows": [{"cells": ["1G"]}, {"cells": ["2G"]}, {"cells": ["2PG"]}, {"cells": ["3G"]}]}],
+             "steps": [{"title": "1G", "line": [1, 2]}, {"title": "2G", "line": 3}, {"title": "2PG", "line": 4}, {"title": "3G", "line": 5}]}
+    lines5 = "".join('<p data-i="%d">l</p>' % k for k in range(1, 6))
+    k2 = lambda sp, extra="": ('<section class="slide" id="s23"><div data-kit2d="#k2-s23"></div><script type="application/json" '
+                               'id="k2-s23">%s</script>%s%s</section>' % (json.dumps(sp), lines5, extra))
+    got = cm.dead_figure_problems(k2(table))
+    check("its four steps light lines and set nothing: a must-fix naming each step", len(got) == 1 and got[0][0] == "s23"
+          and "steps 1, 2, 3, 4" in got[0][1] and "\"set\"" in got[0][1], got)
+    rows = dict(table, state={"r": 0}, steps=[dict(st, set={"r": k}) for k, st in enumerate(table["steps"], 1)])
+    check("the same table whose steps bring its rows in, one a step, passes", not cm.dead_figure_problems(k2(rows)))
+    half = dict(rows, steps=rows["steps"][:2] + [dict(rows["steps"][2], set={"r": 2}), dict(rows["steps"][3], set={"zz": 1})])
+    check("a step setting a state to the value it has, or a state no part reads, changes nothing",
+          "steps 3, 4" in (cm.dead_figure_problems(k2(half)) or [("", "")])[0][1], cm.dead_figure_problems(k2(half)))
+
+    print("-- a step lights a line of its slide, counted from 1 (M01 s01: \"line\": 0)")
+    scene = {"label": "t", "parts": [{"id": "tank", "type": "tank_c"}], "steps": [{}, {"select": "tank", "line": 0}, {"line": 1}]}
+    k3 = ('<section class="slide" id="s01"><div data-kit3d="#k3-s01"></div><script type="application/json" id="k3-s01">%s</script>'
+          '%s</section>' % (json.dumps(scene), "".join('<p data-i="%d">l</p>' % k for k in range(1, 5))))
+    got = cm.step_line_problems(k3)
+    check("a 3D scene: line 0 and the lines after the last one lit are must-fixes", len(got) == 2 and all(x[0] == "s01" for x in got)
+          and "line 0" in got[0][1] and "never 0" in got[0][1] and "lines 2, 3, 4" in got[1][1], got)
+    good = dict(scene, steps=[{"line": 1}, {"select": "tank", "line": 2}, {"line": 3}, {"line": 4}])
+    check("... lines 1-4 on a slide of four pass", not cm.step_line_problems(k3.replace(json.dumps(scene), json.dumps(good))))
+    check("a 2D kit figure lighting line 0, or a line past the slide's last, is a must-fix",
+          [x[1].split(",")[0] for x in cm.step_line_problems(k2(dict(rows, steps=[{"set": {"r": 1}, "line": 0}, {"set": {"r": 2}, "line": 6}])))]
+          == ["its figure's step 1 lights line 0", "its figure's step 2 lights line 6"])
+    past = spec([{"title": "a", "line": 1, "play": [["C", 1, 1]]}, {"title": "b", "line": 3, "play": [["C", 2, 1]]}])
+    check("a figure-kit step past the lines plays with the answer on a slide with a question - not a problem there",
+          not cm.step_line_problems(page(past, '><p data-i="1">a</p><p data-i="2">b</p><li class="you">?</li')))
+    check("... and is one on a slide without a question", len(cm.step_line_problems(page(past, '><p data-i="1">a</p><p data-i="2">b</p'))) == 1)
+
     print("-- the drawing agrees with the answer")
     words = cm.slide_words({"text": "Budget", "ask": "Which three?", "reveal": "Dock hire 35 %\nYard labour 25 %\nContingency 10 %"})
     got = cm.share_mismatches(BAR, words)

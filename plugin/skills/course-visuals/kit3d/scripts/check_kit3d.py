@@ -8,7 +8,8 @@ SPEC   valid JSON; a label; every part of a type the kit has (or the module's ki
        (parts and their sub-parts); every label, group, step and control names something that exists; every state
        named is one the part's type has; `when` well formed; view angles numbers.
 MODULE every *.kit3d.json in the figures folder; and when the module's deck holds data-kit3d: assets/kit3d.js and
-       assets/kit3d.css are there and equal the factory's byte for byte, and assets/vendor/three.min.js is there.
+       assets/kit3d.css are there and equal the factory's byte for byte, assets/vendor/three.min.js is there, and each
+       scene's step lines are lines of its slide (1..n, counted from 1 as the deck counts them) up to its last line.
 NOTES  (shown, but exit 0 unless --strict): a part nobody names, a step with too many or too few labels, a scene with
        nothing to walk or press, no units.
 
@@ -40,6 +41,12 @@ WHEN = re.compile(r"^(!?)\s*([\w.]+)(?:\s*(?:>=|<=|==|>|<)\s*-?\d+(?:\.\d+)?)?$"
 # these tank types draw their liquid (and so its sub-part) only when the part says how full it is
 LIQUID_ONLY_WITH_FILL = ("tank_c", "tank_sphere", "tank_prism")
 MAX_LABELS, MIN_LABELS = 9, 2
+# a step's "line" is the slide's line as the deck numbers it: data-i="1" is the first line, so a scene counting from 0 lights
+# each line one step late and its first step lights nothing (M01 s01: "line": 0, the highlight a step ahead of the words)
+FROM_ONE = "the deck counts a slide's lines from 1 (data-i=\"1\" is the first line): the first line is \"line\": 1, never 0"
+SECTION = re.compile(r'<section\b[^>]*\bid="([^"]+)"[^>]*>(.*?)</section>', re.S)
+SCENE = re.compile(r'<script type="application/json" id="k3-[^"]*">(.*?)</script>', re.S)
+DATA_I = re.compile(r'\bdata-i="(\d+)"')
 
 
 def read(p):
@@ -255,6 +262,8 @@ def check_spec(spec, types):
         if "line" in st and not (isinstance(ln, list) and ln and all(isinstance(x, int) and not isinstance(x, bool) for x in ln)
                                  or (isinstance(ln, int) and not isinstance(ln, bool))):
             P.append("%s: \"line\" must be an integer or a list of integers (the slide's data-i), not %r" % (tag, ln))
+        elif min(step_lines(st) or [1]) < 1:
+            P.append("%s: \"line\" %d is not a line of the slide - %s" % (tag, min(step_lines(st)), FROM_ONE))
 
     # -- controls
     controls = spec.get("controls") if isinstance(spec.get("controls"), list) else []
@@ -361,6 +370,52 @@ def deck_problems(spec):
     return out
 
 
+# ------------------------------------------------------------------ the steps and the slide's lines
+def step_lines(st):
+    """the slide lines a step lights: its "line", one number or a list"""
+    ln = st.get("line") if isinstance(st, dict) else None
+    return [x for x in (ln if isinstance(ln, list) else [] if ln is None else [ln]) if isinstance(x, int) and not isinstance(x, bool)]
+
+
+def line_problems(spec, lines):
+    """the scene's steps against its slide's lines 1..lines (gb_deck.js lockFor walks them with one counter): a step lighting
+    a line the slide does not have lights nothing, and the lines after the last one a step lights come with the scene standing
+    at its last step. Steps that light no line are walked with the lines by the deck, one line each Next"""
+    steps = spec.get("steps") if isinstance(spec.get("steps"), list) else []
+    named = sorted({x for st in steps for x in step_lines(st)})
+    if not named:
+        return []
+    out = []
+    for i, st in enumerate(steps):
+        bad = [x for x in step_lines(st) if not 1 <= x <= lines]
+        if bad:
+            out.append("step %d lights line %d, and the slide has %s - %s" % (
+                i, bad[0], "lines 1-%d" % lines if lines > 1 else "one line" if lines else "no line", FROM_ONE))
+    last = max([x for x in named if 1 <= x <= lines] or [0])
+    if last and last < lines:
+        out.append("lines %s come after line %d, the last a step lights: Next reaches %s with the scene standing at its last "
+                   "step - give each a step that shows what it says (\"line\": %d ...)" % (
+                       ", ".join(str(x) for x in range(last + 1, lines + 1)), last, "them" if lines - last > 1 else "it", last + 1))
+    return out
+
+
+def deck_line_problems(page):
+    """[(slide id, sentence)] - every 3D-kit scene of a built deck against the lines of its own slide"""
+    out = []
+    for sid, body in SECTION.findall(page):
+        if "data-kit3d=" not in body:
+            continue
+        lines = len(set(DATA_I.findall(re.sub(r"<svg\b.*?</svg>", "", body, flags=re.S))))
+        for m in SCENE.finditer(body):
+            try:
+                spec = json.loads(m.group(1).replace("<\\/", "</"))
+            except ValueError:
+                continue
+            if isinstance(spec, dict):
+                out += [(sid, x) for x in line_problems(spec, lines)]
+    return out
+
+
 # ------------------------------------------------------------------ a module's files
 def check_assets(module_dir, kit):
     """when the deck holds a 3D scene: the engine, its stylesheet and three.js ship with it, and they are the factory's"""
@@ -458,6 +513,8 @@ def main(argv=None, kit=KIT):
     check_files(specs, types, found, notes)
     asset_probs, has_scene = check_assets(o.module_dir, kit)
     found += [("", x) for x in asset_probs]
+    if has_scene:
+        found += deck_line_problems(read(os.path.join(o.module_dir, "presentation", "index.html")))
     if not specs and not has_scene:
         print("nothing to check - no *.kit3d.json (give --figures) and no data-kit3d in the deck")
         return 2

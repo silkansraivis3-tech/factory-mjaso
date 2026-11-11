@@ -252,6 +252,24 @@ check("... Back walks both back", d.get("step") == 1 and d.get("cur") == ["2"], 
 check("... and Next after the last of them turns the slide", e == "s3", e)
 check("... no page error", not any(x.get("errors") for x in r), [x.get("errors") for x in r])
 
+# ---------------------------------------------------------------- the fit gate waits for a scene to stand before it measures
+# (M01 s02 at 1024 x 768: a pill pushed past the box after the walk had measured the slide - the build never saw it cut)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(HERE))), "course-module-ux", "measure", "scripts"))
+import fit_gate  # noqa: E402
+TURN = J % ("(%s)()" % fit_gate.TURNING)
+r = run([
+    {"url": NOLINES, "wait": "document.getElementById('startBtn')", "do": ["document.getElementById('startBtn').click()"], "settle": 1500,
+     "probe": J % "document.querySelector('.slide.active').id"},
+    {"do": "document.getElementById('btnNext').click()", "settle": 2000, "probe": TURN},
+    {"do": "document.getElementById('btnNext').click(); window.__turning = (%s)()" % fit_gate.TURNING, "settle": 0,
+     "probe": J % "window.__turning"},
+    {"do": "0", "settle": 2000, "probe": TURN},
+], "--w=1280", "--h=800")
+a, b, c = (x.get("probe") for x in r[1:])
+check("fit gate: a scene standing at its step, its labels laid, is measured at once", a is False, a)
+check("... a scene still turning to its next step is waited for", b is True, b)
+check("... and measured once it stands", c is False, c)
+
 # ---------------------------------------------------------------- many scenes in a deck: ONE WebGL context, memory given back
 MANY = BASE + "course-visuals/kit3d/scripts/fixtures/deck_kit3d_many.html"
 MP = J % ("(function(){var o={active:document.querySelector('.slide.active').id,canvases:document.querySelectorAll('canvas').length,"

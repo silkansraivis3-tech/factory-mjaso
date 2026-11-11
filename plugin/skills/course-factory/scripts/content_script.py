@@ -1080,6 +1080,21 @@ def worked_rows(s):
     return (h, C["px"]) if h > C["px"] else None
 
 
+def worked_under(s):
+    """(the height its question and answer take, the most they may), in px at 1024 x 768, of a worked example whose question
+    and answer, cards under the picture in its column, would leave the picture under its floor - or None. The answer's lines
+    are each a paragraph, so a long answer takes the picture's room (M01 s02: a 46-word answer in three lines left a 3D scene
+    171 px and its labels cut). layout-templates.json budgets worked_under"""
+    if s.get("kind") != "slide" or picture_of(s)["kind"] in ("", "none") or shaped_kind(s) != "worked-example":
+        return None
+    C = LAYOUT_RULES["budgets"]["worked_under"]
+    rows = lambda x: max(1, -(-wc(x) // C["row_words"]))
+    h = C["ask_card"] + C["ask_row"] * rows(as_text(s.get("ask"))) + C["gap"]
+    h += C["card"] + C["row"] * sum(rows(x) for x in lines_of(as_text(s.get("reveal")))) + C["gap"]
+    most = C["px"] if len(s.get("title") or "") <= C["title_chars"] else C["px_long_title"]
+    return (h, most) if h > most else None
+
+
 def side_budget(s):
     """the words the column beside this slide's picture holds on a 1024 x 768 tablet (layout-templates.json): beside a 3D
     model on a split slide, the widest column that still leaves the model its share of the width ("boxes" three_d); beside
@@ -1160,6 +1175,11 @@ def theory_check(script):
             add(s["id"], "text", FAIL, "t_overfull_rows", n=len(lines_of(s.get("text"))), h=rows[0], max=rows[1],
                 tpl="worked-example (%s)" % LAYOUT_RULES["templates"]["worked-example"]["name"])
             found[-1]["fix"] = T(script, "t_fix_worked")
+        under = worked_under(s)
+        if under:
+            add(s["id"], "reveal", FAIL, "t_overfull_under", h=under[0], max=under[1],
+                tpl="worked-example (%s)" % LAYOUT_RULES["templates"]["worked-example"]["name"])
+            found[-1]["fix"] = T(script, "t_fix_under")
         if w_notes < R["notes"]["min_words"]:
             add(s["id"], "notes", NOTE, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
         elif w_notes > R["notes"]["max_words"]:

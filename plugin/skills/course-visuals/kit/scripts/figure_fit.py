@@ -154,7 +154,7 @@ def measure(spec_path, sid, spec=None, strip=True):
     if r.get("error"):
         return None, r
     # judged as the build judges: every drawing audit at 1280 x 800 (the drawing check, L54), and words under the floor at
-    # 1024 x 768 too (run_audits.py's svgSmall - the kit grows words at most 2x, so a narrow column there fails the build)
+    # 1024 x 768 too (run_audits.py's svgSmall - the kit grows its words to the floor at any scale, so this stays the guard)
     return [x for x in studio.problems(res) if x[0] == GATE or (x[0] == SMALL_AT and x[2] == "small text")], r
 
 

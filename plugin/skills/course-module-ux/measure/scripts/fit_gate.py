@@ -64,6 +64,12 @@ BUSY = """(id) => { const s = document.getElementById(id); if (!s) { return fals
   return kit || k2; }"""
 
 
+# a 3D scene on the slide in front still turning to its step, or its labels not yet laid where the view stands (kit3d.js
+# settle): measured before, a pill the scene then pushes past its box is never seen (M01 s02 at 1024 x 768, cut by 14 px)
+TURNING = """() => { const k = window.__scene3d && window.__scene3d.__k3, s = document.querySelector('.slide.active');
+  return !!(k && k.ok && s && s.contains(k.stage) && (k.tween || !k.setFull)); }"""
+
+
 # 2.115.0 - a figure with steps that does not change on any Next is a dead drawing (PM M02 s12, s13: the chart stayed an empty
 # axis on every Next). Its state at a stop: a hash of what it drew.
 KITSTATE = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
@@ -106,8 +112,9 @@ def dead_figures(states):
     for sid, seen in states.items():
         if seen["steps"] and len(seen["sigs"]) == 1 and seen["stops"] > 1:
             out.append((sid, "the drawing on %s does not change on any Next (%d stops walked, its figure has %d step(s)) - "
-                             "point its steps' \"line\" at lines the slide lights, or mark the step \"reveal\": true "
-                             "to play it with the answer" % (sid, seen["stops"], seen["steps"])))
+                             "give each step what it changes (a 2D kit figure: its \"set\" of a state a part reads; a figure "
+                             "kit drawing: its \"play\"), point its steps' \"line\" at lines the slide lights, or mark the "
+                             "step \"reveal\": true to play it with the answer" % (sid, seen["stops"], seen["steps"])))
     return out
 
 
@@ -150,6 +157,10 @@ def walk(page, deck, min_shown, shots=None, record=None):
         page.click("#startBtn")
     for _ in range(MAX_STEPS):
         page.wait_for_timeout(450)
+        for _ in range(12):
+            if not page.evaluate(TURNING):
+                break
+            page.wait_for_timeout(250)
         page.evaluate(SETTLE)
         page.wait_for_timeout(120)
         r = page.evaluate("() => window.FitProbe()")

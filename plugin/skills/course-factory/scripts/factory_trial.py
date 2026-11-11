@@ -237,9 +237,13 @@ def measured(fn, *args):
         return None
 
 
+CUT_KINDS = ("cut", "spill", "picture", "figure")      # fit_gate.py's findings of something shown in part
+
+
 def fit_slides(deck, no_browser):
     """{size: slides with words cut or a picture cropped at that size, every Next pressed} - fit_gate.py at the tablets'
-    1280 x 800 and at 1024 x 768; {} when nothing could be measured"""
+    1280 x 800 and at 1024 x 768; {} when nothing could be measured. Only what is cut or cropped counts: the gate's other
+    findings (a drawing that never changes, lines walked twice) are not a cut slide"""
     if no_browser or not os.path.isfile(deck):
         return {}
     sys.path.insert(0, os.path.join(PLUGIN, "skills", "course-module-ux", "measure", "scripts"))
@@ -256,7 +260,7 @@ def fit_slides(deck, no_browser):
         shutil.rmtree(os.path.dirname(out), ignore_errors=True)
     if not isinstance(found, dict):
         return {}
-    return {size: len({x[0] for x in found.get(size) or []}) for size in FIT_SIZES if size in found}
+    return {size: len({x[0] for x in found.get(size) or [] if x[2] in CUT_KINDS}) for size in FIT_SIZES if size in found}
 
 
 def build_verdict(course, mid):

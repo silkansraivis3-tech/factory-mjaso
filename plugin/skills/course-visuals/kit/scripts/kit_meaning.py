@@ -49,7 +49,7 @@ import kit_relate  # noqa: E402
 TRUTHS_PATH = os.path.join(os.path.dirname(os.path.dirname(HERE)), "knowledge", "figure-truths.json")
 _TRUTHS = None
 
-CONTAINERS = ("ga", "space", "zone", "panel")
+CONTAINERS = ("ga", "midship", "space", "zone", "panel")
 WORDLESS = ("text", "pipe", "hose", "wire")
 CHARTS = ("scale", "bands", "range_bar", "composition_bar", "curve_chart", "flammability", "tree", "step_track", "log")
 INSTRUMENTS = ("gauge", "level", "readout", "panel", "log", "well", "badge") + CHARTS
@@ -592,7 +592,7 @@ def chk_aim(F, bad):
         r = g.get("reach")
         if not r:
             continue
-        aimed = [q for q, h in targets if q is not p and q.get("type") not in ("ga", "space", "panel")]
+        aimed = [q for q, h in targets if q is not p and q.get("type") not in ("ga", "midship", "space", "panel")]
         d = min([pt_box(r, h["box"]) for q, h in targets if q in aimed and h.get("box")] +
                 [poly_dist(r, h["pts"]) for q, h in targets if q in aimed and h.get("pts")] + [1e9])
         off = not (0 <= r[0] <= F.W and 0 <= r[1] <= F.H) or any(      # it sprays on past the picture, or over an area
@@ -629,7 +629,7 @@ def chk_aim(F, bad):
                     round(top[0], 1), round(top[1], 1)), p, BLOCK if d > AIM_FAR else NOTE)
     for p, g in F.of("detector"):
         b = g["box"]
-        rooms = [q for q, h in F.items if q.get("type") in ("space", "ga") and h.get("box") and
+        rooms = [q for q, h in F.items if q.get("type") in ("space", "ga", "midship") and h.get("box") and
                  h["box"][0] <= center(b)[0] <= h["box"][2] and h["box"][1] <= center(b)[1] <= h["box"][3]]
         near = [q for q, h in targets if q is not p and h.get("box") and gap(b, h["box"]) <= 60]
         if not rooms and not near:
@@ -665,7 +665,7 @@ def chk_words(F, bad):
 TAKE_AWAY = re.compile(r"\b(?:stop(?:s|ped|ping)?|shut(?:s|ting)?|clos(?:e|es|ed|ing)|trip(?:s|ped)?|isolat\w*|off|lost|"
                        r"los(?:e|es|ing)|fall(?:s|ing)?|drop(?:s|ped)?|empt\w*|ends?|remov\w*|disconnect\w*|leav(?:e|es)|"
                        r"out|down|reset|before|back|again|no longer|only|loss|free|crack\w*|break\w*|brittle)\b")
-SCENERY = ("tank", "integral_tank", "boil_off", "tank_type", "tank_wall", "space", "zone", "pipe", "pipe_section", "ga")
+SCENERY = ("tank", "integral_tank", "boil_off", "tank_type", "tank_wall", "space", "zone", "pipe", "pipe_section", "ga", "midship")
 
 
 def _refs(s):
@@ -886,7 +886,7 @@ def _under(F, cap_box, cell):
     cx = center(cap_box)[0]
     out = []
     for q, h in F.drawn(containers=True) + F.pipes():
-        if q.get("type") in CHARTS + ("badge", "ga", "panel"):
+        if q.get("type") in CHARTS + ("badge", "ga", "midship", "panel"):
             continue
         b = h.get("box") or _pbox(h)
         if abs(center(b)[0] - cx) <= max(46, cell / 2) and cap_box[1] - 150 <= center(b)[1] <= cap_box[3] + 170:

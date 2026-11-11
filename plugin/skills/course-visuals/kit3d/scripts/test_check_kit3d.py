@@ -317,5 +317,35 @@ check("deck_level reads the hull's deck as kit3d.js does (top 9 over its origin)
 js = io.open(os.path.join(os.path.dirname(HERE), "kit3d.js"), encoding="utf-8").read()
 check("kit3d.js places a part \"on\" a hull's deck before it builds it", "function deckRelation" in js and "deckRelation(list, list[i], S)" in js)
 
+# a step's "line" is the slide's line counted from 1 (M01 s01: "line": 0 for the first line - the highlight a step ahead of
+# the words on about 12 slides, and nothing caught it)
+print("\n-- step lines from 1, up to the slide's last line")
+zero = copy.deepcopy(GOOD)
+zero["steps"] = [{"view": {"az": 24, "el": 23}}, {"select": "pipe", "line": 0}, {"select": "tank", "line": 1}]
+check("spec: a step lighting line 0 fails - the deck counts lines from 1",
+      any("\"line\" 0 is not a line" in x and "never 0" in x for x in run(zero)[0]), run(zero)[0])
+check("spec: lines from 1 pass", not [x for x in run(GOOD)[0] if "line" in x], run(GOOD)[0])
+four = {"steps": [{"view": {}}, {"line": 0}, {"line": 1}]}
+lp = ck.line_problems(four, 4)
+check("a slide of 4 lines: line 0 is named, and lines 2-4 after the last one lit (the scene standing still)",
+      len(lp) == 2 and "step 1 lights line 0" in lp[0] and "lines 2, 3, 4 come after line 1" in lp[1], lp)
+check("... a line past the slide's last fails", any("lights line 5" in x for x in ck.line_problems({"steps": [{"line": 5}]}, 4)))
+check("... steps lighting 1..4 pass; a line no step lights before the last is the deck's own stop",
+      not ck.line_problems({"steps": [{"line": 1}, {"line": 2}, {"line": 4}]}, 4))
+check("... steps lighting no line pass (the deck walks the lines with them)", not ck.line_problems({"steps": [{}, {"view": {}}]}, 4))
+page = ('<section class="slide" id="s01"><div data-kit3d="#k3-s01"></div><script type="application/json" id="k3-s01">%s</script>'
+        '<p data-i="1">a</p><p data-i="2">b</p><p data-i="3">c</p><p data-i="4">d</p></section>'
+        '<section class="slide" id="s02"><p data-i="1">a</p></section>' % json.dumps(dict(GOOD, steps=four["steps"])))
+dl = ck.deck_line_problems(page)
+check("deck: each scene against its own slide's lines", [x[0] for x in dl] == ["s01", "s01"], dl)
+tmp2 = tempfile.mkdtemp(prefix="ck3l_")
+try:
+    m = os.path.join(tmp2, "M01")
+    write(os.path.join(m, "presentation", "index.html"), page)
+    code, out = cli(["module", m])
+    check("module: the deck's step lines are refused (exit 1) beside its assets", code == 1 and "lights line 0" in out, out)
+finally:
+    shutil.rmtree(tmp2, ignore_errors=True)
+
 print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
 sys.exit(1 if FAILS else 0)

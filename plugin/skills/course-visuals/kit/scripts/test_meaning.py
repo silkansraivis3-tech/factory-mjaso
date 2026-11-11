@@ -102,6 +102,26 @@ def relations_part():
           abs(P["Z"]["x"] + 30 - o[0]) < 0.2 and abs(P["Z"]["y"] + 30 - o[1]) < 0.2, (P["Z"]["x"], P["Z"]["y"], o))
     check("a cloud \"from\" the outlet grows from over the outlet", abs(P["C"]["from"][0] - o[0]) < 0.2 and P["C"]["from"][1] < o[1], P["C"]["from"])
     check("a resolved spec keeps its relations (a reader sees what was meant)", P["V"].get("on") == "G.deck" and P["P"].get("to") == "V.inlet")
+    # a midship section is its own part (a gas carrier's s26 was a side-view ship: an anchor and a propeller in a section, a
+    # "cargo tank" placed in the double bottom by a guessed y); a semi-membrane tank its own kind (s17 drew a membrane twice)
+    sec = {"size": [420, 280], "label": "midship", "parts": [
+        {"id": "M", "type": "midship", "x": 40, "y": 30, "w": 340, "h": 200, "labels": {"hold": "hold space", "bottom": "double bottom"}},
+        {"id": "K", "type": "tank_type", "kind": "semi_membrane", "in": "M", "at": 0.5, "w": 200, "h": 112, "label": "cargo tank"}],
+        "steps": [{"title": "the hold", "play": [["M", 1, 600]]}, {"title": "the ballast tanks", "play": [["M", 2, 600]]}]}
+    g2 = kr.run([sec])[0]
+    gm = {g["id"]: g for g in g2["geometry"] if g and g.get("id")}
+    ib = 30 + 200 - 200 * 0.12
+    check("a tank \"in\" a midship section stands on its inner bottom, above the double bottom, centred in the hold",
+          abs(gm["K"]["foot"][1] - ib) < 0.5 and abs(gm["K"]["foot"][0] - (40 + 170)) < 0.5, gm["K"]["foot"])
+    check("... the section's anchors: the hold, its floor (the inner bottom), the keel",
+          abs(gm["M"]["ports"]["floor"][1] - ib) < 0.5 and gm["M"]["ports"]["keel"][1] == 230 and "hold" in gm["M"]["ports"], gm["M"]["ports"])
+    check("... and the section with its tank means nothing wrong (check_kit.py spec)",
+          not [x for x in km.check(dict(sec, why="spatial", why_text="t"), "sec") if x.startswith("BLOCK") or "BLOCK" in x[:12]],
+          km.check(dict(sec, why="spatial", why_text="t"), "sec"))
+    js = io.open(os.path.join(os.path.dirname(HERE), "kit.js"), encoding="utf-8").read()
+    check("the kit draws the section with no anchor and no propeller, and a semi-membrane tank as its own kind",
+          "KIT.define('midship'" in js and "kind === 'semi_membrane'" in js
+          and not any(x in js.split("KIT.define('midship'")[1].split("/* end kit-part */")[0] for x in ("kit-ga-anchor", "'ellipse'")))
     old = load(os.path.join(FIX, "M03_s16.kit.json"))
     check("a spec with no relation is left exactly as it was", kr.run([old])[0]["spec"] == old)
     bad = kr.run([{"size": [100, 100], "parts": [{"id": "V", "type": "vent", "on": "X.deck"}]}])[0]["spec"]

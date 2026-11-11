@@ -226,6 +226,23 @@ def main():
                   not draw, ["w %d scale %.3f: %.2f px" % (r["w"], r["scale"], r["drawPx"]) for r in draw][:8])
             big = max([r["deckPx"] for r in grown] or [0])
             check("the margin stays small: shown below 1:1, a figure's smallest word is grown to 13.2 px at most", big <= 13.2, big)
+        # a column so narrow that the words need more than UP_MAX times their size (M01 s10 at 1024 x 768: a 713-wide figure
+        # shown at 0.48, nine names at 12.1 px): the floor is a clamp, never stopped short by UP_MAX
+        narrow = list(range(220, 330, 6))
+        page_n = tmp / "floor_narrow.html"
+        page_n.write_text(PAGE % {"css": (KIT / "kit.css").as_uri(), "js": (KIT / "kit.js").as_uri(), "spec": json.dumps(SPEC),
+                                  "hosts": "".join('<div class="w" style="width:%dpx"></div>' % w for w in narrow)}, encoding="utf-8")
+        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + str(tmp / "profn"),
+                               "--allow-file-access-from-files", "--window-size=1280,2600", "--virtual-time-budget=8000",
+                               "--dump-dom", page_n.as_uri()], capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", timeout=180)
+        m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
+        rn = json.loads(unescape(m.group(1))) if m and m.group(1).strip() else []
+        low_n = [r for r in rn if r["deckPx"] < 12.5 or r["drawPx"] < 12.45]
+        check("a figure shown under 1/UP_MAX (scale %s-%s) keeps every word at 12.5 px or more at all %d widths - the floor "
+              "is a clamp" % (min([r["scale"] for r in rn] or [0]), max([r["scale"] for r in rn] or [0]), len(narrow)),
+              len(rn) == len(narrow) and any(r["scale"] < 0.5 for r in rn) and not low_n,
+              ["w %d scale %.3f: %r %.2f px" % (r["w"], r["scale"], r["word"], r["deckPx"]) for r in low_n][:8] or len(rn))
         # 2.63.3 (item 4 - the 2.63.2 run: "tiny labels" in 14 of 15 modules) - a deck figure (--kit-floor: 16, kit.css on a
         # slide) keeps 16 px at every width, measured as both audits measure it; a task page's figure keeps 12.5
         hosts16 = "".join('<div class="w" style="width:%dpx;--kit-floor:16"></div>' % w for w in widths)

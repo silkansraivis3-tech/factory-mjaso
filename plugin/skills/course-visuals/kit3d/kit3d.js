@@ -2031,7 +2031,7 @@
                "about": "IMO type C: cylinder, dished ends, rings, saddles; cut open, liquid level, insulation"},
     "tank_sphere": {"family": "tanks", "at": "centre", "subs": ["liquid"], "about": "a spherical (Moss) tank on its skirt; cut open, liquid, insulation"},
     "tank_prism": {"family": "tanks", "at": "centre", "subs": ["liquid"], "subs_from": ["layers"],
-                   "about": "prismatic / membrane tank: chamfered section, the layers of insulation and barriers seen at the cut"},
+                   "about": "prismatic / membrane / semi-membrane tank: chamfered (or rounded) section, the layers of insulation and barriers seen at the cut"},
     "pipe": {"family": "piping", "at": "the path's origin", "about": "a pipe run through points: bends, flanges, ID bands"},
     "pipe_dw": {"family": "piping", "at": "the pipe's middle", "subs": ["inner", "annulus", "outer"], "states": ["cut"],
                 "about": "a double-walled gas pipe: yellow inner pipe, see-through outer pipe, the annulus; cut open"},
@@ -2404,16 +2404,25 @@
 
   /* a prismatic tank or a membrane tank (IGF course, containment systems): a chamfered section along x, the layers of
      insulation and barriers inside the inner hull seen where it is cut. size [L, H, B]; chamfer; kind "membrane"
-     (default) | "type_b" | "type_a"; or layers [{id, name, t, mat}] from the inner hull inwards; cut "end" (x > 0 away,
-     the section shows every layer) or "front" (z > 0 away); fill (0..1 of the height) */
+     (default) | "semi_membrane" (the section's corners rounded, the tank a plate thicker than a membrane) | "type_b" |
+     "type_a"; or layers [{id, name, t, mat}] from the inner hull inwards; cut "end" (x > 0 away, the section shows every
+     layer) or "front" (z > 0 away); fill (0..1 of the height) */
   var LAYERS = {
     membrane: [{ t: 0.45, mat: 'insulation' }, { t: 0.03, mat: 'barrier' }, { t: 0.25, mat: 'insulation' }, { t: 0.03, mat: 'membrane' }],
+    semi_membrane: [{ t: 0.45, mat: 'insulation' }, { t: 0.03, mat: 'barrier' }, { t: 0.25, mat: 'insulation' }, { t: 0.08, mat: 'tank' }],
     type_b: [{ t: 0.3, mat: 'insulation' }, { t: 0.04, mat: 'tank' }],
     type_a: [{ t: 0.08, mat: 'tank' }, { t: 0.0, mat: 'insulation' }]
   };
-  function octo(hy, hz, c) {
+  function octagon(hy, hz, c) {
     c = Math.max(0, Math.min(c, hy * 0.9, hz * 0.9));
     return [[-hz + c, -hy], [hz - c, -hy], [hz, -hy + c], [hz, hy - c], [hz - c, hy], [-hz + c, hy], [-hz, hy - c], [-hz, -hy + c]];
+  }
+  /* the same section with its corners rounded (a semi-membrane tank): a quarter circle of radius c in five points */
+  function round4(hy, hz, c) {
+    c = Math.max(0, Math.min(c, hy * 0.9, hz * 0.9));
+    var out = [], k, cs = [[hz - c, -hy + c, -90], [hz - c, hy - c, 0], [-hz + c, hy - c, 90], [-hz + c, -hy + c, 180]];
+    cs.forEach(function (q) { for (k = 0; k <= 4; k++) { var a = (q[2] + k * 22.5) * Math.PI / 180; out.push([q[0] + c * Math.cos(a), q[1] + c * Math.sin(a)]); } });
+    return out;
   }
   function shapeOf(pts, hole) {
     var s = new T.Shape(), i;
@@ -2434,7 +2443,7 @@
   }
   define('tank_prism', function (k, p) {
     var s = p.size || [20, 12, 14], L = s[0], hy = s[1] / 2, hz = s[2] / 2, c = num(p.chamfer, Math.min(hy, hz) * 0.3), self = k.cur;
-    var layers = p.layers || LAYERS[p.kind || 'membrane'] || LAYERS.membrane;
+    var layers = p.layers || LAYERS[p.kind || 'membrane'] || LAYERS.membrane, octo = p.kind === 'semi_membrane' ? round4 : octagon;
     var cut = p.cut === undefined ? 'end' : p.cut, clip = null;
     if (cut === 'end') { clip = [k.clip([-1, 0, 0], 0)]; } else if (cut === 'front' || cut === true) { clip = [k.clip([0, 0, -1], 0)]; }
     var ex = clip ? { clip: clip } : null, hullT = num(p.hull, 0.2), off = 0, i;

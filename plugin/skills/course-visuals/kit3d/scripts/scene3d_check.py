@@ -8,7 +8,8 @@ whole-course run's scenes passed every check while showing "a bare pipe" and "la
 3D step runs this, then gives the pictures to a SEPARATE reviewer (build_course.js, review3d) - 3D never relies on the
 builder's own judgement. One command, in this order, each part judged as the build judges it:
 
-  1 SPEC     check_kit3d.py spec on every *.kit3d.json the module's build sheet names (with assets/kit3d_parts.js)
+  1 SPEC     check_kit3d.py spec on every *.kit3d.json the module's build sheet names (with assets/kit3d_parts.js), and
+             on the built deck each scene's step lines against its slide's lines (counted from 1, up to the last)
   2 SMOKE    smoke3d.py on the built deck's slides that show them - loads, draws, stays quiet
   3 PERF     perf3d.mjs at 4x CPU, the warm first frame against the 1,000 ms budget, then perf_gate.py: the deck walked
              with Next at 4x CPU and every slide timed - a scene whose turn lags (a p95 over two frames at 60 Hz) in two
@@ -232,8 +233,12 @@ def check(course, module, out=None, size=(720, 450), perf=True):
             res[sid]["problems"] += ["spec: " + x for x in mine]
         elif code not in (0,) and len(specs) == 1:
             res[sid]["problems"] += ["spec: " + x.strip() for x in text.splitlines() if x.strip()][:6]
-    # 2 smoke, 3 perf - on the built deck's slides
+    # 2 smoke, 3 perf - on the built deck's slides; and each scene's step lines against its slide's lines
     if os.path.isfile(deck):
+        import check_kit3d
+        for sid, x in check_kit3d.deck_line_problems(io.open(deck, encoding="utf-8").read()):
+            if sid in res:
+                res[sid]["problems"].append("lines: " + x)
         ids = ",".join(sid for sid, _ in specs)
         # smoke3d.py gives the scenes 15 s each in one browser, then each late one a browser of its own (15 + 30 s)
         code, text = run([PY, os.path.join(MEASURE, "smoke3d.py"), deck, "--slide", ids], 60 * len(specs) + 120)
