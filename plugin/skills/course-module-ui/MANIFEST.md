@@ -103,7 +103,7 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
-## Wide photographs on top, parts that turn like pages, a highlight with room — 2.127.0 (2026-11-10)
+## Wide photographs on top, parts that turn like pages, a highlight with room — 2.128.0 (2026-11-10)
 
 `knowledge/blueprints.json` and `layout-templates.json`: the `figure-top` variant of explain-figure, reading-with-figure and
 content-in-parts (a row of wide photographs on top, each box its photo's shape, `under_top_row` 100 words measured by
