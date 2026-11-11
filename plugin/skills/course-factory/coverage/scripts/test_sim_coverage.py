@@ -216,6 +216,14 @@ def main():
         lines = sim_coverage.practical_lines(sim_coverage.practical(gas))
         check("without a simulator manual in the sources the factory asks for it and never writes a procedure without it",
               any(x.startswith("No simulator manual in the sources") and "never write a simulator procedure" in x for x in lines), lines)
+        cat = {s["code"]: s for s in sim_coverage.catalogue()["simulators"]}
+        write(os.path.join(tmp, "gas", "source_files", "Simulator - LCHS 5000 VLCC Tanker and Crude Oil Terminal - Trainee Manual.pdf"), "x")
+        check("the oil and chemical simulators whose manuals are in the sources are catalogued (VLCC 105 p, PROD 82 p, CHEM 109 p), "
+              "and a manual is found under the other name a course gave it",
+              [cat[c]["manuals"][0]["pages"] for c in ("VLCC", "PROD", "CHEM")] == [105, 82, 109]
+              and {"VLCC", "PROD"} <= set(sim_coverage.catalogue()["courses"]["oil-advanced"]["simulators"])
+              and sim_coverage.catalogue()["courses"]["chemical-advanced"]["simulators"] == ["CHEM"]
+              and bool(sim_coverage.manuals_in_sources(gas, ["VLCC"])["found"].get("VLCC")))
         none = os.path.join(tmp, "pm", "course")
         write(os.path.join(none, "working_claude", "programme.json"), {"title": "Project management", "academic_hour_min": 45,
                                                                        "topics": {"1": {"title": "Planning", "theory": 4, "practical": 0}}})
