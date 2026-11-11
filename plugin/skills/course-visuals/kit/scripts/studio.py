@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """studio.py - the figure studio: one *.kit.json drawn, audited and photographed in seconds, without a module compile.
 
-  studio.py <figure.kit.json> [--parts kit_parts.js] [--panel two-col|dark|wide-left|task|WxH]
+  studio.py <figure.kit.json | figure.kit2d.json> [--parts kit_parts.js] [--panel two-col|dark|wide-left|task|WxH]
             [--sizes 1280x800,1024x768] [--step final|N|all] [--out <folder>] [--json] [--quick]
 
 WHY (IGF M01-M04, 2026-10-16): the modules took 3, ~10, ~12 and 17 compile runs, nearly all for drawings - a label
@@ -19,7 +19,10 @@ drawing check. The studio gives the same answers for one figure at a time:
      --step all draws the whole sequence - the rest state and the end of every step - as ONE contact sheet in a single
      browser run (the panels as wide as the real slide's), instead of one run per step
 
-Exit 0 clean, 1 findings, 2 could not run (no Chrome or Edge: set CF_BROWSER).
+A 2D kit figure (*.kit2d.json) is drawn by the factory's kit2d.js the same way - on its real slide, or in a frame - and its
+steps measured by the drawing audit, the kit's own audit (KIT2D.audit) and every word's size on screen.
+
+Exit 0 clean, 1 findings, 2 could not run (no Chrome or Edge: set CF_BROWSER), or a picture asked for was not taken.
 """
 from __future__ import annotations
 
@@ -53,6 +56,7 @@ AUDIT = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "audit_dr
 COMPILE = os.path.join(SKILLS, "course-factory", "compile", "scripts")
 FACTORY_SCRIPTS = os.path.join(SKILLS, "course-factory", "scripts")
 sys.path.insert(0, FACTORY_SCRIPTS)
+KIT2D = os.path.join(SKILLS, "course-visuals", "kit2d")
 OUT_ID = "__studio_out"
 INSET_OVER = None       # (x, y, w) in the drawing's units: draw a stand-in photo over the figure (--inset-over), as the compiler's "over" does
 PANELS = ("two-col", "dark", "wide-left", "task")
@@ -65,6 +69,15 @@ def find_browser():
 
 def uri(p):
     return Path(os.path.abspath(p)).as_uri()
+
+
+def is_2d(spec_path):
+    """a 2D kit figure (*.kit2d.json, course-visuals/kit2d) - drawn by kit2d.js, not by the figure kit"""
+    return str(spec_path or "").lower().endswith(".kit2d.json")
+
+
+def stem_of(spec_path):
+    return re.sub(r"(?i)\.kit(2d)?\.json$", "", os.path.basename(spec_path))
 
 
 # ------------------------------------------------------------------ where the figure lives
@@ -177,6 +190,9 @@ def task_page_run(spec_path, spec, ctx, sizes, out, shots):
                     png = os.path.join(out, "%s_%s_task_%s.png" % (stem, ctx["screen"], key))
                     ok, _ = chrome(exe, uri(f), size, prof, png).wait(60)
                     r["shot"] = png if os.path.isfile(png) else None
+                    if not r["shot"]:
+                        r["shot_error"] = "no picture was taken of the task page at %s - the hidden browser %s" % (
+                            key, "did not finish in time" if not ok else "wrote no file")
                     continue
                 win = drawing_check.window_for(exe, size)
                 text = io.open(f, encoding="utf-8").read()
@@ -257,12 +273,16 @@ def real_slide(ctx):
     return dict(real), mdir, None
 
 
-def generic_slide(spec, panel):
-    """a slide frame of the panel kind with the spec in it - the compiler's markup for a kit figure"""
+def generic_slide(spec, panel, two=False):
+    """a slide frame of the panel kind with the spec in it - the compiler's markup for a kit figure (two: a 2D kit figure,
+    as compile_module.kit2d_figure writes it)"""
     sys.path.insert(0, COMPILE)
     import compile_module as cm
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     svg = '<svg data-kit="#kit-studio"></svg>'
+    if two:
+        return generic_frame(panel, '<div class="fill fig kit2d-fig"><div class="kit2d-stage" data-kit2d="#k2-studio"></div>'
+                                    '<script type="application/json" id="k2-studio">%s</script></div>' % data)
     if INSET_OVER and panel != "task":      # a photo laid over a blank part of the drawing, as the compiler's "over" does (F4)
         x, y, w = INSET_OVER
         sw, sh = spec["size"]
@@ -278,6 +298,11 @@ def generic_slide(spec, panel):
         return ('<div class="studio-task"><div class="ga" style="--ar:%.3f"><svg class="taskfig" data-kit="#kit-studio" '
                 'data-kit-step="final"></svg><script type="application/json" id="kit-studio">%s</script></div></div>'
                 % (spec["size"][0] / float(spec["size"][1]), data))
+    return generic_frame(panel, fig)
+
+
+def generic_frame(panel, fig):
+    """the figure's markup in a box of WxH, or in a slide of the panel kind beside its lines"""
     m = re.fullmatch(r"(\d+)x(\d+)", panel or "")
     if m:
         return ('<div class="studio-box" style="width:%spx;height:%spx">%s</div>' % (m.group(1), m.group(2), fig))
@@ -355,6 +380,74 @@ PROBE = r"""
 </script>"""
 
 
+# the same for a 2D kit figure (kit2d.js): shown as the deck shows it on entering its slide, then every step measured - the
+# drawing audit, the kit's own audit (KIT2D.audit) and every word's size on screen - or the step asked for photographed
+PROBE2D = r"""
+<script src="%(audit)s"></script>
+<script>
+(function () {
+  var SHOT = %(shot)s, ONLY = %(only)s;
+  function out(r) { r.virt = Math.round(performance.now()); var p = document.createElement('pre'); p.id = '%(out)s'; p.textContent = JSON.stringify(r); document.body.appendChild(p); }
+  /* a step stood still: the slide's own motion it starts (a line lit, a rise, a fade) at its end, then the figure laid out for
+     the size it is shown at then - as the deck's resize observer lays it out once the slide has settled */
+  function settled() { if (document.getAnimations) document.getAnimations().forEach(function (a) { try { if (a.effect.getComputedTiming().iterations !== Infinity) a.finish(); } catch (e) {} }); }
+  function stand(f, k) { f.goStep(k, true); settled(); f.resize(); f.frame(true, 0); }
+  function words(f) {
+    var px = [];
+    [].forEach.call(f.svg.querySelectorAll('text, tspan'), function (t) {
+      if (!t.textContent.trim()) return;
+      for (var n = t; n && n !== f.svg; n = n.parentNode) { var o = n.getAttribute && n.getAttribute('opacity'); if (o != null && +o < 0.15) return; if (n.style && n.style.display === 'none') return; }
+      var m = t.getScreenCTM(); if (!m) return;
+      px.push({ t: t.textContent.trim().slice(0, 40), px: parseFloat(getComputedStyle(t).fontSize) * Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) });
+    });
+    return px;
+  }
+  function run() {
+    var sb = document.getElementById('startBtn');
+    if (sb && getComputedStyle(sb).display !== 'none') sb.click();
+    setTimeout(function () {
+      var f = window.KIT2D && KIT2D.figures[0];
+      if (!f) { var h = document.querySelector('[data-kit2d]'); out({ error: 'the 2D figure was not drawn: ' + ((h && h.textContent.trim()) || 'no kit2d.js?') }); return; }
+      settled(); f.show(); f.resize();
+      var n = f.steps.length - 1;
+      if (SHOT !== null) {
+        stand(f, SHOT === 'final' ? n : Math.min(+SHOT, n));
+        if (document.getAnimations) document.getAnimations().forEach(function (a) { try { var t = a.effect.getTiming(); if (t.iterations === Infinity) a.pause(); else a.finish(); } catch (e) {} });
+        f.hide();
+        document.documentElement.setAttribute('data-studio-done', '1');
+        return;
+      }
+      var res = { viewport: [innerWidth, innerHeight], steps: n, states: [] }, k = 0, least = 1e9;
+      (function next() {
+        if (k > n) {
+          var up = parseFloat(getComputedStyle(f.svg).getPropertyValue('--k2-up')) || 1;
+          res.report = { scale: f.scale, up: up, minTextPx: least < 1e9 ? Math.round(least * 100) / 100 : null, labels: f.labels.length,
+                         moved: 0, leaders: f.labels.filter(function (L) { return L.far; }).length, unplaced: [],
+                         theme: f.root.classList.contains('k2-light') ? 'light' : 'dark' };
+          out(res); return;
+        }
+        stand(f, k);
+        setTimeout(function () {
+          var a = ONLY ? { findings: [] } : AuditDrawing.figure(f.svg, 'step ' + k, ONLY), fs = [];
+          (a.findings || []).forEach(function (x) { fs.push({ check: x.check, part: x.part, other: x.other || '', detail: x.detail || '' }); });
+          if (!ONLY) KIT2D.audit(f).forEach(function (x) { fs.push({ check: '2D kit', part: x, other: '', detail: '' }); });
+          words(f).forEach(function (w) {
+            least = Math.min(least, w.px);
+            if (w.px < 12.45) fs.push({ check: 'small text', part: '"' + w.t + '"', other: '', detail: 'drawn at ' + (Math.round(w.px * 10) / 10) + ' px - the floor is 12.5 px' });
+          });
+          var sb2 = f.svg.getBoundingClientRect(), hb = f.stage.getBoundingClientRect();
+          res.states.push({ step: k, findings: fs, aborted: a.ABORTED || '', svg: [Math.round(sb2.width), Math.round(sb2.height)],
+                            panel: [Math.round(hb.width), Math.round(hb.height)] });
+          k++; next();
+        }, 80);
+      })();
+    }, 450);
+  }
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function () { setTimeout(run, 60); });
+})();
+</script>"""
+
+
 def generic_head(panel):
     """the stylesheets of a generic frame (no course): the tokens, the shell, the kit - and the frame's own few rules"""
     css = [os.path.join(TOKENS, x) for x in ("gb_tokens.css", "gb_shell.css", "gb_compose.css")] + [os.path.join(KIT, "kit.css")]
@@ -389,14 +482,30 @@ def sheet_size(spec, size, split=False, n=None):
     return cw, cols, cols * cw + (cols + 1) * 16, rows * ch + (rows + 1) * 16, ch
 
 
-def sheet_html(spec, parts_js, size, split=False, ks=None):
+def sheet_html(spec, parts_js, size, split=False, ks=None, two=False):
     """ONE page that draws the figure at the end of every step side by side (step 0 = the rest state), each in a dark panel the
     width of the real slide's - so one browser run gives the whole sequence, where a --step N run gave one picture.
     ks: only these steps (a split sheet is taken a few steps a page: a page thousands of pixels tall came back with its
-    lower steps half painted at 1920 x 1080)"""
+    lower steps half painted at 1920 x 1080). two: a 2D kit figure, each cell its own kit2d.js figure at its step"""
     steps = spec.get("steps") or []
     ks = list(range(len(steps) + 1)) if ks is None else list(ks)
     cw, cols, pw, ph, ch = sheet_size(spec, size, split, len(ks))
+    if two:
+        fh = int(round(cw * spec["size"][1] / float(spec["size"][0])))
+        cells = "".join('<div class="sheet-cell"><div class="sheet-cap">%s</div><div style="height:%dpx"><div class="kit2d-stage" '
+                        'data-kit2d="#k2-sheet" data-sheet-step="%d"></div></div></div>'
+                        % (html.escape("Start" if k == 0 else "Step %d - %s" % (k, steps[k - 1].get("title") or "")), fh, k) for k in ks)
+        data = json.dumps(dict(spec, bar=False), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+        run = ("<script>setTimeout(function(){KIT2D.figures.forEach(function(f){f.goStep(+f.host.getAttribute('data-sheet-step'),true);"
+               "f.resize();f.frame(true,0);});"
+               "if(document.getAnimations)document.getAnimations().forEach(function(a){try{var t=a.effect.getTiming();"
+               "if(t.iterations===Infinity)a.pause();else a.finish();}catch(e){}});},400);</script>")
+        rows = ";grid-auto-rows:%dpx" % ch if split else ""
+        return ('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">%s<link rel="stylesheet" href="%s"></head><body><div class="sheet" '
+                'style="grid-template-columns:repeat(%d,%dpx);width:%dpx%s">%s</div><script type="application/json" id="k2-sheet">%s</script>'
+                '<script src="%s"></script>%s</body></html>'
+                % (generic_head("two-col"), uri(os.path.join(KIT2D, "kit2d.css")), cols, cw, pw, rows, cells, data,
+                   uri(os.path.join(KIT2D, "kit2d.js")), run)), (pw, ph)
     sys.path.insert(0, COMPILE)
     import compile_module as cm
     light = (' data-kit-theme="light" style="background:var(--white);box-shadow:0 0 0 1px var(--line-l)"'
@@ -442,10 +551,11 @@ def split_sheet(png, spec, size, ks):
     return out
 
 
-def page_html(spec, ctx, panel, parts_js, shot, only=None):
-    """(html, base folder): the studio page, read from the module's presentation folder (course) or the kit"""
+def page_html(spec, ctx, panel, parts_js, shot, only=None, two=False):
+    """(html, base folder): the studio page, read from the module's presentation folder (course) or the kit; two: a 2D kit
+    figure, drawn by the factory's kit2d.js"""
     shot_js = "null" if shot is None else json.dumps(shot)
-    probe = PROBE % {"audit": uri(AUDIT), "out": OUT_ID, "shot": shot_js, "only": json.dumps(only)}
+    probe = (PROBE2D if two else PROBE) % {"audit": uri(AUDIT), "out": OUT_ID, "shot": shot_js, "only": json.dumps(only)}
     real = None
     if ctx:
         real, mdir, why = real_slide(ctx)
@@ -461,6 +571,9 @@ def page_html(spec, ctx, panel, parts_js, shot, only=None):
         if fl > 12.5:
             head += "<style>.slide .kit-fig{--kit-floor:%g}</style>" % fl
         scripts = ["../assets/gb_deck.js", "../assets/gb_fit.js", "../assets/gb_zoom.js", uri(os.path.join(KIT, "kit.js"))]
+        if two:
+            scripts.append(uri(os.path.join(KIT2D, "kit2d.js")))
+            head += '<link rel="stylesheet" href="%s">' % uri(os.path.join(KIT2D, "kit2d.css"))
         local = os.path.join(real["mdir"], "assets", "kit_parts.js")
         if parts_js or os.path.isfile(local):
             scripts.append(uri(parts_js) if parts_js else "../assets/kit_parts.js")
@@ -475,7 +588,10 @@ def page_html(spec, ctx, panel, parts_js, shot, only=None):
         return doc, real.get("probs") or []
     head = generic_head(panel)
     scripts = [os.path.join(KIT, "kit.js")] + ([parts_js] if parts_js else [])
-    body = generic_slide(spec, panel) + "".join('<script src="%s"></script>' % uri(s) for s in scripts)
+    if two:
+        head += '<link rel="stylesheet" href="%s">' % uri(os.path.join(KIT2D, "kit2d.css"))
+        scripts = [os.path.join(KIT2D, "kit2d.js")]
+    body = generic_slide(spec, panel, two) + "".join('<script src="%s"></script>' % uri(s) for s in scripts)
     doc = ('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, '
            'initial-scale=1">%s</head><body>%s%s</body></html>' % (head, body, probe))
     return doc, []
@@ -664,6 +780,9 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
             return None, "%s is not valid JSON - %s" % (spec_path, err)
     else:
         spec = json.loads(json.dumps(spec))
+    two = is_2d(spec_path)                      # a 2D kit figure: kit2d.js draws it, on its slide or in a frame
+    if two and panel == "task":                 # the task pages draw the figure kit's drawings only
+        panel = None
     if panel == "task" and not ctx:             # 2.52.1: a spec a course's task question stands on - its real task page
         tctx = task_context(spec_path)
         if tctx:
@@ -679,7 +798,7 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
     tmp = tempfile.mkdtemp(prefix="kit_studio_")
     out = out or os.path.join(os.path.dirname(os.path.abspath(spec_path)), "_studio")
     os.makedirs(out, exist_ok=True)
-    stem = os.path.basename(spec_path).replace(".kit.json", "")
+    stem = stem_of(spec_path)
     res, procs, notes = {}, [], []
     try:
         for size in sizes:
@@ -688,11 +807,12 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
                 pages = split_chunks(spec) if sheet and split else [None]
                 for pi, ks in enumerate(pages):
                     if sheet:                   # ONE page with every step side by side: one browser run for the whole sequence
-                        doc, win = sheet_html(spec, parts, size, split, ks)
+                        doc, win = sheet_html(spec, parts, size, split, ks, two)
                         nts = []
                     else:
                         doc, nts = page_html(spec, ctx, panel or "two-col", parts, None if mode == "probe" else step,
-                                             "small text" if mode == "probe" and tuple(size) in tuple(map(tuple, small_only)) else None)
+                                             "small text" if mode == "probe" and tuple(size) in tuple(map(tuple, small_only)) else None,
+                                             two)
                     notes += nts
                     f = os.path.join(tmp, "%s_%dx%d_%d.html" % (mode, size[0], size[1], pi))
                     io.open(f, "w", encoding="utf-8").write(doc)
@@ -728,12 +848,17 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
             key = "%dx%d" % size
             r = res.setdefault(key, {})
             if mode == "shot":
-                if ks is not None:              # a page of a split sheet: its steps, cut out
-                    if png and os.path.isfile(png):
-                        r.setdefault("pictures", []).extend(split_sheet(png, spec, size, ks))   # "steps" is the probe's
-                        r["shot"] = r.get("shot") or png
+                # a picture the hidden browser did not take is said, never passed over: a review of no pictures is no review
+                if not (png and os.path.isfile(png)):
+                    r["shot_error"] = "no picture was taken at %s%s - the hidden browser %s" % (
+                        key, " (steps %s)" % ", ".join(map(str, ks)) if ks is not None else "",
+                        "did not finish in time" if not ok else "wrote no file")
                     continue
-                r["shot"] = png if png and os.path.isfile(png) else None
+                if ks is not None:              # a page of a split sheet: its steps, cut out
+                    r.setdefault("pictures", []).extend(split_sheet(png, spec, size, ks))   # "steps" is the probe's
+                    r["shot"] = r.get("shot") or png
+                    continue
+                r["shot"] = png
                 continue
             m = re.search(r'<pre id="%s">(.*?)</pre>' % OUT_ID, so or "", re.S)
             if not m:
@@ -794,6 +919,8 @@ def summary(result, spec_path, gate="1280x800"):
                      % (rep.get("labels"), rep.get("moved"), rep.get("leaders"), len(rep.get("unplaced") or []), len(st)))
         if r.get("shot"):
             lines.append("      screenshot: %s" % r["shot"])
+        if r.get("shot_error"):
+            lines.append("      NO PICTURE: %s" % r["shot_error"])
     allp = problems(result)
     probs = [x for x in allp if x[0] == gate]
     if gate not in result["sizes"]:       # only the tablet size is judged - without it nothing was, so it is not clean
@@ -839,6 +966,9 @@ def main(argv=None):
         print(json.dumps(result, ensure_ascii=False, indent=1))
     print(text)
     print("(%.1f s)" % (time.time() - t0))
+    if any(r.get("shot_error") for r in result["sizes"].values()):
+        print("NOT DONE: a picture asked for was not taken (above) - run it again; a figure is never passed on no picture")
+        return 2
     return 1 if probs else 0
 
 

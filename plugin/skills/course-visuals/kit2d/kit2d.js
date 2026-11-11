@@ -95,8 +95,10 @@
     f.side(); f.bar();
     f.goStep(0, true);
     f.resize();
+    /* its box observed, and the window's resize too: a page whose frames are not drawn (a hidden browser's checks) delivers
+       no observation, and the figure would be measured at a size it was never laid out for */
     if (w.ResizeObserver) { new w.ResizeObserver(function () { f.resize(); }).observe(f.stage); }
-    else { w.addEventListener('resize', function () { f.resize(); }); }
+    w.addEventListener('resize', function () { f.resize(); });
   }
   Fig.prototype = {
     build: function () {
@@ -114,7 +116,7 @@
       if (f.spec.glow !== false) {                  /* a soft light behind the hero: the eye goes there first */
         var gw = f.spec.glow || {};
         el('ellipse', { cx: gw.x != null ? gw.x : f.W / 2, cy: gw.y != null ? gw.y : f.H * 0.48, rx: gw.rx || f.W * 0.42, ry: gw.ry || f.H * 0.45,
-          fill: 'url(#' + f.id + '-glow)' }, f.L.bg);
+          fill: 'url(#' + f.id + '-glow)', 'data-may-overlap': '' }, f.L.bg);    /* a light, not a shape: words may lie on it */
       }
     },
     /* the paint servers every part shares: metal lit from the top left, the cut wall's hatching, a liquid, the glow,
@@ -3188,16 +3190,20 @@
     H[id] = cur;
   }
   function deck(f, slide) {
+    var id = slide.id, other = !!((w.GB_HOOKS || {})[id] || {}).step;     /* the slide's own stops (gb_steps.js) walk it already */
+    function ids(st) { return st && st.line != null ? [].concat(st.line).map(Number) : []; }
     f.onStep = function (n) {
       [].forEach.call(slide.querySelectorAll('[data-i]'), function (x) { x.classList.remove('cur', 'lit'); });
       for (var i = 0; i <= n; i++) {
-        [].concat(f.steps[i].line == null ? [] : f.steps[i].line).forEach(function (k) {
+        ids(f.steps[i]).forEach(function (k) {
           var line = slide.querySelector('[data-i="' + k + '"]'); if (line) { line.classList.add(i === n ? 'cur' : 'lit'); }
         });
       }
+      var hk = (w.GB_HOOKS || {})[id];                 /* the deck re-lights the lines from its one counter */
+      if (hk && hk.sync) { hk.sync(n); }
     };
     f.hide();
-    hook(slide.id, {
+    hook(id, {
       enter: function () { f.goStep(0, true); f.show(); f.resize(); },
       leave: function () { f.hide(); },
       step: function (dir) {
@@ -3206,6 +3212,17 @@
         return false;
       }
     });
+    /* the deck walks the figure, the slide's lines and its parts with one counter (gb_deck.js lockFor), as the 3D kit does:
+       the line(s) each step lights - counted from 1, as data-i - and a way to put the figure at a step. On a slide whose
+       words are in parts, the part that holds the lit line is the one shown. Not when the slide's own stops walk it */
+    var hk = (w.GB_HOOKS || {})[id];
+    if (hk && f.steps.length > 1 && !other) {
+      hk.line0 = ids(f.steps[0]);
+      hk.lines = f.steps.slice(1).map(ids);
+      hk.go = function (n, animate) { if (n !== f.step) { f.goStep(n, !animate); } };
+    }
+    /* for the slide's own stops (gb_steps.js), which play the figure's steps before the answer */
+    slide.__fig = { steps: function () { return f.steps; }, at: function () { return f.step; }, go: function (n) { f.goStep(n); } };
   }
   function shown(n, svg) {
     var o = 1;

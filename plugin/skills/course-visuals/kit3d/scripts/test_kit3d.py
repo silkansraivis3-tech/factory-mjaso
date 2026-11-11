@@ -429,6 +429,22 @@ check("... back at rest, every label is exactly where it stood before the turn",
 check("... and a standing view drawn again reads nothing and writes nothing for its labels",
       tn.get("standReads") == 0 and tn.get("same") is True, tn)
 
+# a narrow box (M01 s16 at 1024 x 768: 325 x 449) and a slow label search: each step, once its view stands, is searched
+# and every pill is inside the box - a slow search kept the step before's places, cut at the edge and on each other (the
+# factory trial, M01 s16 and M19 s03 / s06)
+NARROW = ("(function(){var S=k3.scene,o=[];for(var s=0;s<k3.steps();s++){k3.step(s);k3.render();S.setCost=50;"
+          "for(var j=0;j<6;j++){S.frame();}"
+          "o.push({step:s,searched:S.setFull===true,edge:T3.overlaps().filter(function(x){return /box edge/.test(x);}),"
+          "on:T3.overlaps().filter(function(x){return !/box edge|controls/.test(x);}),n:T3.shown().length});}return JSON.stringify(o);})()")
+BOXES = (("m01_hull", 325, 449), ("m03_station", 325, 449), ("m02_tank", 460, 300))
+r = run([{"url": STUDIO % (name, w_, h_), "wait": "window.k3ready", "do": HELP, "settle": 600, "probe": NARROW}
+         for name, w_, h_ in BOXES], "--w=1024", "--h=768")
+for (name, w_, h_), x in zip(BOXES, r):
+    st = x.get("probe") or []
+    check("%s in a %d x %d box, a slow search: every step searched once its view stands, every pill inside the box, none on "
+          "another" % (name, w_, h_), st and all(s["searched"] and not s["edge"] and not s["on"] for s in st)
+          and any(s["n"] for s in st), (st, x.get("errors")))
+
 srv.shutdown()
 print()
 print("ALL PASS" if not FAILS else "%d FAILED: %s" % (len(FAILS), "; ".join(FAILS)))

@@ -21,7 +21,10 @@ smoke3d, perf3d and a picture of every step in `working_claude\review\MNN_3d\` -
 - **Labels on the parts**: an amber dot on the part, a white stem, a white pill with a blue border. They never cover
   each other, a stem, a dot, a control, the Full screen button or the box edge: every frame each label that touches
   something tries other stem lengths, the other side of its point and a sideways shift (the hand-made
-  `settleLabels`, IGF slide review 2026-10-22). A label behind the camera or off the picture hides.
+  `settleLabels`, IGF slide review 2026-10-22). A label behind the camera or off the picture hides. The box edge is a
+  hard limit, at every size: a pill is never cut by it (a point at the edge of a narrow box gets a shorter stem, the
+  other side or a pill slid along its stem), and each step's places are searched once its view stands, however slow
+  the search.
 - **A tap on a part** (not a drag): it keeps its own colour, lit from within and more solid if see-through, the other
   parts step back a little; its pill lights, the camera frames it; a second tap, or a tap
   beside the parts, puts the step's view back. 12 px tolerance; see-through and cut-away pieces let the tap through.

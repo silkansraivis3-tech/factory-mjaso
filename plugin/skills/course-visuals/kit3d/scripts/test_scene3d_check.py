@@ -77,6 +77,16 @@ def main():
         check("... a deck within the budget is walked once", sc.lagging("deck.html") == {} and len(walks) == 1, walks)
         sc.run = lambda cmd, timeout=600: (2, "perf_gate: Playwright is not installed")
         check("... and one that could not be measured is no lag", sc.lagging("deck.html") == {})
+        # the frames a second perf3d.mjs printed were judged by nothing: M19 s02 passed at 2.9 (the factory trial)
+        res = {"s01": {"perf": "s01                          811.6       376    13.0  OK"},
+               "s02": {"perf": "s02                             72     292.5     2.9  OK"},
+               "s03": {"perf": "s03                           65.4     232.3     6.1  OK"}}
+        walks.clear()
+        sc.run = lambda cmd, timeout=600: walks.append(cmd) or (0, "s02    70    -    3.1  OK\ns03    60    -    12.4  OK\n")
+        slow = sc.slow_turns("deck.html", res)
+        check("perf3d: a scene under %d frames a second twice is slow (2.9, then 3.1); one fast the second time is not; one at 13 "
+              "is not timed again" % sc.SOFT_FPS, slow == {"s02": 2.9} and len(walks) == 1 and "--slides=s02,s03" in walks[0], (slow, walks))
+        check("perf3d: its line's frames a second are read", sc.perf_fps(res["s02"]["perf"]) == 2.9 and sc.perf_fps("no line") is None)
     finally:
         sc.run = real_run
     if not shutil.which("node"):

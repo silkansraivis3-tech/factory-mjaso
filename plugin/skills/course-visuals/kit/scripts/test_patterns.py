@@ -89,6 +89,25 @@ def review_part(tmp):
           and any(k["kind"] == "vent_system" for k in e["kinds"]) and e["meaning"]["block"] == []
           and set(e["meaning"]) == {"block", "note", "waived"}, (e["kinds"], e["meaning"]))
 
+    # a 2D kit figure is photographed too, one picture per step (the factory trial: "0 picture(s)" for every figure)
+    k2 = os.path.join(tmp, "s07.kit2d.json")
+    io.open(k2, "w", encoding="utf-8").write(json.dumps({"size": [640, 360], "label": "t", "state": {"a": 0}, "parts": [
+        {"type": "node", "x": 40, "y": 60, "w": 240, "h": 90, "text": "Integral"},
+        {"type": "node", "x": 360, "y": 60, "w": 240, "h": 90, "text": "Membrane", "show": "@a"}],
+        "steps": [{"title": "The membrane", "set": {"a": 1}, "line": 1}]}))
+    e2 = figure_review.review([("s07", k2, {"title": "t"})], os.path.join(tmp, "fr2"))[0]
+    check("a 2D kit figure: one picture per step (2), and no error", len(e2["pictures"]) == 2 and not e2["error"], e2)
+    # a run that photographs nothing fails, naming the figure - never "0 picture(s)" and a pass
+    run = figure_review.studio.run
+    figure_review.studio.run = lambda *a, **k: ({"sizes": {"1920x1080": {"shot_error": "no picture was taken at 1920x1080"}}}, None)
+    try:
+        code = figure_review.main(["--specs", k2, "--out", os.path.join(tmp, "fr3")])
+    finally:
+        figure_review.studio.run = run
+    ents3 = json.load(io.open(os.path.join(tmp, "fr3", "figures.json"), encoding="utf-8"))
+    check("no picture taken: exit 1, the figure's error says so", code == 1 and "no picture was taken" in (ents3[0]["error"] or ""),
+          (code, ents3))
+
 
 def main():
     if not studio.find_browser():

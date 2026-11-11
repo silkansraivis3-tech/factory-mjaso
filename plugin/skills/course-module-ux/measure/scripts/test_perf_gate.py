@@ -78,6 +78,14 @@ def main():
     check("at 120 Hz the same 33 ms is four frames: four keep up, five do not", [s for s, _ in over] == ["b"], over)
     check("never looser than a frame: 35.5 ms at 60 Hz is over", perf_gate.judge([row("s01", 16.7, 16.7, ""), row("c", 16.7, 35.5)], o),
           "35.5 passed")
+
+    print("-- the frames the scene drew itself while it turned, not the page's beat (the factory trial: M19 s02 at 2.9 a second)")
+    turned = lambda sid, fps, spun=True: dict(row(sid, 16.7, 16.8), spun=spun, fps=fps)  # noqa: E731
+    over = perf_gate.judge([row("s01", 16.7, 16.7, ""), turned("s02", 2.9), turned("s03", 59.8), turned("s04", 29.5),
+                            turned("s05", None, False)], o)
+    check("a scene that drew 2.9 frames a second while the page beat 60 is over; 59.8 and 29.5 (two frames of 60 Hz) keep up",
+          [s for s, _ in over] == ["s02", "s05"] and "2.9 frames a second" in over[0][1], over)
+    check("a scene timed without being turned is not passed: it was not measured", "not turned" in (over[-1][1] if over else ""), over)
     try:
         import playwright  # noqa: F401
     except ImportError:
