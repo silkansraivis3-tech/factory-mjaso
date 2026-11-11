@@ -2338,6 +2338,23 @@ def asked_composition(b):
     return b
 
 
+def implied_template(s, b, lines):
+    """2.127.0 - a build sheet that gives a template's own inputs asks for that template without naming it: "blocks" of three
+    line ranges beside a picture is three-content-blocks, "blocks" of two with a second picture ("figure_b") is compare-two.
+    WHY: both were built only when "template" said so as well, and no build sheet of three courses ever did - "blocks" alone
+    did nothing, silently. A sheet that names a template, or a layout other than the starter's two-col, keeps its own way;
+    so does a slide whose own words ask for a template (shaped_template)."""
+    if b.get("template") or b.get("composition") not in (None, "", "two-col") or not b.get("figure") or not b.get("blocks"):
+        return b
+    if shaped_template(s, b, lines):
+        return b
+    if line_ranges(b["blocks"], len(lines), 3):
+        return dict(b, template="three-content-blocks")
+    if b.get("figure_b") and line_ranges(b["blocks"], len(lines), 2):
+        return dict(b, template="compare-two")
+    return b
+
+
 def line_ranges(spec, n, howmany=None):
     """[[1, 3], [4, 6]] - line ranges in order, each line once; None when they are not that"""
     try:
@@ -2472,6 +2489,18 @@ def layout_key(slide):
     ground = "dark" if c and re.search(r"\b(dark|photo)\b", c.group(1)) else "light"
     left = bool(body and "fig-first" in body.group(1).split())
     return (shape_of(t.group(1) if t else "", v.group(1) if v else "", left), ground)
+
+
+def template_mix(m, slides):
+    """2.127.0 - "Templates in M02: 9 reading-with-figure, 4 photo-explain, ... (5 of 21 templates)": what the deck was built
+    in, most used first. WHY: nobody saw that a course used a handful of the templates until the decks were counted by hand"""
+    n = {}
+    for x in slides:
+        t = re.search(r'\bdata-template="([\w-]+)\.v\d+"', x)
+        if t:
+            n[t.group(1)] = n.get(t.group(1), 0) + 1
+    return "Templates in %s: %s (%d of %d templates)" % (
+        m, ", ".join("%d %s" % (k, t) for t, k in sorted(n.items(), key=lambda p: (-p[1], p[0]))) or "none", len(n), len(TEMPLATES))
 
 
 LEFT = {"explain-figure": "figure-left", "reading-with-figure": "figure-left", "long-explanation": "figure-left",
@@ -3237,6 +3266,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         return recap_html(s, base, m, n, total, lines, bool(b.get("dark")), words_of(script)["tap"])
 
     own_comp = b.get("composition")
+    if kind == "slide":
+        b = implied_template(s, b, lines)         # 2.127.0: "blocks" (and "figure_b") ask for their template without naming it
     b = asked_composition(b)                      # L61: a template asked for by name decides the composition
     ph_keys = carousel_keys(b, len(lines), probs, where)
     if ph_keys and not b.get("figure"):           # 2.109.0 (F5): no "figure" - the first card's photo is the slide's first picture
@@ -5096,6 +5127,7 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
                       "change a slide to avoid a repeat; ask for another template in the build sheet if you want one"
                       % ((cs.place(script, s["id"]),) + layout_key(b_)))
     kit2d_variety(script, screens, slides, probs)
+    note_once(template_mix(m, slides))             # 2.127.0: the templates this deck is built in, said on every build
     # 2.62.1 - 80 / 20 (owner, 2026-10-21): at least 80 % of the module's slides on the light ground. The rule is the
     # background's colour: a slide on the Navy ground ("dark") and a photograph framed on it count; a full-screen
     # photograph is its own background and does not
@@ -5898,6 +5930,8 @@ def main(argv=None):
         for f in cs.build_findings(o.course, script):
             if f["rule"] == "v_paged_slide":                # 2.109.0 F1 - the writer's finding; the factory never pages or cuts the words (L61)
                 print("MUST FIX (too many words for the picture): %s - %s" % (f["where"], f["detail"]))
+            elif f["rule"] == "t_template_mix" and f["level"] == cs.FAIL:   # 2.127.0 - the writer's finding, like the one above
+                print("MUST FIX (the slide for the information): %s - %s" % (f["where"], f["detail"]))
     parts = [x for x in notes if x[0]]
     if o.only in ("all", "deck"):
         listed = write_to_take(o.course, script, parts)

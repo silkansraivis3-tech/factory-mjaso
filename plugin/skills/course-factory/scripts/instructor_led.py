@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """The Instructor-Led Course Development Guideline, checked on a course (L68, knowledge/instructor-led.json).
 
+    instructor_led.py plan    <course> [--module 4]     BEFORE a module's script: each Sub-ILO's task type and the 1-2
+                                                        TLAs to write its activities in (2.128.0), into the register
     instructor_led.py draft   <course>                  write or complete working_claude/instructor_led.json to fill in
     instructor_led.py check   <course> [--module 4]     the guideline's review checklist, module by module (section 7)
     instructor_led.py approve <course> --by "<name>"    the operator's yes to the course's instructor_led.json
@@ -38,6 +40,15 @@ simulator and real-equipment exercise needs one; a classroom exercise only when 
 it is listed here). The cycle's rows add up to the activity screen's minutes exactly - brief and debrief come out of the
 exercise's own time, never on top of it (R8, L1).
 
+CHOSEN WHILE WRITING, NOT ONLY CHECKED (2.128.0, Aigars Kluga: "the factory ... cannot vary")
+plan reads the ILO map before a module's script is written: each Sub-ILO's task type (the register's, or read from its
+verb - knowledge/instructor-led.json "formats" "verbs") picks one or two TLAs near its Bloom level, varied across the
+module (scripts/activity_formats.py), and the register gets them where it has none. The script then writes each
+activity screen in its format ("format": the key). draft makes a practical for every activity that needs one - simulator,
+equipment, and every room drill, team scenario and project block (the format's "practical") - with cycle rows that add
+up to the screen's minutes and the cards' fields from the screen's own words or the format's catalogue entry; it fills the
+register's task type, TLAs and evidence where they are empty. Everything it writes is a draft the operator approves.
+
 Exit codes: check 0 nothing open, 1 an item is "no", 2 nothing to check. Standard library only.
 """
 from __future__ import annotations
@@ -55,6 +66,7 @@ from datetime import date
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
+import activity_formats as af  # noqa: E402  - the formats chosen while a module is written (2.128.0)
 import bloom_map  # noqa: E402
 import content_script as cs  # noqa: E402
 import ilo_map  # noqa: E402
@@ -541,53 +553,206 @@ def report(rows):
 
 
 # ------------------------------------------------------------------ draft, approve, status
+def experienced(arch):
+    return str((arch.get("course") or {}).get("course_type") or "").upper() == "EXPERIENCED"
+
+
+def leaf_rows(m, mid):
+    """the ILO map rows of a module's Sub-ILOs (the leaves), in the map's order"""
+    rows = ilo_map.module_rows(m, mid)
+    ids = set(ilo_map.leaves(rows)) if rows else set()
+    return [r for r in rows if str(r.get("sub_ilo_id")) in ids]
+
+
+def ilo_modules(m):
+    """the modules of the ILO map, in order ("M01" ...; the final is not one)"""
+    out = []
+    for r in (m or {}).get("rows") or []:
+        k = ilo_map.mkey(r.get("module")) if isinstance(r, dict) else None
+        if isinstance(k, int) and "M%02d" % k not in out:
+            out.append("M%02d" % k)
+    return sorted(out)
+
+
+def _empty_row():
+    return {"task_type": "", "must_know": [], "lookup": [], "evidence": {"practice": [], "scored": []}, "criteria": [], "tla": []}
+
+
+def _tla_names(keys):
+    return [af.label(k) for k in keys if af.get(k) and k != af.UNNAMED["key"]]
+
+
+def plan(course, only=None, write=True):
+    """[(mid, [{sid, text, task_type, source, level, picks}])] - BEFORE a module's script is written: each Sub-ILO's task
+    type and the TLAs its activities are to be written in, varied across the module. The register gets the task type and
+    the TLA names where it has none (a draft - the operator approves the file); what is set is never changed."""
+    data = load(course)
+    arch, _, _ = course_files(course)
+    reg = data.setdefault("register", {})
+    m = ilo_map.read(course)
+    lang = bloom_map.lang_code((arch.get("course") or {}).get("course_language") or "English")
+    out, changed = [], 0
+    for mid in ilo_modules(m):
+        if only is not None and ilo_map.mkey(mid) != ilo_map.mkey(only):
+            continue
+        rows = af.plan(leaf_rows(m, mid), reg, lang, experienced(arch))
+        out.append((mid, rows))
+        for p in rows:
+            r = reg.setdefault(p["sid"], _empty_row())
+            if not r.get("task_type"):
+                r["task_type"], r["_task_type_from"] = p["task_type"], p["source"]
+                changed += 1
+            if not r.get("tla"):
+                r["tla"] = _tla_names(p["picks"])
+                changed += 1
+    if write and changed:
+        if data.get("status") == "approved":
+            data["status"] = "draft"
+        cs.save(path(course), data)
+    return out
+
+
+def plan_report(out):
+    lines_ = []
+    for mid, rows in out:
+        lines_.append("\n%s - write its activities in these formats (\"format\" on an activity screen: the key in [ ])" % mid)
+        for p in rows:
+            lines_.append("  %s  %s (%s), Bloom %s - %s" % (p["sid"], af.KNOW["task_types"][p["task_type"]]["label"].lower(),
+                                                       p["source"], p["level"], (p["text"] or "")[:90]))
+            for k in p["picks"]:
+                f = af.get(k)
+                lines_.append("        [%s] %s - %s: %s" % (k, f["label"], f["drafts"], f["write"]))
+    return "\n".join(lines_)
+
+
+def _evidence(mid, script, final, sid):
+    """{"practice": [...], "scored": [...]} - how the course already shows the Sub-ILO: the module's activities and tablet
+    sets that name it, and the final's questions that name it"""
+    practice, scored = [], []
+    for s in script.get("screens", []):
+        if sid not in cs.sub_ilos_of(s):
+            continue
+        if s.get("kind") == "activity":
+            practice.append("%s - %s" % (key(mid, s["id"]), af.label(af.format_of(s))))
+        elif s.get("kind") == "slide" and af.format_of(s) and commit_of(s, lang_of(script))[0]:
+            practice.append("%s %s - %s, every trainee commits" % (mid, s["id"], af.label(af.format_of(s))))
+        elif s.get("kind") in ("self-check", "module-check") and s.get("set"):
+            x = "%s %s on the tablet" % (mid, s["set"])
+            if x not in practice:
+                practice.append(x)
+    for s in (final or {}).get("screens", []):
+        if s.get("kind") == "final" and sid in cs.sub_ilos_of(s):
+            scored.append("final %s" % s.get("id"))
+    return {"practice": practice, "scored": scored}
+
+
 def draft(course):
-    """write instructor_led.json, or add what it lacks: a register row per Sub-ILO, a practical per simulator or equipment
-    exercise - every value left for the factory to fill from the approved material, never invented here"""
+    """write instructor_led.json, or add what it lacks, from the approved scripts and the ILO map: a register row per
+    Sub-ILO (its task type from the verb, its TLAs from the formats the script used or picks, its evidence from the screens
+    that name it - each only where empty), a practical per simulator or equipment exercise and per room drill, team
+    scenario and project block (2.128.0), with cycle rows inside the screen's minutes. What the material does not give -
+    must-know facts, a simulator's or equipment's safety, a recorded run's form - is left empty for the operator, never
+    invented. -> (entries added, fields filled, [warnings])"""
     data = load(course)
     arch, prog, sheet = course_files(course)
     reg = data.setdefault("register", {})
     prac = data.setdefault("practicals", {})
     m = ilo_map.read(course)
-    added = 0
-    for mid, script in scripts(course):
+    exp = experienced(arch)
+    lang = bloom_map.lang_code((arch.get("course") or {}).get("course_language") or "English")
+    scr = scripts(course)
+    final = dict(scr).get("FINAL")
+    added, filled, warns = 0, 0, []
+    for mid, script in scr:
         if mid == "FINAL":
             continue
-        rows = ilo_map.module_rows(m, mid)
-        ids = ilo_map.leaves(rows) if rows else []
-        for sid in ids:
+        rows = leaf_rows(m, mid)
+        text_of = {str(r.get("sub_ilo_id")): r.get("sub_ilo_en") or r.get("sub_ilo") or "" for r in rows}
+        picked = {p["sid"]: p for p in af.plan(rows, reg, lang, exp)}
+        used = af.moments(script)
+        for sid in text_of:
             if sid not in reg:
-                reg[sid] = {"task_type": "", "must_know": [], "lookup": [], "evidence": {"practice": [], "scored": []},
-                            "criteria": [], "tla": []}
+                reg[sid] = _empty_row()
                 added += 1
+            r = reg[sid]
+            if not r.get("task_type"):
+                r["task_type"], r["_task_type_from"] = picked[sid]["task_type"], picked[sid]["source"]
+                filled += 1
+            if not r.get("tla"):
+                mine = [f for s, f in used if sid in cs.sub_ilos_of(s)]
+                feats = [x for f in mine for x in (af.get(f) or {}).get("features") or []]
+                r["tla"] = _tla_names(list(dict.fromkeys(mine + feats))) or _tla_names(picked[sid]["picks"])
+                filled += 1
+            ev = r.setdefault("evidence", {"practice": [], "scored": []})
+            if not any(ev.get(k) for k in ("practice", "scored")):
+                got = _evidence(mid, script, final, sid)
+                if any(got.values()):
+                    ev.update(got)
+                    filled += 1
+            r.setdefault("must_know", [])
         for k, s, where in activities(course, mid, script, arch, sheet):
-            if where in ("simulator", "equipment") and k not in prac:
-                prac[k] = {"_title": s.get("title"), "_minutes": cs.minutes(s), "team": False, "practice_runs": 2,
-                           "cycle": [], "prebrief": {"objective": "", "roles": "", "safety": [], "stop_word": "STOP"},
-                           "debrief": {"must_observe": []}}
+            fmt = af.format_of(s)
+            if not af.needs_practical(fmt, where):
+                continue
+            subs = [text_of.get(x) for x in cs.sub_ilos_of(s) if text_of.get(x)]
+            crit = [c.get("text") for x in cs.sub_ilos_of(s) for c in (reg.get(x) or {}).get("criteria") or []
+                    if isinstance(c, dict) and c.get("text")]
+            new, w = af.practical(s, fmt, where, subs, crit, exp, minutes=cs.minutes(s))
+            if k not in prac:
+                prac[k] = new
                 added += 1
+                warns += ["%s: %s" % (k, x) for x in w]
+                continue
+            e = prac[k]                                   # fill only what is empty; what is there stays
+            for f, v in new.items():
+                if isinstance(v, dict):
+                    have = e.setdefault(f, {})
+                    for g, x in v.items():
+                        if have.get(g) in (None, "", []):
+                            have[g] = x
+                            filled += 1
+                elif e.get(f) in (None, "", []):
+                    e[f] = v
+                    filled += 1
+            if not (e.get("prebrief") or {}).get("safety"):
+                warns += ["%s: %s" % (k, x) for x in w if x.startswith("safety")]
     data.setdefault("must_pass", [])
     data.setdefault("justify", {})
     data.setdefault("employer", {"can_do": [], "decays": "", "drill": "", "watch_for": [], "refresher": ""})
-    if added and data.get("status") == "approved":
+    if (added or filled) and data.get("status") == "approved":
         data["status"] = "draft"
     cs.save(path(course), data)
-    return added
+    return added, filled, warns
 
 
 def main(argv=None):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("cmd", choices=("draft", "check", "approve", "status"))
+    ap.add_argument("cmd", choices=("plan", "draft", "check", "approve", "status"))
     ap.add_argument("course")
     ap.add_argument("--module")
     ap.add_argument("--by")
     ap.add_argument("--json", action="store_true")
     o = ap.parse_args(argv)
     course = workspace.work_folder(o.course, create=False)
+    if o.cmd == "plan":
+        if not ilo_map.read(course):
+            print("No ILO map yet (working_claude/ilo_map.json) - the formats are picked from its Sub-ILOs")
+            return 2
+        out = plan(course, o.module)
+        if o.json:
+            print(json.dumps([{"module": mid, "sub_ilos": rows} for mid, rows in out], ensure_ascii=False, indent=1))
+        else:
+            print("Practical-activity formats, by Sub-ILO (L68, knowledge/instructor-led.json \"formats\") - a draft: the task "
+                  "type is the operator's to confirm in %s" % path(course))
+            print(plan_report(out))
+        return 0
     if o.cmd == "draft":
-        n = draft(course)
-        print("%s: %d entr%s added to fill in (instructor-led/GUIDE.md)" % (path(course), n, "y" if n == 1 else "ies"))
+        n, filled, warns = draft(course)
+        print("%s: %d entr%s added, %d field%s filled from the scripts and the ILO map - check them (instructor-led/GUIDE.md)"
+              % (path(course), n, "y" if n == 1 else "ies", filled, "" if filled == 1 else "s"))
+        for w in warns:
+            print("  to fill: " + w)
         return 0
     if o.cmd == "approve":
         if not o.by:

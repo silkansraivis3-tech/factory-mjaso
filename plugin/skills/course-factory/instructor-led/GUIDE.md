@@ -1,7 +1,7 @@
 # The Instructor-Led Course Development Guideline - what the course owes it (L68)
 
-Read this lane after a module's exercises are written (the Trainee and Instructor forms in `to_review\exercises\`) and
-before the course is handed over. The rules, limits, TLA pool and review checklist are `knowledge/instructor-led.json`;
+Read §0 before a module's content script is written, and the rest after a module's exercises are written (the Trainee
+and Instructor forms in `to_review\exercises\`) and before the course is handed over. The rules, limits, TLA pool and review checklist are `knowledge/instructor-led.json`;
 the check is `scripts/instructor_led.py`; the module plan shows the result (`compile/scripts/module_plan.py`) and the
 additional materials print the paper (`compile/scripts/additional_materials.py`).
 
@@ -9,16 +9,49 @@ The guideline adds no parallel set of documents. It sets what the factory's outp
 items: the pre-brief card, the debrief card, the observation card and the employer sheet. Main ILOs, hours and facts are
 never changed by it (L1, L2, L4).
 
+## 0 · Choose the formats while the module is written (2.128.0)
+
+Aigars Kluga (2026-11-11): *"the factory is good but cannot vary - fine for one-direction courses like Gas, but narrow."*
+The guideline chooses in this order: task type → method → cheapest modality that gives the right cues → Bloom tag. So
+before a module's content script is drafted:
+
+```
+python scripts/instructor_led.py plan <course> --module 3
+```
+
+reads the module's Sub-ILOs from the ILO map and, for each, prints its task type - the register's, or read from its verb
+(`knowledge/instructor-led.json` `"formats"` `"verbs"`: the earliest verb decides; none is a decision) - and one or two TLAs
+near its Bloom level, varied across the module (`scripts/activity_formats.py`), each with how it is written in the script.
+A decision gets a case dilemma, a refutation card, a contrast pair, a worked example ...; a real-time outcome the scenario
+run with two to four planned events; a hands-on outcome the demonstration (Peyton four-step) or a planted-defect
+inspection; a team outcome a closed-loop or challenge-and-response drill with another team observing and a trainee-led
+debrief. The register gets the task type (`"_task_type_from"` says where it came from) and the TLA names where it has none -
+a draft; the operator confirms the task type (R2).
+
+Then write the module in those formats. An activity screen names its format - `"format": "scenario-run"` (the keys are
+`"formats"` `"pool"`) - and may carry the words its practical's cards are drafted from, approved with the script:
+`"objective"`, `"roles"`, `"safety"` (lines; required in the script for a simulator or real equipment - never drafted),
+`"observe"` (2-3 lines), `"events"` (a scenario run's planned events), `"team"`. The script check makes a module a
+**must-fix** when it came out one direction anyway (`content_script.py` `a_one_direction`: two or more activity screens all
+one format, or three or more practice moments - activity screens and active slides - all one format), or when a team,
+real-time or hands-on Sub-ILO has no activity of its kind (`a_type_unserved`). `"formats_why"` at the top of the script
+keeps both a note.
+
 ## 1 · Write the course's file
 
 ```
 python scripts/instructor_led.py draft <course>
 ```
 
-writes `working_claude\instructor_led.json` with an empty row per Sub-ILO and an empty practical per simulator or
-real-equipment exercise, and keeps everything already filled. Fill it from the approved material only - the ILO map, the
-content scripts, the exercise forms, the simulator manual, the sources. A value the material does not give is left empty
-and asked of the operator at the next STOP (L31), never invented (L4).
+writes `working_claude\instructor_led.json`, or adds what it lacks, from the approved scripts and the ILO map, and keeps
+everything already filled: a row per Sub-ILO with its task type, its TLAs (the formats the script used, else the plan's)
+and its evidence (the activities, committing slides and tablet sets that name it; the final's questions that do); and a
+practical for every simulator and real-equipment exercise and every room drill, team scenario and project block (2.128.0,
+the format's `"practical"` - a case, a map or a discussion needs none), with cycle rows that add up to the screen's minutes
+and the cards' fields from the screen's own words or the format's catalogue entry. What the material does not give - the
+must-know facts, a simulator's or equipment's safety, a recorded run and its form, the employer sheet - is left empty, and
+draft lists the safety lines still to fill. Check every drafted value with the operator at the next STOP (L31); none is
+invented (L4).
 
 **`register`** - one row per Sub-ILO, the outcome register's added columns (guideline 5.1):
 
@@ -36,8 +69,8 @@ A Sub-ILO whose verb cannot be watched ("understand", "be familiar with") is re-
 operator's yes (L2, `bloom.json` `weak`) - the check names it, this file does not change it.
 
 **`practicals`** - keyed `"M04.A01"` (the module and the activity screen's id). Every simulator and real-equipment exercise
-has one; a classroom exercise only when it is a drill, a role-play or a team scenario. A tablet task, a case or a
-discussion needs none.
+has one; a classroom exercise only when it is a drill, a role-play, a team scenario or a project block (draft makes these
+from the activity's `"format"`). A tablet task, a case, a map or a discussion needs none.
 
 - `cycle` - the rows inside the exercise's own minutes, in order: `brief` (3-5 min), `show` (first exposure only) or
   `diagnostic` (an experienced group: each trainee tries unassisted first), `run` (as many as there are), `debrief`

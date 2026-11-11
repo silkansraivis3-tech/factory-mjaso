@@ -7,6 +7,60 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.128.0 · Varied practical-activity formats, chosen while a module is written (2026-11-11)
+
+- WHY (course expert Aigars Kluga, 2026-11-11: "the factory is good but cannot vary - fine for one-direction courses like
+  Gas, but narrow"): the guideline's TLA pool was only checked after the course was written. Every practical of Project
+  Management was solo or pair project work until `instructor_led.json` was filled by hand; run on its approved scripts the
+  new check flags all three teaching modules one direction and Sub-ILOs 2.5 and 4.2 (real-time) with no activity of
+  their kind.
+- `knowledge/instructor-led.json` `"formats"`: how each of the pool's 28 TLAs is written in a content script (slide,
+  activity, tablet task, or a feature of a team practical), the activity ones with their roles, what the debrief
+  observes and the R10 intervention; `"verbs"` (task type from a Sub-ILO's verb, English, the earliest wins), `"core"` (the
+  format each task type's evidence names), `"one_direction"` thresholds, room defaults. The pool itself is unchanged.
+- `scripts/activity_formats.py` (new): `task_type_of`, `pick` / `plan` (nearest Bloom level, least used in the module, a
+  second TLA of another kind, team formats bring observers and a trainee-led debrief), `format_of` / `moments` (an
+  activity's `"format"` or sign words, else `exercise`; an active slide's technique), `cycle` / `practical` (rows that add up
+  to the screen's minutes; cards from the screen's own words, then the catalogue; no safety drafted for simulator or
+  equipment).
+- `scripts/instructor_led.py`: `plan <course> [--module N]` before a module's script (writes task type, `_task_type_from`
+  and TLA names into the register where empty); `draft` now makes a practical for every room drill, team scenario and
+  project block too, and fills the register's task type, TLAs and evidence where empty; it returns and prints what is still
+  to fill.
+- `scripts/content_script.py`: `activity_findings` in `all_findings` - `a_one_direction` (two activity screens, or three
+  practice moments, all one format) and `a_type_unserved` (a team, real-time or hands-on Sub-ILO with no activity of its
+  kind) are must-fixes, `"formats_why"` keeps them notes; `validate` refuses an unknown `"format"`; the review page shows an
+  activity's format and its card words. Labels `a_*`, `s_format*` in `knowledge/page-labels.json` (English).
+- Docs: `instructor-led/GUIDE.md` §0 and §1, `script/GUIDE.md` §0, `SKILL.md` Stage 3.
+- Tests: `scripts/test_activity_formats.py` (new, 29), `test_instructor_led.py` (+10, among them a new course from the ILO
+  map through `plan`, a script in the picked formats, `draft` and `check --module` passing with nothing filled by hand),
+  `test_content_script.py` (+10).
+- Not done: the verbs are English only (a Latvian or Russian Sub-ILO reads as a decision until the register says
+  otherwise); `show` vs `diagnostic` follows the course type, not each trainee's first exposure; recorded runs, their forms
+  and the employer sheet are still written by hand; no existing course was rebuilt.
+
+## 2.127.0 · The slide for the information: the factory says which template a plain slide fits (2026-11-10)
+
+- WHY (operator Aleksis Vejs: "the factory doesn't really want to use the template"): counted on the built decks, 42 of 57
+  teaching slides of Project Management and 150 of 150 of the safety course were ordinary lines beside a picture, and ten
+  of the twenty-one templates were in no deck. The picking table was an invitation; `"blocks"` without `"template"` did
+  nothing; the starter build sheet's `"composition": "two-col"` is on 291 entries.
+- `scripts/content_script.py`: `plain_slide`, `template_fit`, `template_findings` (called from `build_findings`, so the
+  review page and the compiler both show them). Rules `t_fits_template` (a suggestion on the slide, with the exact
+  fields or `"blocks"` to write) and `t_template_mix` (the module: a must-fix above `max_plain_share` when some plain
+  slides fit a template; a note when none fits or the script says `"plain_why"`). Labels `t_*`, `fit_*` in
+  `knowledge/page-labels.json` (English; lv / ru fall back to it).
+- `course-module-ui/knowledge/layout-templates.json` `"mix"`: `max_plain_share` 0.6, `min_slides` 6, `label_words` 4 and the
+  sign words by course language (English only) - starting values, not measured ones.
+- `compile/scripts/compile_module.py`: `implied_template` (`"blocks"` of three ranges beside a picture is
+  three-content-blocks; of two with `"figure_b"` is compare-two - a named template or a layout other than two-col keeps
+  its own way), `template_mix` (the line "Templates in M02: ..." on every build), and the must-fix printed with
+  `v_paged_slide`'s.
+- Tests: `scripts/test_content_script.py`, `compile/scripts/test_compile_module.py`.
+- Not done: the starter build sheet still writes `"composition": "two-col"` for every figure, which keeps a wide drawing
+  off the stage; no course was rebuilt; the threshold has not been tried on a new course's first draft. (2.126.0 is the
+  kit's flow layer on `aleksis/kit-flow-layer`, not merged when this was written.)
+
 ## 2.125.0 · Scanned pages read whole; the walk review cannot pass what it was not shown (2026-11-10)
 
 - `kb/builder/ocr.py`: `grey_copy` (moved from `pdf.py`), lines cut at `GAP_CUT`, column reflow, the print-cell coverage

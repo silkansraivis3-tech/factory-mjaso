@@ -285,6 +285,103 @@ def main():
               and not cs.media_findings(SCRIPT) and lv("s_media_clean") not in page)
         check("F1: the same slides with the build sheet's \"parts\" are not found",
               not cs.paged_findings(SCRIPT, {"screens": {x: {"parts": [[1, 2], [3, 9]]} for x in ("s01", "s02", "s03")}}))
+        # 2.127.0 - the slide for the information: a plain slide whose words fit a template is told so, and a module of
+        # plain slides is a must-fix only when some of them fit one
+        def sl(i, text, **kw):
+            return dict({"id": "p%02d" % i, "kind": "slide", "title": "Slide %d" % i, "visual_kind": "schematic",
+                         "visual": "A drawing.", "text": text, "notes": "- n", "minutes": 2}, **kw)
+
+        def mod(slides, **kw):
+            return dict({"module": 1, "course_language": "English", "operator_language": "en", "screens": slides}, **kw)
+        dull = "The tank holds the fuel.\nThe pump moves it to the engine.\nThe valve stops it."
+        fits = [("A leak is found in the tank room.\nWhat would you do first?", "scenario"),
+                ("The valve closes.\nWhy does the pressure rise?", "worked-example"),
+                ("Many people think LNG burns as a liquid.\nOnly the vapour burns.", "true-false"),
+                ("Cost is quantity times rate.\nDock hire: 10 days x EUR 4,000 = EUR 40,000.", "worked-example"),
+                ("First isolate the line.\nThen vent it.\nNext purge it.\nFinally test it.", "procedure"),
+                ("Methanol tank:\n• kept inerted\n• breathes through valves\nGas cylinders:\n• relief valves\n• on open deck", "compare-two"),
+                ("Detection: the gas is found.\nShutdown: the valve closes.\nVentilation: the gas is cleared.", "three-content-blocks"),
+                ("The phases in order.\nInitiating: why.\nPlanning: how.\nExecuting: the work.\nClosing: the handover.", "reference-table"),
+                ("The tank is filled to 98 % at most.\nThe relief valve opens at 10 bar.\nThe LNG is at -162 °C.", "key-numbers")]
+        got = [(cs.template_fit(mod([]), sl(1, t)) or ("",))[0] for t, _ in fits]
+        check("2.127.0: a plain slide's words say which template they fit - a situation, a question, a wrong belief, a "
+              "calculation, steps, two groups, three parts, named rows, numbers", got == [w for _, w in fits], got)
+        f6 = cs.template_fit(mod([]), sl(1, fits[5][0]))
+        f7 = cs.template_fit(mod([]), sl(1, fits[6][0]))
+        check("... with the build sheet's \"blocks\" worked out for it", f6[2]["blocks"] == "[[1, 3], [4, 6]]"
+              and f7[2]["blocks"] == "[[1, 1], [2, 2], [3, 3]]", (f6, f7))
+        check("... ordinary lines fit none, and a course in another language is read by the lines' shape only",
+              cs.template_fit(mod([]), sl(1, dull)) is None
+              and cs.template_fit(mod([], course_language="Latvian"), sl(1, fits[2][0])) is None
+              and cs.template_fit(mod([], course_language="Latvian"), sl(1, fits[6][0]))[0] == "three-content-blocks")
+        check("2.127.0: a slide already written or built as a template is not plain",
+              cs.plain_slide(sl(1, dull)) and cs.plain_slide(sl(1, dull), {"template": "reading-with-figure.v1", "composition": "two-col"})
+              and not cs.plain_slide(sl(1, "1 Isolate.\n2 Vent.\n3 Purge."))
+              and not cs.plain_slide(sl(1, "LNG | -162 °C\nLPG | -42 °C"))
+              and not cs.plain_slide(sl(1, dull, claim="LNG burns as a liquid.", claim_is="false"))
+              and not cs.plain_slide(sl(1, dull), {"blocks": [[1, 1], [2, 2], [3, 3]]})
+              and not cs.plain_slide(sl(1, dull), {"template": "compare-two"}))
+        six = [sl(i, dull) for i in range(1, 5)] + [sl(5, fits[4][0]), sl(6, fits[6][0])]
+        tf = cs.template_findings(mod(six))
+        check("2.127.0: six plain slides, two of which fit a template - the module is a must-fix that names them, each with its suggestion",
+              [f["rule"] for f in tf] == ["t_template_mix", "t_fits_template", "t_fits_template"] and tf[0]["level"] == cs.FAIL
+              and "Slide 5, Slide 6" in tf[0]["detail"].replace("slide", "Slide") and all(f["level"] == cs.NOTE for f in tf[1:])
+              and "three-content-blocks" in tf[2]["detail"], tf)
+        check("... a note when the operator says why the module stays plain, or when no slide fits a template",
+              cs.template_findings(mod(six, plain_why="An old course kept as it was."))[0]["level"] == cs.NOTE
+              and [(f["rule"], f["level"]) for f in cs.template_findings(mod([sl(i, dull) for i in range(1, 7)]))] == [("t_template_mix", cs.NOTE)])
+        mixed = six[:3] + [sl(7, dull, claim="LNG burns as a liquid.", claim_is="false"), sl(8, "1 Isolate.\n2 Vent.\n3 Purge."),
+                           sl(9, "LNG | -162 °C\nLPG | -42 °C\nMethanol | 20 °C")]
+        check("... and nothing about the mix when the module is short, or 60 % of it or less is plain",
+              not [f for f in cs.template_findings(mod(six[1:])) if f["rule"] == "t_template_mix"]
+              and not cs.template_findings(mod(mixed)), cs.template_findings(mod(mixed)))
+        # 2.128.0 - varied practical-activity formats (Aigars Kluga: "the factory ... cannot vary"): one direction is a must-fix
+        def act(i, title, text="Work in pairs on the task.", **kw):
+            return dict({"id": "a%02d" % i, "kind": "activity", "title": title, "text": text, "notes": "- n", "minutes": 40}, **kw)
+        two = [act(1, "Project work: the charter", "Your own project, in the template."),
+               act(2, "Project work: the schedule", "Your own project, in the template.")]
+        rules = lambda f: [(x["rule"], x["level"]) for x in f]
+        af_ = cs.activity_findings(None, mod(two))
+        check("2.128.0: two activities that are both project work are one direction - a must-fix that names the format and "
+              "what else to write", rules(af_) == [("a_one_direction", cs.FAIL)] and "Write the plan or brief" in af_[0]["detail"]
+              and "[" in af_[0]["detail"], af_)
+        unnamed = [act(1, "Exercise 1"), act(2, "Exercise 2")]
+        check("... two activities of no named format are one direction too ('exercise')",
+              rules(cs.activity_findings(None, mod(unnamed))) == [("a_one_direction", cs.FAIL)])
+        check("... \"formats_why\" at the top of the script keeps it a note",
+              rules(cs.activity_findings(None, mod(two, formats_why="One project carried through the course."))) == [("a_one_direction", cs.NOTE)])
+        varied = [two[0], act(3, "Change board", "Role-play: the board pushes back.", format="challenge-response")]
+        check("... a project block beside a role-play is varied - nothing to say",
+              cs.activity_findings(None, mod(varied)) == [], cs.activity_findings(None, mod(varied)))
+        same_slides = [sl(i, dull, active="scenario", ask="What do you do?", choices=["a", "b"], right="a") for i in range(1, 4)]
+        check("... three practice moments that are all the same slide technique (case dilemma) are one direction as well",
+              rules(cs.activity_findings(None, mod(same_slides))) == [("a_one_direction", cs.FAIL)]
+              and "practice moments" in cs.activity_findings(None, mod(same_slides))[0]["detail"])
+        check("... one activity alone, or a final assessment, is never one direction",
+              cs.activity_findings(None, mod(two[:1])) == [] and cs.activity_findings(None, dict(mod(two), module="final")) == [])
+        check("2.128.0: an activity naming a format the catalogue does not hold is a script problem",
+              any("unknown activity format" in x for x in cs.validate(mod([act(1, "X", format="lecture")]))),
+              cs.validate(mod([act(1, "X", format="lecture")])))
+        tmp_af = tempfile.mkdtemp(prefix="cs_formats_")
+        try:
+            c_af = os.path.join(tmp_af, "course")
+            os.makedirs(os.path.join(c_af, "working_claude"))
+            cs.save(os.path.join(c_af, "working_claude", "ilo_map.json"), {"rows": [
+                {"module": "M01", "main_ilo_ids": ["1"], "sub_ilo_id": "1.1", "sub_ilo": "Prepares the voyage plan"},
+                {"module": "M01", "main_ilo_ids": ["1"], "sub_ilo_id": "1.2", "sub_ilo": "Communicates helm orders with closed-loop readback"}]})
+            solo = [dict(two[0], sub_ilo="1.1"), act(4, "Read the plan", "Each trainee checks a plan.", format="walkthrough", sub_ilo="1.2")]
+            got = cs.activity_findings(c_af, mod(solo))
+            check("2.128.0: a team Sub-ILO (read from its verb 'communicates') trained only by solo work is a must-fix naming "
+                  "the team formats", rules(got) == [("a_type_unserved", cs.FAIL)] and "1.2" in got[0]["detail"]
+                  and "Closed-loop communication drill" in got[0]["detail"], got)
+            team = solo[:1] + [act(5, "Helm orders", "Groups of three at the console.", format="closed-loop", sub_ilo="1.2", minutes=45)]
+            check("... and served once an activity for it is a closed-loop drill", cs.activity_findings(c_af, mod(team)) == [],
+                  cs.activity_findings(c_af, mod(team)))
+            cs.save(os.path.join(c_af, "working_claude", "instructor_led.json"), {"register": {"1.2": {"task_type": "decision"}}})
+            check("... the register's task type comes first: set to a decision, it asks nothing more",
+                  cs.activity_findings(c_af, mod(solo)) == [], cs.activity_findings(c_af, mod(solo)))
+        finally:
+            shutil.rmtree(tmp_af, ignore_errors=True)
         check("operator-stated facts listed once - from the script and from FEEDBACK_LOG.md",
               "left console" in page and "tested to 7 bar" in page and page.count(lv("s_facts_title")) == 1)
         doc = zipfile.ZipFile(p["docx"]).read("word/document.xml").decode("utf-8")
