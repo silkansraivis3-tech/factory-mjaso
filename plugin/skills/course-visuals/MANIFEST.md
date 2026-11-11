@@ -146,6 +146,12 @@ lane, `trace` and `region` on charts, and the minified copy modules ship (`min/k
 changing the kit - `test_minify_engines.py` fails a stale copy).
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
+## 2.128.0 · Step lines from 1, a label floor that holds, a midship section, the Commons fetcher (2026-11-11)
+
+- `scripts/commons.py` (`search`, `get`): the one Wikimedia Commons fetcher - original file and its `_photo_meta.json`, licences that allow use only, a fixed User-Agent with no person in it, one request a second. `agents/visual-sourcer.md` uses it. `scripts/check_assets.py`: `visually_verified` must be words.
+- `kit3d`: a step's `line` counts from 1 (`SPEC.md`, the starter scene); `check_kit3d.py` and `scene3d_check.py` refuse a line outside 1..n and lines no step reaches; `tank_prism` `kind: "semi_membrane"`.
+- `kit`: the label floor is a clamp at every scale; the `midship` part (shell, bilges, double bottom, hopper and top-side tanks, optional double side, the hold); `tank_type` `kind: "semi_membrane"`; `PARTS.md`, the catalogue, `figure-truths.json` and `kit_meaning` updated. Minified copies rebuilt.
+
 ## 2.127.0 · Lines that walk with a scene, labels that cost nothing standing still (2026-11-10)
 
 - `kit3d/kit3d.js`: a scene whose steps name no line lights one line per Next; labels placed only when something moved (size, step, caption, shown labels, their points), the controls' places read only when the view stands, styles written only when changed; a label search over 8 ms (`TURN_SEARCH_MS`) waits for the view to stand. `min/kit3d.js` rebuilt.

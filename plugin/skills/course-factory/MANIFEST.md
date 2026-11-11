@@ -7,6 +7,15 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.128.0 · No person in a request, why read where it belongs, task pages walked, credits that name every author (2026-11-11)
+
+- `scripts/check_script_match.py`: `why` compared only on a scenario; `scripts/content_script.py`: `why` is the figure's reason on other slides; `t_overfull_under` (a worked example's question and answer under its picture).
+- `compile/scripts/build_module.py`: the task pages photographed on every build; `walk_review.py prepare` photographs any not yet shot.
+- `compile/scripts/compile_module.py`: `credit_line` names every author; `credit_author_problems` refuses a slide missing a CC BY / BY-SA author; 3D step lines outside 1..n and 2D steps that change nothing refused.
+- `retrofit/scripts/check_language.py`: a language by its code. SKILL.md *Auto build*, `BUILDER_CARD.md`, `build_course.js`: downloads through `course-visuals/scripts/commons.py`, no person in a request; `visually_verified` as words.
+- `scripts/factory_trial.py`: cut slides counted from cut, spill, picture and figure findings only.
+- Tests beside each script; known failures unchanged (test_task_engine tap area, test_patterns fuel_space_access, test_figure_checks photograph answer over).
+
 ## 2.127.0 · Wide photographs on top, parts that turn like pages, runs that finish, 3D speed in the build (2026-11-10)
 
 - `compile/scripts/compile_module.py`: the `figure-top` variant chosen from the photos' real shape (a build sheet's `variant` wins), `"part_figures"`, lines ending ":" as subheadings, a worked example's question and answer under its picture; refuses a card over a whole picture or a picture box with only words.
