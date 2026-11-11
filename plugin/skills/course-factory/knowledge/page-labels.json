@@ -263,6 +263,8 @@
     "t_overfull_rows": "its {n} lines are cards that fill about {h} px of the {max} px the column beside the picture has on a 1024 x 768 tablet - its template, {tpl}, has no parts, so the last of them would be cut. Split it into two slides.",
     "t_fix_scenario": "split into two slides - the situation on a slide of its own (it may keep the picture, or carry another photograph), then the question, the choices and their whys on the next; or teach part of it on the slide before",
     "t_fix_worked": "split into two slides - the first steps on one (with the picture), the rest and the room's question on the next (it may carry its own picture); or teach part of it on the slide before",
+    "t_overfull_under": "its question and its answer are cards under the picture that take about {h} px of its column on a 1024 x 768 tablet, where they may take {max} - the picture would be left under 240 px and its labels cut. Its template, {tpl}, has no parts.",
+    "t_fix_under": "shorten the answer to what the room must say (one or two short lines; the rest goes in the notes or on the next slide), or ask the question on a slide of its own after this one",
     "t_part_situation": "the situation",
     "t_part_choices": "the question, its choices and their whys",
     "t_part_steps": "the steps and the room's question",

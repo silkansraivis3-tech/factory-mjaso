@@ -2147,6 +2147,51 @@ def dead_figure_problems(page, script=None):
                 out.append((sid, "its drawing never moves - none of its %d step(s) changes any part from where it starts (a "
                                  "bar or a line left at 0 on every step). Give a step the value the drawing is to show, and "
                                  "mark the one that shows the answer \"reveal\": true" % len(spec["steps"])))
+        for m in KIT2D_DATA.finditer(body):
+            try:
+                spec = json.loads(m.group(1).replace("<\\/", "</"))
+            except ValueError:
+                continue
+            still = kit2d_still_steps(spec) if isinstance(spec, dict) else []
+            if still:
+                out.append((sid, "its 2D kit figure does not change on step%s %s - a step changes the drawing only through its "
+                                 "\"set\" (a state a part reads, \"@r\"); its \"line\" lights the slide's line and nothing more. "
+                                 "Give each step the state it shows (a table's rows: \"at\": \"@r\" and \"set\": {\"r\": 1}, "
+                                 "{\"r\": 2} ...)" % ("s" if len(still) > 1 else "", ", ".join(str(k) for k in still))))
+    return out
+
+
+KIT2D_DATA = re.compile(r'<script type="application/json" id="k2-[^"]*">(.*?)</script>', re.S)
+
+
+def kit2d_still_steps(spec):
+    """the steps (1 = the first Next) of a 2D kit figure that change nothing it draws: kit2d.js moves a part only through
+    the states it reads ("@name" in the parts, readouts and controls), and a step changes them only with its "set" - so a
+    step whose "set" leaves every such state where the step before left it is a Next on which the drawing stands still
+    (M01 s23: a table whose rows were all shown from the start, four steps with a "line" and no "set")"""
+    read = set()
+
+    def scan(v):
+        if isinstance(v, str) and v.startswith("@"):
+            read.add(v[1:])
+        elif isinstance(v, dict):
+            for k, x in v.items():
+                scan(x)
+                if k == "state" and isinstance(x, str):
+                    read.add(x)
+        elif isinstance(v, list):
+            for x in v:
+                scan(x)
+
+    for key in ("parts", "readouts", "controls"):
+        scan(spec.get(key))
+    now = {k: v for k, v in (spec.get("state") or {}).items()} if isinstance(spec.get("state"), dict) else {}
+    out = []
+    for k, st in enumerate(spec.get("steps") or [], 1):
+        sets = st.get("set") if isinstance(st, dict) and isinstance(st.get("set"), dict) else {}
+        if not any(name in read and now.get(name) != v for name, v in sets.items()):
+            out.append(k)
+        now.update(sets)
     return out
 
 
@@ -2176,6 +2221,38 @@ def lines_twice_problems(page):
                                      "figure's steps in the order of the lines (or mark the step \"reveal\": true)" % (k, min(ln), at)))
                     break
                 at = max(at, max(ln))
+    return out
+
+
+KIT_DATA = re.compile(r'<script type="application/json" id="(k2-|k3-|kit-)[^"]*">(.*?)</script>', re.S)
+
+
+def step_line_problems(page):
+    """[(slide id, message)] - a figure's step lights a line of its own slide: the deck numbers them from 1 (data-i="1"), so a
+    "line": 0 lights nothing and the figure walks one step ahead of its words (M01 s01 and ~12 more 3D slides). A 3D scene's
+    steps are judged by check_kit3d.py (1..n, and up to the slide's last line); a 2D figure's steps light a line from 1 to n -
+    past the last only on a slide with a question, where such a step plays with the answer (gb_steps.js)"""
+    sys.path.insert(0, os.path.join(SKILLS, "course-visuals", "kit3d", "scripts"))
+    import check_kit3d
+    out = []
+    for sid, body in SECTION.findall(page):
+        lines = len(set(re.findall(r'\bdata-i="(\d+)"', re.sub(r"<svg\b.*?</svg>", "", body, flags=re.S))))
+        ask = bool(re.search(r'class="[^"]*\byou\b', body))
+        for m in KIT_DATA.finditer(body):
+            try:
+                spec = json.loads(m.group(2).replace("<\\/", "</"))
+            except ValueError:
+                continue
+            if not isinstance(spec, dict):
+                continue
+            if m.group(1) == "k3-":
+                out += [(sid, "its 3D scene: " + x) for x in check_kit3d.line_problems(spec, lines)]
+                continue
+            for k, st in enumerate(spec.get("steps") or [], 1):
+                bad = [x for x in check_kit3d.step_lines(st) if x < 1 or (x > lines and not (ask or st.get("reveal")))]
+                if bad:
+                    out.append((sid, "its figure's step %d lights line %d, and the slide has %s - %s" % (
+                        k, bad[0], "lines 1-%d" % lines if lines > 1 else "one line" if lines else "no line", check_kit3d.FROM_ONE)))
     return out
 
 
@@ -3908,7 +3985,8 @@ def starter_scene(script, sid, scripts=None):
     return {"figure": name,
             "_figure": ("A 3D scene, planned by default (L46), drawn by the 3D kit from a short spec: working_claude\\figures\\%s\\%s "
                         "(--init-build writes a starter - parts guessed from the slide's words, side by side: place them as they are on "
-                        "board, add steps and labels). Read course-visuals\\kit3d\\SPEC.md (the format) and PARTS.md (every part and its "
+                        "board, add steps and labels - a step's \"line\" is the slide's line counted from 1: \"line\": 1 is the first, "
+                        "never 0). Read course-visuals\\kit3d\\SPEC.md (the format) and PARTS.md (every part and its "
                         "settings); the finished scenes of the IGF course are ported in course-visuals\\kit3d\\examples\\. Check it: "
                         "course-visuals\\kit3d\\scripts\\check_kit3d.py spec <file>, then smoke3d.py and perf3d.mjs on the compiled "
                         "deck (compile GUIDE 2b). Full screen, tappable labels, the scene built while the slide before is on screen and "
@@ -3979,18 +4057,22 @@ def starter_kit3d(script, s):
     nothing: a label from the slide, metres, a home view, and one part per thing the slide's lines name (the term before " - " or
     ": ", else the kit's word in the line; the kit's words in the first sentence of `visual` the lines did not name; up to
     KIT3D_MAX_PARTS), each with an id and a label in the script's own word, side by side along x. A slide that names nothing gets
-    a tank. "_todo" says to place the parts as they are on board."""
+    a tank. Its steps show the line numbering the deck uses: step 0 (the scene as it opens) lights line 1, and a line that named a
+    part gets a step that frames that part and lights it ("line": the line's number, counted from 1 as data-i). "_todo" says
+    to place the parts as they are on board."""
     lines = cs.lines_of(s.get("text"))
     statement = len(lines) > 1 and not TERM.match(lines[0]) and any(TERM.match(x) for x in lines[1:])
     items, seen = [], set()
 
-    def add(kind, label):
+    def add(kind, label, ln=None):
         key = (kind, label.lower())
         if key not in seen and len(items) < KIT3D_MAX_PARTS:
             seen.add(key)
-            items.append((kind, label))
+            items.append((kind, label, ln))
 
-    for line in lines[1 if statement else 0:]:
+    for ln, line in enumerate(lines, 1):
+        if statement and ln == 1:
+            continue
         m = TERM.match(line)
         term = m.group(1).strip() if m and 1 <= len(m.group(1).split()) <= 4 and not m.group(1)[:1].islower() else ""
         bare = re.sub(r"[.,;:!?]+$", "", line).strip()
@@ -3998,18 +4080,20 @@ def starter_kit3d(script, s):
             term = bare
         hit = kit3d_hit(term, last=True) if term else kit3d_hit(line)
         if hit:
-            add(hit[0], term or hit[1].capitalize())
+            add(hit[0], term or hit[1].capitalize(), ln)
     visual = (s.get("visual") or "").strip()
     first = re.split(r"(?<=[.!?])\s", visual, 1)[0] if visual else ""
-    named = {k for k, _ in items}
+    named = {k for k, _, _ in items}
     for _pos, kind, word in sorted((m.start(), k, m.group(0)) for k, rx in KIT3D_RX for m in rx.finditer(first)):
         if kind not in named and not (kind == "pipe" and "pipe_dw" in named):
             named.add(kind)
             add(kind, word.lower())
     if not items:
         add("tank_c", " ".join(re.sub(r"[.,;:!?]+$", "", s.get("title") or "").split()[:4]) or "Tank")
-    width = sum(KIT3D_SIZE[k][0] for k, _ in items) + KIT3D_GAP * (len(items) - 1)
+    width = sum(KIT3D_SIZE[k][0] for k, _, _ in items) + KIT3D_GAP * (len(items) - 1)
     x, parts, labels, ids = -width / 2.0, [], [], set()
+    home = {"az": 24, "el": 23}
+    steps = [{"view": dict(home), "line": 1}] if lines else []
 
     def ident(label, kind):
         base = re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")[:30].strip("_") or kind
@@ -4021,7 +4105,7 @@ def starter_kit3d(script, s):
         ids.add(pid)
         return pid
 
-    for kind, label in items:
+    for kind, label, ln in items:
         w, y, own = KIT3D_SIZE[kind]
         cx = round(x + w / 2.0, 2)
         if kind == "station":                        # a deck plate with a pipe and a valve on it
@@ -4034,11 +4118,19 @@ def starter_kit3d(script, s):
             pid = ident(label, kind)
             parts.append(dict({"id": pid, "type": kind, "at": [cx, y, 0]}, **own))
             labels.append({"part": pid, "text": label})
+        if ln and ln > 1:
+            first_id = parts[-3 if kind == "station" else -1]["id"]
+            steps.append({"view": dict(home, frame=[first_id]), "select": first_id, "line": ln})
         x += w + KIT3D_GAP
-    return {"label": first or s.get("title") or "", "units": "m", "view": {"az": 24, "el": 23}, "parts": parts, "labels": labels,
-            "_todo": "Starter written by --init-build: the parts are guessed from the slide's words and laid side by side. Place them "
-                     "as they are on board (true metres, SPEC.md), size them, add steps for the slide's lines and a cut-away where the "
-                     "inside is the lesson; check_kit3d.py spec <file> says what is missing. Delete this key when it is done."}
+    out = {"label": first or s.get("title") or "", "units": "m", "view": dict(home), "parts": parts, "labels": labels}
+    if steps:
+        out["steps"] = steps
+    out["_todo"] = ("Starter written by --init-build: the parts are guessed from the slide's words and laid side by side. Place them "
+                    "as they are on board (true metres, SPEC.md), size them, give the slide's lines their steps and a cut-away where "
+                    "the inside is the lesson. A step's \"line\" is the slide's line counted from 1 as the deck counts it (\"line\": 1 "
+                    "is the first line, never 0), up to its last line; check_kit3d.py spec <file> says what is missing. Delete this "
+                    "key when it is done.")
+    return out
 
 
 # ------------------------------------------------------------------ starter figure-kit specs (2.50.0)
@@ -6097,7 +6189,7 @@ def main(argv=None):
             probs.append("slide %s (%s): the drawing says \"%s\" but %s. Make the drawing say what the approved "
                          "answer says (the figure's spec), or say why it differs in the build sheet: \"numbers_differ\": \"<why>\""
                          % (sid, cs.place(script, sid), drawn, said))
-        for sid, msg in dead_figure_problems(page) + lines_twice_problems(page):
+        for sid, msg in dead_figure_problems(page) + lines_twice_problems(page) + step_line_problems(page):
             probs.append("slide %s (%s): %s" % (sid, cs.place(script, sid), msg))
         # 2.63.3 - a figure shows what its slide says, and a photo is not one its own record says it is not
         for sid, rel, k, line, said, shown in figure_number_mismatches(build, figdir, mdir):

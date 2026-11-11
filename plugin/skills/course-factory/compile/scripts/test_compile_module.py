@@ -466,6 +466,20 @@ def reveal_part(tmp):
           "the script check sees it (t_overfull_rows) - the slide is split; three of them fit",
           cs.worked_rows(five) and not cs.overfull(five)
           and not cs.worked_rows(dict(five, text="\n".join(five["text"].split("\n")[:3]))), cs.worked_rows(five))
+    s02 = {"kind": "slide", "picture": {"kind": "3d"}, "active": "worked-example", "title": "Pressure, cold or both? Predict first",
+           "text": "Three gas tankers, cut open at midships.\nShip 1: thick cylindrical tanks, no insulation.",
+           "ask": "Which ship keeps its cargo liquid by pressure alone, and which by cooling it?",
+           "reveal": "Ship 1 is fully pressurised: thick tanks, no insulation - the cargo is kept liquid under pressure alone.\n"
+                     "Ship 2 is semi-pressurised: insulated tanks and a plant on deck - under pressure and refrigerated.\n"
+                     "Ship 3 is fully refrigerated: large insulated prismatic tanks - the cargo is refrigerated."}
+    four = "\n".join("Ship %d: kept liquid by pressure." % k for k in range(1, 5))
+    check("a worked example's question and its three-line answer, cards under the picture, leave the 3D scene under 240 px at "
+          "1024 x 768 (M01 s02: 171-194 px, its labels cut): the script check sees it (t_overfull_under); one short answer line "
+          "fits; a two-line title leaves less", cs.worked_under(s02) == (297, 281)
+          and not cs.worked_under(dict(s02, reveal="Ship 1 is fully pressurised."))
+          and not cs.worked_under(dict(s02, reveal=four))
+          and cs.worked_under(dict(s02, reveal=four, title="Your call reaches the cargo control room"))
+          and not cs.worked_under(dict(s02, picture={"kind": "none"})), cs.worked_under(s02))
     code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
     check("... and check_script_match finds every approved word on them - the ask and the reveal too", code == 0, out[-1500:])
 
@@ -3767,6 +3781,11 @@ def main():
         if spec3d:
             code, kout = run(os.path.join(SKILLS, "course-visuals", "kit3d", "scripts", "check_kit3d.py"), "spec", k3)
             check("3D kit: ... and the starter scene passes check_kit3d.py (no problem; notes allowed)", code == 0, kout)
+            st = spec3d.get("steps") or []
+            check("3D kit: ... its steps show the deck's numbering - step 0 lights line 1, never 0, and each line that named a part "
+                  "frames it on a step of its own; its \"_todo\" says lines count from 1",
+                  st and st[0].get("line") == 1 and all(isinstance(x.get("line"), int) and x["line"] >= 1 for x in st)
+                  and "never 0" in spec3d.get("_todo", ""), st)
         code, out = run(COMPILE, c4, "--module", "1", "--init-build")
         check("--init-build never replaces an existing build sheet", code == 2, out)
         # finding 8: a new module has no folder - --init-build makes it, with the factory's style files, ready to compile

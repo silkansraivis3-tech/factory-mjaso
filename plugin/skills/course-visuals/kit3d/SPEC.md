@@ -129,8 +129,9 @@ A part can make its own labels (a dimension's value, a hull space's `name`).
 
 ```json
 "steps": [
-  {"view": {"az": 24, "el": 23}},
-  {"view": {"az": 17, "el": 17, "frame": ["pipe"]}, "state": {"pipe.cut": 1}, "select": "pipe", "line": 2}
+  {"view": {"az": 24, "el": 23}, "line": 1},
+  {"view": {"az": 17, "el": 17, "frame": ["pipe"]}, "state": {"pipe.cut": 1}, "select": "pipe", "line": 2},
+  {"view": {"az": 30, "el": 25, "frame": ["tank"]}, "select": "tank", "line": 3}
 ]
 ```
 
@@ -138,6 +139,13 @@ Step 0 is what the slide opens with. Each step may set `view` (`az`, `el`, `fram
 `state` (kept by the later steps unless they change it), `select` (a part or group lit), `labels` (only these
 parts' labels), `line` (the slide line `data-i` it lights; that line is then a way to the step). The deck's Next
 walks the steps before it turns the slide; Back walks them back.
+
+**Lines count from 1, as the deck counts them**: the slide's first line is `"line": 1` (`data-i="1"`), never 0 - a
+scene counting from 0 lights nothing on its first step and every line one step late. Steps are numbered from 0 (step 0
+opens the slide), lines from 1: above, step 0 lights line 1, step 1 line 2, step 2 line 3. Light up to the slide's last
+line: the lines after the last one a step lights come with the scene standing still. Or give no step a `line`: the deck
+then walks the lines with the steps, one each Next. The compile and `check_kit3d.py module` refuse a line outside the
+slide's 1..n and lines left after the last one lit; `check_kit3d.py spec` refuses a line under 1.
 
 ## Controls
 

@@ -321,14 +321,17 @@ def main():
             @staticmethod
             def main(args):
                 io.open(args[args.index("--json") + 1], "w", encoding="utf-8").write(json.dumps(
-                    {"1280x800": [["s01", 1, "cut", "a"], ["s01", 2, "cut", "b"]], "1024x768": [["s01", 1, "cut", "a"], ["s05", 1, "picture", "c"]]}))
+                    {"1280x800": [["s01", 1, "cut", "a"], ["s01", 2, "cut", "b"], ["s23", 1, "dead", "d"]],
+                     "1024x768": [["s01", 1, "cut", "a"], ["s05", 1, "picture", "c"], ["s23", 1, "dead", "d"], ["s09", 1, "twice", "e"]]}))
                 return 1
         sys.modules["fit_gate"] = FakeFit
         try:
             fit = ft.fit_slides(deck, False)
         finally:
             sys.modules.pop("fit_gate", None)
-        check("fit_gate at 1280x800 and 1024x768 in one run: the slides cut at each size", fit == {"1280x800": 1, "1024x768": 2}, fit)
+        check("fit_gate at 1280x800 and 1024x768 in one run: the slides cut at each size - a drawing that never changes and lines "
+              "walked twice are no cut slide (the 2.127.0 trial's M01 s23 was counted cut at both sizes)",
+              fit == {"1280x800": 1, "1024x768": 2}, fit)
 
         sc = os.path.join(tmp, "scored")
         code, out = cli("report", "--course", oc, "--no-browser", "--run", sc)
