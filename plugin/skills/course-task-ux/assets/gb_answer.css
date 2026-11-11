@@ -45,6 +45,8 @@ body>.wrap{flex:1 0 auto;width:100%}
 .why.bad .vd{color:var(--warn)}
 .why p{margin:0;font-size:17px;line-height:1.45}
 .why{scroll-margin-bottom:96px}            /* shown above the dock when the engine brings it into view */
+/* a scroll the browser makes itself (into view, a focus) stops below the 60 px top bar, as the engine's own does */
+html{scroll-padding-top:68px}
 
 /* ---- choose one, choose all that are right, read the instrument ---------- */
 .opts{counter-reset:o;max-width:1040px;margin:4px auto 0;gap:10px}

@@ -643,6 +643,16 @@ BAR_AT = ("var st=document.querySelector('header.state'),sc=document.querySelect
           "bar:st.getBoundingClientRect().bottom,first:f.getBoundingClientRect().top};"
           "window.scrollTo(0,1e6);o.y=scrollY;o.top=st.getBoundingClientRect().top;o.alpha2=a(st);window.scrollTo(0,0);out['%s']=o;")
 LONG = "var lg=document.createElement('style');lg.textContent='.res li{min-height:240px}';document.head.appendChild(lg);"
+# after each Check, as the engine scrolled: the question, the verdict, the bar and the dock - then Next
+VERDICT_AT = ("var st=document.querySelector('header.state').getBoundingClientRect(),sc=document.querySelector('.scr.on'),"
+              "q=sc.querySelector('.q').getBoundingClientRect(),w=sc.querySelector('.why.on'),d=document.getElementById('dock').getBoundingClientRect();"
+              "w=w&&w.getBoundingClientRect();(out.verdicts=out.verdicts||[]).push({id:sc.getAttribute('data-script'),bar:st.bottom,"
+              "q:q.top,w:w?[w.top,w.bottom]:null,dock:d.top,y:scrollY});document.getElementById('go').click();")
+MC_SEEN = MC_WRONG[:1] + [x for p in MC_WRONG[1:] for x in ([p[0], p[1], True], ["eval", VERDICT_AT])]
+# a scroll the browser makes itself: the score card, scrolled out of sight, brought into view by the page
+NATIVE = ("var li=document.querySelector('.res-top');window.scrollTo(0,1e6);li.scrollIntoView();"
+          "out.native={top:li.getBoundingClientRect().top,bar:document.querySelector('header.state').getBoundingClientRect().bottom,y:scrollY};"
+          "window.scrollTo(0,0);")
 
 
 def result_part(exe, page, tmp):
@@ -660,7 +670,7 @@ def result_part(exe, page, tmp):
     mc = os.path.join(md, "assessment", "check.html")
     check("the module check is built with feedback off (the debrief rule)", 'data-reveal="debrief"' in io.open(mc, encoding="utf-8").read())
     for n, size in enumerate(((1280, 800), (1024, 768), (1280, 720))):
-        r = drive(exe, mc, [["eval", NO_MOVE + BAR_AT % "intro"]] + MC_WRONG + [["eval", LONG + RES_LOOK + BAR_AT % "result"]],
+        r = drive(exe, mc, [["eval", NO_MOVE + BAR_AT % "intro"]] + MC_SEEN + [["eval", LONG + RES_LOOK + BAR_AT % "result" + NATIVE]],
                   tmp, look=False, size=size)
         i, o, at = r.get("intro") or {}, r.get("result") or {}, "%d x %d" % size
         if not n:
@@ -677,6 +687,14 @@ def result_part(exe, page, tmp):
         check(at + ": the screen starts below the bar, and scrolled to its end the bar stays on top of it",
               i.get("first", -1) >= i.get("bar", 9e9) - 1 and o.get("first", -1) >= o.get("bar", 9e9) - 1
               and o.get("y", 0) > 0 and abs(o.get("top", 9)) < 1, (i, o))
+        v, nat = r.get("verdicts") or [], r.get("native") or {}
+        # the question stays below the bar whenever it and its verdict fit between the bar and the dock together; the
+        # verdict is always there
+        hid = [x for x in v if not x["w"] or x["w"][0] < x["bar"] - 1 or x["w"][1] > x["dock"] + 1
+               or (x["q"] < x["bar"] - 1 and x["w"][1] - x["q"] <= x["dock"] - x["bar"] - 16)]
+        check(at + ": after each Check the verdict is between the bar and the Check button, and the question is not "
+              "scrolled under the bar when both fit; a scroll the browser makes stops below the bar too",
+              len(v) == 3 and not hid and nat.get("y", 0) > 0 and nat.get("top", -1) >= nat.get("bar", 9e9) - 1, (hid or v, nat))
     r = drive(exe, page, RIGHT[:3] + [["q04", [["eval", "out.dial0 = [s.querySelector('.dial-val').textContent,"
                                                        " s.querySelector('.dial-scale span').textContent, document.getElementById('go').disabled];"],
                                                 ["plus", 9]]]], tmp, look=False)
