@@ -3,6 +3,7 @@
 """Simulator coverage (L66) - every model-course item a school simulator can train is trained on it.
 
     sim_coverage.py needed <course>                   does L66 apply, and which simulators (coverage/knowledge/simulators.json)
+    sim_coverage.py practical <course>                which modules have simulator or equipment exercises, and which none
     sim_coverage.py init   <course> [--sims LNG,MeOH] start working_claude\\SIM_COVERAGE.json: one empty row per syllabus item
     sim_coverage.py check  <course>                   exit 0: the map is whole; exit 2: what is missing, in plain words
     sim_coverage.py accept <course> --task P1 --by "<name>"   the course director accepts a task's draft
@@ -27,6 +28,13 @@ WHAT check WANTS (coverage/SIMULATORS.md is the lane)
 A PARTLY item no task takes up is a note, not a failure: the review page shows it. So is a drafted task the course
 director has not accepted: nothing is built from its draft, and the module's screen that names it holds its minutes
 with no exercise behind it (pending; check_course_package.py says it too).
+
+WHAT practical SAYS
+Module by module, the practice minutes the programme gives it (programme.json topics, by plan.json), the practicals
+architecture.json names with their kind on paper (simulator / equipment / room, the rule additional_materials.py prints
+by), and its simulator tasks (SIM_COVERAGE.json). A module with practice minutes and no practical named is said. A
+course with none of these has no practical work: no paper exercise is printed for it, and it is said.
+factory_trial.py picks its practical module from it.
 
 Standard library only.
 """
@@ -95,20 +103,171 @@ def needed(course):
             if any(w.lower() in whole for w in v.get("match", [])):
                 cid = k
                 break
-    codes = list(intake.get("simulators") or ((cat.get("courses") or {}).get(cid) or {}).get("simulators") or [])
+    given = intake.get("simulators")
+    given = [str(x) for x in given] if isinstance(given, list) else []      # codes; a sentence names them, it lists none
+    codes = list(given or ((cat.get("courses") or {}).get(cid) or {}).get("simulators") or [])
     out = {"needed": False, "why": "", "course_id": cid, "codes": codes}
     if (intake.get("sim_coverage_declined") or "").strip():
         out["why"] = "declined by the operator: " + intake["sim_coverage_declined"].strip()
         return out
     if intake.get("simulators"):
-        out.update(needed=True, why="intake.json names the simulators: " + ", ".join(intake["simulators"]))
+        out.update(needed=True, why="intake.json names the simulators: " + (", ".join(given) or str(intake["simulators"])))
     elif any(m.lower() in title for m in cat.get("advanced_markers", [])):
         out.update(needed=True, why="an advanced course (its programme title says so)")
     elif any(w.lower() in whole for w in cat.get("simulator_words", [])):
         out.update(needed=True, why="its programme names a simulator")
     else:
         out["why"] = "not an advanced course, and its programme names no simulator"
+    mc, entry = model_course(course)
+    if entry and entry.get("simulator_topics"):
+        # L28: every simulator of the IMO model course is assumed available - its simulator topics are planned as
+        # simulator exercises even where L66's full map does not apply
+        out["model_course"] = dict(entry, id=mc)
+        if not out["needed"] and not given:
+            out["codes"] = list(entry.get("simulators") or [])
+    if out["needed"] or out.get("model_course"):
+        out["manuals"] = manuals_in_sources(course, out["codes"])
     return out
+
+
+def model_course(course):
+    """(its number, its entry in simulators.json "model_courses") of the course's IMO model course, or (None, None)"""
+    prog, arch = ilo_map.course_files(course)
+    text = " ".join(str(x or "") for x in ((prog or {}).get("imo_model_course"), (prog or {}).get("model_course"),
+                                            ((arch or {}).get("course") or {}).get("model_course")))
+    for k, v in (catalogue().get("model_courses") or {}).items():
+        if re.search(r"(?<![\d.])%s(?![\d])" % re.escape(k), text):
+            return k, v
+    return None, None
+
+
+def manuals_in_sources(course, codes):
+    """{"found": {code: [file]}, "missing": [code]} - the simulators' manuals (simulators.json) in the course's own
+    source_files and old course; a simulator exercise is written from its manual, never without it"""
+    names = {}
+    for s in catalogue().get("simulators", []):
+        if s.get("code") in codes:
+            for m in s.get("manuals") or []:
+                names[(m.get("file") or "").lower()] = s["code"]
+    master = workspace.master_of(course)
+    found = {}
+    for sub in ("source_files", "old_course"):
+        for dp, _, fs in os.walk(os.path.join(master, sub)):
+            for f in fs:
+                code = names.get(f.lower())
+                if code:
+                    found.setdefault(code, []).append(f)
+    return {"found": found, "missing": [c for c in codes if c not in found]}
+
+
+def model_course_lines(n):
+    """what the IMO model course asks of a simulator, and which manuals the sources hold - [] when it asks nothing"""
+    mc = n.get("model_course")
+    if not mc:
+        return []
+    out = ["IMO Model Course %s marks topics to be taught on a simulator (%s): %s. Exercises: %s. Every simulator of the model "
+           "course is assumed available (L28): Stage 2 plans these topics as simulator exercises (architecture.json "
+           "\"practicals\", inside the theory minutes where the programme gives them no practice hours), each written on "
+           "paper from the simulator's manual and the model course, its activity screen in the deck where the class goes to it."
+           % (mc["id"], mc.get("pages", ""), "; ".join(mc["simulator_topics"]), mc.get("exercises", "-"))]
+    if mc.get("equipment_topics"):
+        out.append("Its real-equipment practicals: %s - paper exercises too." % "; ".join(mc["equipment_topics"]))
+    man = n.get("manuals") or {}
+    if man.get("found"):
+        out.append("Manuals in the sources: %s." % "; ".join("%s %s" % (c, ", ".join(f)) for c, f in man["found"].items()))
+    if not man.get("found"):
+        out.append("No simulator manual in the sources (%s): ask the operator for it - unattended, write it to "
+                   "OPEN_EXPERT_QUESTIONS.md - and never write a simulator procedure without it." % ", ".join(n["codes"]))
+    return out
+
+
+# the rule additional_materials.classify prints a practical's paper by (test_sim_coverage.py keeps the two the same)
+SIM_WORDS = re.compile(r"simulator|симулятор|тренаж", re.I)
+EQUIPMENT_WORDS = re.compile(r"\b(?:rig|bench|detectors?|meters?|apparatus|instruments?|equipment|facility|monitor|"
+                             r"tripod|stretcher|resuscitator|extinguisher|hoses?|iekārt\w*|aprīkojum\w*|mērinstrument\w*|"
+                             r"оборудован\w*|прибор\w*|стенд\w*)\b", re.I)
+
+
+def _paper_kind(words):
+    """simulator, equipment or room"""
+    if SIM_WORDS.search(words):
+        return "simulator"
+    return "equipment" if EQUIPMENT_WORDS.search(words) else "room"
+
+
+def practical(course):
+    """{"modules": {n: {"minutes", "practicals": [{"name", "kind", "place", "minutes"}], "sim_tasks": [{"id", "minutes",
+    "accepted"}], "kind"}}, "l66": needed(course)} - every module with practice minutes in the programme, a practical in
+    the architecture or a simulator task. A module's kind: simulator when a simulator does part of it, else equipment, else
+    room; "unnamed" when the programme gives it practice minutes and the architecture names no practical"""
+    prog, arch = ilo_map.course_files(course)
+    prog, arch = prog or {}, arch or {}
+    hour = float(prog.get("academic_hour_min") or 45)
+    topics = prog.get("topics") or {}
+    if isinstance(topics, list):
+        topics = {str(t.get("id") or t.get("no") or i): t for i, t in enumerate(topics, 1) if isinstance(t, dict)}
+    plan = [m for m in (_load(workspace.claude_path(course, "plan.json")) or {}).get("modules") or []
+            if isinstance(m, dict) and m.get("module") is not None]
+    # a module per topic until Stage 2's plan says which topics each module holds
+    by_topic = {str(m["module"]): [str(t) for t in m.get("topics") or []] for m in plan} if plan else \
+        {str(k): [str(k)] for k in topics}
+    mods = {}
+
+    def row(n):
+        return mods.setdefault(n, {"minutes": 0, "practicals": [], "sim_tasks": [], "kind": ""})
+    for n, keys in by_topic.items():
+        try:
+            n = int(str(n).lstrip("Mm"))
+        except ValueError:
+            continue
+        mins = sum(float((topics.get(k) or {}).get("practical") or 0) for k in keys if isinstance(topics.get(k), dict)
+                   and not topics[k].get("assessment")) * hour
+        if mins:
+            row(n)["minutes"] = int(round(mins))
+    for am in arch.get("modules") or []:
+        try:
+            n = int(str(am.get("module")).lstrip("Mm"))
+        except (TypeError, ValueError):
+            continue
+        for p in am.get("practicals") or []:
+            if not isinstance(p, dict):
+                continue
+            words = " ".join(str(p.get(k) or "") for k in ("task", "equipment", "place"))
+            name = re.split(r"\s\(|:", str(p.get("task") or ""), maxsplit=1)[0].strip()
+            row(n)["practicals"].append({"name": name, "kind": _paper_kind(words), "place": p.get("place") or "",
+                                         "minutes": p.get("minutes")})
+    for t in (_load(path(course)) or {}).get("proposed_tasks") or []:
+        m = MODULE.search(t.get("module") or "")
+        if m:
+            row(int(m.group(1)))["sim_tasks"].append({"id": t.get("id"), "minutes": t.get("minutes"),
+                                                       "accepted": bool((t.get("accepted_by") or "").strip())})
+    for r in mods.values():
+        kinds = [p["kind"] for p in r["practicals"]]
+        r["kind"] = ("simulator" if r["sim_tasks"] or "simulator" in kinds else "equipment" if "equipment" in kinds
+                     else "room" if kinds else "unnamed")
+    return {"modules": dict(sorted(mods.items())), "l66": needed(course)}
+
+
+def practical_lines(p):
+    """the practical work of a course in plain lines - the last one says when it has none"""
+    out = []
+    for n, r in p["modules"].items():
+        what = "; ".join("%s: %s%s" % (x["kind"], x["name"] or "-", (" (%s)" % x["place"]) if x["place"] else "")
+                         for x in r["practicals"])
+        if r["sim_tasks"]:
+            what += ("; " if what else "") + "simulator tasks: " + ", ".join(
+                "%s %s min%s" % (t["id"], t["minutes"], "" if t["accepted"] else " (draft)") for t in r["sim_tasks"])
+        if not what:
+            what = "no practical named in architecture.json - Stage 2 names what the trainees do in these minutes"
+        out.append("M%02d  %s min practice - %s" % (n, r["minutes"], what))
+    if not p["modules"]:
+        out.append("No practical work in this course: the programme gives no practice minutes and names no simulator or "
+                   "equipment exercise - no paper exercise is printed and no activity screen sends the class to one.")
+    elif not any(r["kind"] == "simulator" for r in p["modules"].values()):
+        out.append(("No simulator exercise in the architecture yet, and L66 applies - %s: sim_coverage.py check <course>."
+                    if p["l66"]["needed"] else "No simulator exercise in the architecture; L66's coverage map does not apply - %s.")
+                   % p["l66"]["why"])
+    return out + model_course_lines(p["l66"])
 
 
 def leaf_items(syllabus):
@@ -368,7 +527,7 @@ def init(course, sims):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("cmd", choices=("needed", "init", "check", "accept"))
+    ap.add_argument("cmd", choices=("needed", "practical", "init", "check", "accept"))
     ap.add_argument("course")
     ap.add_argument("--sims", help="simulator codes, comma-separated (init)")
     ap.add_argument("--task", help="the proposed task's id (accept)")
@@ -379,11 +538,16 @@ def main(argv=None):
         code, msg = accept(course, a.task or "", a.by or "")
         print(msg)
         return code
+    if a.cmd == "practical":
+        print("\n".join(practical_lines(practical(course))))
+        return 0
     if a.cmd == "needed":
         n = needed(course)
         print("%s - %s.%s" % ("L66 applies" if n["needed"] else "L66 does not apply", n["why"],
                               (" Simulators: %s." % ", ".join(n["codes"])) if n["needed"] and n["codes"] else
                               (" Which simulators is not known - see coverage/knowledge/simulators.json." if n["needed"] else "")))
+        for line in model_course_lines(n):
+            print(line)
         return 0
     if a.cmd == "init":
         code, msg = init(course, [s.strip() for s in (a.sims or "").split(",") if s.strip()])

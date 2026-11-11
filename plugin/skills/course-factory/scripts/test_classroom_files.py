@@ -71,7 +71,7 @@ def main():
     m1 = doc["modules"]["module01"]
     check("module01: the simulator practical (with its place) first, a practical done at home left out, the task paper, the cards, the form, "
           "the first two safety lines", labels(m1) == [
-              "Bunkering on the simulator: bunkering simulator", "Print: A01 task paper - Practical - bunkering",
+              "Bunkering on the simulator: bunkering simulator", "Print: A01 trainee card and instructor sheet - Practical - bunkering (the module plan opens them)",
               "Print: pre-brief, debrief and observation cards - A01", "Print: assessment form, one per candidate - A01",
               "Safety brief ready - A01: The ESD link is tested first.; Second line."] and m1[0]["place"] == "simulator room"
           and m1[0]["kind"] == "simulator" and all(x["kind"] == "document" for x in m1[1:4]), m1)

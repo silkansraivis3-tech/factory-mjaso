@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """The factory trial - a few modules of a real course built from scratch after every major update, and scored.
 
-    factory_trial.py setup  --from <course master folder> [--modules 1,4,8,19] [--home <folder>]
+    factory_trial.py setup  --from <course master folder> [--modules 1,16] [--home <folder>]
     factory_trial.py setup  --reuse <an earlier trial's home or run> [--from ...] [--plugin-dir <plugin folder>] [--dry-run]
     factory_trial.py run    [--modules 1,4] [--plugin-dir <plugin folder>] [--fresh] [--dry-run] [--home <folder>]
     factory_trial.py report [--run <runs\\folder>] [--course <trial course>] [--against <scorecard.json>] [--no-browser] [--home <folder>]
@@ -13,8 +13,10 @@ WHY THIS EXISTS
 To see whether a release builds courses better, a whole course was built - hours of work, and every run asked other
 questions and made other choices, so two runs could not be compared. The trial keeps one course's inputs (its
 source_files, old course and knowledge base, read where they are) and its decisions (intake.json, kb_sources.json), and
-builds only a few modules - the first, the ones with simulator exercises, one more - from an empty folder, unattended,
-the way the office PC builds. Then it scores what was built and sets the score beside the last trial's.
+builds only a few modules - by default two: the first, and the cheapest one with simulator or real-equipment exercises
+(sim_coverage.py practical; a simulator before equipment), so the paper exercises are built in every trial - from an
+empty folder, unattended, the way the office PC builds. Then it scores what was built and sets the score beside the last
+trial's. Modules given by hand that build no practical work in a course that has some are said, on setup and on run.
 
   setup   remembers the course's inputs and copies its decision files (course name "FACTORY TRIAL"). Nothing is copied
           from the inputs: source_files and the old course are linked into each run (the factory only reads them, L14).
@@ -46,7 +48,8 @@ the way the office PC builds. Then it scores what was built and sets the score b
             lifts of more than one level; must-fix findings left in the script; how many slide templates and the longest
             run of one; how many shapes the eye sees (layout-templates.json "shapes": a picture left or right is one,
             beside), the longest run of one shape and the share of beside; the basic tasks of each self-check and the self-checks off their mix (t_sc_mix); simulator and
-            equipment exercises written, and simulator drafts still awaiting the course director (L66). A number that
+            equipment exercises written, and simulator drafts still awaiting the course director (L66); over the modules, the
+            course's practical work module by module, or "No practical work in this course". A number that
             cannot be measured is "-". A run that ended on Claude's usage limit is scored "stopped: usage limit": its
             modules are unfinished, not failed.
           --course scores any trial course (its master or course folder) - two trial homes compared; the scorecard is
@@ -146,11 +149,63 @@ def plugin_version(plugin_dir=None):
     return d.get("version", "?")
 
 
+def master_and_course(source):
+    master = os.path.abspath(workspace.master_of(source) if hasattr(workspace, "master_of") else source)
+    return master, os.path.join(master, "course") if os.path.isdir(os.path.join(master, "course")) else master
+
+
+def sim_cov():
+    """coverage/scripts/sim_coverage.py - which modules have simulator or equipment exercises (L66)"""
+    cov = os.path.join(os.path.dirname(HERE), "coverage", "scripts")
+    if cov not in sys.path:
+        sys.path.insert(0, cov)
+    import sim_coverage
+    return sim_coverage
+
+
+RANK = {"simulator": 0, "equipment": 1, "room": 2, "unnamed": 3}
+DEFAULT_MODULES = [1, 4, 8, 19]          # a course whose plan and programme cannot be read
+
+
+def default_modules(course):
+    """the trial's modules when setup is not told: the first module and the course's cheapest module with practical work
+    - a simulator exercise before real equipment - so every trial builds the paper exercises, the activity screens and
+    the classroom files; with no practical work in the course, the first and the middle module. Two modules: a practical
+    module takes a theory module's place, the trial costs no more"""
+    plan = [m for m in (load(workspace.claude_path(course, "plan.json"), {}) or {}).get("modules") or []
+            if isinstance(m, dict) and str(m.get("module")).isdigit()]
+    minutes = {int(m["module"]): float(m.get("built_min") or 0) for m in plan}
+    if not minutes:                       # no Stage 2 plan yet: a module per programme topic
+        prog = load(workspace.claude_path(course, "programme.json"), {}) or {}
+        topics = prog.get("topics") if isinstance(prog.get("topics"), dict) else {}
+        hour = float(prog.get("academic_hour_min") or 45)
+        minutes = {int(k): hour * sum(float(t.get(x) or 0) for x in ("theory", "practical")) for k, t in topics.items()
+                   if str(k).isdigit() and isinstance(t, dict) and not t.get("assessment")}
+    work = sim_cov().practical(course)["modules"]
+    nums = sorted(minutes) or sorted(work)
+    if not nums:
+        return list(DEFAULT_MODULES)
+    first = nums[0]
+    pick = sorted((n for n in work if n != first), key=lambda n: (RANK.get(work[n]["kind"], 9), minutes.get(n) or 1e9, n))
+    if pick:
+        return [first, pick[0]]
+    return [first, nums[len(nums) // 2]] if len(nums) > 1 else [first]
+
+
+def lane_note(course, modules):
+    """a line when the trial's modules build no practical work and the course has some - None when they do, or it has none"""
+    work = sim_cov().practical(course)["modules"]
+    real = [n for n, r in work.items() if r["kind"] != "unnamed"]
+    if not real or any(m in real for m in modules):
+        return None
+    return ("Modules %s have no simulator or equipment exercise, so this trial does not test the paper exercises - M%02d would "
+            "(%s; sim_coverage.py practical)." % (", ".join(map(str, modules)), default_modules(course)[-1],
+                                                 ", ".join("M%02d %s" % (n, work[n]["kind"]) for n in real)))
+
+
 def setup(home, source, modules):
     """-> (config, problems)"""
-    master = workspace.master_of(source) if hasattr(workspace, "master_of") else source
-    master = os.path.abspath(master)
-    course = os.path.join(master, "course") if os.path.isdir(os.path.join(master, "course")) else master
+    master, course = master_and_course(source)
     inputs = {"source_files": os.path.join(master, "source_files"), "old_course": os.path.join(master, "old_course")}
     probs = ["%s: not found - a trial needs the course's %s" % (p, k) for k, p in inputs.items() if not os.path.isdir(p)]
     intake = os.path.join(course, "working_claude", "intake.json")
@@ -862,6 +917,7 @@ def score_module(course, m, no_browser=False):
         row["templates"], row["same_template_in_a_row"] = len(set(tpl)), best
         row.update(layout_plan.stats(*layout_plan.deck_shapes(page)))     # look_shapes, same_look_in_a_row, beside_share
     sim = os.path.join(course, "additional-materials", "simulator-and-equipment")
+    row["practical_kind"] = ((measured(sim_cov().practical, course) or {}).get("modules", {}).get(m) or {}).get("kind") or "none"
     row["simulator_exercises"] = sum(1 for _, _, fs in os.walk(sim) for f in fs if re.match(r"%s_A\d+.*_TRAINEE\.pdf$" % mid, f))
     row["simulator_drafts_pending"] = measured(lambda: sum(1 for p in sim_pending(course) if p["module"] == m))
     return row
@@ -870,11 +926,7 @@ def score_module(course, m, no_browser=False):
 def sim_pending(course):
     """the drafted simulator tasks the course director has not accepted (L66, sim_coverage.py) - their minutes sit on a
     screen with no exercise behind it"""
-    cov = os.path.join(os.path.dirname(HERE), "coverage", "scripts")
-    if cov not in sys.path:
-        sys.path.insert(0, cov)
-    import sim_coverage
-    return sim_coverage.pending(course)
+    return sim_cov().pending(course)
 
 
 LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped",
@@ -887,7 +939,8 @@ BANDS = {"interactive_3d_share": (int(round(100 * cs.MEDIA["three_d"]["min_share
 SHOWN = ("built", "passed", "build_says", "build_minutes", "cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "off_blueprint_slides",
          "pictures_pending", "interactive_3d_share", "max_words_slide", "slides_over_120_words", "claims", "claims_unproven",
          "claims_unchecked", "old_moved", "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates",
-         "same_template_in_a_row", "look_shapes", "same_look_in_a_row", "beside_share", "self_check_basic_tasks", "self_checks_off_mix", "simulator_exercises", "simulator_drafts_pending")
+         "same_template_in_a_row", "look_shapes", "same_look_in_a_row", "beside_share", "self_check_basic_tasks", "self_checks_off_mix",
+         "practical_kind", "simulator_exercises", "simulator_drafts_pending")
 
 
 def compare(now, before):
@@ -927,6 +980,8 @@ def show(card, before=None):
         print("STOPPED: %s - the run ended before the factory finished; a module that did not pass is unfinished, not failed" % stop)
     if card.get("reused"):
         print("Taken from the last trial, or run again:\n" + "\n".join(reuse_lines(card["reused"])))
+    if card.get("practical"):
+        print("Practical work in the course:\n" + "\n".join("  " + x for x in card["practical"]))
     old = {r["module"]: r for r in (before or {}).get("modules", [])}
     if before:
         print("  %-24s %-16s %s" % ("", "before %s" % before.get("plugin"), "now %s" % card.get("plugin")))
@@ -991,6 +1046,7 @@ def report(home, run_dir=None, no_browser=False, course=None, against=None):
             "course": course, "modules": [score_module(course, m, no_browser) for m in mark.get("modules") or []]}
     if mark.get("reused"):
         card["reused"] = mark["reused"]
+    card["practical"] = measured(lambda: sim_cov().practical_lines(sim_cov().practical(course)))
     logf = os.path.join(run_dir, "build.log") if run_dir else ""
     stop = stopped_by(io.open(logf, encoding="utf-8", errors="replace").read()) if os.path.isfile(logf) else None
     if stop:
@@ -1017,7 +1073,9 @@ def setup_cmd(home, a):
         return 2
     earlier = (load(os.path.join(os.path.dirname(os.path.dirname(master)), "trial.json")) or {}) if master else {}
     source = a.source or earlier.get("from") or (mark or {}).get("from")
-    mods = modules_of(a.modules or ",".join(map(str, earlier.get("modules") or (mark or {}).get("modules") or [])) or "1,4,8,19")
+    mods = modules_of(a.modules or ",".join(map(str, earlier.get("modules") or (mark or {}).get("modules") or [])))
+    if source and not mods and not a.modules:
+        mods = default_modules(master_and_course(source)[1])
     if not source or not mods:
         print("Stopped - setup needs --from <the course's master folder> and --modules like 1,4,8,19")
         return 2
@@ -1053,6 +1111,9 @@ def setup_cmd(home, a):
         print("Kept for the next run - it would take:\n" + "\n".join(reuse_lines(decide(os.path.join(home, REUSE), mods, a.plugin_dir))))
     print("Trial ready in %s - modules %s, from %s. Run it after every major update: factory_trial.py run"
           % (home, ", ".join(map(str, mods)), cfg["from"]))
+    note = lane_note(master_and_course(cfg["from"])[1], mods)
+    if note:
+        print("Note: " + note)
     return 0
 
 
@@ -1105,6 +1166,9 @@ def main(argv=None):
         print("Stopped - %s" % err)
         return 2
     cmd = claude_command(prompt, a.plugin_dir)
+    note = lane_note(master_and_course(cfg["from"])[1], mods)
+    if note:
+        print("Note: " + note)
     print("\n".join(reuse_lines((load(os.path.join(master, MARKER)) or {}).get("reused"))))
     if a.dry_run:
         print("Trial course made in %s (modules %s). Not started (--dry-run) - it would run:\n  %s\n  in %s"

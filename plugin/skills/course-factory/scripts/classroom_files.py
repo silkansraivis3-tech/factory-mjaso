@@ -43,13 +43,13 @@ FINAL_MARKS = ("mean_if_complete", "sum_if_complete", "percent_if_complete")
 KEY = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 MAX_CRITERIA = 500
 
-SIM_WORDS = re.compile(r"simulat|тренаж", re.I)
+SIM_WORDS = re.compile(r"simulator|симулятор|тренаж", re.I)
 EQUIP_WORDS = re.compile(r"\b(?:rig|bench|detectors?|meters?|apparatus|instruments?|equipment|facility|monitor|tripod|stretcher|"
                          r"resuscitator|extinguisher|hoses?|laptops?|tablets?|projector|computers?|pc|screen|kit)\b", re.I)
 ROOM_WORDS = re.compile(r"\b(?:class\s?room|room|hall|lab|laboratory|workshop)\b", re.I)
 AWAY_WORDS = re.compile(r"\bhome\b|independent|self[- ]study|remote|online", re.I)    # done by the trainee, not set up by the instructor
 W = {"print": "Print", "cards": "pre-brief, debrief and observation cards", "form": "assessment form, one per candidate",
-     "paper": "task paper", "safety": "Safety brief ready", "assessor": "An assessor named for the recorded runs (not the trainer, where possible)",
+     "paper": "task paper", "papers": "trainee card and instructor sheet", "in_plan": "(the module plan opens them)", "safety": "Safety brief ready", "assessor": "An assessor named for the recorded runs (not the trainer, where possible)",
      "employer": "Print: the employer sheet", "sheet": "Assessment form",
      "crit": "A. Critical steps", "global": "B. Global rating", "decision": "C. Decision",
      "stop": "STOP", "decision_label": "Decision: Yes = competent, No = Not yet (write one sentence for any Not yet)",
@@ -151,7 +151,10 @@ def module_items(arch_module, tasks, pracs):
     for t in tasks or []:
         if t.get("where") == "tablet":
             continue
-        add(out, item("%s: %s %s - %s" % (W["print"], t["code"], W["paper"], short(t["title"], 80)), "document"))
+        if t.get("where") in ("simulator", "equipment"):     # on the instructor's tablet beside the module plan (additional_materials)
+            add(out, item("%s: %s %s - %s %s" % (W["print"], t["code"], W["papers"], short(t["title"], 80), W["in_plan"]), "document"))
+        else:
+            add(out, item("%s: %s %s - %s" % (W["print"], t["code"], W["paper"], short(t["title"], 80)), "document"))
         entry = pracs.get(t.get("il_key") or "")
         if entry:
             add(out, item("%s: %s - %s" % (W["print"], W["cards"], t["code"]), "document"))

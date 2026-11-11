@@ -5,6 +5,7 @@ names a simulator. It runs **unasked**, at Stage 2, after the model course's syl
 2) and the old course is read (step 4b), and **before the gate** - the gate's practical tasks are planned from it.
 
     python coverage/scripts/sim_coverage.py needed <course>      does it apply, and which simulators
+    python coverage/scripts/sim_coverage.py practical <course>   module by module: simulator, equipment or none
     python coverage/scripts/sim_coverage.py init   <course>      one empty row per syllabus item
     python coverage/scripts/sim_coverage.py check  <course>      whole, or what is missing (exit 2)
 
@@ -27,6 +28,17 @@ are counted from) and which advanced course trains on which. `needed` picks the 
 `G:\My Drive\Gas Library\documents\manual\` (copies of 2026-10-23 in `G:\My Drive\_staging Gas Library 2026-10-23\`);
 they are INSTRUCTOR_ONLY sources - read, cited by page, never copied into a trainee page. A simulator or manual not in
 the file is added there (a factory change), so the next course finds it.
+
+**A course L66 does not cover still gets its model course's simulator exercises.** `simulators.json` →
+`model_courses` holds what an IMO model course itself marks for a simulator and for real equipment, with its pages (MC
+1.04: the topics marked (*), Part D Appendix 2's three exercises). For such a course `needed` and `practical` print them:
+Stage 2 plans those topics as simulator exercises in `architecture.json` `"practicals"` - inside the theory minutes
+(`"track": "theory"`) where the programme gives them no practice hours (L28: every simulator of the model course is
+assumed available) - each written on paper from the simulator's manual and the model course, its activity screen in
+the deck where the class goes to it. Both name the manuals found in the course's own `source_files` / `old_course`; with none, the factory
+asks for the manual (unattended: `OPEN_EXPERT_QUESTIONS.md`) and never writes a simulator procedure without it. A
+course with no practice minutes, no practical and no simulator topic gets no paper exercise and no activity screen for one,
+and `practical` says so.
 
 Whether a model is installed, and which options it has (e-Tutor, fault injection, saved states, time compression), is
 **checked with the course director, never assumed** - such things go in the decisions list (§5), not into a verdict.

@@ -120,6 +120,13 @@ def main():
         got = am.match_practicals(acts, prac)
         check("an exercise is matched to its practical by the number both name, else in order",
               got["a01"] is prac[1] and got["a02"] is prac[0], got)
+        steps = {"n": 8, "title": "Gas measuring", "script": {"screens": []}, "build": {}}
+        task = {"code": "A03", "title": "Prepare the detector", "kind": "equipment", "where": "equipment", "minutes": 15, "questions": [],
+                "sub_ilos": [], "practical": {}, "slide": {"id": "a03", "kind": "activity",
+                                                         "text": "Each trainee, with their own detector:\n1. Switch on in clean air.\n2. Apply the gas."}}
+        page = am.to_html("card", am.task_paper(steps, task, "Gas", {}, trainee=True))
+        check("steps that carry their own numbers are printed once numbered (the gas course's cards read \"2. 1. Check the battery\")",
+              "<p>1. Switch on in clean air.</p>" in page and "<ol>" not in page, page[page.find("<h2"):][:400])
 
         # ---- a built folder
         c = course(os.path.join(tmp, "one"), minutes=30)
@@ -178,8 +185,24 @@ def main():
 
         cp = read(c, "modules", "_course_shell", "advanced_course_plan.html")
         mp = read(c, "modules", "module01", "instructor", "advanced_module_plan.html")
-        alone = lambda p: not re.search(r"<link\b|<script\b|\bhref=|\bsrc=", p)
-        check("the tablet's course plan and module plan stand alone: no stylesheet, script or link out", alone(cp) and alone(mp))
+        alone = lambda p: not re.search(r"<link\b|<script\b|\bsrc=", p) and all(h.startswith("papers/") for h in re.findall(r'\bhref="([^"]*)"', p))
+        check("the tablet's course plan and module plan stand alone: no stylesheet, script or link out - the module plan's "
+              "only links are to its own papers", alone(cp) and alone(mp) and "href=" not in cp)
+        stem = "M01_A01_practical_bunkering_on_the_simulator"
+        papers = os.path.join(c, "modules", "module01", "instructor", "papers")
+        on_tablet = sorted(os.listdir(papers)) if os.path.isdir(papers) else []
+        check("the simulator exercise's trainee card and instructor sheet are on the instructor's tablet too, beside the module "
+              "plan, to open and to print (the instructor app had no way to reach the papers: additional-materials never ships)",
+              on_tablet == sorted(stem + x for x in ("_INSTRUCTOR.html", "_INSTRUCTOR.pdf", "_TRAINEE.html", "_TRAINEE.pdf"))
+              and all(open(os.path.join(papers, x), "rb").read(5) == b"%PDF-" for x in on_tablet if x.endswith(".pdf")), on_tablet)
+        check("... the module plan's step for it links each one, and nothing else is linked",
+              all('href="papers/%s%s"' % (stem, x) in mp for x in ("_TRAINEE.html", "_TRAINEE.pdf", "_INSTRUCTOR.html", "_INSTRUCTOR.pdf"))
+              and len(re.findall(r"\bhref=", mp)) == 4, re.findall(r'href="[^"]*"', mp))
+        tc, ic = read(papers, stem + "_TRAINEE.html"), read(papers, stem + "_INSTRUCTOR.html")
+        check("... the trainee card holds no answer and no instructor note, the sheet holds the note; both stand alone in the viewer",
+              "line up the bunker station" in tc and "ESD link is tested" not in tc and "ESD link is tested" in ic
+              and all('name="gb-standalone"' in x and "<script" not in x and "@page{size:A4" in x for x in (tc, ic)), tc[:600])
+        check("... a room exercise has no paper on the tablet", not any("M01_A02" in x for x in on_tablet), on_tablet)
         check("... the module plan goes step by step: what is taught, the self-check, the exercise and its paper, the check",
               all(x in mp for x in ("Module 1 - step by step", "Step 1", "You teach", "The Code (4 min)", "SC1",
                                     "Practical exercise on the simulator A01", "M01_A01_practical_bunkering_on_the_simulator_TRAINEE.pdf",
