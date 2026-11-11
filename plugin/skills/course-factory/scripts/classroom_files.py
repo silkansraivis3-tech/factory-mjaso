@@ -49,7 +49,7 @@ EQUIP_WORDS = re.compile(r"\b(?:rig|bench|detectors?|meters?|apparatus|instrumen
 ROOM_WORDS = re.compile(r"\b(?:class\s?room|room|hall|lab|laboratory|workshop)\b", re.I)
 AWAY_WORDS = re.compile(r"\bhome\b|independent|self[- ]study|remote|online", re.I)    # done by the trainee, not set up by the instructor
 W = {"print": "Print", "cards": "pre-brief, debrief and observation cards", "form": "assessment form, one per candidate",
-     "paper": "task paper", "papers": "trainee card and instructor sheet", "in_plan": "(the module plan opens them)", "safety": "Safety brief ready", "assessor": "An assessor named for the recorded runs (not the trainer, where possible)",
+     "codes": "the programme's equipment {codes}", "paper": "task paper", "papers": "trainee card and instructor sheet", "in_plan": "(the module plan opens them)", "safety": "Safety brief ready", "assessor": "An assessor named for the recorded runs (not the trainer, where possible)",
      "employer": "Print: the employer sheet", "sheet": "Assessment form",
      "crit": "A. Critical steps", "global": "B. Global rating", "decision": "C. Decision",
      "stop": "STOP", "decision_label": "Decision: Yes = competent, No = Not yet (write one sentence for any Not yet)",
@@ -82,6 +82,24 @@ def short(task, n=60):
     t = re.split(r"\s\(|:", str(task or ""), maxsplit=1)[0]
     t = label(t, n)
     return t[:1].upper() + t[1:]
+
+
+NOT_ENGLISH = re.compile(r"[āčēģīķļņšūžĀČĒĢĪĶĻŅŠŪŽЀ-ӿ]")      # a Latvian or Russian letter
+PROGRAMME_CODE = re.compile(r"\bM\d{1,2}\b")
+
+
+def english_equipment(p):
+    """(a practical's equipment in English, the programme's equipment codes when it has no English) - "equipment_en" first;
+    words in the programme's own language never reach an English paper or list"""
+    whole = str(p.get("equipment_en") or p.get("equipment") or "")
+    if not NOT_ENGLISH.search(whole):
+        return label(whole), []
+    return "", list(dict.fromkeys(PROGRAMME_CODE.findall(whole)))
+
+
+def english(text):
+    """the text, or "" when it is in another language"""
+    return "" if NOT_ENGLISH.search(str(text or "")) else label(text)
 
 
 def kind_of(text):
@@ -141,13 +159,14 @@ def module_items(arch_module, tasks, pracs):
     for p in (arch_module or {}).get("practicals") or []:
         if not isinstance(p, dict) or AWAY_WORDS.search(str(p.get("place") or "")):
             continue
-        eq = label(p.get("equipment"))
-        name = short(p.get("task"))
+        eq, codes = english_equipment(p)
+        name = short(english(p.get("task")))
         if not name:
             continue
-        text = "%s: %s" % (name, eq) if eq else name
+        what = eq or (W["codes"].format(codes=", ".join(codes)) if codes else "")
+        text = "%s: %s" % (name, what) if what else name
         k = kind_of("%s %s" % (p.get("task") or "", eq))
-        add(out, item(text, k if k != "other" else ("equipment" if eq else "room"), p.get("place")))
+        add(out, item(text, k if k != "other" else ("equipment" if what else "room"), english(p.get("place"))))
     for t in tasks or []:
         if t.get("where") == "tablet":
             continue
@@ -155,15 +174,18 @@ def module_items(arch_module, tasks, pracs):
             add(out, item("%s: %s %s - %s %s" % (W["print"], t["code"], W["papers"], short(t["title"], 80), W["in_plan"]), "document"))
         else:
             add(out, item("%s: %s %s - %s" % (W["print"], t["code"], W["paper"], short(t["title"], 80)), "document"))
-        entry = pracs.get(t.get("il_key") or "")
-        if entry:
-            add(out, item("%s: %s - %s" % (W["print"], W["cards"], t["code"]), "document"))
+        # a practical of several screens has the guideline's cards per screen that has a cycle (additional_materials.kit)
+        for code, key in t.get("il_parts") or [(t["code"], t.get("il_key") or "")]:
+            entry = pracs.get(key)
+            if not entry:
+                continue
+            add(out, item("%s: %s - %s" % (W["print"], W["cards"], code), "document"))
             if entry.get("recorded"):
-                add(out, item("%s: %s - %s" % (W["print"], W["form"], t["code"]), "document"))
+                add(out, item("%s: %s - %s" % (W["print"], W["form"], code), "document"))
             safety = (entry.get("prebrief") or {}).get("safety") or []
             safety = [safety] if isinstance(safety, str) else [str(x) for x in safety if str(x).strip()]
             if safety:
-                add(out, item("%s - %s: %s" % (W["safety"], t["code"], "; ".join(safety[:2])), "other"))
+                add(out, item("%s - %s: %s" % (W["safety"], code, "; ".join(safety[:2])), "other"))
     return out[:MAX_ITEMS]
 
 
@@ -182,7 +204,8 @@ def prepare(course, arch, intake, infos, mods, il_data):
         n = i["n"]
         tasks = []
         for t in (by_n.get(n) or {}).get("tasks") or []:
-            tasks.append(dict(t, il_key="%s.%s" % (by_n[n]["mid"], str(t["slide"]["id"]).upper()) if t["slide"].get("kind") == "activity" else ""))
+            key = lambda x: "%s.%s" % (by_n[n]["mid"], str(x["slide"]["id"]).upper()) if x["slide"].get("kind") == "activity" else ""
+            tasks.append(dict(t, il_key=key(t), il_parts=[(x["code"], key(x)) for x in t.get("parts") or [t]]))
         items = module_items(planned.get(n), tasks, pracs)
         if items:
             modules[i["code"]] = items

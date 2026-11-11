@@ -148,7 +148,8 @@ def manuals_in_sources(course, codes):
     for s in catalogue().get("simulators", []):
         if s.get("code") in codes:
             for m in s.get("manuals") or []:
-                names[(m.get("file") or "").lower()] = s["code"]
+                for f in [m.get("file") or ""] + list(m.get("also") or []):      # the same manual under another name
+                    names[f.lower()] = s["code"]
     master = workspace.master_of(course)
     found = {}
     for sub in ("source_files", "old_course"):

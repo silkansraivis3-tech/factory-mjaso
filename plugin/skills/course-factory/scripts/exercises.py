@@ -165,7 +165,7 @@ def screen(ex, sid):
     if ex["need"]:
         lines.append("You need: " + first_sentence(ex["need"].split(";")[0]))
     if ex["minutes"]:
-        lines.append("Time: %d min" % ex["minutes"])
+        lines.append("Time: %d min - the instructor hands out the exercise papers." % ex["minutes"])     # the handover
     notes = "- Run it from the instructor copy%s." % (": " + os.path.basename(ex["instructor"]) if ex["instructor"] else "")
     return {"id": sid, "kind": "activity", "exercise": ex["no"], "title": "Exercise %s - %s" % (ex["no"], ex["title"]),
             "text": "\n".join(x for x in lines if x), "notes": notes, "minutes": ex["minutes"] or 1}

@@ -94,6 +94,104 @@ def course(tmp, minutes=None, days=None):
     return c
 
 
+GROUP = [
+    {"id": "g01", "kind": "activity", "sub_ilo": ["1.1"], "paper": "Gas detection at the bench", "paper_part": "brief",
+     "title": "Practical 1.1 - the brief", "text": "Pairs, one instrument set each.\nSafety: no naked lights at the drum.",
+     "notes": "- Hand out the gas-test record.", "minutes": 5},
+    {"id": "g02", "kind": "activity", "sub_ilo": ["1.1"], "paper": "Gas detection at the bench", "title": "Your turn 1 - prepare the detector",
+     "text": "1. Switch on in clean air.\n2. Apply the span gas.", "notes": "- Score each step 3-2-1.", "minutes": 15},
+    {"id": "g03", "kind": "activity", "sub_ilo": ["1.1"], "paper": "Gas detection at the bench", "title": "Your turn 2 - the drum",
+     "text": "1. Test the drum at three levels.", "notes": "- A reading taken too early does not count.", "minutes": 15},
+    {"id": "g04", "kind": "activity", "sub_ilo": ["1.1"], "paper": "Gas detection at the bench", "paper_part": "debrief",
+     "title": "Debrief", "text": "Which readings differed, and why?", "notes": "- Close with the two errors seen most.", "minutes": 5}]
+HANDOVER = {"id": "x01", "kind": "activity", "sub_ilo": ["1.1"], "exercise": "1.2", "title": "Exercise 1.2 - bunkering on the simulator",
+            "text": "We now go to the bunkering simulator, room K2 - 20 minutes.\nThe instructor hands out the exercise papers.",
+            "notes": "- Run it from the instructor sheet.", "minutes": 20}
+FORM = {"Course": "Basic training for ships subject to the IGF Code", "Exercise No.": "1.2", "Title": "Bunkering on the simulator",
+        "Reference": "IMO MC 7.13 Part D exercise 3; LNGBunk p62", "Duration": "20 min",
+        "Exercise Description": ["1. Line up the bunker station from the checklist (LNGBunk p62).", "2. Start the transfer at the minimum rate."],
+        "Performance Criteria": ["PC1 - the ESD link is tested before the transfer.", "PC2 - the rate is raised only after the line is cold."]}
+
+
+def practical_on_paper(tmp):
+    """one practical over four screens is one paper; an approved simulator form is the simulator's paper"""
+    print("\n-- a practical on paper: one paper for its screens, the approved form for a simulator exercise")
+    c = course(os.path.join(tmp, "grp"))
+    wc = os.path.join(c, "working_claude")
+    sp = os.path.join(wc, "script", "M01.json")
+    s = cs.load(sp)
+    s["screens"] = t.SCREENS[:4] + GROUP + [HANDOVER] + t.SCREENS[4:]
+    s["sources"].append("IMO Model Course 7.13: Part D, exercise 3")
+    s["approved_hash"] = cs.content_hash(s)
+    cs.save(sp, s)
+    check("the script check passes a practical over four screens and a simulator screen that is only the handover",
+          not [p for p in cs.validate(s) if "paper" in p or "handover" in p], cs.validate(s))
+    arch = cs.load(os.path.join(wc, "architecture.json"))
+    arch["modules"][0]["practicals"] = [
+        {"task": "Gas detection at the bench (exercise 1.1)", "equipment": "M8 Tanku atmosfēras mērinstrumenti; M9 Pārnēsājamais skābekļa mēraparāts",
+         "place": "practical room"},
+        {"task": "Bunkering on the simulator (exercise 1.2)", "equipment": "Liquid cargo simulator (A2)", "place": "K2"}]
+    cs.save(os.path.join(wc, "architecture.json"), arch)
+    il_data = {"register": {"1.1": {"criteria": [{"text": "Zeroes the detector in clean air", "must_pass": True, "step": "M01.G02 1"}]}},
+               "practicals": {"M01.G04": {"debrief": {"must_observe": ["Readings taken only after the sample arrived"]}}}}
+    cs.save(os.path.join(wc, "instructor_led.json"), dict(il_data, status="approved", approved_by="Test", approved_hash=am.il.content_hash(il_data)))
+    content = os.path.join(wc, "exercises", "sim_drafts", "M01", "content")
+    os.makedirs(content)
+    for who in ("trainee", "instructor"):
+        cs.save(os.path.join(content, "EX_1.2_%s.json" % who), dict(FORM, **({"Instructor notes": ["Inject the ESD fault at 10 min."]}
+                                                                              if who == "instructor" else {})))
+    cov = {"proposed_tasks": [{"id": "P1", "module": "M01", "draft": "1.2"}]}
+    cs.save(os.path.join(wc, "SIM_COVERAGE.json"), cov)
+    code, out = run(TOOL, c, "--no-pdf")
+    root = os.path.join(c, am.FOLDER)
+    names = sorted(f for _, _, fs in os.walk(os.path.join(root, "simulator-and-equipment")) for f in fs)
+    stem = "M01_G01-G04_gas_detection_at_the_bench"
+    check("the four screens of one practical are one paper - its trainee card and its instructor sheet (the gas course printed "
+          "six cards for one 80-minute practical, its brief and debrief among them)",
+          stem + "_TRAINEE.docx" in names and not any(x.startswith(("M01_G01_", "M01_G02_", "M01_G04_")) for x in names), names)
+    papers = os.path.join(c, "modules", "module01", "instructor", "papers")
+    card, sheet = read(papers, stem + "_TRAINEE.html"), read(papers, stem + "_INSTRUCTOR.html")
+    check("... the trainee card holds the trainees' parts, their own numbers once - no brief, no debrief, no instructor note",
+          "<p>1. Switch on in clean air.</p>" in card and "Test the drum at three levels" in card and "Pairs, one instrument set" not in card
+          and "Which readings differed" not in card and "Score each step" not in card, card[card.find("<h2"):][:900])
+    check("... the instructor sheet holds every part in order, the brief and the debrief marked as the instructor's, each part's notes",
+          all(x in sheet for x in ("Pairs, one instrument set", "the brief - the instructor's", "Score each step 3-2-1",
+                                   "Which readings differed", "the debrief - the instructor's"))
+          and sheet.find("Pairs, one instrument set") < sheet.find("Switch on") < sheet.find("Which readings differed"), sheet[:1500])
+    check("... and the approved criteria (must pass, at its step), what the debrief must observe, the IMO model course and the sources",
+          all(x in sheet for x in ("Assessment criteria", "Zeroes the detector in clean air", "must pass, step 1 of G02",
+                                   "Must observe (G04):", "Readings taken only after the sample arrived", "IMO model course",
+                                   "IMO Model Course 7.13: Part D, exercise 3", "ISGOTT, 6th edition"))
+          and sheet.find("IMO Model Course 7.13") < sheet.find(">Sources<") < sheet.find("ISGOTT"), sheet[sheet.find("Marking"):][:1500])
+    every = card + sheet + "".join(docx_text(os.path.join(dp, f)) for dp, _, fs in os.walk(root) for f in fs if f.endswith(".docx"))
+    prep = json.dumps(cs.load(os.path.join(c, "modules", "classroom", "prepare.json")), ensure_ascii=False)
+    check("the programme's Latvian equipment never prints on an English paper or list: its codes, and it is said",
+          "Tanku" not in every + prep and "the programme's M8, M9" in sheet and "the programme's equipment M8, M9" in prep
+          and "write \"equipment_en\"" in out, (out[-500:], prep[:600]))
+    mp = read(c, "modules", "module01", "instructor", "advanced_module_plan.html")
+    check("the module plan: the practical is one step with its parts, linked to its one paper",
+          "G01-G04 - Gas detection at the bench" in mp and "Its parts" in mp and 'href="papers/%s_TRAINEE.html"' % stem in mp
+          and mp.count("Practical exercise with real equipment") == 1, mp[mp.find("G01"):][:900])
+    check("... the Prepare list prints it once", "Print: G01-G04 trainee card and instructor sheet - Gas detection at the bench" in prep, prep)
+    x = "M01_X01_exercise_1_2_bunkering_on_the_simulator"
+    check("a simulator draft nobody accepted is not printed - the handover screen's own card", "Performance Criteria" not in
+          read(papers, x + "_INSTRUCTOR.html") and "hands out the exercise papers" in read(papers, x + "_TRAINEE.html"))
+    cov["proposed_tasks"][0]["accepted_by"] = "A. Director"
+    cs.save(os.path.join(wc, "SIM_COVERAGE.json"), cov)
+    code, out = run(TOOL, c, "--no-pdf")
+    tc, ic = read(papers, x + "_TRAINEE.html"), read(papers, x + "_INSTRUCTOR.html")
+    check("accepted, the approved exercise form is the simulator's paper - its fields, its performance criteria, the manual's steps",
+          all(x_ in tc for x_ in ("Trainee card 1.2", "Performance Criteria", "PC1 - the ESD link is tested", "<p>1. Line up the bunker station",
+                                  "IMO MC 7.13 Part D exercise 3")) and "Inject the ESD fault" not in tc
+          and "Inject the ESD fault" in ic and "Instructor sheet 1.2" in ic and "printed from its own fields" in ic, tc[:1500])
+    bad = lambda **k: [p for p in cs.validate(dict(s, screens=t.SCREENS[:4] + k["screens"] + t.SCREENS[4:])) if "practical" in p or "handover" in p or "paper_part" in p]
+    check("the script check: a screen between two parts of a practical", bad(screens=GROUP[:2] + [dict(HANDOVER, id="x09")] + GROUP[2:]))
+    check("... a part that is none of brief, show, debrief", bad(screens=[dict(GROUP[0], paper_part="setup")] + GROUP[1:]))
+    check("... a practical with nothing for the trainees", bad(screens=[GROUP[0], GROUP[3]]))
+    check("... a simulator exercise's screen that lists steps instead of handing over",
+          bad(screens=[dict(HANDOVER, text="We go to the simulator.\n1. Line up the station.\n2. Start the transfer.")]))
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="additional_materials_")
     try:
@@ -341,6 +439,8 @@ def main():
         check("a rendering missing: the programme's words are shown, and it is said - never silent (exit 1)",
               code == 1 and MAIN[1]["text"] in docx_text(os.path.join(lroot, want[1]))
               and "the programme is in Latvian and Main ILO 2, Sub-ILO 1.1 have no English rendering" in out, (code, out[-600:]))
+
+        practical_on_paper(tmp)
 
         s = cs.load(os.path.join(c, "working_claude", "script", "M01.json"))
         s["screens"] = [x for x in s["screens"] if x["id"] != "a02"]

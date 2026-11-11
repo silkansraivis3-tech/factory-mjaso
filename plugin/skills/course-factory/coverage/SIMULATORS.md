@@ -88,6 +88,11 @@ their own session - an unattended build never accepts one), and an approved exer
 edited. Until then the module's activity screen that names the task holds its minutes, its notes naming the draft
 as awaiting the course director: `check` and the course package check list every such screen as pending.
 Without the org skill installed, the content file is the draft and the review README says the forms are not rendered.
+Once accepted, the form is the simulator's paper: `compile/scripts/additional_materials.py` prints its content files
+(`EX_<no>_trainee.json` / `EX_<no>_instructor.json`, or one `EX_<no>.json` holding both) field by field - the steps
+from the manual, the performance criteria - as the trainee card and the instructor sheet, in the day's folder and
+beside the module plan on the instructor's tablet. The activity screen that names it (`"exercise": "<no>"`) is only
+the handover (`script/GUIDE.md`). A draft nobody accepted is never printed.
 
 ## 5 · SIM_COVERAGE.md and the review
 

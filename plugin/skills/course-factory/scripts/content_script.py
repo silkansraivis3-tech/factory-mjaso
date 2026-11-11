@@ -317,6 +317,49 @@ def for_group(script, g):
     return out
 
 
+PAPER_PARTS = ("brief", "show", "debrief")         # a practical's parts on the instructor sheet only (additional_materials)
+SIMULATOR = re.compile(r"simulator|симулятор|тренаж", re.I)
+OWN_STEP = re.compile(r"^\s*(?:\d{1,2}|[a-z])[.)]\s")
+
+
+def paper_problems(script):
+    """the practicals on paper: the activity screens of one practical carry the same "paper" (its name), one after another,
+    at least one of them the trainees' own; "paper_part" is brief, show or debrief. A simulator exercise whose paper is its
+    approved exercise form ("exercise": "<no>") has a screen that is only the handover - its steps are on the form"""
+    probs, screens = [], script.get("screens", [])
+    seen, last = set(), None
+    for s in screens:
+        name = str(s.get("paper") or "").strip()
+        part = s.get("paper_part")
+        if (name or part) and s.get("kind") != "activity":
+            probs.append("%s: only an activity screen is part of a practical on paper (\"paper\", \"paper_part\")" % s.get("id"))
+            last = None
+            continue
+        if part is not None and part not in PAPER_PARTS:
+            probs.append("%s: \"paper_part\" is one of %s - the brief, the demonstration or the debrief, which go on the instructor "
+                         "sheet only; a part the trainees do has none" % (s.get("id"), ", ".join(PAPER_PARTS)))
+        if part and not name:
+            probs.append("%s: \"paper_part\" without \"paper\" - name the practical it is part of" % s.get("id"))
+        if name and name != last and name in seen:
+            probs.append("%s: the screens of the practical %r are not one after another - a practical's screens follow each "
+                         "other, nothing between them" % (s.get("id"), name))
+        if name:
+            seen.add(name)
+        last = name or None
+        if s.get("kind") == "activity" and str(s.get("exercise") or "").strip() and \
+                SIMULATOR.search(" ".join(str(s.get(k) or "") for k in ("title", "text"))):
+            lines = lines_of(s.get("text"))
+            if len(lines) > 3 or any(OWN_STEP.match(x) for x in lines):
+                probs.append("%s: a simulator exercise's screen is only the handover - where the class goes, for how long, and "
+                             "that the instructor hands out the papers; its steps are on exercise %s's form, never on the "
+                             "screen (script/GUIDE.md)" % (s.get("id"), s["exercise"]))
+    for name in seen:
+        parts = [s for s in screens if str(s.get("paper") or "").strip() == name]
+        if all(s.get("paper_part") in PAPER_PARTS for s in parts):
+            probs.append("the practical %r has no part the trainees do - its trainee card would be empty" % name)
+    return probs
+
+
 def group_problems(script):
     """the groups are declared once, two or more, and every question's group is one of them; slides carry none"""
     probs, groups = [], groups_of(script)
@@ -806,6 +849,7 @@ def validate(script):
                 probs.append("a slide comes after the module check starts - nothing is taught after the module check (only the hand-off screen follows it)")
     probs += shape_problems(script)
     probs += group_problems(script)
+    probs += paper_problems(script)
     alloc = script.get("minutes_allocated")
     if alloc:
         got = sum(minutes(s) for s in screens if s.get("kind") in INSTRUCTOR)
