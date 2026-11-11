@@ -537,6 +537,7 @@ def main():
         probe_cache_part(tmp)
         flammability_part(tmp)
         kit_words_part()
+        kit2d_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     task_page_part()
@@ -553,6 +554,60 @@ FLOOR_PARTS = {
     "step_track": {"size": [640, 390], "label": "step track", "parts": [
         {"id": "ST", "type": "step_track", "x": 24, "y": 30, "vertical": True, "gap": 62,
          "steps": ["Authorise", "Isolate", "Ventilate", "Test the air", "Attendant, rescue", "Enter, keep testing"]}]}}
+
+
+# a 2D kit figure: a label a step brings in, and a callout under it
+K2 = {"size": [640, 360], "label": "a 2D kit figure", "state": {"a": 0},
+      "parts": [{"type": "node", "x": 40, "y": 60, "w": 240, "h": 90, "text": "Integral", "sub": "part of the hull"},
+                {"type": "node", "x": 360, "y": 60, "w": 240, "h": 90, "text": "Membrane", "show": "@a"},
+                {"type": "callout", "at": [320, 260], "text": "Internal insulation", "sub": "on the inner hull"}],
+      "steps": [{"title": "The membrane", "set": {"a": 1}, "line": 1}]}
+
+
+def kit2d_part(tmp):
+    """a 2D kit figure (*.kit2d.json) in the studio: drawn by kit2d.js, every step measured and photographed - the studio said
+    "no kit.js?" and every fix brief sent the fixers to it (the factory trial, M01's three figure fixers)"""
+    print("\n-- a 2D kit figure: drawn, measured at every step and photographed")
+    sp = os.path.join(tmp, "s07.kit2d.json")
+    io.open(sp, "w", encoding="utf-8").write(json.dumps(K2))
+    r, why = studio.run(sp, sizes=((1280, 800), (1024, 768)), out=os.path.join(tmp, "k2"))
+    s = (r or {}).get("sizes", {})
+    a, b = s.get("1280x800") or {}, s.get("1024x768") or {}
+    check("2D: it is drawn and its rest state and its step are measured at both sizes (no \"no kit.js?\")",
+          not why and not a.get("error") and not b.get("error") and len(a.get("states") or []) == 2 and len(b.get("states") or []) == 2,
+          (why, a.get("error"), b.get("error")))
+    check("2D: every word of it is 12.5 px or larger on screen at both sizes, and said",
+          all((x.get("report") or {}).get("minTextPx") and x["report"]["minTextPx"] >= 12.45 for x in (a, b)),
+          [(x.get("report") or {}).get("minTextPx") for x in (a, b)])
+    check("2D: a picture at each size, named after the figure", all(x.get("shot") and os.path.isfile(x["shot"]) and
+                                                                      os.path.basename(x["shot"]).startswith("s07_") for x in (a, b)),
+          [x.get("shot") for x in (a, b)])
+    r2, _ = studio.run(sp, sizes=((1920, 1080),), step="all", out=os.path.join(tmp, "k2all"), split=True)
+    pics = (((r2 or {}).get("sizes") or {}).get("1920x1080") or {}).get("pictures") or []
+    check("2D: --step all, split: one picture per step (the rest state and step 1)", len(pics) == 2 and all(os.path.isfile(x) for x in pics), pics)
+    bad = json.loads(json.dumps(K2))
+    bad["parts"].append({"type": "callout", "at": [330, 262], "text": "Internal insulation", "sub": "on the inner hull", "side": "down", "dist": 16})
+    bad["parts"].append({"type": "node", "x": 300, "y": 300, "w": 600, "h": 90, "text": "Half off the edge"})
+    io.open(sp, "w", encoding="utf-8").write(json.dumps(bad))
+    r3, _ = studio.run(sp, sizes=((1280, 800),), shots=False)
+    found = [f for st in ((r3 or {}).get("sizes", {}).get("1280x800") or {}).get("states") or [] for f in st.get("findings") or []]
+    check("2D: what is wrong with it is found (a box past the edge: the kit's own audit and the drawing audit)",
+          any(f["check"] == "2D kit" for f in found) and any(f["check"] != "2D kit" for f in found), found[:4])
+    shot = studio.chrome                                  # a hidden browser that never writes its picture
+    studio.chrome = lambda exe, url, size, prof, shot_png=None: _NoShot() if shot_png else shot(exe, url, size, prof)
+    try:
+        io.open(sp, "w", encoding="utf-8").write(json.dumps(K2))
+        r4, _ = studio.run(sp, sizes=((1280, 800),), out=os.path.join(tmp, "k2none"))
+    finally:
+        studio.chrome = shot
+    e = ((r4 or {}).get("sizes", {}).get("1280x800") or {})
+    check("a picture the hidden browser did not take is said (shot_error), never a silent nothing",
+          not e.get("shot") and "no picture was taken" in (e.get("shot_error") or ""), e)
+
+
+class _NoShot(object):
+    def wait(self, timeout):
+        return True, ""
 
 
 def probe_cache_part(tmp):

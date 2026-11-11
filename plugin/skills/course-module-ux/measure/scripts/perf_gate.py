@@ -16,7 +16,9 @@ with the CPU slowed (--throttle, 4x by default) and the screen at the tablet's s
   heap     the page's JS heap in MB, after a garbage collection
 
 Fails when a 3D slide's p95 is over --p95-ms (33: under 30 frames a second the turn judders - judged in whole frames of
-the screen, so at 60 Hz two frames, 33.4 ms, keep up and three, 50 ms, do not), when more than --max-ctx
+the screen, so at 60 Hz two frames, 33.4 ms, keep up and three, 50 ms, do not), when a 3D-kit scene itself drew fewer
+frames a second than that while it turned (the page's beat can keep up while the scene skips frames or stands still: a
+scene timed without turning is judged on nothing), when more than --max-ctx
 live contexts (1) are held at once, when a slide's first frame takes over --first-ms (1500), or when canvases off screen
 draw more than --max-hidden frames (10) while a slide is up. Only a slide with a scene is judged on its frames; every
 slide is judged on contexts and off-screen drawing.
@@ -45,6 +47,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 MAX_STEPS = 3000
 FRAME_SLACK = 0.05        # a frame's time read from the screen's beat is off by a fraction of a millisecond, never more
+FPS_SLACK = 1.0           # frames a second a scene's count is off by: a frame begun as the timing ends
 GL_ARGS = {"swiftshader": ["--use-angle=swiftshader", "--use-gl=angle", "--enable-unsafe-swiftshader",
                            "--ignore-gpu-blocklist"],
            "gpu": ["--ignore-gpu-blocklist", "--enable-gpu-rasterization"]}
@@ -100,14 +103,17 @@ SLIDE = """() => { const s = document.querySelector('.slide.active');
 SAMPLE = """(ms) => new Promise(function (done) {
   const pg = window.__pg, s = document.querySelector('.slide.active'), sc = window.__scene3d;
   const h0 = pg.hidden, n0 = pg.shown, ts = [];
-  if (sc && sc.spin && sc.__k3 && s && s.contains(sc.__k3.stage)) { try { sc.spin(ms + 400, function () {}); } catch (e) {} }
-  const t0 = performance.now();
+  let spun = false;
+  if (sc && sc.spin && sc.__k3 && s && s.contains(sc.__k3.stage)) { try { sc.spin(ms + 400, function () {}); spun = true; } catch (e) {} }
+  const f0 = spun ? sc.frames : 0, t0 = performance.now();
   (function tick(t) {
     ts.push(t);
     if (t - t0 < ms) { requestAnimationFrame(tick); return; }
     const dt = [];
     for (let i = 1; i < ts.length; i++) { dt.push(ts[i] - ts[i - 1]); }
-    done({ dt: dt, hidden: pg.hidden - h0, shown: pg.shown - n0 });
+    /* the frames the scene drew itself while it turned, a second: not the page's own beat */
+    done({ dt: dt, hidden: pg.hidden - h0, shown: pg.shown - n0, spun: spun,
+           fps: spun ? Math.round((sc.frames - f0) * 10000 / Math.max(1, t - t0)) / 10 : null });
   })(t0);
 })"""
 
@@ -163,7 +169,7 @@ def measure(page, cdp, o):
             rows.append({"id": s["id"], "index": s["index"], "kind": s["kind"], "ctx": page.evaluate("() => __pg.live()"),
                          "first": first if s["kind"] else None,
                          "med": round(statistics.median(dt), 1) if dt else None, "p95": round(p95(dt), 1) if dt else None,
-                         "hidden": r["hidden"], "heap": heap(cdp)})
+                         "hidden": r["hidden"], "heap": heap(cdp), "spun": r.get("spun"), "fps": r.get("fps")})
             same = 0
         else:
             same += 1
@@ -199,6 +205,13 @@ def judge(rows, o):
         if r["kind"] and r["p95"] is not None and r["p95"] / beat > most + FRAME_SLACK:
             bad.append((r["id"], "p95 frame %.1f ms - %.1f frames of %.1f ms (at most %d: %g ms)"
                         % (r["p95"], r["p95"] / beat, beat, most, o.p95_ms)))
+        # a 3D-kit scene: the frames it drew itself while it turned - the page's beat (its p95) keeps up while a scene that
+        # skips frames, or stands still, does not (the factory trial: M19 s02 passed at 2.9 frames a second)
+        if r["kind"] == "kit3d" and r.get("first") is not None and r.get("spun") is False:
+            bad.append((r["id"], "the scene was not turned while its frames were timed (window.__scene3d.spin) - not measured"))
+        elif r["kind"] == "kit3d" and r.get("first") is not None and r.get("fps") is not None                 and r["fps"] < 1000.0 / (most * beat) - FPS_SLACK:
+            bad.append((r["id"], "the scene drew %.1f frames a second while it turned (at least %.0f: %g ms a frame)"
+                        % (r["fps"], 1000.0 / (most * beat), o.p95_ms)))
         if r["kind"] and r["first"] is not None and r["first"] > o.first_ms:
             bad.append((r["id"], "first frame %d ms after Next (at most %d)" % (r["first"], o.first_ms)))
         if r["kind"] and r["first"] is None and r["index"] >= 0 and r["index"] < 10 ** 6:
@@ -207,12 +220,12 @@ def judge(rows, o):
 
 
 def table(rows):
-    out = ["%-14s %-6s %4s %7s %7s %7s %7s %7s" % ("slide", "3D", "ctx", "first", "med", "p95", "hidden", "heap")]
+    out = ["%-14s %-6s %4s %7s %7s %7s %7s %7s %7s" % ("slide", "3D", "ctx", "first", "med", "p95", "fps", "hidden", "heap")]
     for r in rows:
         f = lambda v, fmt: (fmt % v) if v is not None else "-"   # noqa: E731
-        out.append("%-14s %-6s %4d %7s %7s %7s %7d %7s" % (r["id"][:14], r["kind"] or "", r["ctx"], f(r["first"], "%d"),
-                                                          f(r["med"], "%.1f"), f(r["p95"], "%.1f"), r["hidden"],
-                                                          f(r["heap"], "%.1f")))
+        out.append("%-14s %-6s %4d %7s %7s %7s %7s %7d %7s" % (r["id"][:14], r["kind"] or "", r["ctx"], f(r["first"], "%d"),
+                                                               f(r["med"], "%.1f"), f(r["p95"], "%.1f"), f(r.get("fps"), "%.1f"),
+                                                               r["hidden"], f(r["heap"], "%.1f")))
     return "\n".join(out)
 
 

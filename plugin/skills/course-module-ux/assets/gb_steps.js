@@ -118,13 +118,20 @@
        line (its stop) replays its step. Only a slide with a question (li.you): other stop slides keep kit.js's own step hook. Complete at the last stop,
        so kit.js's own step hook (which would step the figure on after the stops and light line 1 again) has nothing left to do. */
     function (s) {
-      var host = q('[data-kit]', s);
+      var host = q('[data-kit], [data-kit2d], [data-kit3d]', s);
       var ask = !!q('li.you', s);       /* the last two stops are the question and the answer */
       if (!host || !ask) { return null; }
       var at = -1, total = 0;
+      /* the figure's steps after its opening view, and a way to put it at one: kit.js on its host, the 2D and 3D kits on
+         the slide (__fig) */
+      var fig = function () {
+        var f = host.__kit;
+        if (f && f.spec && f.go) { return { st: f.spec.steps || [], go: function (c) { f.go(c); } }; }
+        return s.__fig ? { st: s.__fig.steps().slice(1), go: s.__fig.go } : null;
+      };
       var want = function (k, n) {
-        var f = host.__kit, st = f && f.spec && f.spec.steps || [], seen = ask ? n - 2 : n, last = k >= n - 1, c = 0, i, top;
-        if (!f) { return -1; }
+        var F = fig(), st = F ? F.st : [], seen = ask ? n - 2 : n, last = k >= n - 1, c = 0, i, top;
+        if (!F) { return -1; }
         for (i = 0; i < st.length && !last; i++) {
           top = st[i].line == null ? 0 : Math.max.apply(Math, [].concat(st[i].line).map(Number));
           if (st[i].reveal || top > Math.min(k + 1, seen)) { break; }
@@ -135,12 +142,37 @@
       var run = function (k, n) {
         var c = want(k, n);
         at = k; total = n;
-        if (c >= 0) { host.__kit.go(c); }
+        if (c >= 0) { fig().go(c); }
       };
       s.__figSync = function () { if (at >= 0) { run(at, total); } };
       return run;
     }
   ];
+
+  /* a 2D kit figure or a 3D scene on a slide whose last stop shows the answer to a vote or a pick (true / false, a scenario):
+     Next plays the figure's steps before the answer while the lines they light are on screen, and the steps that light a
+     line of the answer (or none the slide shows), or are marked "reveal": true, after it; Back the other way round. The
+     answer never comes before the steps that lead to it. -> fn(stop now, dir): true when the figure took this Next / Back */
+  var ANSWER = '.lt-opt.ok, .lt-vote .ok, .lt-why';
+  function answerLast(s, n) {
+    if (n < 2 || q('li.you', s) || !q(ANSWER, s) || !q('[data-kit2d], [data-kit3d]', s)) { return null; }
+    var inAnswer = function (st) {
+      if (st.reveal) { return true; }
+      return [].concat(st.line == null ? [] : st.line).some(function (L) {
+        var x = q('[data-i="' + L + '"]', s);
+        return !x || !!(x.closest && x.closest('[data-k="' + (n - 1) + '"], .fb'));
+      });
+    };
+    return function (i, dir) {
+      var F = s.__fig;
+      if (!F) { return false; }
+      var st = F.steps(), at = F.at(), cut = st.length, j;
+      for (j = 1; j < st.length; j++) { if (inAnswer(st[j])) { cut = j; break; } }
+      var mine = dir > 0 ? (i === n - 2 && at + 1 < cut) || (i === n - 1 && at + 1 < st.length)
+                         : (i === n - 1 && at >= cut) || (i === n - 2 && at > 0);
+      return mine && F.go(at + dir) !== false;        /* a scene that cannot draw (no WebGL) leaves Next to the stops */
+    };
+  }
 
   /* a choice the room taps before the answer: one picked at a time */
   function pickers(s) {
@@ -182,6 +214,7 @@
     var marks = qa('[data-k]', s), n = +s.getAttribute('data-stops') || 0, i = 0, box = q('[data-lt-scene]', s), fns = [], clk = clock(s);
     if (!n) { each(marks, function (x) { n = Math.max(n, +x.getAttribute('data-k') + 1); }); }
     each(PARTS, function (f) { var g = f(s); if (g) { fns.push(g); } });
+    var fig = answerLast(s, n);
     pickers(s);
     function go(k) {
       if (k < 0 || k >= n) { return; }
@@ -202,7 +235,7 @@
     H[s.id] = {
       enter: function () { go(0); if (old.enter) { old.enter(); } if (s.__figSync) { w.setTimeout(s.__figSync, 0); } },
       leave: function () { if (clk) { clk.stop(); } if (old.leave) { old.leave(); } },
-      step: function (dir) { var k = i + dir; if (k < 0 || k >= n) { return false; } go(k); return true; }
+      step: function (dir) { if (fig && fig(i, dir)) { return true; } var k = i + dir; if (k < 0 || k >= n) { return false; } go(k); return true; }
     };
     go(0);
   }

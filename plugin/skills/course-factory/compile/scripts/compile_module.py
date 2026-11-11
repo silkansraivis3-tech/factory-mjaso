@@ -2234,10 +2234,10 @@ def lines_twice_problems(page):
     steps with the lines (gb_deck.js lockFor), a step that names an EARLIER line than the step before it sends the walk back to
     that line: the room goes through the lines a second time (PM M03 s02: after the question, Next lit line 1 again). A
     step may repeat the line it is on. The slides that walk their own stops (data-stops) light line k at stop k, once; the
-    browser walk (fit_gate.py) checks the real page"""
+    browser walk (fit_gate.py) checks the real page. A 2D kit figure is walked with its lines the same way"""
     out = []
     for sid, body in SECTION.findall(page):
-        if 'data-kit="#' not in body or " data-stops=" in body.split(">", 1)[0] + ">":
+        if not ('data-kit="#' in body or 'data-kit2d="#' in body) or " data-stops=" in body.split(">", 1)[0] + ">":
             continue
         for m in JSON_DATA.finditer(body):
             try:
@@ -2264,14 +2264,16 @@ KIT_DATA = re.compile(r'<script type="application/json" id="(k2-|k3-|kit-)[^"]*"
 def step_line_problems(page):
     """[(slide id, message)] - a figure's step lights a line of its own slide: the deck numbers them from 1 (data-i="1"), so a
     "line": 0 lights nothing and the figure walks one step ahead of its words (M01 s01 and ~12 more 3D slides). A 3D scene's
-    steps are judged by check_kit3d.py (1..n, and up to the slide's last line); a 2D figure's steps light a line from 1 to n -
-    past the last only on a slide with a question, where such a step plays with the answer (gb_steps.js)"""
+    steps are judged by check_kit3d.py (1..n, and up to the slide's last line); a 2D kit figure, walked by the deck the same
+    way, by the same check; a figure-kit step lights a line from 1 to n. A 2D step past the last line, on a slide with a
+    question or an answer to reveal, plays with the answer (gb_steps.js) and is no line of the walk"""
     sys.path.insert(0, os.path.join(SKILLS, "course-visuals", "kit3d", "scripts"))
     import check_kit3d
     out = []
     for sid, body in SECTION.findall(page):
         lines = len(set(re.findall(r'\bdata-i="(\d+)"', re.sub(r"<svg\b.*?</svg>", "", body, flags=re.S))))
         ask = bool(re.search(r'class="[^"]*\byou\b', body))
+        answer = ask or bool(re.search(r'class="[^"]*\b(lt-why|lt-opts|lt-vote)\b', body))
         for m in KIT_DATA.finditer(body):
             try:
                 spec = json.loads(m.group(2).replace("<\\/", "</"))
@@ -2281,6 +2283,11 @@ def step_line_problems(page):
                 continue
             if m.group(1) == "k3-":
                 out += [(sid, "its 3D scene: " + x) for x in check_kit3d.line_problems(spec, lines)]
+                continue
+            if m.group(1) == "k2-":
+                walked = [dict(st, line=[x for x in check_kit3d.step_lines(st) if x <= lines])
+                          if isinstance(st, dict) and (answer or st.get("reveal")) else st for st in spec.get("steps") or []]
+                out += [(sid, "its 2D figure: " + x) for x in check_kit3d.line_problems(dict(spec, steps=walked), lines, 1, "figure")]
                 continue
             for k, st in enumerate(spec.get("steps") or [], 1):
                 bad = [x for x in check_kit3d.step_lines(st) if x < 1 or (x > lines and not (ask or st.get("reveal")))]
@@ -3219,10 +3226,10 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         why_box = ('<div class="lt-why" data-k="1"><span class="stamp" data-script-ignore>%s</span><div>%s</div></div>'
                    % (e(w["true" if right == "t" else "false"]), why))
         if fig:
-            # beside a picture, why opens over the picture's column: under the claim and the vote it had a third of the
-            # slide, and a why of three lines was cut (the factory trial, M01 s04)
-            i = side.rfind("</")
-            side, why_box = side[:i] + why_box + side[i:], ""
+            # beside a picture, why opens in the picture's column, under the picture: under the claim and the vote it had a
+            # third of the slide, and a why of three lines was cut (the factory trial, M01 s04); over the picture it hid the
+            # whole figure, and the steps the figure walks with the why's lines were drawn where no one saw them (M19 s08)
+            side, why_box = '<div class="lt-scol">%s%s</div>' % (side, why_box), ""
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-tf">\n      <p class="lt-claim lt-in" style="--i:1" '
                 'data-script-field="claim">%s</p>\n      <div class="lt-vote lt-in" style="--i:2">%s</div>\n      %s</div>%s</div>'
                 % ("48fr 52fr" if fig else "1fr", e(s.get("claim")), vote, why_box, "\n    " + side if fig else ""))

@@ -11,10 +11,11 @@ builder's own judgement. One command, in this order, each part judged as the bui
   1 SPEC     check_kit3d.py spec on every *.kit3d.json the module's build sheet names (with assets/kit3d_parts.js), and
              on the built deck each scene's step lines against its slide's lines (counted from 1, up to the last)
   2 SMOKE    smoke3d.py on the built deck's slides that show them - loads, draws, stays quiet
-  3 PERF     perf3d.mjs at 4x CPU, the warm first frame against the 1,000 ms budget, then perf_gate.py: the deck walked
-             with Next at 4x CPU and every slide timed - a scene whose turn lags (a p95 over two frames at 60 Hz) in two
-             walks, or a deck that keeps contexts or draws off screen, is a problem here, so a module whose 3D lags does
-             not pass its 3D step (--no-perf skips both)
+  3 PERF     perf3d.mjs at 4x CPU, the warm first frame against the 1,000 ms budget and the frames a second the scene
+             draws while it turns (under SOFT_FPS twice is a problem), then perf_gate.py: the deck walked with Next at 4x
+             CPU and every slide timed - a scene whose turn lags (a p95 over two frames at 60 Hz, or fewer frames drawn by
+             the scene itself) in two walks, or a deck that keeps contexts or draws off screen, is a problem here, so a
+             module whose 3D lags does not pass its 3D step (--no-perf skips both)
   4 SHOTS    shot3d.mjs: the scene at each of its steps (it opens on the first), in a box of the slide's size, PNG files in
              --out (default working_claude\\review\\MNN_3d\\) - what the reviewer looks at
 
@@ -179,6 +180,29 @@ def perf_over(line):
     return bool(re.search(r"\b(FAIL|over)\b", line, re.I))
 
 
+SOFT_FPS = 10       # frames a second a scene draws while it turns at 4x CPU in software graphics (perf3d's stand-in chip)
+
+
+def perf_fps(line):
+    """the frames a second perf3d.mjs's line of a scene says it drew while it turned ("s02  72  292.5  2.9  OK"), or None"""
+    m = re.match(r"^\s*\S+\s+(?:[\d.]+|-)\s+(?:[\d.]+|-)\s+([\d.]+)\s+(?:OK|OVER)\b", line or "")
+    return float(m.group(1)) if m else None
+
+
+def slow_turns(deck, res):
+    """{slide id: fps} - the scenes perf3d.mjs timed under SOFT_FPS, timed again: under it both times. perf3d printed the
+    frames a second and nothing judged them - M19 s02 passed at 2.9 (the factory trial)"""
+    slow = {sid: perf_fps(r.get("perf")) for sid, r in res.items()}
+    slow = {sid: f for sid, f in slow.items() if f is not None and f < SOFT_FPS}
+    if not slow:
+        return {}
+    _, text = run(["node", os.path.join(MEASURE, "perf3d.mjs"), deck, "--slides=" + ",".join(sorted(slow)), "--budget-ms=1000",
+                   "--throttle=4", "--gate=warm", "--no-cold"], 600)
+    again = {sid: perf_fps(next((x.strip() for x in text.splitlines() if re.search(r"\b%s\b" % re.escape(sid), x)), ""))
+             for sid in slow}
+    return {sid: min(f, again[sid]) for sid, f in slow.items() if again.get(sid) is not None and again[sid] < SOFT_FPS}
+
+
 def lag_said(text):
     """{slide id: [what]} - the slides perf_gate.py names over its budget ("  s27  p95 frame 49.9 ms - ...")"""
     out = {}
@@ -255,6 +279,10 @@ def check(course, module, out=None, size=(720, 450), perf=True):
                 res[sid]["perf"] = line
                 if code == 1 and perf_over(line):
                     res[sid]["problems"].append("perf3d: " + line)
+            for sid, f in slow_turns(deck, res).items():
+                res[sid]["problems"].append("perf3d: the scene drew %.1f frames a second while it turned, twice (at least %d at 4x "
+                                            "CPU in software graphics) - lighten it: fewer parts, fewer labels, no flow while it "
+                                            "turns" % (f, SOFT_FPS))
         if perf:
             over = lagging(deck)
             for sid in res:

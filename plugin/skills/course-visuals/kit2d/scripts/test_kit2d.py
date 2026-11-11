@@ -44,6 +44,39 @@ BROKEN = """() => { const h = document.createElement('div'); h.style.height = '6
     {type: 'person', x: 560, y: 560, name: 'B', say: 'Port twenty, sir.', side: 'left', bubbleW: 240, bubbleH: 70}]});
   const out = KIT2D.audit(f); h.remove(); return out; }"""
 
+# every <text> and <tspan> of a figure shown small, as the deck's audit measures it: its own font size by the scale it is drawn at
+SMALL = """() => { const h = document.createElement('div'); h.style.width = '403px'; h.style.height = '227px'; document.body.prepend(h);
+  const f = KIT2D.mount(h, {size: [960, 540], parts: [{type: 'callout', at: [300, 200], text: 'Gas-dangerous', sub: 'open deck'},
+    {type: 'node', x: 520, y: 300, w: 300, h: 120, text: 'Cargo tank', sub: 'Type C'},
+    {type: 'chart', id: 'C', x: 80, y: 360, w: 300, h: 120, xaxis: {min: 0, max: 20, step: 10, label: 'Pressure', unit: 'bar'},
+     yaxis: {min: 0, max: 2, step: 1}}]});
+  f.resize(); f.frame(true, 0);
+  const px = [], under = [];
+  f.svg.querySelectorAll('text, tspan').forEach(t => { if (!t.textContent.trim()) return; const m = t.getScreenCTM();
+    const v = parseFloat(getComputedStyle(t).fontSize) * Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)); px.push(v);
+    if (v < 12.45) under.push([t.tagName, t.getAttribute('class'), t.textContent.trim().slice(0, 20), +v.toFixed(2)]); });
+  h.remove(); return {px: px.length, under}; }"""
+
+# a figure built in a hidden box, then shown with no observation delivered: a window resize lays it out, and the drawing
+# check lays out one that never had any
+LATE = """() => { const mk = () => { const h = document.createElement('div'); h.style.cssText = 'display:none;width:420px;height:240px';
+    document.body.prepend(h); return [h, KIT2D.mount(h, {size: [960, 540], parts: [{type: 'callout', at: [240, 270], text: 'Integral', sub: 'part of the hull'},
+      {type: 'callout', at: [700, 270], text: 'Membrane', sub: 'a thin layer'}]})]; };
+  const [h, f] = mk(); h.style.display = 'block'; window.dispatchEvent(new Event('resize'));
+  const up = +getComputedStyle(f.svg).getPropertyValue('--k2-up') > 1, placed = f.labels.every(L => L.off);
+  h.remove();
+  const [h2, f2] = mk(); h2.style.display = 'block';
+  const res = AuditDrawing.page(), over = (res.findings || []).filter(x => x.check === 'text zone' && /over each other/.test(x.detail || ''));
+  const placed2 = f2.labels.every(L => L.off); h2.remove();
+  return {up, placed, placed2, over: over.map(x => x.part)}; }"""
+
+# where the deck is: the slide, its stop, the figure's step, the lit line, the part shown, the why and the figure's height
+STOP = """() => { const s = document.querySelector('.slide.active'), F = s.__fig, why = s.querySelector('.lt-why');
+  const st = s.querySelector('.kit2d-stage');
+  return {id: s.id, cur: [...s.querySelectorAll('[data-i].cur')].map(x => x.getAttribute('data-i')).join(','), part: s.getAttribute('data-part-at'),
+    fig: F ? F.at() : null, last: s.hasAttribute('data-last'), why: !!(why && why.getClientRects().length),
+    figH: st ? st.getBoundingClientRect().height : 0}; }"""
+
 
 def main():
     try:
@@ -138,6 +171,60 @@ def main():
                      {at: 6, label: 'Head count', sub: 'everyone there'}]}]});
           f.goStep(f.steps.length - 1, true); f.frame(true, 0); const out = KIT2D.audit(f); h.remove(); return out; }""")
         check("five events a minute apart: each takes a free side or lane, no words on each other", crowd == [], crowd)
+
+        print("\n-- every word at least 12.5 px on screen, a label's own <text> too (M01 s03, s15, s19: 11.5-12 px at 1024 x 768)")
+        small = pg.evaluate(SMALL)
+        check("a figure shown at 0.42 of its size: no <text> or <tspan> drawn under 12.5 px", small["px"] and not small["under"], small)
+        pg.close()
+
+        print("\n-- a page that draws no frames (a hidden browser's checks): the figure is laid out all the same")
+        pg = b.new_page(viewport={"width": 1024, "height": 768})
+        pg.add_init_script("window.ResizeObserver = function () { this.observe = function () {}; this.disconnect = function () {}; };")
+        pg.goto((KIT / "demos.html").as_uri())
+        pg.wait_for_timeout(600)
+        pg.add_script_tag(path=str(SKILLS / "course-module-ux" / "measure" / "scripts" / "audit_drawing.js"))
+        late = pg.evaluate(LATE)
+        check("a window resize lays out a figure first built in a hidden box: its type grown, its labels placed",
+              late["up"] and late["placed"], late)
+        check("the drawing check lays a 2D-kit figure out before it judges its labels: none on top of another (M01 s19)",
+              late["placed2"] and not late["over"], late)
+        pg.close()
+
+        print("\n-- in a deck: the steps light the slide's lines from 1, the part that holds the line shows, the answer comes last")
+        pg = b.new_page(viewport={"width": 1280, "height": 800})
+        errs = []
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.goto((HERE / "fixtures" / "deck_kit2d.html").as_uri())
+        pg.wait_for_timeout(600)
+        pg.click("#startBtn")
+        walk = []
+        for _ in range(14):                                 # to the last stop of s4
+            if pg.locator("#btnNext").is_disabled():
+                break
+            pg.click("#btnNext")
+            pg.wait_for_timeout(250)
+            walk.append(pg.evaluate(STOP))
+        by = lambda sid: [x for x in walk if x["id"] == sid]
+        s2 = [(x["cur"], x["part"], x["fig"]) for x in by("s2")]
+        check("words in two parts: Next lights lines 1-3 on part 1, then line 4 turns to part 2 with the figure's step 1, line 5 step 2",
+              s2 == [("", "0", 0), ("1", "0", 0), ("2", "0", 0), ("3", "0", 0), ("4", "1", 1), ("5", "1", 2)], s2)
+        s3 = [(x["cur"], x["fig"], x["last"]) for x in by("s3")]
+        check("a scenario: the figure's steps light the situation's lines first, the answer shows on the last Next",
+              s3 == [("", 0, False), ("1", 1, False), ("2", 2, False), ("2", 2, True)], s3)
+        s4 = [(x["cur"], x["fig"], x["why"], x["figH"] > 120) for x in by("s4")]
+        check("true or false: the why opens first - its lines are the ones the steps light - under the figure, never over it",
+              s4 == [("", 0, False, True), ("", 0, True, True), ("1", 1, True, True), ("2", 2, True, True)], s4)
+        back = []
+        for _ in range(3):
+            if pg.locator("#btnPrev").is_disabled():
+                break
+            pg.click("#btnPrev")
+            pg.wait_for_timeout(250)
+            back.append(pg.evaluate(STOP))
+        back = [(x["id"], x["fig"], x["why"]) for x in back]
+        check("... and Back the other way round: the steps after the why, then the why closes",
+              back == [("s4", 1, True), ("s4", 0, True), ("s4", 0, False)], back)
+        check("in a deck: no page error", not errs, errs)
         pg.close()
         b.close()
     print("\n%d failed" % len(FAILS) if FAILS else "\nall passed")

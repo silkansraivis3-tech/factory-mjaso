@@ -18,12 +18,19 @@ and for courses already built with it. A new 2D figure is a 2D-kit spec.
   animate. Whole numbers roll like a counter. Nothing loops by itself (L13); with reduced motion each step is its end.
 - **Words.** Labels carry a halo and are placed clear of each other, of the solids and of the lines (arrows, curves,
   trails), with a leader when they must go further; they glide when they move. Axis numbers thin out when the grown
-  type no longer fits, and fade out of the way of a value tag. Type grows so no word is under 12.5 px on screen.
+  type no longer fits, and fade out of the way of a value tag. Type grows so no word is under 12.5 px on screen - every
+  word, a label's own `<text>` too.
 - **Colour.** Course tokens and five category colours (`--cat-1`..`--cat-5`: blue, teal, violet, rose, slate). Its
   warning colour is the factory's alarm amber (`--kit-alarm`): a deck's brand styles make `--amber` blue. Dark is
   the slide; on a light ground the kit takes its light set (`.k2-light`, or `"theme": "light"`).
 - **The deck.** Inside a slide the deck's Next and Back walk the steps (GB_HOOKS); a step's `line` lights the
-  slide's line. Outside a deck the kit draws its own step bar.
+  slide's line. Lines count from 1, as the deck counts them (`"line": 1` is `data-i="1"`, never 0), as a 3D scene's do:
+  the deck walks the figure, its lines and, on a slide whose words are in parts, the part that holds the lit line with
+  one counter - a line no step names is a Next of its own, before the step after it. Light up to the slide's last
+  line; the compile refuses a line outside 1..n and lines left after the last one lit (as for a 3D scene). On a slide
+  whose last Next shows an answer (a vote, a pick, a question), the steps that light the lines on screen play first and
+  the answer last; a step lighting a line of the answer (or marked `"reveal": true`) plays once it shows. Outside a deck
+  the kit draws its own step bar.
 - **The overlap check.** `KIT2D.audit(figure)` lists words over words, words that spill out of the box they are written
   in, words or shapes cut at the edge and labels lying on a line, and boxes on each other; a word is out of its box when it leaves the shape itself (a triangle's tip, a diamond's corner), not only its bounding box. A box's words wrap to its width at their grown size. `fit_gate.py` runs it at the end of every step it walks; a finding fails the gate.
 
@@ -44,7 +51,9 @@ comparison, a pyramid, a schedule, a grid, a graph, a process laid out four ways
 not have - and says why in the build sheet's `"_brief"`. Two figures that look alike less than 5 slides apart are listed for
 the reviewer; the build carries on. Its `"_todo"`, when it has one, names the values only the course's sources can give, and the compile reports
 it until it is gone. Alone: `KIT2D.mount(element, spec)` returns the figure
-(`goStep(n)`, `next()`, `prev()`, `idle()`).
+(`goStep(n)`, `next()`, `prev()`, `idle()`). One figure on its real slide, measured at every step and photographed:
+`course-visuals/kit/scripts/studio.py <figure>.kit2d.json` (`--quick` for the findings only, `--step all` for a picture
+of every step); `figure_review.py` photographs a module's 2D figures with its other figures.
 
 ## Top level
 

@@ -461,6 +461,10 @@
     /* a figure-kit drawing lays itself out for the size it is shown at (its labels, the 12.5 px floor, its frame) the
        first time it is on screen - which may be this very moment, when a check moved it into a question */
     if (svg.__kit && typeof svg.__kit.layout === "function") { try { svg.__kit.layout(); } catch (e) { /* judged as it is */ } }
+    /* a 2D-kit figure too: its type grown and its labels placed for this size before they are judged - a hidden browser
+       that draws no frames never tells it its size, and its labels waited, unplaced, on top of each other (M01 s19) */
+    var k2 = window.KIT2D && KIT2D.figures ? KIT2D.figures.filter(function (f) { return f.svg === svg; })[0] : null;
+    if (k2 && typeof k2.resize === "function") { try { k2.resize(); } catch (e) { /* judged as it is */ } }
     settle(svg);
     var copies = expandUses(svg);
     var moving = endless(svg), held = moving.map(function (a) { return { a: a, t: a.currentTime, run: a.playState === "running" }; });

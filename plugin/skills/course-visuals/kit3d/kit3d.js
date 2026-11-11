@@ -38,6 +38,7 @@
   var DEG = Math.PI / 180;
   var PIXEL_BUDGET = 2.4e6;           /* 2.70.0 - the most pixels a frame draws (P.size) */
   var TURN_SEARCH_MS = 8;             /* a label search slower than this waits for the view to stand (P.settle) */
+  var EDGE = 40;                      /* a pill past the box's edge counts as this many touches: inside always wins (P.settle) */
   /* lite light: a device a scene juddered on is remembered, and every scene after builds lite there (P.goLite) */
   var LITE_KEY = 'kit3d.lite';
   function slowDevice(set) {
@@ -1175,6 +1176,7 @@
     /* the places the pills keep off are read from the page only when the view stands or the slide's layout changed - never
        in the frames of a turn, where a read after the last frame's writes would lay the page out again */
     if (lay !== S.labLay || key === S.labKey || !S.res) { S.keepOut(); }
+    S.standing = key === S.labKey;                      /* nothing moved since the last frame: the view stands */
     S.labLay = lay; S.labKey = key;
     S.labels.forEach(function (l) {
       setCls(l.el, 'k3-off', !l.shown);
@@ -1232,9 +1234,12 @@
        between, each pill keeps its place round its moving point (perf_gate, a turn at 4x: the search was a third to half of
        every frame, 15 labels 130 ms a search). A search that took longer than TURN_SEARCH_MS is not made in a turn at all:
        crowded labels on a thin layer (the membrane tank's four) took up to 200 ms each, a frame of the turn every 100 ms
-       held for it - p95 three frames in perf_gate. At rest the full search follows, as before */
+       held for it - p95 three frames in perf_gate. At rest the full search follows, as before - only while the view moves is
+       a search put off: a view that stands after a step is searched however long the last search took (the factory trial,
+       M01 s16 and M19 s03: a slow search kept every later step's pills at the places of the step before, cut at the box's
+       edge and on top of each other) */
     var tn = now();
-    if (!still && S.setT && (tn - S.setT < Math.max(100, 3 * (S.setCost || 0)) || S.setCost > TURN_SEARCH_MS)
+    if (!still && !S.standing && S.setT && (tn - S.setT < Math.max(100, 3 * (S.setCost || 0)) || S.setCost > TURN_SEARCH_MS)
         && shown.every(function (l) { return !!l.f; })) {
       shown.forEach(function (l) { l.up = l.f[0]; l.gap = l.f[1]; l.dx = l.f[2]; l.oy = l.f[3]; });
       S.setFull = false;
@@ -1274,8 +1279,8 @@
     function confl(l) {
       var n = 0, p = pillR(l), s = stemR(l), j, b, bp;
       for (j = 0; j < res.length; j++) { if (hit(p, res[j], 4) || hit(s, res[j], 0)) { n++; } }
-      /* a pill past the box's edge is cut, its name unread: worse than touching another pill (fit gate, 1024 x 768) */
-      if (p.y1 < 4 || p.y2 > H - 4 || p.x1 < 4 || p.x2 > W - 4) { n += 3; }
+      /* a pill past the box's edge is cut, its name unread: worse than any number of touches (fit gate, 1024 x 768) */
+      if (p.y1 < 4 || p.y2 > H - 4 || p.x1 < 4 || p.x2 > W - 4) { n += EDGE; }
       for (j = 0; j < shown.length; j++) {
         b = shown[j];
         if (b === l) { continue; }
@@ -1292,9 +1297,11 @@
        stem misses it (it meets the pill at least 12 px in from its corner) */
     function place(l, want) {
       l.dx = want;
-      var r = pillR(l), t = want;
+      var r = pillR(l), t = want, lim = l.pw / 2 - 12;
       if (r.x1 < 4) { t += 4 - r.x1; } else if (r.x2 > W - 4) { t += W - 4 - r.x2; }
-      return l.tag ? t : clamp(t, -(l.pw / 2 - 12), l.pw / 2 - 12);
+      if (l.tag) { return t; }
+      /* a point nearer the box's edge than that: the pill stays inside, its stem nearer its corner (still under it) */
+      return t !== want && Math.abs(t) > lim ? clamp(t, -(l.pw / 2 - 3), l.pw / 2 - 3) : clamp(t, -lim, lim);
     }
     /* "side": 1 hangs the pill to the right of its stem, -1 to the left (IGF M03's labels), or "dx" in px */
     function pref(l) { return l.tag ? 0 : (l.side ? l.side * (l.pw / 2 - 12) : l.dx0); }
@@ -1386,6 +1393,16 @@
       if (!changed) { break; }
     }
     }
+    /* the box's edge is a hard limit: a pill the search left past it (no place inside free of the others) gets the stem that
+       fits, or the other side of its point, and is slid inside */
+    shown.forEach(function (l) {
+      var r = pillR(l), upG = l.sy - 4 - l.ph, dnG = H - 4 - l.sy - l.ph;
+      if (l.tag || (r.x1 >= 4 && r.x2 <= W - 4 && r.y1 >= 4 && r.y2 <= H - 4)) { return; }
+      if (r.y1 < 4 || r.y2 > H - 4) {
+        if ((l.up ? upG : dnG) >= 6) { l.gap = l.up ? upG : dnG; } else if ((l.up ? dnG : upG) >= 6) { l.up = !l.up; l.gap = Math.min(l.base, l.up ? upG : dnG); }
+      }
+      l.dx = place(l, l.dx);
+    });
     /* a value is written only when it changed: an unchanged write still marks the page for another layout */
     function put(el, k, v) { if (el.style[k] !== v) { el.style[k] = v; } }
     shown.forEach(function (l) {
@@ -1943,6 +1960,9 @@
       hk.lines = S.steps().slice(1).map(ids);
       hk.go = function (n, animate) { if (S.live && n !== S.step) { S.goStep(n, !animate); } };
     }
+    /* for the slide's own stops (gb_steps.js), which play the scene's steps before the answer: false when it cannot step */
+    slide.__fig = { steps: function () { return S.steps(); }, at: function () { return S.step; },
+      go: function (n) { if (!S.live) { return false; } if (n !== S.step) { S.goStep(n); } } };
     /* a line a step lights is also the way to that step (the 2D kit's rule) */
     S.steps().forEach(function (st, i) {
       [].concat(st.line == null ? [] : st.line).forEach(function (k0) {

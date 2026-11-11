@@ -33,7 +33,9 @@
 .k2-stage svg{display:block;width:100%;height:100%}
 .k2 svg text{font-family:var(--font,"Raleway","Segoe UI",Arial,sans-serif)}
 
-/* type, in drawing units; --k2-up grows it so nothing is drawn under 12.5 px on screen */
+/* type, in drawing units; --k2-up grows it so nothing is drawn under 12.5 px on screen - a text with no class of its own
+   (a label's lines, each in its own class) grows too: the floor holds for every word, never only the classed ones */
+:where(.k2 svg) text{font-size:calc(16px * var(--k2-up,1))}
 .k2-t-name{font-size:calc(15px * var(--k2-up,1));font-weight:700;letter-spacing:.08em;text-transform:uppercase;fill:var(--k2-dim)}
 .k2-t-val{font-size:calc(34px * var(--k2-up,1));font-weight:800;fill:var(--k2-ink);font-variant-numeric:lining-nums tabular-nums}
 .k2-t-lbl{font-size:calc(17px * var(--k2-up,1));font-weight:700;fill:var(--k2-ink)}

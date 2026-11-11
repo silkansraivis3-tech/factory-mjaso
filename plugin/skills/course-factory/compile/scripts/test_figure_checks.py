@@ -101,7 +101,18 @@ def main():
     check("... lines 1-4 on a slide of four pass", not cm.step_line_problems(k3.replace(json.dumps(scene), json.dumps(good))))
     check("a 2D kit figure lighting line 0, or a line past the slide's last, is a must-fix",
           [x[1].split(",")[0] for x in cm.step_line_problems(k2(dict(rows, steps=[{"set": {"r": 1}, "line": 0}, {"set": {"r": 2}, "line": 6}])))]
-          == ["its figure's step 1 lights line 0", "its figure's step 2 lights line 6"])
+          == ["its 2D figure: step 1 lights line 0", "its 2D figure: step 2 lights line 6"])
+    early = cm.step_line_problems(k2(dict(rows, steps=rows["steps"][:2])))
+    check("a 2D kit figure is walked as a 3D scene is: the lines after the last one a step lights are a must-fix",
+          len(early) == 1 and "lines 4, 5 come after line 3" in early[0][1] and "the figure standing" in early[0][1], early)
+    check("... lines 1-5 lit by its steps pass", not cm.step_line_problems(k2(rows)))
+    why = '<div class="lt-why" data-k="1"><p data-i="6">a</p></div>'
+    past2 = dict(rows, steps=[{"set": {"r": 1}, "line": [1, 2, 3, 4, 5]}, {"set": {"r": 2}, "line": [6, 7]}])
+    check("a 2D step past the last line on a slide with an answer to reveal (true or false) plays with the answer - not a problem",
+          not cm.step_line_problems(k2(past2, why)) and len(cm.step_line_problems(k2(past2))) == 1, cm.step_line_problems(k2(past2, why)))
+    k2back = dict(rows, steps=[dict(rows["steps"][2]), dict(rows["steps"][0])])
+    check("a 2D kit figure whose step goes back to an earlier line walks the lines twice (the deck walks its lines with it)",
+          len(cm.lines_twice_problems(k2(k2back))) == 1)
     past = spec([{"title": "a", "line": 1, "play": [["C", 1, 1]]}, {"title": "b", "line": 3, "play": [["C", 2, 1]]}])
     check("a figure-kit step past the lines plays with the answer on a slide with a question - not a problem there",
           not cm.step_line_problems(page(past, '><p data-i="1">a</p><p data-i="2">b</p><li class="you">?</li')))

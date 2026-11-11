@@ -377,25 +377,27 @@ def step_lines(st):
     return [x for x in (ln if isinstance(ln, list) else [] if ln is None else [ln]) if isinstance(x, int) and not isinstance(x, bool)]
 
 
-def line_problems(spec, lines):
+def line_problems(spec, lines, first=0, what="scene"):
     """the scene's steps against its slide's lines 1..lines (gb_deck.js lockFor walks them with one counter): a step lighting
     a line the slide does not have lights nothing, and the lines after the last one a step lights come with the scene standing
-    at its last step. Steps that light no line are walked with the lines by the deck, one line each Next"""
+    at its last step. Steps that light no line are walked with the lines by the deck, one line each Next. A 2D kit figure is
+    walked the same way: first=1 (its steps are counted from the first Next), what="figure\""""
     steps = spec.get("steps") if isinstance(spec.get("steps"), list) else []
     named = sorted({x for st in steps for x in step_lines(st)})
     if not named:
         return []
     out = []
-    for i, st in enumerate(steps):
+    for i, st in enumerate(steps, first):
         bad = [x for x in step_lines(st) if not 1 <= x <= lines]
         if bad:
             out.append("step %d lights line %d, and the slide has %s - %s" % (
                 i, bad[0], "lines 1-%d" % lines if lines > 1 else "one line" if lines else "no line", FROM_ONE))
     last = max([x for x in named if 1 <= x <= lines] or [0])
     if last and last < lines:
-        out.append("lines %s come after line %d, the last a step lights: Next reaches %s with the scene standing at its last "
+        out.append("lines %s come after line %d, the last a step lights: Next reaches %s with the %s standing at its last "
                    "step - give each a step that shows what it says (\"line\": %d ...)" % (
-                       ", ".join(str(x) for x in range(last + 1, lines + 1)), last, "them" if lines - last > 1 else "it", last + 1))
+                       ", ".join(str(x) for x in range(last + 1, lines + 1)), last, "them" if lines - last > 1 else "it", what,
+                       last + 1))
     return out
 
 

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - 2D-kit figures on the factory deck engine</title>
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_shell.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_compose.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_layouts.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_upgrade.css">
+<link rel="stylesheet" href="../../kit2d.css">
+</head>
+<body>
+<!-- Test fixture for test_kit2d.py: 2D-kit figures the way compile_module.py writes them, driven by the factory's own
+     gb_steps.js and gb_deck.js. s2: words in two parts, the figure's steps light lines 4 and 5 (the deck walks lines 1-3 on
+     part 1 first). s3: a scenario - the figure's steps light the situation's lines before the answer shows. s4: true or
+     false - the figure's steps light the why's lines, so they play once the why is open, under the figure. -->
+<div id="landing"><button id="startBtn" type="button"><span class="btn-label">Start</span></button></div>
+<div id="chrome"><button id="btnPrev" type="button">Back</button><button id="btnNext" type="button">Next</button></div>
+<main id="stage">
+  <section class="slide" id="s1" data-visual="none"><div class="slide-body"><h2>Before</h2></div></section>
+
+  <section class="slide" id="s2" data-template="content-in-parts.v1" data-variant="with-figure"><h2>Five kinds</h2>
+  <div class="slide-body two-col fig-wide dom-fig">
+    <div class="fill fig kit2d-fig" data-script-ignore><div class="kit2d-stage" data-kit2d="#k2-s2"></div><script type="application/json" id="k2-s2">
+{"size": [600, 360], "glow": false, "state": {"a": 0, "b": 0},
+ "parts": [{"type": "node", "x": 40, "y": 60, "w": 220, "h": 80, "text": "Integral"},
+           {"type": "node", "x": 340, "y": 60, "w": 220, "h": 80, "text": "Independent"},
+           {"type": "node", "x": 40, "y": 220, "w": 220, "h": 80, "text": "Semi-membrane", "show": "@a"},
+           {"type": "node", "x": 340, "y": 220, "w": 220, "h": 80, "text": "Internal insulation", "show": "@b"}],
+ "steps": [{"title": "Semi-membrane", "set": {"a": 1}, "line": 4}, {"title": "Internal insulation", "set": {"b": 1}, "line": 5}]}
+</script></div>
+    <div class="copy">
+      <div class="lt-parts" data-parts="2">
+        <div class="lt-part on" data-part="1">
+          <p data-i="1">Integral - part of the hull</p>
+          <p data-i="2">Independent - self-supporting</p>
+          <p data-i="3">Membrane - a thin layer</p>
+        </div>
+        <div class="lt-part" data-part="2">
+          <p data-i="4">Semi-membrane - rounded corners</p>
+          <p data-i="5">Internal insulation - on the inner hull</p>
+        </div>
+      </div>
+    </div>
+    <div class="lt-tabs"><button type="button" class="lt-tab on" data-part="1">1</button><button type="button" class="lt-tab" data-part="2">2</button></div>
+  </div></section>
+
+  <section class="slide" id="s3" data-template="scenario.v1" data-variant="picture-left" data-stops="2"><h2>Which ship?</h2>
+  <div class="slide-body lt-split" style="--cols:46fr 54fr"><div class="lt-scol"><div class="lt-in fill fig kit2d-fig" data-script-ignore style="--i:0"><div class="kit2d-stage" data-kit2d="#k2-s3"></div><script type="application/json" id="k2-s3">
+{"size": [600, 300], "glow": false, "state": {"a": 0, "b": 0},
+ "parts": [{"type": "node", "x": 40, "y": 100, "w": 220, "h": 80, "text": "Propane", "show": "@a"},
+           {"type": "node", "x": 340, "y": 100, "w": 220, "h": 80, "text": "LNG", "show": "@b"}],
+ "steps": [{"title": "Propane", "set": {"a": 1}, "line": 1}, {"title": "LNG", "set": {"b": 1}, "line": 2}]}
+</script></div><p class="lt-sit" data-i="1">1 Propane, at ambient temperature</p><p class="lt-sit" data-i="2">2 LNG, at -162 °C</p></div>
+    <div class="copy lt-dcopy"><p class="lt-ask">Which ships take them?</p><ol class="lt-opts">
+      <li class="lt-opt ok" data-v="A"><span class="l">A</span><div><b>1 pressurised, 2 LNG carrier</b><span class="fb">Right.</span></div></li>
+      <li class="lt-opt no" data-v="B"><span class="l">B</span><div><b>One ship for both</b><span class="fb">No.</span></div></li>
+    </ol></div></div></section>
+
+  <section class="slide" id="s4" data-template="true-false.v1" data-variant="picture"><h2>What the ESD stops</h2>
+  <div class="slide-body lt-split" style="--cols:48fr 52fr"><div class="copy lt-tf">
+      <p class="lt-claim">When the ESD trips, the pumps keep running.</p>
+      <div class="lt-vote"><button type="button" data-v="t">True</button><button type="button" data-v="f" class="ok">False</button></div>
+      </div>
+    <div class="lt-scol"><div class="lt-in fill fig kit2d-fig" data-script-ignore style="--i:1"><div class="kit2d-stage" data-kit2d="#k2-s4"></div><script type="application/json" id="k2-s4">
+{"size": [600, 300], "glow": false, "state": {"a": 0, "b": 0},
+ "parts": [{"type": "node", "x": 40, "y": 100, "w": 220, "h": 80, "text": "Valves close", "show": "@a"},
+           {"type": "node", "x": 340, "y": 100, "w": 220, "h": 80, "text": "Pumps stop", "show": "@b"}],
+ "steps": [{"title": "Valves", "set": {"a": 1}, "line": 1}, {"title": "Pumps", "set": {"b": 1}, "line": 2}]}
+</script></div><div class="lt-why" data-k="1"><span class="stamp">False</span><div><p data-i="1">The manifold ESD valves close.</p><p data-i="2">The cargo pumps stop.</p></div></div></div>
+  </div></section>
+
+  <section class="slide" id="s5" data-visual="none"><div class="slide-body"><h2>After</h2></div></section>
+</main>
+<script src="../../../../course-module-ux/assets/gb_steps.js"></script>
+<script src="../../../../course-module-ux/assets/gb_deck.js"></script>
+<script src="../../kit2d.js"></script>
+<script>GBDeck.init({ hooks: window.GB_HOOKS || {} });</script>
+</body>
+</html>
