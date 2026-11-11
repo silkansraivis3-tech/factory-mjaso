@@ -243,22 +243,37 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
    allow - no empty bands above and under a wide photograph in a tall box (M01 s09) - and the words under them */
 .slide[data-template] .slide-body.two-col.fig-top{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;
   align-items:stretch;gap:min(2.6vmin,22px)}
-.slide[data-template] .slide-body.two-col.fig-top > .fill,.slide[data-template] .slide-body.two-col.fig-top > .lt-pfigs{
+/* the words first, the picture band under them (variant figure-bottom): the same band, its row last */
+.slide[data-template] .slide-body.two-col.fig-bottom{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
+  align-items:stretch;gap:min(2.6vmin,22px)}
+.slide[data-template] .slide-body.two-col:is(.fig-top,.fig-bottom) > .fill,
+.slide[data-template] .slide-body.two-col:is(.fig-top,.fig-bottom) > .lt-pfigs{
   height:auto;min-height:min(30vmin,240px);background:none;border:0;padding:0;container-type:size}
-.slide[data-template] .slide-body.two-col.fig-top .lt-pfig > .fill{background:none;border:0;padding:0}
-.slide[data-template] .slide-body.two-col.fig-top > .copy{align-self:start;width:100%}
-.slide[data-template] .fig-top .lt-tiles{display:flex;width:100%;height:100%;justify-content:center;align-items:center;
+.slide[data-template] .slide-body.two-col:is(.fig-top,.fig-bottom) .lt-pfig > .fill{background:none;border:0;padding:0}
+.slide[data-template] .slide-body.two-col:is(.fig-top,.fig-bottom) > .copy{align-self:start;width:100%}
+/* the words' row is as high as the words: a lit line's mark (--hl-y) and a figure's tap line (kit.css: 5 px out) stay inside it */
+.slide[data-template] .slide-body.two-col:is(.fig-top,.fig-bottom) > .copy:has([data-i]){padding-bottom:var(--hl-y)}
+/* a drawing or a live 3D scene in the band (fig-band) keeps its panel, a little higher than a row of photographs: the
+   scene turns and its labels sit inside the box */
+.slide[data-template] .slide-body.two-col.fig-band > .fill.fig{min-height:min(34vmin,272px);padding:min(1.5vmin,12px);
+  background:radial-gradient(ellipse at 50% 46%,var(--lt-panel-glow) 0,transparent 70%),var(--lt-panel)}
+.slide[data-template] .slide-body.two-col.fig-band .kit3d-stage{height:100%;min-height:0}
+.slide[data-template] .slide-body.two-col.fig-band > .fill.fig.lt-light{background:var(--lt-white);border:1px solid var(--lt-line)}
+.slide[data-template] .slide-body.two-col.fig-band .lt-pfig > .fill.fig{padding:min(1.5vmin,12px);
+  background:radial-gradient(ellipse at 50% 46%,var(--lt-panel-glow) 0,transparent 70%),var(--lt-panel)}
+.slide[data-template] :is(.fig-top,.fig-bottom) .lt-tiles{display:flex;width:100%;height:100%;justify-content:center;align-items:center;
   gap:min(1.6vmin,12px);--gaps:calc((var(--n) - 1) * min(1.6vmin,12px))}
-.slide[data-template] .fig-top .lt-tile{flex:none;aspect-ratio:var(--ar,1.5);
+.slide[data-template] :is(.fig-top,.fig-bottom) .lt-tile{flex:none;aspect-ratio:var(--ar,1.5);
   width:min(calc(100cqh * var(--ar,1.5)),calc((100cqw - var(--gaps)) * var(--ar,1.5) / var(--sum,3)))}
-.slide[data-template] .fig-top .lt-tile img{width:100%;height:100%;object-fit:cover}
-.slide[data-template] .fig-top .lt-tile figcaption{position:absolute;left:0;right:0;bottom:0;color:var(--lt-white);
+.slide[data-template] :is(.fig-top,.fig-bottom) .lt-tile img{width:100%;height:100%;object-fit:cover}
+.slide[data-template] :is(.fig-top,.fig-bottom) .lt-tile figcaption{position:absolute;left:0;right:0;bottom:0;color:var(--lt-white);
   background:linear-gradient(transparent,rgba(10,36,99,.82) 40%);padding-top:1.4em}
-.slide[data-template] .fig-top > .fill > img:only-child,.slide[data-template] .fig-top .lt-pfig > .fill > img:only-child{
+.slide[data-template] :is(.fig-top,.fig-bottom) > .fill > img:only-child,
+.slide[data-template] :is(.fig-top,.fig-bottom) .lt-pfig > .fill > img:only-child{
   width:min(100cqw,calc(100cqh * var(--ar,1.5)));height:auto;aspect-ratio:var(--ar,1.5);object-fit:cover;margin:0 auto}
-.slide[data-template] .fig-top > .fill:has(> img:only-child){align-items:center}
-/* under the photographs the points sit two a row: the words take the slide's width and half its height */
-.slide[data-template] .fig-top .copy .support{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--lt-gap)}
+.slide[data-template] :is(.fig-top,.fig-bottom) > .fill:has(> img:only-child){align-items:center}
+/* under or over the band the points sit two a row: the words take the slide's width and half its height */
+.slide[data-template] :is(.fig-top,.fig-bottom) .copy .support{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--lt-gap)}
 
 /* a part's own picture ("part_figures"): every part's picture in one place, the one of the part shown */
 .slide[data-template] .lt-pfigs{display:grid;min-width:0;min-height:0}
@@ -386,6 +401,7 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 /* in parts the photographs keep one size from part to part: the words' row has a share of its own, larger only for a part
    that needs it */
 .slide[data-template] .slide-body.two-col.fig-top:has(> .lt-tabs){grid-template-rows:minmax(0,1.6fr) minmax(min-content,1fr) auto}
+.slide[data-template] .slide-body.two-col.fig-bottom:has(> .lt-tabs){grid-template-rows:minmax(min-content,1fr) minmax(0,1.6fr) auto}
 .slide[data-template] .lt-tab{
   width:56px;height:56px;flex:none;                                /* L6: a target of 56 px */
   border-radius:50%;border:1px solid var(--lt-ring);background:var(--lt-white);

@@ -6,8 +6,8 @@ run_audits.py (2.63.0). The numbers in course-module-ui/knowledge/layout-templat
 
 For every layout and word count it builds a small deck (like a module, never in the course): four texts of that length,
 cut from the course's own approved scripts (a statement and bullets), each measured slide between three short text
-slides so L62 keeps its own layout; then run_audits.py at 1024 x 768 and 1280 x 800 says what spills and by how much.
-A layout's budget is the longest count at which all four texts fit. Re-run it when a template, the type or the logo
+slides so the layout plan keeps its own layout; then run_audits.py at 1024 x 768, 1280 x 800 and 1280 x 720 says what
+spills and by how much. A layout's budget is the longest count at which all four texts fit at every size. Re-run it when a template, the type or the logo
 changes. Writes nothing in the course. Needs Chrome or Edge.
 """
 from __future__ import annotations
@@ -33,6 +33,11 @@ KIT = {"size": [640, 390], "label": "a drawing", "parts": [
     {"id": "T", "type": "tank", "x": 40, "y": 150, "w": 260, "h": 140, "label": "Fuel tank", "value": 0.5},
     {"id": "R", "type": "space", "x": 360, "y": 60, "w": 250, "h": 260, "label": "Tank connection space"},
     {"id": "V", "type": "valve", "x": 485, "y": 220, "label": "Master valve", "value": 1}]}
+KIT_WIDE = {"size": [960, 380], "label": "a wide drawing", "parts": [      # a ship's run of tanks: wide enough for a band
+    {"id": "T1", "type": "tank", "x": 40, "y": 120, "w": 240, "h": 150, "label": "Fuel tank 1", "value": 0.5},
+    {"id": "R", "type": "space", "x": 330, "y": 60, "w": 300, "h": 260, "label": "Tank connection space"},
+    {"id": "T2", "type": "tank", "x": 680, "y": 120, "w": 240, "h": 150, "label": "Fuel tank 2", "value": 0.7},
+    {"id": "V", "type": "valve", "x": 470, "y": 220, "label": "Master valve", "value": 1}]}
 LAYOUTS = {   # layout -> (the picture, the build-sheet entry)
     "beside-drawing": ("kit", {"composition": "two-col"}),
     "beside-drawing+inset": ("kit", {"composition": "two-col", "inset": {"photo": "", "caption": "A ship's deck tank."}}),
@@ -43,7 +48,12 @@ LAYOUTS = {   # layout -> (the picture, the build-sheet entry)
     "parts": ("kit", {"composition": "two-col", "template": "content-in-parts"}),
     "under-top-tiles": ("tiles", {"composition": "two-col", "variant": "figure-top"}),
     "parts-under-top-tiles": ("tiles", {"composition": "two-col", "template": "content-in-parts", "variant": "figure-top"}),
+    "over-bottom-tiles": ("tiles", {"composition": "two-col", "variant": "figure-bottom"}),
+    "under-band-drawing": ("wide", {"composition": "two-col", "variant": "figure-top"}),
+    "over-band-drawing": ("wide", {"composition": "two-col", "variant": "figure-bottom"}),
+    "parts-under-band-drawing": ("wide", {"composition": "two-col", "template": "content-in-parts", "variant": "figure-top"}),
 }
+SIZES = ("1024x768", "1280x800", "1280x720")
 
 
 def lines_of(course):
@@ -78,14 +88,15 @@ def measure(tcm, pool, lay, n0):
             screens.append({"id": sid, "kind": "slide", "title": "The fuel system of an IGF ship", "layout": "split",
                             "visual_kind": "photo" if pic == "photo" else "comparison", "text": text_of(pool, n0, 7 * j + 3 * n0),
                             "visual": "A picture.", "notes": "- Say it.", "minutes": 2})
-            e = dict(entry, figure=("assets/img/p%02d.jpg" % j) if pic == "photo" else "k.kit.json", declined_3d="flat")
+            e = dict(entry, figure=("assets/img/p%02d.jpg" % j) if pic == "photo" else "w.kit.json" if pic == "wide" else "k.kit.json",
+                     declined_3d="flat")
             if pic == "tiles":           # two wide photographs: a row on top, the words under them
                 e = dict(entry, figure="", tiles=["assets/img/p%02d.jpg" % j, "assets/img/i%02d.jpg" % j], declined_3d="flat")
-                if "template" in e:      # in parts: two parts of about n words each
-                    a = text_of(pool, n0, 7 * j + 3 * n0).split("\n")
-                    b2 = text_of(pool, n0, 7 * j + 3 * n0 + 5).split("\n")
-                    screens[-1]["text"] = "\n".join(a + [x.lstrip("• ") for x in b2[:1]] + b2[1:])
-                    e["parts"] = [[1, len(a)], [len(a) + 1, len(a) + len(b2)]]
+            if e.get("template") == "content-in-parts" and pic in ("tiles", "wide"):   # in parts: two of about n words each
+                a = text_of(pool, n0, 7 * j + 3 * n0).split("\n")
+                b2 = text_of(pool, n0, 7 * j + 3 * n0 + 5).split("\n")
+                screens[-1]["text"] = "\n".join(a + [x.lstrip("• ") for x in b2[:1]] + b2[1:])
+                e["parts"] = [[1, len(a)], [len(a) + 1, len(a) + len(b2)]]
             if "inset" in e:
                 e["inset"] = dict(e["inset"], photo="assets/img/i%02d.jpg" % j)
             sheet["screens"][sid] = e
@@ -102,6 +113,7 @@ def measure(tcm, pool, lay, n0):
                 meta[f] = {"source": "Wikimedia Commons", "author": "A. Person", "licence": "CC BY 4.0", "description": "A ship."}
         tcm.cs.save(os.path.join(img, "_photo_meta.json"), meta)
         tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "k.kit.json"), KIT)
+        tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "w.kit.json"), KIT_WIDE)
         tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), sheet)
         tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
         page = os.path.join(md, "presentation", "index.html")
@@ -112,7 +124,7 @@ def measure(tcm, pool, lay, n0):
             if sid and t:
                 built[sid.group(1)] = "%s/%s" % t.groups()
         row = {}
-        for size in ("1024x768", "1280x800"):
+        for size in SIZES:
             p = subprocess.run([sys.executable, RUN, page, "--quiet", "--viewport", size], capture_output=True, text=True,
                                encoding="utf-8", errors="replace")
             block = re.split(r"\n\d+x\d+\s", p.stdout.split(size, 1)[1] if size in p.stdout else "")[0]
@@ -147,7 +159,7 @@ def main(argv=None):
             res.setdefault(lay, {})[str(n)] = row
     json.dump(res, io.open(o.out, "w", encoding="utf-8"), indent=1)
     for lay, rows in res.items():
-        fit = [int(n) for n, r in rows.items() if all(v.get("1024x768", 1) == 0 for k, v in r.items() if k != "error")]
+        fit = [int(n) for n, r in rows.items() if all(v.get(z, 1) == 0 for k, v in r.items() if k != "error" for z in SIZES)]
         bad = sorted(int(n) for n in rows if int(n) not in fit)
         print("%-22s fits all four up to %s words; first spill at %s" % (lay, max([x for x in fit if not bad or x < bad[0]] or [0]),
                                                                           bad[0] if bad else "-"))
