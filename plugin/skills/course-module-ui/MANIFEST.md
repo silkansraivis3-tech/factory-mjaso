@@ -103,6 +103,14 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## Many blueprints, bands above and below, centred words, no line numbers — 2.131.0 (2026-11-11)
+
+`knowledge/blueprints/` - one file a layout (54), each with its grid, its `shape` and `fits`; `blueprints.json` points to the folder and
+`scripts/blueprints.py` checks every file and draws the catalogue (`design/template-blueprints/index.html`). New variants `figure-bottom`,
+`figure-top` (procedure, long-explanation) and `figure-tall`; a band takes a photograph, a 2D drawing or a 3D scene. `templates/gb_layouts.css`:
+words beside a picture centred against it, the picture's box at its own aspect (`--ar`), a band's height on its grid row, the line counter a small
+square (steps keep numbers). Budgets in `layout-templates.json`: words under or over a band 70, a part in a band 40, beside a tall box 50.
+
 ## Wide photographs on top, parts that turn like pages, a highlight with room — 2.128.0 (2026-11-10)
 
 `knowledge/blueprints.json` and `layout-templates.json`: the `figure-top` variant of explain-figure, reading-with-figure and

@@ -7,6 +7,15 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.131.0 · Slides that do not all look alike, a cheaper trial (2026-11-11)
+
+- `compile/scripts/layout_plan.py` (new): every blueprint a slide can take scored by its picture's real shape, its words and its names; the whole module planned by shape, seeded among near-equal fits; `problems` for the package check. `compile_module.py`: `photo_aspect`, `kit3d_aspect`, `plan_item`, the plan applied in `slide_html`, `Layout plan (Mxx)` printed; `CF_LAYOUT_PLAN=0` for tests.
+- `scripts/content_script.py render`: the planned shape line. `script/GUIDE.md`, `compile/GUIDE.md`, the note under L62 in FACTORY_LAWS.
+- `scripts/factory_trial.py`: `setup --reuse`, `run --fresh`, stage hashes, REUSED / RUNS in the prompt and the scorecard; `look_shapes`, `same_look_in_a_row`, `beside_share`. `orchestration/workflows/brief.mjs` (new): the briefs and the gate from the workflow. `build_course.js`: `HANDS_ON`, the 3D check runner and the build after the figure fixers on Sonnet. `compile/scripts/check_cache.py`: a kit's parts file stales only its own slides.
+- `tablet/scripts/check_course_package.py`: the blueprint library and the shape rule.
+- `coverage/scripts/sim_coverage.py practical`, `coverage/knowledge/simulators.json` (`model_courses`, VLCC, PROD, CHEM), `SIMULATORS.md`; `compile/scripts/additional_materials.py` and `scripts/classroom_files.py`: one paper a practical (`paper`, `paper_part`), exercise forms as papers, `moduleNN/instructor/papers/`, the instructor sheet's criteria, IMO model course and sources, no Latvian equipment; `content_script.py` checks the new fields and the handover-only simulator screen; `factory_trial.py` builds a practical module by default.
+- Tests: new `test_layout_plan.py`; test_compile_module, test_course_package, test_factory_trial, test_build_course, test_check_cache, test_content_script; known failures unchanged.
+
 ## 2.130.0 · Builders that count their own builds, render shows approve's list, verdicts that stand, a trial off the shared libraries (2026-11-11)
 
 - `compile/scripts/phase_a.py`: Phase A's streak forgotten after its build; `BUILDER_CARD.md` and `build_course.js` say a builder counts its own builds.

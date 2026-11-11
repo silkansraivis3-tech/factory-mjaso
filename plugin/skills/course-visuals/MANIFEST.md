@@ -146,6 +146,10 @@ lane, `trace` and `region` on charts, and the minified copy modules ship (`min/k
 changing the kit - `test_minify_engines.py` fails a stale copy).
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
+## 2.131.0 · A fixer's quick look at its 3D scenes (2026-11-11)
+
+- `kit3d/scripts/scene3d_check.py --slides <ids> --no-perf`: shoots only the scenes a fixer changed into `review/MNN_3d_look/`, never the reviewer's pictures.
+
 ## 2.130.0 · 2D steps on the deck's lines, the answer after the figure, labels inside their box, a scene's own frames judged (2026-11-11)
 
 - `kit2d`: `deck()` gives the deck `line0`, `lines`, `go` and a sync on each step, so a 2D figure lights its lines and turns the parts like a 3D one; every text held to the floor; a layout on window resize; the glow may overlap. `compile_module.py` checks 2D step lines with `check_kit3d.line_problems`.
