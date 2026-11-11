@@ -790,6 +790,9 @@ def hint_ignored(page):
 TOP_ASPECT, TOP_ROW = LAYOUTS["boxes"]["top_aspect"], LAYOUTS["boxes"]["top_row_aspect"]
 
 
+_ASPECTS = {}
+
+
 def photo_aspect(mdir, rel):
     """a photograph's width over its height, read from the file itself - None when it cannot be read"""
     rel = str(rel or "").replace("\\", "/")
@@ -797,10 +800,13 @@ def photo_aspect(mdir, rel):
     if not os.path.isfile(p) and rel.startswith("assets/img/"):
         p = img_file(mdir, rel[len("assets/img/"):])
     try:
-        from PIL import Image
-        with Image.open(p) as im:
-            w, h = im.size
-        return w / float(h) if h else None
+        key = (p, os.path.getmtime(p))
+        if key not in _ASPECTS:                         # read once a build: the layout plan asks for every slide's picture
+            from PIL import Image
+            with Image.open(p) as im:
+                w, h = im.size
+            _ASPECTS[key] = w / float(h) if h else None
+        return _ASPECTS[key]
     except Exception:                                  # noqa: BLE001 - an SVG, a missing or broken file: no shape
         return None
 

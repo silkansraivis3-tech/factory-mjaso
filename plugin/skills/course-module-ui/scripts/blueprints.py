@@ -151,6 +151,10 @@ def card(b, title_row):
         items = "<li><b>Title</b> - title</li>" + items
     note = "<li><b>Notes</b> - %s</li>" % e(b["notes"]) if b.get("notes") else ""
     ref = '<div class="ref">Reference: <code>%s</code></div>' % e(b["ref"]) if b.get("ref") else ""
+    f = b.get("fits") or {}
+    if b.get("shape"):                  # a slide blueprint: its shape, and the pictures and picture shapes it is good for
+        good = "; ".join("%s %s:1" % (k, "-".join("%g" % x for x in v)) for k, v in (f.get("aspect") or {}).items())
+        ref = '<div class="ref">Shape: <b>%s</b>%s</div>' % (e(b["shape"]), (" - takes " + e(good)) if good else "") + ref
     return ('<article class="bp"><h3>%s</h3><p class="for">%s</p><div class="fr%s">%s%s<div class="body" style="%s">%s</div>%s</div>'
             '<ul>%s%s</ul>%s</article>' % (e(b["id"]), e(b["for"]), " hasbg" if bg else "", bg, tt, style, slots, go, items, note, ref))
 

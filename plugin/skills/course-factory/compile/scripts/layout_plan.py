@@ -382,6 +382,8 @@ def plan(items, rules=None):
     cap = int(math.ceil(len(teach) * r["beside_share"]))
     cost, choice = _dp(items, teach, opts, cap, brk)
     if len(teach) >= r["min_slides"]:
+        # too few shapes: a shape not used yet is given to the slide where it costs least, and that slide keeps it - each
+        # round fixes one more slide, so a shape the new plan drops is given back in the next round
         while True:
             used = {choice[i]["shape"] for i in teach}
             if len(used) >= r["min_shapes"]:
@@ -389,15 +391,16 @@ def plan(items, rules=None):
             best = None
             for i in teach:
                 for s, c, o in opts[i]:
-                    if s in used:
+                    if s in used or len(opts[i]) == 1:
                         continue
-                    cc, ch = _dp(items, teach, dict(opts, **{i: [(s, c, o)]}), cap, brk)
-                    if cc[:2] <= cost[:2] and len({ch[j]["shape"] for j in teach}) > len(used) and (best is None or cc < best[0]):
-                        best = (cc, ch, i, (s, c, o))
+                    cc, ch = _dp(items, teach, {**opts, i: [(s, c, o)]}, cap, brk)
+                    n = len({ch[j]["shape"] for j in teach})
+                    if cc[:2] <= cost[:2] and n >= len(used) and (best is None or (-n, cc) < (-best[3], best[0])):
+                        best = (cc, ch, (i, (s, c, o)), n)
             if not best:
                 break
             cost, choice = best[0], best[1]
-            opts[best[2]] = [best[3]]
+            opts[best[2][0]] = [best[2][1]]
     return choice
 
 

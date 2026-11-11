@@ -12,6 +12,8 @@ from __future__ import annotations
 import os
 import sys
 
+os.environ["CF_LAYOUT_PLAN"] = "0"     # the pre-check's own fixtures, each slide in its own template (test_layout_plan.py: the plan)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")

@@ -37,6 +37,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(os.path.dirname(HERE))
 SKILLS = os.path.dirname(SKILL)
 sys.path.insert(0, os.path.join(SKILL, "scripts"))
+# each slide built in its own template: the deck's layout plan is tested on its own (variety_part, test_layout_plan.py)
+os.environ["CF_LAYOUT_PLAN"] = "0"
 import content_script as cs  # noqa: E402
 import gate_fixture  # noqa: E402
 
@@ -1569,11 +1571,28 @@ def variety_part(tmp):
     page0 = deck(md)
     keys0 = [cm.layout_key(x) for x in re.findall(r"<section [^>]*>.*?</section>", page0, re.S)]
     teach0 = [k for k in keys0 if k[0] not in ("task-launch", "recap", "")]
-    check("2.116.0 (operator, 2026-11-09): the factory does NOT flip a slide's layout to avoid a repeat - ten split slides in a row "
-          "are built the way their templates say, no data-varied, and the repeats are a note only",
+    check("with the layout plan off (CF_LAYOUT_PLAN=0, the factory's own tests of one template) ten split slides in a row are "
+          "built the way their templates say, no data-varied, and the repeats are a note only",
           code == 0 and 'data-varied="' not in page0 and any(a == b for a, b in zip(teach0, teach0[1:]))
           and "Note: " in out and "looks exactly like the slide before it" in out and "a note only" in out, out[-700:])
     out_first = out                           # the first build is the one that enlarges the small photographs (L62)
+    os.environ["CF_LAYOUT_PLAN"] = "1"        # the owner, 2026-11-11: real variety in every build - the deck's layout plan
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    page1 = deck(md)
+    import layout_plan
+    items, shapes = layout_plan.deck_shapes(page1)
+    seq = [shapes[i] for i in sorted(shapes)]
+    check("the layout plan, on in every build: the same ten split slides never show the same shape twice in a row, beside on "
+          "at most half of them, the plan said as one line - and every slide it moved marked data-varied for the pre-check",
+          code == 0 and all(a != b for a, b in zip(seq, seq[1:])) and seq.count("beside") <= (len(seq) + 1) // 2
+          and "Layout plan (M01): " in out and 'data-varied="' in page1 and not layout_plan.problems(page1), (seq, out[-900:]))
+    check("... and each slide still says exactly the approved words", run(MATCH, c, "--module", "1", "--part", "instructor")[0] == 0)
+    code2, out2 = run(COMPILE, c, "--module", "1", "--force")
+    check("... the same input gives the same plan", deck(md) == page1 or layout_plan.deck_shapes(deck(md))[1] == shapes)
+    os.environ["CF_LAYOUT_PLAN"] = "0"
+    for x in ("M01_layouts.json", "M01_layout_avoid.json"):   # the old flip below starts from no remembered way
+        if os.path.isfile(os.path.join(c, "working_claude", "_build", x)):
+            os.remove(os.path.join(c, "working_claude", "_build", x))
     os.environ["CF_LAYOUT_FLIP"] = "1"        # the old machinery, forced - what the factory's own tests of choose_layout still cover
     code, out = run(COMPILE, c, "--module", "1", "--force")
     page = deck(md)
@@ -2900,7 +2919,7 @@ def v2520_part(tmp):
 
     # 5 - the figure first in the markup, the projector layout kept by CSS
     check("5: a two-col slide writes its figure before its words, marked dom-fig", re.search(
-        r'<div class="slide-body two-col wide-right dom-fig">\s*<div class="fill fig">.*?<div class="copy">', s04, re.S), s04)
+        r'<div class="slide-body two-col wide-right dom-fig">\s*<div (?:style="--ar:[\d.]+" )?class="fill fig">.*?<div class="copy">', s04, re.S), s04)
     css = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_compose.css"), encoding="utf-8").read()
     check("5: ... and gb_compose.css puts the words back first on a landscape screen only",
           "@media (min-width:901px){.slide-body.dom-fig > .copy{order:-1}}" in css)
@@ -3673,7 +3692,7 @@ def main():
               .count('data-foot="M01 · IGF SHIP DESIGN AND OPERATIONAL · NOVIKONTAS"') == 6)
         check("split + a drawing -> two-col fig-wide: the reading column (.copy), its statement and list, the picture in .fill.fig",
               'slide-body two-col fig-wide dom-fig"' in s02 and '<div class="copy">' in s02 and 'class="statement"' in s02
-              and 'class="support"' in s02 and '<div class="fill fig"><svg viewBox' in s02, s02)
+              and 'class="support"' in s02 and re.search(r'<div (?:style="--ar:[\d.]+" )?class="fill fig"><svg viewBox', s02), s02)
         check("an .svg figure goes in as it is, without its XML prolog", "<?xml" not in page and "60 °C</text>" in s02)
         check("visual_wide with few words -> stage; an .html fragment placed as it is",
               'slide-body stage"' in s03 and FRAGMENT in s03)
