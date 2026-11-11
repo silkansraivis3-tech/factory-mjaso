@@ -7,6 +7,15 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.129.0 · Builders that count their own builds, render shows approve's list, verdicts that stand, a trial off the shared libraries (2026-11-11)
+
+- `compile/scripts/phase_a.py`: Phase A's streak forgotten after its build; `BUILDER_CARD.md` and `build_course.js` say a builder counts its own builds.
+- `scripts/content_script.py`: `approval_blockers()` is approve's one list; `render` and `apply` print it; the minutes must equal the programme's.
+- `scripts/task_cover.py`: a covered verdict keeps a `taught` hash of its question and cited slides and stands while they are unchanged; `fact_check.py fixes --apply` exits 0; GUIDE and SKILL.md name the real `fixes` commands; the checker agents write in `working_claude/scratch/`.
+- `build_course.js`: `ilo_map.py refresh` before `compile_course.py`; no scratch file outside the course. `hours/scripts/check_balance.py`: a short block declared 100 % active is a report line. `tablet/scripts/verify_course.py`: a compiled module is one page with the module check last. `scripts/factory_trial.py`: the shared libraries off.
+- `course-module-ux/measure/scripts/walk_review.py`: each task page's feedback switch read and given to the judge.
+- Tests beside each script, new `tablet/scripts/test_verify_course.py`; known failures unchanged.
+
 ## 2.128.0 · No person in a request, why read where it belongs, task pages walked, credits that name every author (2026-11-11)
 
 - `scripts/check_script_match.py`: `why` compared only on a scenario; `scripts/content_script.py`: `why` is the figure's reason on other slides; `t_overfull_under` (a worked example's question and answer under its picture).

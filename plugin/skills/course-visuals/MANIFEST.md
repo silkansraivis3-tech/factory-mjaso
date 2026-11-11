@@ -146,6 +146,13 @@ lane, `trace` and `region` on charts, and the minified copy modules ship (`min/k
 changing the kit - `test_minify_engines.py` fails a stale copy).
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
+## 2.129.0 · 2D steps on the deck's lines, the answer after the figure, labels inside their box, a scene's own frames judged (2026-11-11)
+
+- `kit2d`: `deck()` gives the deck `line0`, `lines`, `go` and a sync on each step, so a 2D figure lights its lines and turns the parts like a 3D one; every text held to the floor; a layout on window resize; the glow may overlap. `compile_module.py` checks 2D step lines with `check_kit3d.line_problems`.
+- `gb_steps.js` `answerLast()`: on a vote or pick slide the figure's steps play before the answer; a true-or-false why card under the picture.
+- `audit_drawing.js` lays a 2D figure out before judging it; `studio.py` draws and photographs 2D figures and fails a shot not taken; `figure_review.py` photographs 2D and task-page figures and fails when it has none.
+- `kit3d`: the slow label search runs again whenever the view stands; past the edge weighs more than overlaps; a last guard keeps every label in its box. `perf_gate.py` judges the scene's own frames while it turns; `scene3d_check.py` flags a scene under 10 fps twice. Minified copies rebuilt.
+
 ## 2.128.0 · Step lines from 1, a label floor that holds, a midship section, the Commons fetcher (2026-11-11)
 
 - `scripts/commons.py` (`search`, `get`): the one Wikimedia Commons fetcher - original file and its `_photo_meta.json`, licences that allow use only, a fixed User-Agent with no person in it, one request a second. `agents/visual-sourcer.md` uses it. `scripts/check_assets.py`: `visually_verified` must be words.

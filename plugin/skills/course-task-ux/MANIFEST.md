@@ -6,6 +6,13 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.129.0 · A result screen that reads on Navy, placements by name, a bar nothing runs under (2026-11-11)
+
+`assets/gb_task_look.css`: the result screen's answer, reason and debrief lines, a folded scenario step and a check's opening card readable on
+Navy; the top bar takes the ground's colour. `gb_answer.css`: `scroll-padding-top` below the bar. `gb_answer.js`: `placeName()` names a label
+placed on a picture by where it sits; a slider's readout shows its value from the start. `gb_interact.css`: the OPEN pill at 4.5:1.
+`test_task_engine.py` sweeps every screen, white and Navy, for 4.5:1.
+
 ## 2.103.0 · Which group are you in? (2026-11-05)
 
 `assets/gb_answer.js` and `gb_answer.css`: a set page with grouped questions opens on `#grpScr` (one `.grp-pick` button
