@@ -250,12 +250,13 @@ def jitter(seed, *keys):
     return int(h[:12], 16) / float(16 ** 12)
 
 
-def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None, fixed=None, seed="", sid=""):
+def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None, fixed=None, seed="", sid="", rows=0):
     """([{"bp", "shape", "cost"}], {shape: why not}) - the blueprints a teaching slide built as own_bp fits, cheapest first:
     every blueprint of its group (blueprints/*.json "fits") that takes its picture (family: photo, tiles, drawing, 3d) and
     its words (part_words: its largest part, when they are in parts), whose box suits the picture's shape (aspect, None
     while it is not drawn yet) and that shows its names. The cost: 0 a perfect fit, up to 10, and a seeded fraction that
-    settles near-equal fits. fixed: why the slide keeps its own blueprint."""
+    settles near-equal fits. fixed: why the slide keeps its own blueprint. rows: the rows of a table slide - a table's budget
+    (budgets "table_...") is rows and words, and it must fit both"""
     own = LIB.get(own_bp) or {}
     own_shape = own.get("shape") or "beside"
     group = (own.get("fits") or {}).get("group")
@@ -279,7 +280,9 @@ def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None,
             no = "on the dark ground"
         elif not lo <= words <= hi:
             no = "for %d-%d words" % (lo, hi)
-        elif most is not None and w > most:
+        elif isinstance(most, dict) and (w > most["words"] or rows > most["rows"]):
+            no, stage = "%d rows and %d words, it holds %d and %d" % (rows, w, most["rows"], most["words"]), 2
+        elif not isinstance(most, dict) and most is not None and w > most:
             no, stage = "%d words, it holds %d" % (w, most), 2
         elif f.get("names") and names > f["names"]:
             no, stage = "%d names on the picture, it shows %d" % (names, f["names"]), 3

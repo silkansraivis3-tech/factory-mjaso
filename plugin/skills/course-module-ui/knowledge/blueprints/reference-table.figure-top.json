@@ -1,0 +1,61 @@
+{
+ "id": "reference-table.figure-top",
+ "template": "reference-table",
+ "variant": "figure-top",
+ "shape": "top",
+ "for": "a table under a wide picture across the slide",
+ "grid": [
+  "p",
+  "x"
+ ],
+ "rows": "1fr auto",
+ "fill": {
+  "p": [
+   "Picture",
+   "tiles or a photograph in a row, a wide drawing or 3D scene"
+  ],
+  "x": [
+   "Table",
+   "lines 'cell | cell', the whole width, up to table_under_top_row rows and words (layout-templates.json budgets)"
+  ]
+ },
+ "fits": {
+  "group": "table",
+  "pictures": [
+   "photo",
+   "tiles",
+   "drawing",
+   "3d"
+  ],
+  "aspect": {
+   "photo": [
+    1.25,
+    8
+   ],
+   "tiles": [
+    1.25,
+    8
+   ],
+   "drawing": [
+    1.8,
+    8
+   ],
+   "3d": [
+    1.6,
+    8
+   ]
+  },
+  "hard": true,
+  "words": [
+   0,
+   999
+  ],
+  "budget": {
+   "photo": "table_under_top_row",
+   "tiles": "table_under_top_row",
+   "drawing": "table_under_band",
+   "3d": "table_under_band"
+  },
+  "names": 15
+ }
+}

@@ -8,5 +8,6 @@
  "cols": "55fr 45fr",
  "rows": "3fr 1fr",
  "fill": {"i": ["Info", "lines 'cell | cell'"], "x": ["Text", "the line after the rows"], "p": ["Picture", "figure"]},
+ "fits": {"group": "table", "pictures": ["drawing", "3d", "photo"], "aspect": {"drawing": [0.8, 2.2], "3d": [0.8, 2.2], "photo": [0.6, 1.3]}, "words": [0, 999], "budget": {"drawing": "table_beside", "3d": "table_beside", "photo": "table_beside"}},
  "ref": "slides#p13"
 }

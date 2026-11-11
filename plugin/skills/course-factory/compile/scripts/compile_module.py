@@ -2590,7 +2590,7 @@ def auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col):
     if photo_col:                       # 2.116.0: the words stay beside the photo - never moved into parts by the factory
         return "photo-explain", "column"
     if not has_fig:
-        return ("procedure", "text-only") if is_steps(lines) else ("explain-figure", "text-only")
+        return ("procedure", "text-only") if is_steps(lines) else ("reference-table", "text-only") if is_table(lines)             else ("explain-figure", "text-only")
     if comp == "stage":
         return "figure-stage", "figure"
     if is_table(lines):
@@ -2666,7 +2666,7 @@ def pick_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col, 
             why = "is for a task slide or the module's recap, not a teaching slide"
         elif tid == "photo-explain" and not is_photo:
             why = "needs a photograph"
-        elif tid not in ("explain-figure", "procedure", "opening") and not has_fig:
+        elif tid not in ("explain-figure", "procedure", "opening", "reference-table") and not has_fig:
             why = "needs a picture beside the words"
         elif tid == "procedure" and not is_steps(lines):
             why = "needs steps the script numbers itself (1, 2, 3 ...)"
