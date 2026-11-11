@@ -518,8 +518,10 @@ def gates_part(tmp):
 
 
 def task_html(pid, words="Which gauge shows the tank pressure?"):
-    return ("<html><head><link rel=\"stylesheet\" href=\"../assets/deck.css\"></head><body><h1>%s</h1><p>%s</p>%s</body></html>"
-            % (pid, words, "<img src=\"../assets/img/gauge.jpg\">" if pid == "self_check_1" else ""))
+    """a self-check built as by default (the build sheet's feedback off: data-reveal="debrief"), the check with feedback on"""
+    return ("<html><head><link rel=\"stylesheet\" href=\"../assets/deck.css\"></head><body%s><h1>%s</h1><p>%s</p>%s</body></html>"
+            % (' data-reveal="debrief"' if pid == "self_check_1" else "", pid, words,
+               "<img src=\"../assets/img/gauge.jpg\">" if pid == "self_check_1" else ""))
 
 
 def add_tasks(course, module=1, pages=("self_check_1", "check"), sub="tasks"):
@@ -651,11 +653,17 @@ def tasks_part(tmp):
           "Judge by this RUBRIC" in brief and "Judge by this TASK RUBRIC" in brief and all(r in brief for r in wr.TASK_RUBRIC)
           and all(r in brief for r in wr.RUBRIC), brief[:1500])
     check("... each page's questions in order, once", brief.count("## The task pages of this review") == 1
-          and "- `tasks/check.html` (check): q1 1. Which gauge shows the tank pressure?; q2 2. Which gauge" in brief, brief)
+          and "- `tasks/check.html` (check, feedback on): q1 1. Which gauge shows the tank pressure?; q2 2. Which gauge" in brief, brief)
+    check("... the rubric follows each page's build sheet: with feedback off a right answer left unmarked after a wrong one is "
+          "no fail (one attempt, explained in the debrief); with feedback on it is still judged",
+          wr.DEBRIEF in brief and "- `tasks/self_check_1.html` (self_check_1, feedback off): " in brief
+          and "Task page: tasks/self_check_1.html, feedback off - its last screen" in brief
+          and "Task page: tasks/check.html, feedback on - question q2" in brief and "on a page with feedback ON only" in wr.TASK_RUBRIC[2]
+          and "never a fail" in wr.DEBRIEF and "judged on point 3 in full" in wr.DEBRIEF, brief)
     check("... each question with its page, its kind and what the screen said in each picture",
-          "### check.q2 - 2. Which gauge shows the tank pressure?" in brief and "Task page: tasks/check.html - question q2 (choice)" in brief
+          "### check.q2 - 2. Which gauge shows the tank pressure?" in brief and "Task page: tasks/check.html, feedback on - question q2 (choice)" in brief
           and "- picture 3: wrong - the screen says: \"Not quite - the tank gauge" in brief and "- picture 4: right" in brief
-          and "### self_check_1.result - the last screen" in brief and "Task page: tasks/self_check_1.html - its last screen" in brief, brief)
+          and "### self_check_1.result - the last screen" in brief and "Task page: tasks/self_check_1.html, feedback off - its last screen" in brief, brief)
     check("... and the name a verdict goes under", "exactly as its heading has it (\"check.q1\")" in brief
           and "## Batch 3 - check.q1, check.q2, check.result, self_check_1.q1" in brief, brief)
     rc, lines = wr.sign(course, 1, reviewer(tmp, dict({u: True for u in UNITS}, **{"check.q2": TAP})))

@@ -97,12 +97,20 @@ RUBRIC = [
 TASK_RUBRIC = [
     "The question and every choice are readable and whole at 1280 x 800 (picture 1) and at 1024 x 768 (picture 2) - nothing cut, overlapping, off the edge or too small to read; every line and label of a drawing stands out from what is behind it, and no leader line runs through words.",
     "The picture is the one the question is about - the instrument, part or place the words name, drawn so that a seafarer would not call it wrong (a part where it cannot be, a pipe or label ending on nothing) - and its tap areas / drop zones (the pink dashes of picture 3) sit on the right parts: each covers the whole thing it stands for; an area on nothing, on the wrong part, or two areas on one part is a fail.",
-    "The feedback after Check says which it was and explains (why it is right, or what to look at again; after a wrong answer the right one is marked on the right thing) and does not hand over the answer of a later question of the same page (each page's questions are listed below, in order).",
+    "The feedback after Check says which it was and explains (why it is right, or what to look at again; after a wrong answer the right one is marked on the right thing - on a page with feedback ON only, see DEBRIEF below) and does not hand over the answer of a later question of the same page (each page's questions are listed below, in order).",
     "Nothing a trainee needs is under the Check bar or below the screen - the last choice, the lower part of the picture, a drop zone.",
     "A trainee with zero tablet experience can do it: tap and drag only, big controls well apart, and the screen says what to do (L42).",
     "The page's last screen (<page>.result) is the last screen: the trainee's own score, and no way onward to another task or back into the questions (L27, L45). A blind page (the final assessment) does not tell right from wrong after a question, by design - that alone is no fail.",
     "Nothing on screen is the factory's instead of the trainee's - a file path, a drive letter, a placeholder, a question's id, a note to the builder.",
 ]
+# the build sheet's "feedback" switch, as the page was built with it (data-reveal="debrief" when it is off, the default)
+DEBRIEF = ("DEBRIEF - a page marked \"feedback off\" below is built so (the build sheet's \"feedback\" switch is off, the "
+           "default): one attempt, no retry, and a wrong answer is explained in the instructor's debrief. After a wrong "
+           "answer it says \"Not right.\" with the question's brief reason and that the class checks it together in the "
+           "debrief, and it does NOT mark the right answer - that is the page working as built, never a fail, and neither "
+           "is its last screen listing the trainee's answers without the right ones. Point 3 then asks only that the "
+           "verdict and the brief reason show, are readable, and hand over no answer of a later question. A page marked "
+           "\"feedback on\" is judged on point 3 in full: after a wrong answer the right one is marked.")
 
 
 def mid(module):
@@ -237,9 +245,9 @@ def _id(name):
 
 
 def task_pages(folder):
-    """{page id: {"file": "tasks/x.html", "fingerprint": ...}} - every task page of a module folder as it is now: tasks\\
-    and assessment\\, never an answer key (the pages review_sheets.mjs answers). The fingerprint is check_cache.py's for a
-    page: the page and every file it loads"""
+    """{page id: {"file": "tasks/x.html", "fingerprint": ..., "debrief": bool}} - every task page of a module folder as it
+    is now: tasks\\ and assessment\\, never an answer key (the pages review_sheets.mjs answers). The fingerprint is
+    check_cache.py's for a page: the page and every file it loads; debrief: built with the build sheet's feedback off"""
     cc, out = _check_cache(), {}
     for sub in ("tasks", "assessment"):
         for p in sorted(glob.glob(os.path.join(folder or "", sub, "*.html"))):
@@ -248,8 +256,10 @@ def task_pages(folder):
                 continue
             pid = _id(os.path.splitext(base)[0])
             fp = cc.fingerprints(p, False, SALT)
+            body = re.search(rb"<body\b[^>]*>", cc.read(p))
             out[sub + "_" + pid if pid in out else pid] = {"file": sub + "/" + base,
-                                                           "fingerprint": fp[0][1] if fp else cc.sha(SALT, cc.read(p))}
+                                                           "fingerprint": fp[0][1] if fp else cc.sha(SALT, cc.read(p)),
+                                                           "debrief": bool(body and b'data-reveal="debrief"' in body.group(0))}
     return out
 
 
@@ -408,6 +418,12 @@ class Deck(object):
 
     def page_of(self, sid):
         return self.units.get(sid) or sid.split(".")[0]
+
+    def feedback(self, pid):
+        """how the page tells a wrong answer, for the brief: a blind page, or the build sheet's feedback switch"""
+        if (self.tasks.get(pid) or {}).get("blind"):
+            return ", a blind page"
+        return ", feedback off" if (self.pages.get(pid) or {}).get("debrief") else ", feedback on"
 
     def gone(self, sid):
         """a verdict's slide, question or task page is no longer in the module"""
@@ -599,7 +615,7 @@ def prepare(course, module, slides=None, stale_only=False):
                   "RUBRIC - one question, each "
                   "point (points 6 and 7 for a last screen):", ""]
         lines += ["%d. %s" % (i, r) for i, r in enumerate(TASK_RUBRIC, 1)]
-        lines += [""]
+        lines += ["", DEBRIEF, ""]
     lines += ["Return ONLY this JSON (every slide of the batch and no other; \"ok\" is true or false, never a word in "
               "quotes; \"fails\" are short, concrete sentences naming the stop number):", "",
               "    {\"reviewed_by\": \"<your name / model>\", \"slides\": {\"s03\": {\"ok\": true, \"fails\": []},",
@@ -617,7 +633,7 @@ def prepare(course, module, slides=None, stale_only=False):
             lines += ["", "## The task pages of this review", ""]
             for pid in dict.fromkeys(d.page_of(s) for s in asked):
                 page = d.tasks.get(pid) or {}
-                lines += ["- `%s` (%s%s): %s" % (page.get("file", pid), pid, ", a blind page" if page.get("blind") else "", "; ".join(
+                lines += ["- `%s` (%s%s): %s" % (page.get("file", pid), pid, d.feedback(pid), "; ".join(
                     "%s%s %s" % (q.get("id", ""), " [group %s]" % q["group"] if q.get("group") else "", q.get("ask", ""))
                     for q in page.get("questions") or []))]
         lines += ["", "## Batch %d - %s" % (n, ", ".join(batch)), ""]
@@ -626,9 +642,9 @@ def prepare(course, module, slides=None, stale_only=False):
             was = (d.got.get(sid) or {}).get("fails") or []
             if d.is_task(sid):
                 q, page = d.about.get(sid), d.tasks.get(d.page_of(sid)) or {}
-                lines += ["Task page: %s - %s" % (page.get("file", ""), "question %s (%s)%s" % (
+                lines += ["Task page: %s%s - %s" % (page.get("file", ""), d.feedback(d.page_of(sid)), "question %s (%s)%s" % (
                     q.get("id", ""), q.get("mech", "") or "?", ", shown to group %s only" % q["group"] if q.get("group") else "")
-                    if q else "its last screen%s" % (" (a blind page)" if page.get("blind") else ""))]
+                    if q else "its last screen")]
             else:
                 w = why.get(sid)
                 lines += ["Figure why: %s - %s" % w if w else "Figure why: (none declared - a slide with no drawing, or the build sheet has no why)"]

@@ -58,6 +58,7 @@
     passed: 'PASSED', notPassed: 'NOT PASSED',
     yourAns: 'Your answer', rightAns: 'Right answer', yourOrder: 'Your order', rightOrder: 'Right order',
     notPlaced: 'not placed', leftOut: 'does not belong here', onPic: 'its place is marked on the picture',
+    labelTop: 'the label above the picture', labelBottom: 'the label below the picture', fromLeft: ', {n} of {of} from the left',
     trayEmpty: 'Cards not placed',                          /* 2.63.2: written on the empty dashed bank under a sort / match list */
     /* 2.74.0 - wrong is said briefly; the right answer waits for the debrief, where the class checks it together */
     notRight: 'Not right.', later: 'We will check this one together in the debrief.',
@@ -557,7 +558,7 @@
       thumb.style.left = p + '%';
       fill.style.width = p + '%';
       if (knob) { knob.style.setProperty('--turn', (-135 + 2.7 * p) + 'deg'); }     /* the knob turns with the value */
-      out.textContent = g.k < 0 ? '–' : g.shown(g.k);
+      out.textContent = g.shown(Math.max(g.k, 0));        /* the value the thumb sits at, before it is first moved too */
     };
     g.set = function (k) {
       if (g.locked) { return; }
@@ -838,6 +839,17 @@
     var row = z && z.parentNode, n = row && ($('.name', row) || $('.gname', row));
     return n && n.parentNode === row ? txt(n) : '';
   }
+  /* a label box on a picture has no name of its own (its name is the answer): it is told by where it is - above or below
+     the middle of the picture, and which of that row's boxes from the left */
+  function placeName(g, z) {
+    var n = zoneName(z);
+    if (n || !has(z, 'lbox')) { return n; }
+    var mid = centre(z.parentNode).y, top = centre(z).y < mid, row = g.zones.filter(function (o) {
+      return has(o, 'lbox') && (centre(o).y < mid) === top;
+    });
+    row.sort(function (a, b) { return centre(a).x - centre(b).x; });
+    return say(top ? 'labelTop' : 'labelBottom') + (row.length > 1 ? say('fromLeft', { n: row.indexOf(z) + 1, of: row.length }) : '');
+  }
   function snap(p) {
     var out = [];
     each(p.groups, function (g) {
@@ -874,7 +886,7 @@
         /* match, sort, label: each card not where it belongs - where the trainee put it, where it goes */
         each(g.chips, function (c) {
           if (chipGood(g, c)) { return; }
-          var z = rightZone(g, c), at = c.parentNode === g.tray ? say('notPlaced') : zoneName(c.parentNode) || '?';
+          var z = rightZone(g, c), at = c.parentNode === g.tray ? say('notPlaced') : placeName(g, c.parentNode);
           out.push({ k: 'pair', card: txt(c), mine: at, right: z ? zoneName(z) || say('onPic') : say('leftOut') });
         });
       }

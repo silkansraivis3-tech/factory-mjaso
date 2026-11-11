@@ -23,7 +23,9 @@ body:has(.scr.on.th-n){background:var(--tk-navy);color:var(--tk-white)}
 body:has(.scr.on.th-n)::before{background-image:url(na_pattern_on_navy.svg);opacity:.45}
 
 /* ---- the line along the top: how far through the set ---------------------- */
-.state{background:transparent;border-bottom-color:transparent}
+/* the bar is the ground's own colour, never see-through: a screen scrolled under it is hidden, not crossed by its line */
+.state{background:var(--tk-page);border-bottom-color:transparent;transition:background .35s}
+body:has(.scr.on.th-n) .state{background:var(--tk-navy)}
 .state .part{color:var(--tk-steel)}
 .state .got{color:var(--tk-steel)}
 .state .bar{background:var(--tk-grey)}
@@ -45,6 +47,11 @@ body:has(.scr.on.th-n) .state .bar i{background:var(--tk-blue)}
 .th-n :is(.sit,.sym,.ffc,.ctl),.th-n :is(.sym,.ffc,.ctl) .phead{color:var(--tk-navy)}
 .th-n :is(.ffc,.ctl) .opt{background:var(--tk-white);border-color:var(--tk-line);color:var(--tk-navy)}
 .th-n :is(.ffc,.ctl) .opt.sel{border-color:var(--tk-navy);background:var(--tk-pale)}
+/* a step already answered folds into a line on the Navy ground (its situation has no card of its own there), and the
+   words of a check's opening card stay dark on it */
+.th-n .part.step.past{background:var(--tk-glass-n);border-color:var(--tk-line-n)}
+.th-n .part.step.past .sit{color:var(--tk-white)}
+.th-n .intro{color:var(--tk-navy)}
 .ff-tap{color:var(--tk-steel)}
 /* the interactive types (gb_interact.css): their small labels lighter on Navy, their pale cards dark-worded */
 .th-n :is(.sw-count,.ex-log p,.ex-log span.none,.iv-ph,.iv-pins em,.cr-count,.ta-ex span){color:var(--tk-dim-n)}
@@ -141,4 +148,11 @@ body:has(.scr.on.th-n) .dock .sub.next{background:var(--tk-white);border-color:v
 .th-n .ring .arc{stroke:var(--tk-blue)}
 .th-n .ring .num{color:var(--tk-white)}
 .th-n #resList li{background:var(--tk-glass-n);color:var(--tk-white);border-color:var(--tk-line-n)}
+/* under a wrong question: the trainee's answer, the brief reason and the debrief line light on the Navy card */
+.th-n #resList .fix,.th-n #resList .fix b,.th-n #resList .fix .fx.brief{color:var(--tk-white)}
+.th-n #resList .fix .fx.later{color:var(--tk-dim-n)}
+.th-n #resList .fix s.mine{color:var(--tk-bad-ink-n)}
+.th-n #resList .fix em.good,.th-n #resList .fix .ord ol.good li{color:var(--tk-ok-ink-n)}
+.th-n #resList .fix .ord li{background:none;border-color:transparent}
+.th-n #resList .fix .ord li.moved{color:var(--amber)}
 .th-n #resNote,.th-n #resLine{color:var(--tk-dim-n)}

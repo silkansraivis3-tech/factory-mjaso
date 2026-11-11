@@ -160,8 +160,9 @@ body:not(.dark-active) .cbtn{background:var(--shl-navy-94);border-color:rgba(255
 #btnNext,#btnPrev{min-width:64px}
 #btnNext{background:var(--navy);border-color:var(--navy)}
 body:not(.dark-active) #btnNext{background:var(--navy)}
+/* lining figures, as the slide's header has them: Raleway's default old-style "1" reads like a "5" from the back of a room */
 #counter{
-  font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;color:var(--dim-d);
+  font-variant-numeric:lining-nums tabular-nums;font-feature-settings:"lnum" 1,"tnum" 1;font-size:15px;font-weight:600;color:var(--dim-d);
   padding:0 12px;min-width:78px;text-align:center;letter-spacing:.04em;
 }
 body:not(.dark-active) #counter{color:var(--dim-l)}
