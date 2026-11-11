@@ -4042,9 +4042,10 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                 # made 108-133 words spill at 1024 x 768)
                 head_, tail_ = box.rsplit("</div>", 1)
                 box, credit_html = head_ + credit_html.strip() + "</div>" + tail_, ""
-        if not band and tid != "content-in-parts" and not b.get("tiles"):
+        if not band and tid != "content-in-parts" and not b.get("tiles") and not re.search(r'class="photo-strip|<figure class="inset', box):
             # beside the words the picture's box takes the picture's own shape (--ar): no empty band above and under it, and
-            # the box and the words are centred in the body (gb_layouts.css)
+            # the box and the words are centred in the body (gb_layouts.css). A box that holds more than its picture (the L57
+            # photo row or an inset photograph under the drawing) keeps the column's height - the drawing needs it
             ar = photo_aspect(mdir, b.get("figure")) if is_photo else layout_plan.figure_aspect(fig)
             if ar and " style=" not in box.split(">", 1)[0]:
                 box = box.replace('class="fill fig', 'style="--ar:%.3f" class="fill fig' % ar, 1)

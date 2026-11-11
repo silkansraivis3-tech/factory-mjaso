@@ -257,12 +257,12 @@ async function deck(tiles) {
       var k3=0; [].forEach.call(s.querySelectorAll('[data-kit3d]'),function(e){ if(e.__k3&&e.__k3.steps) k3+=e.__k3.steps(); });
       var src=[].map.call(s.querySelectorAll('script[type="application/json"],img'),function(e){return e.tagName==='IMG'?e.getAttribute('src'):e.textContent;}).join('|');
       return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0,
-               parts: ps.length, part: on + 1, k3: k3, lines: f && f.steps && f.steps() ? s.querySelectorAll('[data-i]').length : 0,
+               parts: ps.length, part: on + 1, k3: k3, lines: [].filter.call(s.querySelectorAll('[data-i]'),function(e){return !e.closest('svg');}).length,
                last: !!(document.getElementById('btnNext')||{}).disabled, src: src }; })()`);
     if (!st) break;
     visits[st.id] = (visits[st.id] || 0) + 1;
     // a Next that never moves on (IGF M11 s11: 381 times); a figure's steps, its lines and its parts are one counter (2.63.3),
-    // and a 3D scene's steps, each a Next of its own
+    // and a 3D scene's steps, each a Next of its own; a slide with no figure that steps walks its lines too (gb_deck.js)
     if (visits[st.id] > st.parts + st.steps + st.k3 + st.lines + 2) break;
     const id = 'deck/' + st.id + (st.part > 1 ? '#' + st.part : '');
     const key = keyOf[st.id] ? sha(keyOf[st.id] + '|' + st.i + '/' + st.of) : '';    // its place too: the deck shows "5 / 20"
