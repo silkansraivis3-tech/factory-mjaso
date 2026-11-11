@@ -190,7 +190,8 @@ VARIETY_WINDOW = LAYOUTS["variety"]["window"]
 DARK_SHARE = 0.2            # 2.62.1 - 80 / 20 (owner, 2026-10-21): at most a fifth of a module's slides on the dark ground
 PHOTO_LONG, PHOTO_LOW = 1600, 800        # L62: a photograph is shipped at 1600 px on its long side or more; under 800 is low
 FIGURE_FREE = {("explain-figure", "text-only"), ("procedure", "text-only"), ("opening", "statement"), ("key-numbers", "cards"),
-               ("drill", "quick-fire"), ("true-false", "text-only"), ("scenario", "text-only"), ("worked-example", "text-only")}
+               ("drill", "quick-fire"), ("true-false", "text-only"), ("scenario", "text-only"), ("worked-example", "text-only"),
+               ("reference-table", "text-only")}     # 2.125.1: a table needs no picture (Project Management review)
 FIGURE_FREE_IDS = {"opening"}
 RECORD = "compiled.json"
 FINAL_SET = re.compile(r"^F[A-Z]$")           # 2.49.2 - a final assessment's set: FA, and FB when it has a second variant
@@ -830,7 +831,7 @@ def figure_html(mdir, figdir, s, b, probs, where):
     if not rel and b.get("tiles"):
         return tiles_figure(mdir, s, b, probs, where)
     if not rel:
-        if (s.get("visual_kind") or "none") != "none":
+        if (s.get("visual_kind") or "none") != "none" and not str(b.get("no_figure") or "").strip():
             probs.append("%s has no picture file in the build sheet - it is planned as %s: %s%s"
                          % (where, s.get("visual_kind"), first_sentence(s.get("visual")) or "(no description)",
                             NO_PHOTO_YET if s.get("visual_kind") in ("photo", "annotated_photo", "photo_to_take") else ""))
@@ -2309,7 +2310,9 @@ def auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col):
         return "photo-explain", "split" if split_photo else "full"
     if photo_col:                       # 2.116.0: the words stay beside the photo - never moved into parts by the factory
         return "photo-explain", "column"
-    if not has_fig:
+    if not has_fig:                    # 2.125.1: table rows with no picture are a table, not plain lines
+        if is_table(lines):
+            return "reference-table", "text-only"
         return ("procedure", "text-only") if is_steps(lines) else ("explain-figure", "text-only")
     if comp == "stage":
         return "figure-stage", "figure"
@@ -2373,8 +2376,13 @@ def pick_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col, 
             why = "is for a task slide or the module's recap, not a teaching slide"
         elif tid == "photo-explain" and not is_photo:
             why = "needs a photograph"
-        elif tid not in ("explain-figure", "procedure", "opening") and not has_fig:
+        # 2.125.1: a figure-free template (key-numbers cards) asked by name needs no picture either (PM M01 s13)
+        elif tid not in ("explain-figure", "procedure", "opening", "reference-table") and (tid, var) not in FIGURE_FREE and not has_fig:
             why = "needs a picture beside the words"
+        elif tid == "key-numbers" and not (2 <= len([x for x in lines if " | " in x]) <= 8
+                                           and all(len(cells(x)) == 2 for x in lines[1:])
+                                           and (" | " not in lines[0] or len(cells(lines[0])) == 2)):
+            why = "needs 2 to 8 lines \"front | back\" (a first line without \" | \" is the lead)"
         elif tid == "procedure" and not is_steps(lines):
             why = "needs steps the script numbers itself (1, 2, 3 ...)"
         elif tid == "reference-table" and not is_table(lines):
@@ -2447,7 +2455,7 @@ def shape_of(tid, variant, left=False):
     if tid in ("task-launch", "recap", "opening", "compare-two") + SHAPED:
         return tid
     if variant == "text-only":
-        return "text"
+        return "table" if tid == "reference-table" else "text"
     if tid == "photo-explain" and variant in ("full", "split"):
         return "photo-full" if variant == "full" else "photo-framed"
     if tid == "figure-stage":
@@ -2611,18 +2619,22 @@ def set_questions(script, code):
 def steps_body(lines):
     """2.89.0 - numbered steps as step boxes, a badge each (its own number, done = a tick) and the line under them that
     fills as Next walks them; up to four boxes a row. None when the lines are not all numbered steps"""
-    nums = [STEP_NUM.match(x) for x in lines]
-    if len(lines) < 2 or not all(nums) or [int(m.group(1).rstrip(".)")) for m in nums] != list(range(1, len(lines) + 1)):
+    # 2.125.1: an unnumbered first line is the lead, above the boxes (PM M03 s04 fell back to a plain list without steps)
+    lead = 1 if len(lines) >= 3 and not STEP_NUM.match(lines[0]) else 0
+    steps = lines[lead:]
+    nums = [STEP_NUM.match(x) for x in steps]
+    if len(steps) < 2 or not all(nums) or [int(m.group(1).rstrip(".)")) for m in nums] != list(range(1, len(steps) + 1)):
         return None
-    per = len(lines) if len(lines) <= 4 else (len(lines) + 1) // 2
+    per = len(steps) if len(steps) <= 4 else (len(steps) + 1) // 2
     boxes = []
-    for i, (x, m) in enumerate(zip(lines, nums), 1):
+    for i, (x, m) in enumerate(zip(steps, nums), 1):
         boxes.append('<div class="lt-step lt-in" data-stop style="--i:%d"><span class="lt-b" data-script-ignore><span class="nn">%d</span>'
                      '<span class="ok">✓</span></span>\n          <p class="lt-t" data-script-field="text" data-i="%d"><span class="n">%s</span>%s%s</p></div>'
-                     % (i, i, i, e(m.group(1)), m.group(2), marked(x[m.end():], True)))
+                     % (i, i, i + lead, e(m.group(1)), m.group(2), marked(x[m.end():], True)))
     rows = ['<div class="lt-row">\n        %s\n      </div>' % "\n        ".join(boxes[k:k + per]) for k in range(0, len(boxes), per)]
-    return ('<div class="slide-body lt-steps" style="--n:%d">\n      %s\n      <div class="lt-track"><i></i></div>\n    </div>'
-            % (per, "\n      ".join(rows)))
+    top = ('<p class="lt-nlead" data-script-field="text" data-i="1">%s</p>\n      ' % marked(lines[0], False)) if lead else ""
+    return ('<div class="slide-body lt-steps" style="--n:%d">\n      %s%s\n      <div class="lt-track"><i></i></div>\n    </div>'
+            % (per, top, "\n      ".join(rows)))
 
 
 def boxed_lines(lines, idx, k0=0):
@@ -2714,9 +2726,14 @@ def cells(x):
     return [c.strip() for c in x.split(" | ")]
 
 
+KEY_CELL = re.compile(r"^[A-Z]{1,3}$")        # 2.125.1: a short key - the letters of SMART or RACI, CPI, SPI
+
+
 def is_numbers(lines):
-    """numbers to remember: every line "value | what it means", the value a number"""
-    return 3 <= len(lines) <= 8 and all(len(cells(x)) == 2 and NUM_CELL.match(cells(x)[0]) for x in lines)
+    """numbers (or short keys) to remember: every line "value | what it means", the value a number or 1-3 capital
+    letters (2.125.1, Project Management review: SMART and RACI as cards fell back to plain text)"""
+    return 3 <= len(lines) <= 8 and all(len(cells(x)) == 2 and (NUM_CELL.match(cells(x)[0]) or KEY_CELL.match(cells(x)[0]))
+                                         for x in lines)
 
 
 def is_two_states(lines):
@@ -2744,6 +2761,10 @@ def shaped_template(s, b, lines):
     if b.get("figure_b") and is_two_states(lines):
         return "before-after", "slider"
     if is_numbers(lines) and not b.get("figure"):
+        return "key-numbers", "cards"
+    # 2.125.1: cards asked by name - "front | back" lines under an optional lead line (PM M01 s13, a charter item by item)
+    if (b.get("template") or "").split(".v")[0] == "key-numbers" and not b.get("figure") and 2 <= len(lines) <= 9 \
+            and all(len(cells(x)) == 2 for x in lines[1:]) and (" | " not in lines[0] or len(cells(lines[0])) == 2):
         return "key-numbers", "cards"
     return None
 
@@ -2923,10 +2944,18 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
 
     elif tid == "key-numbers":
         # the number first, the room says what it means, Next turns the card
-        cards = "".join('\n      <li data-k="%d" class="lt-in" style="--i:%d"><div class="fc" data-script-ignore><b>%s</b><span class="q">%s</span></div>'
-                        '<div class="bc" data-script-field="text" data-i="%d">%s</div></li>'
-                        % (i, i, e(cells(x)[0]), e(w["what"]), i, joined(cells(x), ("b", "span"))) for i, x in enumerate(lines, 1))
-        body = '<div class="slide-body lt-nbody"><ol class="lt-nums">%s\n    </ol></div>' % cards
+        # 2.125.1: data-alt-face - the two faces are never shown together (the turned-away one is visibility:hidden);
+        # audit_collide.js skips the hidden face of such a pair instead of reading front and back as text on text
+        # 2.125.1: a first line with no " | " is the lead (the task the room answers, PM M01 s13 - a charter written item by
+        # item); the build sheet's "hint" replaces "What is it?" on the front of every card
+        lead = 1 if len(lines) > 1 and " | " not in lines[0] and all(" | " in x for x in lines[1:]) else 0
+        hint = str(b.get("hint") or w["what"])
+        cards = "".join('\n      <li data-k="%d" class="lt-in" style="--i:%d"><div class="fc" data-alt-face data-script-ignore><b data-ink>%s</b><span class="q" data-ink>%s</span></div>'
+                        '<div class="bc" data-alt-face data-script-field="text" data-i="%d">%s</div></li>'
+                        % (i - lead, i - lead, e(cells(x)[0]), e(hint), i, joined(cells(x), ("b", "span")))
+                        for i, x in enumerate(lines, 1) if i > lead)
+        top = ('<p class="lt-nlead lt-in" style="--i:0" data-script-field="text" data-i="1">%s</p>' % e(lines[0])) if lead else ""
+        body = '<div class="slide-body lt-nbody%s">%s<ol class="lt-nums">%s\n    </ol></div>' % (" lt-nled" if lead else "", top, cards)
 
     elif tid == "drill":
         # a short timed drill before the module check: the clock runs, and at zero the answer shows by itself
@@ -3270,6 +3299,10 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                          % (where, fitc["why"], layout_fit.SWAP_ADVICE))
     in_parts = False                       # 2.116.0: never automatic (wants_parts / the box's parts are gone)
     tid, variant = pick_template(s, b, comp, is_photo, bool(fig), lines, split_photo, photo_col, probs, where, in_parts)
+    if variant == "text-only" and not fig and comp in ("two-col", "wide-left", "wide-right"):
+        # 2.125.1: a slide with no picture - a table, or a template named in the build sheet ("explain-figure" asks for
+        # two-col) - gets the slide's whole width, not an empty navy picture column (PM M01 s02, M02 s01 / s06b)
+        comp = "flow"
     nwords_all = cs.wc(" ".join(lines))
     if kind == "slide" and not fig and nwords_all > DENSE_WORDS:
         # 2.116.0: a note only - a slide may have no picture when its words read on their own (no picture quota)
@@ -3507,10 +3540,14 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                 probs.append("%s: \"parts\" leave out some lines - every approved line is in a part (L61)" % where)
                 ranges = None
             reading = copy(parts_html(lines, auto_parts(lines, ranges, part_w), emph), 4)
-        elif tid == "reference-table":
-            reading = copy(table_html(lines), 4)
         else:
-            reading = copy(words_html(lines, emph=emph), 4)
+            words = table_html(lines) if tid == "reference-table" else words_html(lines, emph=emph)
+            # 2.125.1 - words beside a photograph walk line by line too (see the plain return below; L67)
+            if len(lines) >= 2 and not re.search(r'\bdata-kit(?:2d|3d)?[="]', fig or "") and not b.get("static") \
+                    and s.get("kind") != "activity":      # a task screen stays still (PM FINAL a04, up between defences)
+                words = step_marks(words if isinstance(words, list) else [words], {})
+                d["class"] += " lt-walk"
+            reading = copy(words, 4)
         # 2.54.0 (L23; built as 2.52.0 on its own branch) - the figure first in the markup: a portrait tablet (one column)
         # shows it in its first screen. On a landscape screen gb_compose.css (.dom-fig) puts the words back first, so the
         # template's text column (gb_layouts.css, L61) holds the words - the projector picture is unchanged
@@ -3548,8 +3585,16 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if sb:
             return '<section %s>\n%s\n  %s\n  %s%s\n</section>' % (attrs(d), head, h2, sb, credit_html)
     figure = (box_of(fig) + "\n    ") if fig else ""      # 2.54.0 (L23): first in the markup, placed under the words by CSS
+    words = table_html(lines) if tid == "reference-table" else words_html(lines, emph=emph)
+    # 2.125.1 - every slide moves on Next (L67): words beside a photograph, a table or plain words walk line by line - the
+    # line now lit, the ones not reached yet dimmed. A drawing with steps of its own (kit) walks its lines itself; the
+    # build sheet's "static": true keeps a slide still (PM review: 21 of 64 slides "don't play the steps")
+    if len(lines) >= 2 and not re.search(r'\bdata-kit(?:2d|3d)?[="]', fig or "") and not b.get("static") \
+            and s.get("kind") != "activity":
+        words = step_marks(words if isinstance(words, list) else [words], {})
+        d["class"] += " lt-walk"
     return ('<section %s>\n%s\n  %s\n  <div class="slide-body%s">\n    %s%s\n  </div>%s\n</section>'
-            % (attrs(d), head, h2, " dom-fig" if fig else "", figure, copy(words_html(lines, emph=emph), 4), credit_html))
+            % (attrs(d), head, h2, " dom-fig" if fig else "", figure, copy(words, 4), credit_html))
 
 
 # ------------------------------------------------------------------ the page

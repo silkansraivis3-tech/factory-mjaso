@@ -259,6 +259,16 @@ def shapes_part(tmp):
     room's turn, short points, a drill, the summary's questions, the self-check list) and the shape of its lines (numbers,
     two states, parts to name) build it in its own template; check_script_match still finds exactly the approved words"""
     print("\n-- the information decides the slide")
+    import compile_module as cm
+    check("2.125.1: key-numbers cards take a short capital key (SMART, RACI letters, CPI) as well as a number, not a word",
+          cm.is_numbers(["S | Specific", "M | Measurable", "A | Achievable"]) and cm.is_numbers(["CPI | cost index", "SPI | time index",
+          "3 | days"]) and not cm.is_numbers(["Goal | what", "Scope | in", "Team | who"]), None)
+    rows = ["Question | Routine | Project", "Does it end? | No | Yes", "Is it new? | No | Yes"]
+    check("2.125.1: table rows with no picture are a reference-table, text-only (was plain lines; asking for it was refused)",
+          cm.auto_template({}, {}, "flow", False, False, rows, False, False) == ("reference-table", "text-only")
+          and ("reference-table", "text-only") in cm.FIGURE_FREE and cm.shape_of("reference-table", "text-only") == "table"
+          and cm.pick_template({}, {"template": "reference-table"}, "flow", False, False, rows, False, False, [], "s01")
+          == ("reference-table", "text-only"), None)
     os.makedirs(os.path.join(tmp, "sh"))
     sc = script(screens=SHAPED_SCREENS)
     check("the fixture script is valid: every new field in its place", not cs.validate(sc), cs.validate(sc))
@@ -299,7 +309,7 @@ def shapes_part(tmp):
           and '<div class="copy lt-tf">' in t and t.split('<div class="copy lt-tf">', 1)[1].split("</div>\n")[0].count("lt-why") == 0, t[:1400])
     k = section(page, "s31")
     check("numbers to remember: the number first (outside the words), the card says the approved line",
-          k.count('<div class="fc" data-script-ignore>') == 3 and
+          k.count('<div class="fc" data-alt-face data-script-ignore>') == 3 and k.count('<div class="bc" data-alt-face') == 3 and
           'data-script-field="text" data-i="2"><b>5-15 %</b><span class="lt-sep"> | </span><span>methane burns in air</span>' in k, k[:1400])
     o = section(page, "s32")
     check("what would you do: the situation, the question, the choices with why; the right one marked for the check",
@@ -492,8 +502,10 @@ def upgrade_part(tmp):
           "lt-zoom" in z.split(">")[0] and 'data-i="2" data-k="2" data-x="700" data-y="380" data-z="2.2"' in z and 'class="lt-ring"' in z, z[:1400])
     o = section(page, "s02")
     body = o.split(">", 1)[1] if ">" in o else o
-    check("a slide without the new fields is built as before: no stops, no upgraded body",
-          "data-k=" not in o and "data-stop" not in o and not re.search(r'class="[^"]*\blt-(steps|duo|boxes|spots|ring|task2|ask4|zoom)\b', body), o[:900])
+    # 2.125.1: its lines walk on Next (lt-walk, a data-k on each line - L67), and nothing else is upgraded
+    check("a slide without the new fields walks its lines (lt-walk), and gets no other upgraded body",
+          "lt-walk" in o.split(">")[0] and 'data-i="1" data-k="1"' in o and "data-stop" not in o
+          and not re.search(r'class="[^"]*\blt-(steps|duo|boxes|spots|ring|task2|ask4|zoom)\b', body), o[:900])
     code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
     check("... and check_script_match finds exactly the approved words on every upgraded slide", code == 0, out[-1500:])
     probs = [x for x in out.splitlines() if "\"spots\"" in x or "\"zoom\"" in x]
@@ -3414,7 +3426,7 @@ def main():
         check("visual_wide with few words -> stage; an .html fragment placed as it is",
               'slide-body stage"' in s03 and FRAGMENT in s03)
         check("visual_wide with many words -> two-col wide-right; dark from the build sheet",
-              "two-col wide-right" in s04 and 'class="slide dark"' in s04)
+              "two-col wide-right" in s04 and re.search(r'class="slide dark( lt-walk)?"', s04))
         t01, t02 = section(page, "t01"), section(page, "t02")
         check("a task slide -> activity on the light ground (2.62.1, 80 / 20), Task, its code, data-task-href to tasks/sc1_<title>.html",
               'class="slide activity"' in t01 and 'data-kind="Task"' in t01 and 'data-activity="SC1"' in t01

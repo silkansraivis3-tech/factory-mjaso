@@ -822,6 +822,8 @@
     }
   }
   function reveal(p, ok) {
+    /* a two-half answer (what you do + why): each half shows the trainee's own pick with its own verdict, right or wrong -
+       never one half marked and the other blank (the right answer of a wrong half is still held for the debrief) */
     each(p.groups, function (g) { revealGroup(g, gradeGroup(g)); });
     each($$('.tray', p.el), function (t) { if (!$('.chip', t)) { add(t, 'spent'); } });    /* 2.63.2: an emptied bank goes (CSS) */
     each($$('.ffc', p.el), function (c) { add(c, 'seen'); });       /* every part's reading, once it is answered */
@@ -902,6 +904,11 @@
     if (q.why) {
       add(q.why, 'on'); add(q.why, q.ok ? 'good' : 'bad');
       /* above the dock, not under it - and a question of several parts keeps its last part's own label in view */
+      /* 2.125.1 - spot the error: the verdict goes above the document, so the verdict and the first lines are seen
+         together after Check (PM walk review: either the first line went under the heading or the verdict under the dock) */
+      /* the same for sorting into bins: the board is taller than the screen once checked (PM M01 q05) */
+      var cg = q.mech === 'spot_the_error' ? $('.cg', q.sec) : q.mech === 'categorise' ? $('.tray', q.sec) : null;
+      if (cg && cg.parentNode === q.sec && q.why.parentNode === q.sec) { q.sec.insertBefore(q.why, cg); add(q.why, 'above'); }
       if (q.parts.length > 1) { settle(q.why, q.parts[q.k].el); } else { bring(q.why, null); }
     }
   }
@@ -912,6 +919,13 @@
     var top = 8, bot = (W.innerHeight || D.documentElement.clientHeight) - 8, bar = $('.state'), team = $('#teamBar');
     if (bar) { top = Math.max(top, bar.getBoundingClientRect().bottom + 8); }
     if (team && !team.hasAttribute('hidden')) { top = Math.max(top, team.getBoundingClientRect().bottom + 8); }
+    /* 2.125.1 - a question heading that sticks under the bar (spot the error) covers what scrolls under it too (PM M02
+       q06 / m06: after Check the first line sat under the heading) */
+    each(D.querySelectorAll('.scr .q'), function (h) {
+      if (!h.offsetParent || !W.getComputedStyle || W.getComputedStyle(h).position !== 'sticky') { return; }
+      var r = h.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < bot) { top = Math.max(top, r.bottom + 8); }
+    });
     if (dock && !has(dock, 'off')) { bot = Math.min(bot, dock.getBoundingClientRect().top - 8); }
     return { top: top, bot: bot };
   }

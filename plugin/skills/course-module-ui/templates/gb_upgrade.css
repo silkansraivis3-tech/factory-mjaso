@@ -99,6 +99,18 @@
    under it; a line under the boxes fills as the steps are reached. Next walks the steps: the step now lifts and its
    illustration draws itself in, the steps done keep a tick. Sizes from the template's own scale. */
 .slide[data-template^="procedure."] .slide-body.lt-steps{display:flex;flex-direction:column;justify-content:center;flex:1;min-height:0;gap:min(3vmin,24px)}
+/* 2.125.1 - a slide that walks its lines (.lt-walk: words beside a photo, a table, plain words): the line now lit, the
+   ones not reached yet dimmed; a table's head row always shown */
+.slide.lt-walk [data-k]{transition:opacity .35s ease,background-color .35s ease}
+.slide.lt-walk [data-k]:not(.cur):not(.lit){opacity:.45}
+.slide.lt-walk .lt-table tr[data-k]:first-child{opacity:1}
+/* the lit line keeps its weight: a bold row re-wraps a table's columns on its stop (PM M03 s25 walk review) */
+.slide.lt-walk .copy [data-k].cur{font-weight:inherit}
+/* 2.125.1 - steps under a lead line: the lead never shrinks, the boxes take the body's size of text so lead + 5 steps fit */
+.lt-steps > .lt-nlead{flex:none;font-size:var(--lt-fs);max-width:none}
+.slide[data-template^="procedure."] .slide-body.lt-steps:has(> .lt-nlead){gap:min(2.4vmin,19px)}
+.lt-steps:has(> .lt-nlead) .lt-step{padding:min(2.4vmin,19px) min(2.4vmin,19px) min(2.2vmin,17px)}
+.lt-steps:has(> .lt-nlead) .lt-step .lt-t{font-size:var(--lt-fs);line-height:1.3}
 .lt-steps .lt-row{display:grid;grid-template-columns:repeat(var(--n,3),1fr);gap:min(3vmin,24px);align-items:stretch}
 .lt-steps .lt-step{position:relative;display:flex;flex-direction:column;gap:min(2vmin,16px);padding:min(3vmin,24px);
   border-radius:min(2.2vmin,18px);background:var(--up-a25525525505);border:1.5px solid var(--up-a8316721922);color:var(--lt-dim-d);
@@ -191,7 +203,7 @@
 .slide.dark .lt-points li.cur{background:var(--up-a8316721918);color:var(--lt-white)}
 .slide.dark .lt-points li.cur::before{background:var(--lt-blue);color:var(--lt-navy)}
 .slide .lt-split{display:grid;grid-template-columns:var(--cols,44fr 56fr);gap:var(--lt-gap);flex:1;min-height:0}
-.slide .lt-split > .copy{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.slide .lt-split > .copy{display:flex;flex-direction:column;justify-content:center;min-width:0;align-self:stretch}  /* 2.125.1: fills the row, so the centring works (PM M02 s04 / s05 sat in the top 40 %) */
 .slide .lt-split > .fill{min-height:0;min-width:0}
 .slide .lt-split .kit3d-fig{height:100%}
 .slide .lt-split .kit3d-stage{height:100%;min-height:0}
@@ -328,6 +340,8 @@
 .slide .lt-pt.on .lt-points{animation:lt-rise .5s cubic-bezier(.2,.7,.2,1) both}
 
 /* ------------------------------------------------ table: the row now lights, the conclusion arrives last */
+/* 2.125.1: a table with no picture (text-only) takes the slide's width - the 950 px reading cap is for running text */
+.slide[data-template^="reference-table."][data-variant="text-only"] .slide-body > .copy{max-width:none;width:100%}
 .slide[data-template^="reference-table."] .lt-table tr{cursor:pointer;transition:background .35s,opacity .35s}
 .slide[data-template^="reference-table."] .lt-table tr td{transition:background .35s,color .35s}
 .slide[data-template^="reference-table."] .lt-table tr.cur td{background:var(--up-a831672192)}
@@ -462,6 +476,11 @@
   background:linear-gradient(180deg,rgba(1,17,17,.8),rgba(1,17,17,0))}
 
 /* ------------------------------------------------ worked example: the steps, then the room's own turn; a detector's display beside them */
+/* 2.125.1 - a worked example with no picture uses the slide's width: each step's words left, its result right (PM M02 s14b
+   stood in the left half) */
+.slide[data-template^="worked-example."][data-variant="text-only"] .lt-split > .copy{max-width:none;width:100%}
+.slide[data-template^="worked-example."][data-variant="text-only"] .lt-work li > div{display:flex;justify-content:space-between;align-items:baseline;gap:1.2em}
+.slide[data-template^="worked-example."][data-variant="text-only"] .lt-work li > div > span{margin-top:0;max-width:42%;text-align:right;font-size:var(--lt-fs);font-weight:700}
 .lt-work{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:min(1.4vmin,11px)}
 .lt-work li{display:grid;grid-template-columns:min(4.4vmin,35px) 1fr;gap:min(1.6vmin,13px);align-items:start;padding:min(1.6vmin,13px) min(2vmin,16px);border-radius:min(1.4vmin,11px);
   border:1.5px solid var(--up-a8316721922);opacity:.45;transition:opacity .4s,background .4s,border-color .4s,transform .4s;cursor:pointer}
@@ -582,15 +601,29 @@
 
 /* ------------------------------------------------ numbers to remember: the number first, then what it means */
 .slide-body.lt-nbody{display:flex;align-items:center;flex:1;min-height:0}
-.lt-nums{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:min(2vmin,16px)}
-.lt-nums li{position:relative;height:min(23vmin,184px);perspective:1000px;cursor:pointer}
+.slide-body.lt-nbody.lt-nled{flex-direction:column;align-items:stretch;justify-content:center;gap:min(3vmin,24px)}
+.lt-nlead{margin:0;max-width:62ch;font-size:var(--lt-fs-lead,var(--lt-fs));line-height:1.4;font-weight:600;color:var(--lt-navy)}
+.lt-nled > .lt-nlead{flex:none;max-width:none;font-size:var(--lt-fs)}
+.lt-nled > .lt-nums{grid-auto-rows:min(24vmin,190px)}
+.slide.dark .lt-nlead{color:var(--lt-white)}
+/* 2.125.1 (Project Management review): cards up to a third taller so two rows fill the slide (compose WEAK on every
+   key-numbers slide), and the face turned away is visibility:hidden - it switches at mid-turn, when the card is edge-on -
+   so a reader and the audits see one face at a time (both faces were measured together: contrast 1.06:1, text on text) */
+.lt-nums{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:min(2vmin,16px);
+  grid-auto-rows:min(28vmin,224px)}
+/* seven or eight cards: four to a row, so two rows still fit (PM M03 s21: 7 cards in rows of three spilled 138 px) */
+.lt-nums:has(> li:nth-child(7)){grid-template-columns:repeat(4,1fr);grid-auto-rows:min(26vmin,208px)}
+.lt-nums li{position:relative;height:auto;perspective:1000px;cursor:pointer}
 .lt-nums .fc,.lt-nums .bc{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:.3em;padding:min(2.4vmin,19px);border-radius:min(2vmin,16px);
-  backface-visibility:hidden;transition:transform .8s cubic-bezier(.3,.7,.2,1)}
-.lt-nums .fc{background:linear-gradient(150deg,#16408f,#0d2a6b);border:1.5px solid var(--up-a8316721935);box-shadow:0 18px 34px -16px var(--up-a0006)}
+  backface-visibility:hidden;transition:transform .8s cubic-bezier(.3,.7,.2,1),visibility 0s linear .4s}
+.lt-nums .bc{visibility:hidden}
+.lt-nums li.cur .fc,.lt-nums li.lit .fc{visibility:hidden}
+.lt-nums li.cur .bc,.lt-nums li.lit .bc{visibility:visible}
+.lt-nums .fc{background-color:var(--lt-navy);background-image:linear-gradient(150deg,#16408f,#0d2a6b);border:1.5px solid var(--up-a8316721935);box-shadow:0 18px 34px -16px var(--up-a0006)}
 .lt-nums .bc{background:var(--lt-white);transform:rotateY(180deg);box-shadow:0 18px 34px -16px var(--up-a0006)}
 .lt-nums b{font-size:clamp(24px,5.2vmin,54px);font-weight:900;letter-spacing:-.02em;line-height:1}
 .lt-nums .fc b{color:var(--lt-white)}.lt-nums .bc b{color:var(--lt-navy);font-size:clamp(16px,2.8vmin,30px)}
-.lt-nums .fc .q{color:var(--lt-blue);font-weight:700;font-size:clamp(12px,1.7vmin,18px)}
+.lt-nums .fc .q{color:var(--lt-white);font-weight:700;font-size:clamp(18px,2.3vmin,22px)}
 .lt-nums .bc span{color:var(--lt-steel);font-size:var(--lt-fs);line-height:1.3;font-weight:600}
 .lt-nums li.cur .fc,.lt-nums li.lit .fc{transform:rotateY(-180deg)}
 .lt-nums li.cur .bc,.lt-nums li.lit .bc{transform:none}

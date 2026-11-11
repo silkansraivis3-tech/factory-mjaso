@@ -1306,7 +1306,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
     elif m == "build_the_plan":                         # numbered slots for the cards that belong; the rest stay out
         ls = cs.lines_of(q.get("answer"))
         good = [cs.unstar(x) for x in ls if cs.starred(x)]
-        extra = ' data-need="slots"' + many(max(len(good), MANY if len(ls) >= 9 else 0))
+        extra = ' data-need="slots"' + many(max(len(good), MANY if len(ls) >= 9 or len(good) + len(ls) >= 10 else 0))   # slots + cards too tall stacked: side by side (walk M03 q11/q13: 5 slots + 7 cards ran under Check)
         if b.get("look") == "chain":                    # 2.74.0 - cause and effect: the slots joined by arrows (gb_answer.css)
             extra += ' data-look="chain"'
         out.append('    <p class="opts-say">%s</p>' % e(w["plan_say"]))

@@ -456,6 +456,10 @@ def main():
                and x["level"] == cs.FAIL and x["screen"] == "s01"]
               and [x for x in cs.media_findings(d3 if screen(d3, "s02").update(why="spatial") is None else d3)
                    if x["rule"] == "v_why" and x["screen"] == "s02"], None)
+        check("2.125.1: a scenario slide's \"why\" (the reasons of its choices) is not read as the figure's why",
+              not [x for x in cs.media_findings(dict(copy.deepcopy(SCRIPT), screens=[
+                  dict(x, choices="A\nB", why="Right: A.\nB is wrong.") if x["id"] == "s01" else x for x in SCRIPT["screens"]]))
+                   if x["rule"] == "v_why" and x["screen"] == "s01"], None)
         short = copy.deepcopy(SCRIPT)
         short["screens"] = [x for x in short["screens"] if x.get("id") not in ("s02", "s03")]
         check("a module under 3 teaching slides is not counted", not share(short), share(short))

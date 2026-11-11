@@ -69,7 +69,11 @@ var AuditCompose = (function (w, d) {
     settleMs: 420,
 
     /* an element is MEANINGFUL if it matches this and has painted content */
-    inkSel: "h1,h2,h3,h4,h5,h6,p,li,td,th,figcaption,blockquote,code,pre," +
+    /* 2.125.1: b, strong, em, span - the upgraded templates put their words in these inside a div (a key-number
+       card's b / span, a worked example's li > div > b): only the h2 was counted, so a slide full of words read as 6 %
+       of ink and failed WEAK (Project Management M01 s01b, M02 s05, M03 s08). ownsInk() still asks for the element's
+       OWN text, and the grid union never counts an area twice */
+    inkSel: "h1,h2,h3,h4,h5,h6,p,li,td,th,figcaption,blockquote,code,pre,b,strong,em,span," +
             "svg,img,canvas,video,button,a[href],input,select,textarea,label," +
             "[data-ink]",
     /* ...unless it is chrome, or the author excluded it */

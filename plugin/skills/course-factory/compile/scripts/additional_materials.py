@@ -780,6 +780,20 @@ def kit(course, title, mods, days, root, probs):
             out += pair(base + "_DEBRIEF", "%s - %s" % (W["debrief"], code), debrief_card(entry, code))
             if entry.get("recorded"):
                 out += pair(base + "_ASSESSMENT", "%s - %s" % (W["form"], code), assessment_form(entry, code))
+    # 2.125.1 - a practical of the final module (an oral defence as the recorded run, PM FINAL.A04): the final is not among
+    # the modules, so its cards and assessment form went unprinted. It is on the last day
+    final = dict(il.scripts(course)).get("FINAL") or {}
+    for s in final.get("screens") or []:
+        entry = pracs.get(il.key("FINAL", s.get("id"))) if s.get("kind") == "activity" else None
+        if not entry:
+            continue
+        sid, title_ = str(s["id"]).upper(), s.get("title") or str(s["id"]).upper()
+        base = os.path.join(root, "practical-kit", "Day_%d" % (len(days) or 1), "FINAL_%s_%s" % (sid, cm.slug(title_)))
+        code = "FINAL %s - %s" % (sid, title_)
+        out += pair(base + "_PREBRIEF", "%s - %s" % (W["prebrief"], code), prebrief_card(entry, code))
+        out += pair(base + "_DEBRIEF", "%s - %s" % (W["debrief"], code), debrief_card(entry, code))
+        if entry.get("recorded"):
+            out += pair(base + "_ASSESSMENT", "%s - %s" % (W["form"], code), assessment_form(entry, code))
     emp = data.get("employer") or {}
     if any(emp.get(k) for k in ("can_do", "decays", "drill", "watch_for", "refresher")):
         out += pair(os.path.join(root, "practical-kit", "EMPLOYER_SHEET_" + cm.slug(title)), "%s - %s" % (W["employer"], title),

@@ -389,6 +389,16 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template^="task-launch."] .slide-body.activity.no-code .act-title{grid-column:1}
 .slide[data-template^="task-launch."] .slide-body.activity.no-code > svg{grid-column:1}
 .slide[data-template^="task-launch."] .slide-body.activity.no-code .act-lines{grid-column:1}
+/* 2.125.1 - a room activity with no photo uses the slide's width: lines up to 46em, not 30 (PM: the right half stood empty) */
+.slide[data-template^="task-launch."] .slide-body.activity.no-code:not(:has(> .act-photo)) .act-inst{max-width:46em}
+/* 2.125.1 - a room activity with a photo: the photo large on the left (45 %), the title and lines beside it - never a small
+   photo stacked between them (PM FINAL a02, "weird layout and small picture") */
+.slide[data-template^="task-launch."] .slide-body.activity.no-code:has(> .act-photo){grid-template-columns:minmax(0,45fr) minmax(0,55fr);
+  grid-template-rows:auto 1fr;column-gap:min(5vmin,44px);align-content:stretch;align-items:start}
+.slide[data-template^="task-launch."] .slide-body.activity.no-code:has(> .act-photo) > .act-photo{grid-column:1;grid-row:1 / span 2;margin:0;
+  align-self:center;width:100%;height:auto;max-width:none;max-height:66vh;object-fit:cover}
+.slide[data-template^="task-launch."] .slide-body.activity.no-code:has(> .act-photo) .act-title{grid-column:2;grid-row:1}
+.slide[data-template^="task-launch."] .slide-body.activity.no-code:has(> .act-photo) .act-lines{grid-column:2;grid-row:2;margin-top:min(3vmin,24px)}
 .act-lines .act-inst.act-lead{font-weight:700;font-size:clamp(17px,2.9vmin,40px);margin-bottom:.5em}
 .act-lines .act-inst.act-bullet{position:relative;padding-left:1.1em}
 .act-lines .act-inst.act-bullet::before{content:"";position:absolute;left:0;top:.62em;width:.45em;height:.45em;border-radius:2px;background:var(--lt-blue,#2f6fb5)}

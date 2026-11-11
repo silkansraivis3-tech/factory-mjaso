@@ -17,7 +17,13 @@ body>.wrap{flex:1 0 auto;width:100%}
 .state{top:0;min-height:58px;padding:8px 24px}
 .state .part{font-size:18px}
 .state .got{font-size:18px;color:var(--dim-l)}
-.wrap{max-width:1280px;padding:8px 20px 14px}
+/* the two sticky bars - the state bar on top, the dock (Check) at the bottom - cover whatever scrolls under them, so the
+   scrolling content keeps room for both: bottom padding of one dock's height (its 58px button + padding + border = ~80px,
+   rounded up) so the last cards/bins can always be scrolled clear of Check, and scroll-padding so anything the browser
+   or the engine scrolls into view stops short of both bars. Every task type shares .wrap, so this holds for all of them. */
+:root{--dock-h:96px;--state-h:92px}
+html{scroll-padding-top:var(--state-h);scroll-padding-bottom:var(--dock-h)}
+.wrap{max-width:1280px;padding:8px 20px calc(var(--dock-h) + 14px)}
 .scr{display:none}
 .scr.on{display:block;animation:gban-in .22s ease-out}
 @keyframes gban-in{from{transform:translateY(10px)}to{transform:none}}
@@ -124,6 +130,15 @@ body>.wrap{flex:1 0 auto;width:100%}
   .scr[data-many] .rows:not(.order) .row{grid-template-columns:minmax(120px,40%) 1fr}
   .scr[data-many] .tray .chip{width:100%}
   .scr[data-many] .part.lay.stopping{display:block}
+  /* categorise with no picture: the cards to sort on the left, the bins stacked on the right - cards over bins ran the
+     bins under the Check bar at 1024 x 768 (walk M01 sc1 q05N, eight cards). Stays one screen high. */
+  .scr[data-mech="categorise"]:not([data-pic]).on{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);column-gap:20px;align-items:start}
+  .scr[data-mech="categorise"]:not([data-pic]).on>.tray .chip{min-height:50px}
+  .scr[data-mech="categorise"]:not([data-pic]).on>*{grid-column:1/-1}
+  .scr[data-mech="categorise"]:not([data-pic]).on>.tray{grid-column:1;grid-row:span 2;margin:0}
+  .scr[data-mech="categorise"]:not([data-pic]).on>.grps{grid-column:2;grid-template-columns:1fr;gap:10px;margin:0}
+  .scr[data-mech="categorise"]:not([data-pic]).on>.grps:has(.grp:nth-child(3)){grid-template-columns:1fr 1fr}
+  .scr[data-mech="categorise"]:not([data-pic]) .grp .zone{min-height:96px}
 }
 /* compare: a picture over each column's choice */
 .cmpfig{margin:0 0 8px}
@@ -561,6 +576,7 @@ body:has(.scr.on[data-frame="1"]:not(.locked)) .dock{visibility:hidden}
 .mxv.sel{transform:translateY(-3px);border-color:var(--blue);background:var(--blue-wash-l);box-shadow:0 0 0 4px var(--blue)}
 .mx{width:100%;max-width:1080px;margin:0 auto;border-collapse:separate;border-spacing:0;table-layout:fixed;background:var(--white);
   border:2px solid var(--navy);border-radius:var(--r-m);overflow:hidden;color:var(--ink)}
+.mx th{position:static}  /* gb_page.css makes every th sticky (top:48px); in this overflow:hidden table that pushes the header row down over the body rows */
 .mx th,.mx td{padding:0;border-bottom:1px solid var(--line-l);border-right:1px solid var(--line-l)}
 .mx tr>:last-child{border-right:0}
 .mx tbody tr:last-child>*{border-bottom:0}

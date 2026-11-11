@@ -23,7 +23,10 @@ body:has(.scr.on.th-n){background:var(--tk-navy);color:var(--tk-white)}
 body:has(.scr.on.th-n)::before{background-image:url(na_pattern_on_navy.svg);opacity:.45}
 
 /* ---- the line along the top: how far through the set ---------------------- */
-.state{background:transparent;border-bottom-color:transparent}
+/* the bar is sticky and the page scrolls under it: it keeps the page's own ground (never transparent), or the question
+   and the score card show through the progress line and the pill. Same for the dock below. */
+.state{background:var(--tk-page);border-bottom-color:transparent}
+body:has(.scr.on.th-n) .state{background:var(--tk-navy)}
 .state .part{color:var(--tk-steel)}
 .state .got{color:var(--tk-steel)}
 .state .bar{background:var(--tk-grey)}
@@ -31,6 +34,14 @@ body:has(.scr.on.th-n)::before{background-image:url(na_pattern_on_navy.svg);opac
 body:has(.scr.on.th-n) .state .part,body:has(.scr.on.th-n) .state .got{color:var(--tk-dim-n)}
 body:has(.scr.on.th-n) .state .bar{background:var(--tk-glass-hi)}
 body:has(.scr.on.th-n) .state .bar i{background:var(--tk-blue)}
+
+/* a document to check is taller than the screen once its verdicts open: the question and its hint stay under the bar
+   while the lines scroll beneath (opaque, so a line is never cut through the heading) */
+/* 2.125.1: no longer sticky - stuck at --state-h it slid over the hint line on a page that had not scrolled (PM M02 q06);
+   after Check the verdict now opens above the document instead (gb_answer.js) */
+.scr[data-mech="spot_the_error"] .q{margin-top:0;padding:6px 0}
+.scr[data-mech="spot_the_error"] > .why.above,.scr[data-mech="categorise"] > .why.above{margin:6px auto 10px;grid-column:1/-1}
+body:has(.scr.on.th-n) .scr[data-mech="spot_the_error"] .q{background:var(--tk-navy)}
 
 /* ---- the question ------------------------------------------------------- */
 .q .num{background:var(--tk-navy);color:var(--tk-white)}
@@ -125,7 +136,8 @@ body:has(.scr.on.th-n) .state .bar i{background:var(--tk-blue)}
 .th-n .why.bad .vd{color:var(--tk-bad-ink-n)}
 
 /* ---- the dock: one big button, always in the same place ----------------- */
-.dock{background:transparent;border-top-color:transparent}
+.dock{background:var(--tk-page);border-top-color:transparent}
+body:has(.scr.on.th-n) .dock{background:var(--tk-navy)}
 .dock .sub{border-radius:18px;background:var(--tk-navy);border-color:var(--tk-navy);color:var(--tk-white);
   box-shadow:0 16px 30px -16px var(--tk-shadow)}
 .dock .sub[disabled]{opacity:1;background:var(--tk-off);border-color:var(--tk-off);box-shadow:none}
@@ -141,4 +153,16 @@ body:has(.scr.on.th-n) .dock .sub.next{background:var(--tk-white);border-color:v
 .th-n .ring .arc{stroke:var(--tk-blue)}
 .th-n .ring .num{color:var(--tk-white)}
 .th-n #resList li{background:var(--tk-glass-n);color:var(--tk-white);border-color:var(--tk-line-n)}
+/* the review under a wrong question: gb_answer.css paints it for a white card (dark ink); on Navy every part is re-inked */
+.th-n .res .fix,.th-n .res .fix b,.th-n .res .fix .fx.brief{color:var(--tk-white)}
+.th-n .res .fix s.mine{color:var(--tk-bad-ink-n)}
+.th-n .res .fix em.good,.th-n .res .fix .ord ol.good li{color:var(--tk-ok-ink-n)}
+.th-n .res .fix .ord li.moved{color:var(--amber)}
+.th-n .res .fix .fx.later{color:var(--tk-dim-n)}
+/* a scenario step that has folded is a white summary card: dark ink on it, whichever ground the screen has */
+.th-n .part.step.past .phead{color:var(--tk-navy)}
+.th-n .part.step.past .opt{background:var(--tk-pale);border-color:var(--tk-line);color:var(--tk-navy)}
+.th-n .part.step.past .opt.right{background:var(--tk-ok-l);border-color:var(--tk-ok)}
+.th-n .part.step.past .opt.wrong{background:var(--tk-bad-l);border-color:var(--tk-bad)}
+.th-n .part.step.past .opt::before{background:var(--tk-grey);color:var(--tk-navy)}
 .th-n #resNote,.th-n #resLine{color:var(--tk-dim-n)}

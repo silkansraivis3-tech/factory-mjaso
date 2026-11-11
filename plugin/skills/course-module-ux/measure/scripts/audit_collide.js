@@ -293,6 +293,9 @@
       if (el.namespaceURI && el.namespaceURI.indexOf("svg") >= 0) { return; }
       var st = getComputedStyle(el);
       if (st.display === "none") { return; }   /* NOT visibility — see header */
+      /* 2.125.1 - the one exception: a flip card's face turned away ([data-alt-face], visibility:hidden). Its two faces
+         are alternatives that are never shown together, so the hidden one is not "text that appears later" */
+      if (st.visibility === "hidden" && el.closest && el.closest("[data-alt-face]")) { return; }
       if (CONFIG.skipOpacityZero && parseFloat(st.opacity) === 0) { return; }
       /* 2.63.2 - a control laid over a figure on purpose (data-overlay: a 3D scene's Full screen button, a drawn part's
          camera badge) sits on the figure's boxes by design - judged like the chrome: never over a word (check 3) */

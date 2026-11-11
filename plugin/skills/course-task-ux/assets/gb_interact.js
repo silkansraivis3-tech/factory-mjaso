@@ -278,7 +278,22 @@
       answered: function () { return done.length === n && done.every(function (x) { return !!x; }); },
       touched: function () { return done.length > 0; },
       right: function () { return this.answered() && done.every(function (x) { return x.ok; }); },
-      show: function (ok) { count.textContent = done.filter(function (x) { return x && x.ok; }).length + ' / ' + n; },
+      /* after Check every card is gone from the deck - the recap lists them all, each with the side the trainee chose and a
+         tick or a cross, so the wrong one can be found and looked at again. Under the debrief rule (api.later) the side
+         that was right is not told; a blind final shows no recap at all. */
+      show: function (ok) {
+        count.textContent = done.filter(function (x) { return x && x.ok; }).length + ' / ' + n;
+        if (api.blind || $('.sw-recap', root)) { return; }
+        fb.className = 'gi-fb'; fb.innerHTML = '';          /* the last card's own line would read as the verdict of the whole set */
+        var ul = el('ul', 'sw-recap', '', root);
+        each(done, function (x) {
+          if (!x) { return; }
+          var li = el('li', x.ok ? 'ok' : 'no', '', ul);
+          el('i', '', x.ok ? '✓' : '✕', li);
+          el('span', 'sw-rs', esc(x.st), li);
+          el('b', '', esc(say(x.v ? 't' : 'f')) + (x.ok || api.later ? '' : ' → ' + esc(say(x.v ? 'f' : 't'))), li);
+        });
+      },
       lock: function () { locked = true; },
       keys: function () { return done.filter(function (x) { return !!x; }).map(function (x) { return api.key(api.id, x.st, x.v ? 'true' : 'false'); }); },
       said: function () {
