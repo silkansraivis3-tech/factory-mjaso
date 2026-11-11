@@ -83,7 +83,7 @@ The answer lists only what fails (the full log's path is its last line - open it
 | `AUDITS ... small / low contrast` on a drawing | the figure's column is too narrow - a wider layout, fewer words in the drawing |
 | `TASK PAGES - FAIL` | a question graded wrong or a leader line crosses words: the sheet's `"labels"` / `"areas"`, or the drawing |
 | `(nothing changed since this build's last answer ...)` | the same report again, nothing built: change what it lists first - a build with no change only repeats it |
-| `SAME FINDING 3 BUILDS RUNNING: ...` | your changes have not moved it: never build for it again - list it in your report; fix only what else the build prints |
+| `SAME FINDING 3 BUILDS RUNNING: ...` | three of your own builds (Phase A's are not counted) and your changes have not moved it: never build for it again - list it in your report; fix only what else the build prints |
 | `STOP - everything this build prints has failed 3 builds running` | STOP now and report: the judges and the one fix round take it from here |
 
 Anything the table does not cover: `compile/GUIDE.md` - §2 layout, §2b photos and empty space, §2c sheet choices, §2d task

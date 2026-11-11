@@ -809,7 +809,7 @@ def validate(script):
     alloc = script.get("minutes_allocated")
     if alloc:
         got = sum(minutes(s) for s in screens if s.get("kind") in INSTRUCTOR)
-        if abs(got - float(alloc)) > 0.5:
+        if abs(got - float(alloc)) > 0.01:
             probs.append("the minutes add up to %g, the programme gives this module %g - they must be equal (L1)" % (got, float(alloc)))
     return probs
 
@@ -3300,6 +3300,8 @@ def cmd_apply(course, module, confirmed, confirmed_by=None):
           % (len(pend["changes"]), " The module is back to draft: it needs the operator's \"next\" again." if was_approved and pend["changes"] else "",
              ("\n  %d comment(s) and note(s) were NOT applied - they are instructions, not edits. Propose the change for "
               "each (content_script.py propose), show it, and apply it when the operator confirms." % len(asked)) if asked else ""))
+    if pend["changes"]:
+        print(approve_preview(course, script))
     return 0
 
 
@@ -3364,25 +3366,14 @@ def cmd_approve(course, module, by, despite=False):
     if probs:
         print("Not approved - the script still has problems:\n" + "\n".join("  - " + x for x in probs))
         return 1
-    must = blocking(all_findings(script, course))
-    # 2.49.2 (F9): a script approved before the ILO map and sources rules (2.42.0), changed in a way that does not touch what those
-    # rules read (a picture, a word), is not held to them again - they stay suggestions. A new approval is checked in full.
-    ilo = ilo_findings(course, script)
-    lenient = approved_before_ilo_rules(script) and not touches_ilo_rules(script.get("since_approval"))
-    if lenient and ilo:
-        must = [f for f in must if f not in ilo]
-        print("  %d finding(s) of the ILO map and sources check stay suggestions: this script was approved before those rules (2.42.0) "
-              "and nothing changed since touches Sub-ILO tags, the sources or the screens. They are on the review page." % len(ilo))
-    chosen = design_choices.load(course)                     # L26: a design rule the operator chose against stops nothing
-    waived = [f for f in must if any(f["rule"].startswith(pre) and rule in chosen for rule, pre in DESIGN_FINDINGS.items())]
-    must = [f for f in must if f not in waived]
-    for f in waived:
-        print("  %s: %s - %s" % (f["where"], f["detail"], design_choices.label(chosen[next(r for r, pre in DESIGN_FINDINGS.items() if f["rule"].startswith(pre))])))
+    must, ilo, lenient, said = approval_blockers(course, script)
+    for x in said:
+        print(x)
     if must and not despite:
         print("Not approved - the checks found %d thing(s) that must be fixed first:\n%s\n\n"
               "  Fix them in the script (propose, confirm, apply) - or, if the operator has read them and wants the\n"
               "  script as it is (L26), approve with --despite-findings; that decision is recorded with the approval."
-              % (len(must), "\n".join("  - %s%s: %s" % (f["where"], (", " + f["field"]) if f["field"] else "", f["detail"]) for f in must)))
+              % (len(must), must_lines(must)))
         return 1
     script["approved_despite_findings"] = [dict(f, date=date.today().isoformat()) for f in must] if must else []
     script.update({"status": "approved", "approved_by": by, "approved_on": date.today().isoformat(), "approved_hash": content_hash(script)})
@@ -3393,6 +3384,44 @@ def cmd_approve(course, module, by, despite=False):
     render(course, module, quiet=True)
     print("Module %s's script is approved by %s. The slides built from it must say exactly this (check_script_match.py)." % (script["module"], by))
     return 0
+
+
+def approval_blockers(course, script):
+    """what approve stops on, the same list wherever it is said: (must-fix findings, the ILO map and sources findings,
+    whether those stay suggestions, the lines approve says about what it lets through)"""
+    must, said = blocking(all_findings(script, course)), []
+    # 2.49.2 (F9): a script approved before the ILO map and sources rules (2.42.0), changed in a way that does not touch what those
+    # rules read (a picture, a word), is not held to them again - they stay suggestions. A new approval is checked in full.
+    ilo = ilo_findings(course, script)
+    lenient = approved_before_ilo_rules(script) and not touches_ilo_rules(script.get("since_approval"))
+    if lenient and ilo:
+        must = [f for f in must if f not in ilo]
+        said.append("  %d finding(s) of the ILO map and sources check stay suggestions: this script was approved before those rules "
+                    "(2.42.0) and nothing changed since touches Sub-ILO tags, the sources or the screens. They are on the review "
+                    "page." % len(ilo))
+    chosen = design_choices.load(course)                     # L26: a design rule the operator chose against stops nothing
+    waived = [f for f in must if any(f["rule"].startswith(pre) and rule in chosen for rule, pre in DESIGN_FINDINGS.items())]
+    must = [f for f in must if f not in waived]
+    for f in waived:
+        said.append("  %s: %s - %s" % (f["where"], f["detail"], design_choices.label(chosen[next(r for r, pre in DESIGN_FINDINGS.items() if f["rule"].startswith(pre))])))
+    return must, ilo, lenient, said
+
+
+def must_lines(must):
+    return "\n".join("  - %s%s: %s" % (f["where"], (", " + f["field"]) if f["field"] else "", f["detail"]) for f in must)
+
+
+def approve_preview(course, script):
+    """approve's list said before anyone runs it - render and apply print it, so a must-fix of the old course, the fact
+    check or the task cover, or one a correction has just made, is not first seen at approve"""
+    probs = validate(script)
+    if probs:
+        return "\nApprove would stop first on the script's own problems:\n" + "\n".join("  - " + x for x in probs)
+    must = approval_blockers(course, script)[0]
+    if not must:
+        return "\nApprove finds nothing that must be fixed first."
+    return ("\nApprove would stop on %d thing(s) that must be fixed first - the same list approve prints:\n%s"
+            % (len(must), must_lines(must)))
 
 
 def cmd_status(course, module):
@@ -3485,6 +3514,8 @@ def render(course, module, quiet=False):
             print("\nThe Bloom map has %d suggestion(s) - on the review page, they never stop the module:" % len(bm["findings"]))
             for k, kw in bm["findings"]:
                 print("  - " + bloom_map.T(bm["lang"], k, **kw))
+        if not probs:                                    # its own problems are said above
+            print(approve_preview(course, script))
     return 1 if probs else 0
 
 

@@ -45,8 +45,12 @@ the things that would make it a lie:
   * it may not exceed data-mins
   * a practice block declaring less than half its minutes active is flagged -
     if trainees are receiving for most of a practical, it is not a practical
-  * a theory block declaring 100 % active is flagged - somebody has to set the
-    task, and a block that never pauses to do so is a rename, not a redesign
+  * a theory block of more than 10 minutes declaring 100 % active is reported -
+    somebody has to set the task, and a block that never pauses to do so may be
+    a rename, not a redesign. A report line, never a FAIL: a compiled active
+    slide counts all its minutes active (the content script's split), and which
+    of the two rules wins is the owner's open decision (course-factory MANIFEST,
+    "Waiting on the owner's decision" 2)
   * the instructor plan must show, for each block, what the trainees do in
     those minutes. That part a human checks; this script cannot.
 
@@ -179,7 +183,7 @@ def main():
     if args.practice_min is not None:
         alloc_p = args.practice_min
 
-    failures, warnings = [], []
+    failures, warnings, reports = [], [], []
 
     # ---- markup completeness ------------------------------------------------
     for b in blocks:
@@ -263,8 +267,9 @@ def main():
                             "if the room is receiving for most of it, it is not practice"
                             % (b["block"], b["active"], b["mins"]))
         elif b["track"] == "theory" and b["active"] == b["mins"] and b["mins"] > 10:
-            failures.append("%s declares 100%% of a %d minute theory block active - somebody "
-                            "sets the task. A rename is not a redesign." % (b["block"], b["mins"]))
+            reports.append("%s declares 100%% of a %g minute theory block active - somebody sets the task; "
+                           "say in the plan who. A report, not a finding: the owner's open decision "
+                           "(MANIFEST \"Waiting on the owner's decision\" 2)" % (b["block"], b["mins"]))
         elif b["track"] == "theory" and b["active"] == 0 and b["mins"] >= 20:
             warnings.append("%s - %d theory minutes with nothing for the trainee to do. "
                             "Allowed, but it is the defect the active-learning rule names."
@@ -276,7 +281,9 @@ def main():
         print("  FAIL  %s" % f)
     for w in warnings:
         print("  warn  %s" % w)
-    if not failures and not warnings:
+    for r in reports:
+        print("  report  %s" % r)
+    if not failures and not warnings and not reports:
         print("  the build delivers the allocation, and every block says what the room does")
 
     if not failures and ratio < args.target_active:
@@ -285,7 +292,8 @@ def main():
         print("  the programme can make it unreachable. Record the figure and the reason in")
         print("  factory-notes.md. Do not reach it by renaming screens.")
 
-    print("\n%d block(s) - %d failure(s), %d warning(s)" % (len(blocks), len(failures), len(warnings)))
+    print("\n%d block(s) - %d failure(s), %d warning(s)%s" % (len(blocks), len(failures), len(warnings),
+                                                           ", %d report(s)" % len(reports) if reports else ""))
     return 1 if failures else 0
 
 

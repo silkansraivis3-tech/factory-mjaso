@@ -469,6 +469,16 @@ def main():
         check("the findings in the Word file are not mistaken for the operator's own text", "outside the boxes" not in out and code == 0, out)
         code, out = cs_run("approve", cb, "--module", "1", "--by", "Anna")
         check("approval is refused while the theory check has must-fix findings", code == 1 and "must be fixed first" in out, out)
+        import task_cover
+        task_cover.save_store(cb, 1, {"module": "1", "questions": {}})        # the task cover started: every question unjudged
+        rendered = cs_run("render", cb, "--module", "1")[1]
+        out = cs_run("approve", cb, "--module", "1", "--by", "Anna")[1]
+        said = [x for x in out.splitlines() if x.startswith("  - ")]
+        check("render prints the list approve stops on, line for line - a must-fix no section of render names too (the task "
+              "cover's; the factory trial saw o_thinner and t_over_budget first at approve)",
+              any(", question:" in x for x in said) and "Approve would stop on %d thing(s)" % len(said) in rendered
+              and all(x in rendered for x in said), (said, rendered[-1500:]))
+        os.remove(task_cover.store_path(cb, 1))
         code, out = cs_run("approve", cb, "--module", "1", "--by", "Anna", "--despite-findings")
         rec = cs.load(cs.paths(cb, 1)["script"])
         check("the operator may approve despite them (L26) - and that is recorded",
@@ -834,6 +844,10 @@ def main():
         check("a graded module check is caught", "module check is not graded" in out, out)
         check("a correct answer that is not an option is caught", "the correct answer 'D'" in out, out)
         check("... and approval is refused", cs_run("approve", cb2, "--module", "1", "--by", "x")[0] == 1)
+        half = copy.deepcopy(SCRIPT)
+        half["minutes_allocated"] = sum(cs.minutes(s) for s in half["screens"] if s.get("kind") in cs.INSTRUCTOR) - 0.5
+        check("half a minute over the programme's is caught too - the minutes equal it exactly (L1; the factory trial: 80.5 "
+              "against 80)", any("the minutes add up to" in x for x in cs.validate(half)), cs.validate(half))
 
         print("\n-- the words a slide's own template needs - drafted by the factory, approved like the text")
         good = copy.deepcopy(SCRIPT)

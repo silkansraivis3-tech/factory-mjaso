@@ -323,8 +323,10 @@ detector display for a reading, the GA drawing for "where is it".
 module-check question and only the slides before it, and judges covered / partly / not covered: could the trainee
 answer it, or do it, from those slides alone? `scripts/task_cover.py` gives it the slides, refuses a quote they do not
 show (the notes alone are not enough), and turns its verdicts into a change list that adds the missing line to a slide
-before the task - proposed with `content_script.py propose` (unattended: `fixes --apply`); a question to change is
-listed for the person. A verdict holds while the question and the slides before it are unchanged. Once the module has
+before the task - proposed with `content_script.py propose` (unattended: `task_cover.py fixes --apply`); a question to
+change is listed for the person. A covered verdict holds while the question and the slides it cites are unchanged (a
+change to another slide leaves it standing); a partly or not covered one is judged again when any slide before the
+question changes. Once the module has
 verdicts, approval is refused while a question is unjudged, partly or not covered; the key-word check (`t_not_taught`)
 stays as the quick first filter.
 
@@ -332,10 +334,10 @@ stays as the quick first filter.
 parallel) proves every claim in the course's knowledge base: `scripts/fact_check.py` finds the claims and proves what a
 source says word for word, the agent judges the rest found / partly / not found from the source passages only, and
 leaves a change list that cuts what no source says and corrects what it says otherwise - proposed with
-`content_script.py propose`, shown like any correction (an unattended build applies it itself, `fixes --apply`, each
-change logged for the expert). A question's answer and the answer a slide reveals to the room's question are never
-changed there - they are listed for the writer, so no question loses its answer. A cut or a correction on a slide
-before a task voids that task's coverage verdict: the apply names the questions to judge again (and a line one relied
+`content_script.py propose`, shown like any correction (an unattended build applies it itself, `fact_check.py fixes
+--apply`, each change logged for the expert). A question's answer and the answer a slide reveals to the room's question
+are never changed there - they are listed for the writer, so no question loses its answer. A cut or a correction on a
+slide a covered verdict cites voids that verdict: the apply names the questions to judge again (and a line one relied
 on that is gone), and approval waits for them. Approval is refused while a claim is not judged or one not proved is
 still in the script (a course with no knowledge base is not checked).
 
@@ -349,7 +351,9 @@ OPEN TASK button on each task slide) and **part 2, the trainee tablet** (every t
 screen, each showing the slide that teaches its answer). At the top: the module in numbers - minutes
 against the programme's, words per theory minute - and the findings of both checks. **The operator's copy is
 the Word file** `to_review/M01_SCRIPT.docx`. Every editable text is its own grey box, locked against deletion, open
-for typing. Fix every problem `render` lists before showing it.
+for typing. Fix every problem `render` lists before showing it. Its last lines are the list `approve` would stop on,
+word for word (`apply` prints it too, after a correction): a must-fix of the old course, the fact-check or the task cover
+is seen there, never first at the approval.
 
 ## 3 · Corrections — understood first, applied only on yes
 

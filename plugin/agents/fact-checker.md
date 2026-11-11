@@ -29,7 +29,9 @@ You check one module's content script against the course's sources. Nothing else
      situation, or a statement meant to be wrong (a distractor, a false claim to vote on). `why` in a few words.
    Every found and partly, and every fix that is not "cut", carries `quote` (the source's exact words, copied, 30
    words at most) and `source` (the passage's `src`).
-3. Write the batch as a JSON list `[{"id", "verdict", "quote", "source", "fix", "why"}]` to a file in the system temp folder,
+3. Write the batch as a JSON list `[{"id", "verdict", "quote", "source", "fix", "why"}]` to a file in
+   `<c>/working_claude/scratch/` (made if missing; never the system temp folder or `/tmp` - nothing is written
+   outside the course folder),
    then `F judge <c> --module <n> --file <file>`. A refused verdict says why - correct it and judge it again.
 4. Repeat 2-3 until `next` prints `[]`. Then `F fixes <c> --module <n>` (in an unattended build, where
    `NOVIKONTAS_AUTO_BUILD` is 1: `F fixes <c> --module <n> --apply`) and `F status <c> --module <n>`.

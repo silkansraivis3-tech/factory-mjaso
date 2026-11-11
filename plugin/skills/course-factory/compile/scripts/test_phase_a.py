@@ -227,6 +227,22 @@ def main():
             check("... and the needs file lists the auto pick for the visual review", "Picked with no agent" in needs and "s01" in needs)
         import contextlib
         import phase_a
+        streak_p = os.path.join(c, "working_claude", "_build", "M01_streak.json")
+        real_run = phase_a.run
+
+        def counted_build(cmd, timeout=3600):              # the build counts its findings, as build_module.py does
+            if "build_module.py" in " ".join(cmd):
+                os.makedirs(os.path.dirname(streak_p), exist_ok=True)
+                bm.streak(streak_p, ["AUDITS s05 over-filled"])
+                return 1, "FAIL M01 - audits 1280x800 (90 s)"
+            return real_run(cmd, timeout)
+        phase_a.run = counted_build
+        try:
+            phase_a.one(c, 1, False)
+        finally:
+            phase_a.run = real_run
+        check("Phase A's build leaves no count for the stop rule: a builder's own builds are the ones counted (the factory "
+              "trial: M01's builder stopped on SAME FINDING 3 BUILDS RUNNING after two builds of its own)", not os.path.isfile(streak_p))
         res_p, run_p = phase_a.status_paths(c)
         io.open(run_p, "w", encoding="utf-8").write(json.dumps({"pid": os.getpid(), "modules": [4], "jobs": 1}))
         buf = io.StringIO()

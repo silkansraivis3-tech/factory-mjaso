@@ -20,7 +20,8 @@ the way the office PC builds. Then it scores what was built and sets the score b
   run     deletes the last trial course - only a folder that carries FACTORY_TRIAL.json, and its links are removed as
           links, never their targets - makes a new one, and starts Claude Code in it (claude -p, the course-factory
           skill, its "Auto build" rules, NOVIKONTAS_TRIAL=1). Every STOP is signed "Factory trial"; the training app is
-          never called; no paid picture is made; nothing is pushed. --plugin-dir builds with a plugin checkout instead of
+          never called; no paid picture is made; nothing is pushed; the shared course libraries are off (nothing is
+          written outside the trial folder). --plugin-dir builds with a plugin checkout instead of
           the installed one (a release before it is pushed); --modules builds only some of the trial's modules (a retest
           of two). The log and the score go to runs\\<date>\\ - the log line by line as the run goes (the session's words,
           each agent it starts, the minutes since the start and the cost so far). A run that ends without its last line
@@ -72,6 +73,9 @@ MARKER = "FACTORY_TRIAL.json"
 SIGNER = "Factory trial"
 DECISIONS = ("intake.json", "kb_sources.json")
 PLUGIN = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
+# the school's shared course libraries are outside the trial folder: subject_library.py ensure / contribute would write
+# there, so a trial runs with them off (course-visuals/scripts/subject_library.py: "off" = no library at all)
+LIBRARIES_OFF = {"NOVIKONTAS_COURSE_LIBRARIES": "off", "NOVIKONTAS_SUBJECT_LIBRARIES": "off"}
 
 TRIAL_PROMPT = """You are the NOVIKONTAS course factory on a FACTORY TRIAL: a test build of a few modules after a factory update.
 Nobody is there to answer. The course in this folder is "FACTORY TRIAL"; its source_files, old course and knowledge base are
@@ -82,7 +86,9 @@ Use the course-factory skill and build it from scratch by its "Auto build" rules
 - There is no expert: sign every STOP --by "Factory trial" (NOVIKONTAS_TRIAL=1 allows it). Never call course_portal.py -
   a trial never goes to the training app.
 - Generate no paid pictures or videos; fill picture spaces from the free sources, and a space nobody could fill keeps its
-  brief. Never push to git and never change a file outside this folder.
+  brief. Never push to git and never change a file outside this folder: a temporary file or a command's saved output goes
+  in course/working_claude/scratch, never /tmp or the system temp folder. The shared course libraries are off for a trial
+  (NOVIKONTAS_COURSE_LIBRARIES=off) - nothing is read from or saved to them.
 End with one line: TRIAL DONE, or TRIAL STOPPED: <why>."""
 
 
@@ -625,7 +631,7 @@ def main(argv=None):
         print("Trial course made in %s (modules %s). Not started (--dry-run) - it would run:\n  %s\n  in %s"
               % (master, ", ".join(map(str, mods)), " ".join(cmd[:2]) + " <the trial prompt> " + " ".join(cmd[3:6]) + " ...", master))
         return 0
-    env = course_portal.unattended_env(NOVIKONTAS_AUTO_BUILD="1", NOVIKONTAS_TRIAL="1")
+    env = course_portal.unattended_env(NOVIKONTAS_AUTO_BUILD="1", NOVIKONTAS_TRIAL="1", **LIBRARIES_OFF)
     logf = os.path.join(run_dir, "build.log")
     print("Building the trial (modules %s) - this takes a while; the log, written as it goes: %s" % (", ".join(map(str, mods)), logf))
     rc = run_claude(cmd, master, env, logf)

@@ -255,11 +255,13 @@ def main():
             del os.environ["NOVIKONTAS_AUTO_BUILD"]
         out = out.getvalue()
         after = cs.load(cs.paths(c, 1)["script"])
-        check("an unattended build applies the cuts itself (nobody there to say yes)", code == 1
+        check("an unattended build applies the cuts itself (nobody there to say yes) - and exits 0: the apply worked (the factory "
+              "trial read an exit 1 after it as a failed apply)", code == 0
               and "40 bar" not in after["screens"][0]["text"] and "18 bar" in after["screens"][0]["text"]
               and not os.path.isfile(cs.paths(c, 1)["pending"]), after["screens"][0])
         check("... and says the task cover must be judged again, naming the line a covered question relied on (factory trial "
-              "M04 s04, M01 s15) - exit 1", "must be judged again" in out and "q01 relied on \"designed for about 40 bar gauge\"" in out, out)
+              "M04 s04, M01 s15)", "must be judged again" in out and "q01 relied on \"designed for about 40 bar gauge\"" in out, out)
+        check("... and prints what approve would stop on, after the correction it made", "Approve would stop" in out, out)
         f = cs.task_cover_findings(c, after)
         check("... a must-fix until it is judged again, which says what is gone",
               [(x["screen"], x["level"]) for x in f] == [("q01", cs.FAIL)] and "40 bar" in f[0]["detail"], f)

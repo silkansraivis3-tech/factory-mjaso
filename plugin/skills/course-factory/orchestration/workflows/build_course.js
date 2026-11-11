@@ -93,7 +93,8 @@ const FOREGROUND = `RUN EVERY COMMAND IN THE FOREGROUND and wait for its last li
 (600000 ms) - never in the background, and never end your turn while a command you started still runs: your report is
 read as the job's result, and an agent waiting on its own background work has stopped. A long command answers before that
 limit and goes on by itself - "STILL BUILDING", "STILL CHECKING" or "STILL RUNNING": then run the SAME command with --wait,
-again, until it prints its answer.`
+again, until it prints its answer. A command's output you keep, or any file only you need, goes in
+${A.course}/working_claude/scratch/ - never /tmp or the system temp folder: nothing is written outside the course folder.`
 const CARD = A.factory ? `${SCRIPTS}/compile/BUILDER_CARD.md`
   : 'compile/BUILDER_CARD.md in the course-factory skill\'s folder (the Skill tool, name "course-factory", names the folder)'
 const SEED = A.seed_from ? ` --seed-from "${A.seed_from}"` : ''
@@ -368,7 +369,8 @@ finds in working_claude/photos_found/ - use those first.
         The "WALK REVIEW" line under MODULE CLEAN is not yours either: the walk judge behind you does the ONE visual
         review - every slide at every stop and every question of every task page - and signs. Never run
         walk_review.py (a builder's own signature is refused).
-    THE SAME FINDING THREE BUILDS RUNNING: the build says so ("SAME FINDING 3 BUILDS RUNNING") - never build for it again,
+    THE SAME FINDING THREE BUILDS RUNNING (your own builds - Phase A's are not counted): the build says so
+        ("SAME FINDING 3 BUILDS RUNNING") - never build for it again,
         list it in your report; when it says "STOP - everything ... 3 builds running", STOP and report: the judges and
         the one fix round take it from there (2.72.5: M02 s05 failed in all 20 of its builds).
     a figure problem the build PRINTED: fix that figure in the studio (studio.py <spec> --quick, seconds; one --step all
@@ -1176,13 +1178,14 @@ if (finalWalk) {
 /* ------------------------------------------------- + · ASSEMBLY (2.58.0), then CROSS-CHECK */
 
 phase('Cross-check')
-/* one process writes the course's own pages once every module is in (Rule 3), the ILO map is refreshed from the scripts,
-   and only then is the whole course judged - before, the cross-check ran on a course with no START_HERE pages and
-   called every module unreachable, and the ILO map still said "planned - module not built" */
+/* the ILO map is refreshed from the scripts, then one process writes the course's own pages once every module is in
+   (Rule 3) - its ilo_coverage.json is made from that map, so the refresh comes first - and only then is the whole course
+   judged - before, the cross-check ran on a course with no START_HERE pages and called every module unreachable, and the
+   ILO map still said "planned - module not built" */
 const assembly = await agent(`Run exactly these, in ONE shell call, and report what they printed (the last 40 lines each):
 
-    python ${SCRIPTS}/compile/scripts/compile_course.py "${A.course}"
     python ${SCRIPTS}/scripts/ilo_map.py refresh "${A.course}"
+    python ${SCRIPTS}/compile/scripts/compile_course.py "${A.course}"
     python ${SCRIPTS}/scripts/check_course_package.py "${A.course}/modules"
     python ${SCRIPTS}/retrofit/scripts/check_terms.py "${A.course}"
     python ${SCRIPTS}/retrofit/scripts/check_numbers.py "${A.course}"
