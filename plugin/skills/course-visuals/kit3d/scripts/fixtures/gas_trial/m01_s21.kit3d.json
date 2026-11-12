@@ -1,0 +1,165 @@
+{
+ "label": "Three 3D hull sections side by side: independent Type A prismatic, Type B spherical and Type C bi-lobe tanks, each self-supporting on its seats.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "ha",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -45,
+    -33
+   ],
+   "half": 8,
+   "bottom": 0,
+   "floor": 1.4,
+   "top": 13,
+   "hopper": [
+    3,
+    3
+   ],
+   "topwing": [
+    3.5,
+    3
+   ]
+  },
+  {
+   "id": "typea",
+   "type": "tank_prism",
+   "kind": "type_a",
+   "in": "ha",
+   "fill": 0.5
+  },
+  {
+   "id": "hb",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -22,
+    -6
+   ],
+   "half": 10,
+   "bottom": 0,
+   "floor": 2,
+   "top": 11,
+   "double": 2.2
+  },
+  {
+   "id": "sphere",
+   "type": "tank_sphere",
+   "in": "hb",
+   "r": 7,
+   "cut": true,
+   "fill": 0.5,
+   "drip": true,
+   "cover": true
+  },
+  {
+   "id": "hc",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    5,
+    15
+   ],
+   "half": 7,
+   "bottom": 0,
+   "floor": 1.2,
+   "top": 10,
+   "topwing": [
+    2.2,
+    2.2
+   ]
+  },
+  {
+   "id": "bilobe",
+   "type": "tank_c",
+   "in": "hc",
+   "r": 3,
+   "lobes": 2,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.2,
+    2.2
+   ],
+   "rings": 0
+  }
+ ],
+ "labels": [
+  {
+   "part": "typea",
+   "text": "Self-supporting tank",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "typea_chocks",
+   "text": "Seats carry the weight",
+   "steps": [
+    2
+   ]
+  },
+  {
+   "part": "bilobe",
+   "text": "Type C: bi-lobe",
+   "steps": [
+    3
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 30,
+    "el": 20,
+    "frame": [
+     "ha",
+     "hb",
+     "hc"
+    ]
+   },
+   "line": 1
+  },
+  {
+   "view": {
+    "az": 40,
+    "el": 16,
+    "frame": [
+     "ha"
+    ]
+   },
+   "line": 2,
+   "select": "typea"
+  },
+  {
+   "view": {
+    "az": 55,
+    "el": 10,
+    "frame": [
+     "ha"
+    ]
+   },
+   "line": 3,
+   "select": "typea_chocks"
+  },
+  {
+   "view": {
+    "az": 40,
+    "el": 16,
+    "frame": [
+     "hc"
+    ]
+   },
+   "line": 4,
+   "select": "bilobe"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "Three 3D hull sections side by side: independent Type A prismatic, Type B spherical and Type C bi-lobe tanks, each self-supporting on its seats."
+}

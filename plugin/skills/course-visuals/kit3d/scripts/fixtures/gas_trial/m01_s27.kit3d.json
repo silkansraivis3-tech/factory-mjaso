@@ -1,0 +1,129 @@
+{
+ "label": "3D cross-section of an LNG carrier with membrane tanks: the insulation spaces between tank and hull, with nitrogen leaving through a vent mast on deck.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "hull",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -8,
+    4
+   ],
+   "half": 9,
+   "bottom": 0,
+   "floor": 2,
+   "top": 14,
+   "double": 2,
+   "hopper": [
+    2.5,
+    2.5
+   ],
+   "topwing": [
+    2.5,
+    2.5
+   ]
+  },
+  {
+   "id": "membrane",
+   "type": "tank_prism",
+   "kind": "membrane",
+   "in": "hull",
+   "fill": 0.6
+  },
+  {
+   "id": "mast",
+   "type": "vent_mast",
+   "on": "hull.deck",
+   "at": [
+    4,
+    0,
+    6
+   ],
+   "h": 4,
+   "r": 0.15
+  }
+ ],
+ "labels": [
+  {
+   "part": "hull_inner",
+   "text": "Double hull: keep it warm",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "membrane_barrier2",
+   "text": "Temperature sensors in insulation",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "mast",
+   "text": "Vent mast",
+   "steps": [
+    2
+   ]
+  },
+  {
+   "part": "membrane_ins1",
+   "text": "Nitrogen swept through",
+   "steps": [
+    3
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 30,
+    "el": 22,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 1,
+   "select": "hull_inner"
+  },
+  {
+   "view": {
+    "az": 45,
+    "el": 14,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 2,
+   "select": "membrane_barrier2"
+  },
+  {
+   "view": {
+    "az": 40,
+    "el": 20,
+    "frame": [
+     "mast"
+    ]
+   },
+   "line": 3,
+   "select": "mast"
+  },
+  {
+   "view": {
+    "az": 35,
+    "el": 18,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 4,
+   "select": "membrane_ins1"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D cross-section of an LNG carrier with membrane tanks: the insulation spaces between tank and hull, with nitrogen leaving through a vent mast on deck."
+}

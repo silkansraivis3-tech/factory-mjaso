@@ -1,0 +1,144 @@
+{
+ "label": "3D view of a gas carrier deck: a tank dome rising through the deck with the cargo pipe, ballast wing tanks at the side, no pump room below deck.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "hull",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -8,
+    2
+   ],
+   "half": 7,
+   "bottom": 0,
+   "floor": 1.2,
+   "top": 10,
+   "topwing": [
+    2.2,
+    2.2
+   ]
+  },
+  {
+   "id": "tank",
+   "type": "tank_c",
+   "in": "hull",
+   "r": 3,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.5,
+    2.5
+   ],
+   "rings": 0,
+   "dome": true
+  },
+  {
+   "id": "domepipe",
+   "type": "pipe",
+   "path": [
+    [
+     0,
+     6.2,
+     0
+    ],
+    [
+     0,
+     11.5,
+     0
+    ],
+    [
+     3,
+     11.5,
+     0
+    ]
+   ],
+   "r": 0.2,
+   "mat": "pipe",
+   "flanges": "ends"
+  }
+ ],
+ "labels": [
+  {
+   "part": "hull_topwing",
+   "text": "Ballast tank",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "tank",
+   "text": "Cargo tank: no pump room below",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "tank",
+   "text": "Tank dome through the deck",
+   "steps": [
+    2
+   ]
+  },
+  {
+   "part": "domepipe",
+   "text": "Cargo pipe above deck",
+   "steps": [
+    3
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 30,
+    "el": 24,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 1,
+   "select": "hull_topwing"
+  },
+  {
+   "view": {
+    "az": 40,
+    "el": 18,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 2,
+   "select": "tank"
+  },
+  {
+   "view": {
+    "az": 35,
+    "el": 22,
+    "frame": [
+     "tank"
+    ]
+   },
+   "line": 3,
+   "select": "tank"
+  },
+  {
+   "view": {
+    "az": 35,
+    "el": 26,
+    "frame": [
+     "tank",
+     "domepipe"
+    ]
+   },
+   "line": 4,
+   "select": "tank"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D view of a gas carrier deck: a tank dome rising through the deck with the cargo pipe, ballast wing tanks at the side, no pump room below deck."
+}

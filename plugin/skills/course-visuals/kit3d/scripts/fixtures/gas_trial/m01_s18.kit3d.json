@@ -1,0 +1,99 @@
+{
+ "label": "3D cross-section of an LNG carrier: the membrane tank as the primary barrier, the secondary barrier behind it and the inner hull acting as the outer boundary.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "hull",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -8,
+    4
+   ],
+   "half": 9,
+   "bottom": 0,
+   "floor": 2,
+   "top": 14,
+   "double": 2,
+   "hopper": [
+    2.5,
+    2.5
+   ],
+   "topwing": [
+    2.5,
+    2.5
+   ]
+  },
+  {
+   "id": "membrane",
+   "type": "tank_prism",
+   "kind": "membrane",
+   "in": "hull",
+   "fill": 0.6
+  }
+ ],
+ "labels": [
+  {
+   "part": "membrane",
+   "text": "Cargo tank: primary barrier",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "membrane_barrier2",
+   "text": "Secondary barrier",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "hull_inner",
+   "text": "Hull as secondary barrier",
+   "steps": [
+    2
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 30,
+    "el": 22,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 1,
+   "select": "membrane"
+  },
+  {
+   "view": {
+    "az": 45,
+    "el": 14,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 2,
+   "select": "membrane_barrier2"
+  },
+  {
+   "view": {
+    "az": 30,
+    "el": 22,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 3,
+   "select": "hull_inner"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D cross-section of an LNG carrier: the membrane tank as the primary barrier, the secondary barrier behind it and the inner hull acting as the outer boundary."
+}

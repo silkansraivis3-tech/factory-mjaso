@@ -1,0 +1,98 @@
+{
+ "label": "3D cross-section of a fully refrigerated LPG carrier: a prismatic Type A tank on chocks, insulated, with the inner hull as its full secondary barrier.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "hull",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -8,
+    4
+   ],
+   "half": 8,
+   "bottom": 0,
+   "floor": 1.4,
+   "top": 13,
+   "hopper": [
+    3,
+    3
+   ],
+   "topwing": [
+    3.5,
+    3
+   ]
+  },
+  {
+   "id": "typea",
+   "type": "tank_prism",
+   "kind": "type_a",
+   "in": "hull",
+   "fill": 0.5
+  }
+ ],
+ "labels": [
+  {
+   "part": "typea",
+   "text": "Type A prismatic tank",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "hull_inner",
+   "text": "Secondary barrier: the hull",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "hull_bottom",
+   "text": "Hold space: inert gas",
+   "steps": [
+    2
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 35,
+    "el": 20,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 1,
+   "select": "typea"
+  },
+  {
+   "view": {
+    "az": 45,
+    "el": 14,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 2,
+   "select": "hull_inner"
+  },
+  {
+   "view": {
+    "az": 25,
+    "el": 26,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 3,
+   "select": "hull_bottom"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D cross-section of a fully refrigerated LPG carrier: a prismatic Type A tank on chocks, insulated, with the inner hull as its full secondary barrier."
+}

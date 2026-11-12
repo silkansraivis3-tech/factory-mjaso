@@ -532,6 +532,55 @@ for i, st in enumerate([x.get("probe") or {} for x in r[1:]]):
     check("gas carriers step %d: labels on their parts, inside the box, none on another" % i,
           st.get("off") == [] and st.get("over") == [] and len(st.get("shown") or []) >= 3, st)
 
+# ---------------------------------------------------------------- the gas trial scenes as built (fixtures/gas_trial): a
+# hull's structure labelled where the kit draws it (not over the tank), a step's frame holding its whole selected part and its
+# label, the dome a sub-part that rises through the deck
+TRIAL = BASE + "course-visuals/kit3d/studio3d.html?spec=scripts/fixtures/gas_trial/%s.kit3d.json&w=%d&h=%d"
+OVER = ("(function(key,tank){k3.render();var S=k3.scene,l=S.labels.filter(function(x){return x.shown&&x.key===key})[0];"
+        "if(!l)return {shown:false,labels:T3.shown()};var rc=new THREE.Raycaster();"
+        "rc.setFromCamera(new THREE.Vector2(l.sx/S.W*2-1,-(l.sy/S.H)*2+1),S.camera);"
+        "var h=rc.intersectObjects(S.parts[tank].items.filter(function(m){return m.isMesh;}),false)"
+        ".filter(function(i){return i.point.z<=S.parts[tank].box.getCenter(new THREE.Vector3()).z+0.01;});"
+        "return {shown:true,hits:h.length,off:T3.off()}})('%s','%s')")
+HOLDS = ("(function(sel,text){k3.render();var S=k3.scene,b=new THREE.Box3();S.keysOf(sel).forEach(function(k){var p=S.parts[k];"
+         "if(p&&p.box&&!p.box.isEmpty())b.union(p.box);});var p=new THREE.Vector3(),out=0,i,sx,sy;for(i=0;i<8;i++){"
+         "p.set(i&1?b.max.x:b.min.x,i&2?b.max.y:b.min.y,i&4?b.max.z:b.min.z).project(S.camera);sx=(p.x*.5+.5)*S.W;"
+         "sy=(-p.y*.5+.5)*S.H;if(sx<-2||sx>S.W+2||sy<-2||sy>S.H+2)out++;}"
+         "return {out:out,shown:T3.shown().indexOf(text)>=0,labels:T3.shown()}})('%s','%s')")
+for name, step, key, tank, what in (("m01_s01", 2, "hull_topwing", "tank", "Top wing tank"), ("m01_s12", 0, "hull_topwing", "tank", "Ballast tank"),
+                                    ("m01_s05", 1, "semi_topwing", "tankb", "Top wing tank")):
+    r = run([{"url": TRIAL % (name, 1280, 720), "wait": "window.k3ready", "do": HELP, "settle": 500, "probe": J % "1"},
+             {"do": "k3.step(%d)" % step, "settle": 1500, "probe": J % (OVER % (key, tank))}], "--w=1280", "--h=720")
+    o = r[1].get("probe") or {}
+    check("trial %s step %d: '%s' (%s) has its dot where the hull draws it - not over the cargo tank %s (F009, F013, F017)"
+          % (name, step, what, key, tank), o.get("shown") and o.get("hits") == 0 and o.get("off") == [], (o, r[1].get("errors")))
+for name, sel, text in (("m01_s23", "sphere", "Moss sphere"), ("m01_s09", "sphere", "Moss sphere")):
+    r = run([{"url": TRIAL % (name, 1280, 720), "wait": "window.k3ready", "do": HELP, "settle": 500, "probe": J % "1"},
+             {"do": "k3.step(0)", "settle": 1500, "probe": J % (HOLDS % (sel, text))}], "--w=1280", "--h=720")
+    o = r[1].get("probe") or {}
+    check("trial %s step 0 frames the hull and selects the %s: the frame holds the whole sphere and its label '%s' shows "
+          "(F014, F032)" % (name, sel, text), o.get("out") == 0 and o.get("shown"), (o, r[1].get("errors")))
+r = run([{"url": TRIAL % ("m01_s12", 1280, 720), "wait": "window.k3ready", "do": HELP, "settle": 500,
+          "probe": J % "(function(){var d=k3.scene.parts.tank_dome;return {dome:!!d,top:d?d.box.max.y:null,parent:d?d.parent:null,"
+                       "warn:k3.info().warnings}})()"}], "--w=1280", "--h=720")
+o = r[0].get("probe") or {}
+check("trial m01_s12: a tank_c's \"dome\" is its sub-part tank_dome and, the tank seated in its hold, it rises through the deck "
+      "(y 10) (F016, F018)", o.get("dome") and o.get("parent") == "tank" and (o.get("top") or 0) > 10 and not o.get("warn"), o)
+CAT = json.load(open(os.path.join(KIT, "examples", "catalogue.kit3d.json"), encoding="utf-8"))
+r = run([{"url": STUDIO % ("catalogue", 1280, 720), "wait": "window.k3ready", "do": HELP, "settle": 400,
+          "probe": J % "(function(){var S=k3.scene,o=[];Object.keys(S.parts).forEach(function(id){if(S.parts[id].parent)o.push(id);});"
+                       "return {subs:o,warn:k3.info().warnings}})()"}], "--w=1280", "--h=720")
+o, mine = r[0].get("probe") or {}, set()
+for p in CAT["parts"]:
+    if isinstance(p.get("id"), str):
+        mine |= set(ck.sub_ids(p, cat.get(p["type"], {}), CAT["parts"]))
+check("the catalogue's new parts build with no warning, and the checker knows every sub-part they make (airlock doors and alarm, "
+      "compressor house rooms, bulkhead and shaft, accommodation doors, tank domes and saddles)",
+      not o.get("warn") and set(o.get("subs") or []) == mine and {"airlock_door1", "airlock_door2", "airlock_alarm",
+                                                                   "compressor_house_bulkhead", "house_doors", "tank_c_dome",
+                                                                   "tank_c_saddles", "tank_sphere_dome"} <= mine,
+      (o.get("warn"), sorted(set(o.get("subs") or []) ^ mine)))
+
 srv.shutdown()
 print()
 print("ALL PASS" if not FAILS else "%d FAILED: %s" % (len(FAILS), "; ".join(FAILS)))

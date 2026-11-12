@@ -1,0 +1,125 @@
+{
+ "label": "3D model of a gas tanker's main deck and engine room: the foam monitors' reach, a sheltered area behind the deckhouse they cannot reach, the bunker station and the engine room - where a portable applicator is taken.",
+ "units": "m",
+ "view": {
+  "az": 24,
+  "el": 23
+ },
+ "parts": [
+  {
+   "id": "engine",
+   "type": "engine",
+   "at": [
+    -6.5,
+    0.0,
+    0
+   ]
+  },
+  {
+   "id": "room",
+   "type": "room",
+   "at": [
+    -1.0,
+    0.0,
+    0
+   ]
+  },
+  {
+   "id": "station",
+   "type": "deck_plate",
+   "at": [
+    5.5,
+    0,
+    0
+   ]
+  },
+  {
+   "id": "station_pipe",
+   "type": "pipe",
+   "at": [
+    5.5,
+    0.8,
+    -1.2
+   ],
+   "path": [
+    [
+     -2.5,
+     0,
+     0
+    ],
+    [
+     2.5,
+     0,
+     0
+    ]
+   ]
+  }
+ ],
+ "labels": [
+  {
+   "part": "engine",
+   "text": "Engine",
+   "up": 70
+  },
+  {
+   "part": "room",
+   "text": "Engine room",
+   "up": -40
+  },
+  {
+   "part": "station",
+   "text": "Bunker station"
+  },
+  {
+   "part": "station_pipe",
+   "text": "Oil spill fire",
+   "up": 60
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 24,
+    "el": 23,
+    "frame": [
+     "station",
+     "station_pipe"
+    ]
+   },
+   "select": "station_pipe",
+   "line": 1,
+   "labels": [
+    "station_pipe"
+   ]
+  },
+  {
+   "view": {
+    "az": 24,
+    "el": 23,
+    "frame": [
+     "station",
+     "station_pipe"
+    ]
+   },
+   "select": "station",
+   "line": 2,
+   "labels": [
+    "station"
+   ]
+  },
+  {
+   "view": {
+    "az": 24,
+    "el": 23
+   },
+   "select": "station_pipe",
+   "line": 3,
+   "labels": [
+    "station_pipe",
+    "room"
+   ]
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D model of a gas tanker's main deck and engine room: the foam monitors' reach, a sheltered area behind the deckhouse they cannot reach, the bunker station and the engine room"
+}

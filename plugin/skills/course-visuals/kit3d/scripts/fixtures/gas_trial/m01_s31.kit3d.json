@@ -1,0 +1,99 @@
+{
+ "label": "Two 3D hull sections with the same side collision damage: a type 1G chlorine ship with tanks far inboard and a semi-pressurised LPG ship with tanks nearer the side.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "h1",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -30,
+    -20
+   ],
+   "half": 9,
+   "bottom": 0,
+   "floor": 1.4,
+   "top": 10,
+   "double": 4.5
+  },
+  {
+   "id": "t1",
+   "type": "tank_c",
+   "in": "h1",
+   "r": 2.6,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.5,
+    2.5
+   ],
+   "rings": 0
+  },
+  {
+   "id": "h2",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    0,
+    10
+   ],
+   "half": 7,
+   "bottom": 0,
+   "floor": 1.2,
+   "top": 10,
+   "topwing": [
+    2.2,
+    2.2
+   ]
+  },
+  {
+   "id": "t2",
+   "type": "tank_c",
+   "in": "h2",
+   "r": 3,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.5,
+    2.5
+   ],
+   "rings": 0
+  }
+ ],
+ "labels": [
+  {
+   "part": "t1",
+   "text": "Chlorine ship: tank far inboard",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "t2",
+   "text": "LPG ship: tank nearer the side",
+   "steps": [
+    0
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 30,
+    "el": 20,
+    "frame": [
+     "h1",
+     "h2"
+    ]
+   },
+   "line": 1,
+   "select": "t1"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "Two 3D hull sections with the same side collision damage: a type 1G chlorine ship with tanks far inboard and a semi-pressurised LPG ship with tanks nearer the side."
+}

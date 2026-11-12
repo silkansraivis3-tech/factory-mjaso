@@ -1,22 +1,22 @@
 {
   "_about": "Gas carrier cargo containment, one hull section each: a fully pressurised LPG carrier (bilobe Type C on saddles, double bottom, top wing tanks), a fully refrigerated LPG carrier (Type A prismatic on chocks, hopper and top wing tanks), a Moss LNG carrier (sphere on its skirt, double hull, drip tray, tank cover), a membrane LNG carrier and a semi-membrane tank lining their inner hulls. Every tank is seated by \"in\"; every label names a hull's or a tank's own sub-part.",
-  "label": "Five gas carrier hull sections side by side: a bilobe Type C tank, a Type A prismatic tank, a Moss sphere, a membrane tank and a semi-membrane tank, each in its own hull.",
+  "label": "Five gas carrier hull sections side by side: a bilobe Type C tank, a Type A prismatic tank, a Moss sphere, a membrane tank and a semi-membrane tank, each in its own hull, in a row square to the opening view so that all five are seen at one scale.",
   "units": "m",
   "view": {"az": 30, "el": 22},
   "parts": [
-    {"id": "pres", "type": "hull", "pick": false, "x": [-84, -74], "half": 7, "bottom": 0, "floor": 1.2, "top": 10, "topwing": [2.2, 2.2]},
+    {"id": "pres", "type": "hull", "pick": false, "at": [-77.94, 0, 45], "x": [-5, 5], "half": 7, "bottom": 0, "floor": 1.2, "top": 10, "topwing": [2.2, 2.2]},
     {"id": "bilobe", "type": "tank_c", "in": "pres", "r": 3, "lobes": 2, "cut": true, "fill": 0.6, "saddles": [-2.2, 2.2], "rings": 0},
 
-    {"id": "refr", "type": "hull", "pick": false, "x": [-56, -44], "half": 8, "bottom": 0, "floor": 1.4, "top": 13, "hopper": [3, 3], "topwing": [3.5, 3]},
+    {"id": "refr", "type": "hull", "pick": false, "at": [-51.96, 0, 30], "x": [-6, 6], "half": 8, "bottom": 0, "floor": 1.4, "top": 13, "hopper": [3, 3], "topwing": [3.5, 3]},
     {"id": "typea", "type": "tank_prism", "kind": "type_a", "in": "refr", "fill": 0.5},
 
-    {"id": "moss", "type": "hull", "pick": false, "x": [-26, -10], "half": 10, "bottom": 0, "floor": 2, "top": 11, "double": 2.2},
+    {"id": "moss", "type": "hull", "pick": false, "at": [-25.98, 0, 15], "x": [-8, 8], "half": 10, "bottom": 0, "floor": 2, "top": 11, "double": 2.2},
     {"id": "sphere", "type": "tank_sphere", "in": "moss", "r": 7, "insulation": 0.3, "cut": true, "fill": 0.5, "drip": true, "cover": true},
 
-    {"id": "memb", "type": "hull", "pick": false, "x": [10, 22], "half": 9, "bottom": 0, "floor": 2, "top": 14, "double": 2, "hopper": [2.5, 2.5], "topwing": [2.5, 2.5]},
+    {"id": "memb", "type": "hull", "pick": false, "x": [-6, 6], "half": 9, "bottom": 0, "floor": 2, "top": 14, "double": 2, "hopper": [2.5, 2.5], "topwing": [2.5, 2.5]},
     {"id": "membrane", "type": "tank_prism", "kind": "membrane", "in": "memb", "fill": 0.6},
 
-    {"id": "semi", "type": "hull", "pick": false, "x": [44, 56], "half": 9, "bottom": 0, "floor": 2, "top": 14, "double": 2, "hopper": [2.5, 2.5], "topwing": [2.5, 2.5]},
+    {"id": "semi", "type": "hull", "pick": false, "at": [25.98, 0, -15], "x": [-6, 6], "half": 9, "bottom": 0, "floor": 2, "top": 14, "double": 2, "hopper": [2.5, 2.5], "topwing": [2.5, 2.5]},
     {"id": "semimem", "type": "tank_prism", "kind": "semi_membrane", "in": "semi", "fill": 0.6}
   ],
   "labels": [

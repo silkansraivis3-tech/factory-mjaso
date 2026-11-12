@@ -1,0 +1,127 @@
+{
+ "label": "3D cross-section of a semi-pressurised ship: a bi-lobe Type C pressure vessel with no secondary barrier, the hold space filled with inert gas.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "hull",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -8,
+    2
+   ],
+   "half": 7,
+   "bottom": 0,
+   "floor": 1.2,
+   "top": 10,
+   "topwing": [
+    2.2,
+    2.2
+   ]
+  },
+  {
+   "id": "tank",
+   "type": "tank_c",
+   "in": "hull",
+   "r": 3,
+   "lobes": 2,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.2,
+    2.2
+   ],
+   "rings": 0
+  }
+ ],
+ "labels": [
+  {
+   "part": "tank",
+   "text": "Cylindrical, bi-lobe or spherical vessel",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "tank",
+   "text": "Bi-lobe Type C tank",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "tank_bulkhead",
+   "text": "Two lobes: centreline bulkhead",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "hull_inner",
+   "text": "Hold space: inert gas or dry air",
+   "steps": [
+    2,
+    3
+   ]
+  },
+  {
+   "part": "hull_bottom",
+   "text": "Leak sensors in the hold",
+   "steps": [
+    3
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 30,
+    "el": 22,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 1,
+   "select": "tank"
+  },
+  {
+   "view": {
+    "az": 60,
+    "el": 14,
+    "frame": [
+     "tank"
+    ]
+   },
+   "line": 2,
+   "select": "tank_bulkhead"
+  },
+  {
+   "view": {
+    "az": 30,
+    "el": 22,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 3,
+   "select": "hull_inner"
+  },
+  {
+   "view": {
+    "az": 25,
+    "el": 26,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 4,
+   "select": "hull_bottom"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D cross-section of a semi-pressurised ship: a bi-lobe Type C pressure vessel with no secondary barrier, the hold space filled with inert gas."
+}

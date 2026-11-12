@@ -783,12 +783,12 @@
     var t = c.clone().addScaledVector(bs.r, sx).addScaledVector(bs.u, sy);
     return { d: Math.max(D, 0.01), tx: t.x, ty: t.y, tz: t.z };
   };
-  /* a step's or the home view: angles in degrees, a box from "frame" (parts) or the whole scene */
-  P.viewFor = function (vw) {
+  /* a step's or the home view: angles in degrees, a box from "frame" (parts) or the whole scene; n: the step it is for */
+  P.viewFor = function (vw, n) {
     var S = this, v = vw || {}, home = S.spec.view || {};
     var az = num(v.az, num(home.az, 30)) * DEG, el0 = num(v.el, num(home.el, 24)) * DEG;
     var b = S.box;
-    if (v.frame && v.frame.length) { b = S.boxOf(v.frame) || S.box; }
+    if (v.frame && v.frame.length) { b = S.stepBox(v.frame, n) || S.box; }
     var f = S.fit(b, az, el0, num(v.fill, num(home.fill, 0.94)));
     if (!v.frame || !v.frame.length) { S.fitDist = f.d; }
     var zoom = (f.d / (S.fitDist || f.d)) * num(v.zoom, 1);
@@ -803,6 +803,19 @@
       else if (S.spec.groups && S.spec.groups[k0]) { var g = S.boxOf(S.spec.groups[k0]); if (g) { b.union(g); } }
     });
     return b.isEmpty() ? null : b;
+  };
+  /* what a step frames: its "frame" parts, and with them the whole of the part it selects and the points of the labels it
+     names - a Moss sphere above its hull is never cut at the top edge, its label never off the picture (gas trial M01 s09) */
+  P.stepBox = function (frame, n) {
+    var S = this, b = S.boxOf(frame), st = n != null ? S.steps()[n] : null;
+    if (!b || !st) { return b; }
+    b = b.clone();
+    [].concat(st.select || []).forEach(function (k0) { var sb = S.boxOf(S.keysOf(k0)); if (sb) { b.union(sb); } });
+    (S.labels || []).forEach(function (l) {
+      if (l.tag || l.tapOnly || l.when) { return; }
+      if (l.steps ? l.steps.indexOf(n) >= 0 : (st.labels && st.labels.indexOf(l.key) >= 0)) { b.expandByPoint(l.v); }
+    });
+    return b;
   };
   P.homeFit = function () {
     var S = this, v = (S.spec.view || {});
@@ -873,7 +886,7 @@
   P.target = function () {
     var S = this, st = S.steps()[S.step] || {};
     if (S.sel) { return S.frameSel(S.sel); }
-    return st.view ? S.viewFor(st.view) : S.home;
+    return st.view ? S.viewFor(st.view, S.step) : S.home;
   };
   P.frameSel = function (key) {
     var S = this, keys = S.keysOf(key), b = S.boxOf(keys), base = S.view, sz = new T.Vector3(), c = new T.Vector3();
@@ -985,7 +998,7 @@
     n = clamp(n, 0, st.length - 1);
     S.step = n; s = st[n];
     S.sel = null; S.free = false; S.toggled = {};
-    var to = s.view ? S.viewFor(s.view) : S.home;
+    var to = s.view ? S.viewFor(s.view, n) : S.home;
     if (instant) { var lv = S.live; S.live = false; S.go(to, S.stepStates(n), s.select ? [].concat(s.select) : []); S.live = lv; }
     else { S.go(to, S.stepStates(n), s.select ? [].concat(s.select) : []); }
     S.ctlSync();                                       /* a step that cuts the pipe open shows its button pressed */
@@ -1000,7 +1013,7 @@
     if (!key || key === S.sel) {
       S.sel = null;
       var st = S.steps()[S.step] || {};
-      S.go(S.opt.keepView ? null : st.view ? S.viewFor(st.view) : S.home, null, st.select ? [].concat(st.select) : []);
+      S.go(S.opt.keepView ? null : st.view ? S.viewFor(st.view, S.step) : S.home, null, st.select ? [].concat(st.select) : []);
     } else {
       S.sel = key;
       S.go(S.opt.keepView ? null : S.frameSel(key), null, [key]);
@@ -2077,11 +2090,16 @@
     "room": {"family": "structures", "at": "floor centre", "about": "a cut-open room: floor, back and side walls, frames, the front open"},
     "enclosure": {"family": "structures", "at": "floor centre", "states": ["open"], "about": "a gas-tight steel box (TCS) whose walls fade away"},
     "panel": {"family": "structures", "at": "centre", "about": "a see-through wall"},
-    "accommodation": {"family": "structures", "at": "base centre", "about": "a deckhouse with window rows and a wheelhouse"},
+    "accommodation": {"family": "structures", "at": "base centre", "about": "a deckhouse with window rows and a wheelhouse; doors in its side walls (doors)"},
+    "airlock": {"family": "structures", "at": "floor centre", "subs": ["door1", "door2", "alarm"], "states": ["open", "alarm"],
+                "anchors": ["door1", "door2", "alarm"],
+                "about": "an airlock: two self-closing gastight steel doors gap apart on their sills, door closers, an alarm lamp and sounder on both sides"},
+    "compressor_house": {"family": "structures", "at": "floor centre", "subs": ["compressor", "motor", "bulkhead", "shaft"], "states": ["on"],
+                         "about": "a cargo compressor house: compressor room and electric motor room divided by a gastight bulkhead, the shaft through it in a gastight seal; ventilation arrows"},
     "tank_c": {"family": "tanks", "at": "axis centre", "subs": ["liquid"],
-               "about": "IMO type C: cylinder, dished ends, rings, saddles; cut open, liquid level, insulation; a bilobe (lobes 2) with its centreline bulkhead; seated in a hold (in)"},
+               "about": "IMO type C: cylinder, dished ends, rings, saddles (sub-part saddles); cut open, liquid level, insulation; a dome (sub-part dome) through the deck; a bilobe (lobes 2) with its centreline bulkhead; seated in a hold (in)"},
     "tank_sphere": {"family": "tanks", "at": "centre", "subs": ["liquid", "skirt"],
-                    "about": "a spherical (Moss) tank on its skirt at the equator; cut open, liquid, insulation, drip tray, tank cover; seated in a hold (in)"},
+                    "about": "a spherical (Moss) tank on its skirt at the equator; its dome (sub-part dome); cut open, liquid, insulation, drip tray, tank cover; seated in a hold (in)"},
     "tank_prism": {"family": "tanks", "at": "centre", "subs": ["liquid"], "subs_from": ["layers"],
                    "about": "prismatic / membrane / semi-membrane tank: chamfered (or rounded) section, the layers of insulation and barriers seen at the cut; lining the hold, or a Type A / B tank on chocks with its centreline bulkhead (in)"},
     "pipe": {"family": "piping", "at": "the path's origin", "about": "a pipe run through points: bends, flanges, ID bands"},
@@ -2109,7 +2127,7 @@
     "foam_container": {"family": "equipment", "at": "base centre", "ports": ["mouth"],
                        "about": "a 20-25 litre foam concentrate container: jerrycan or drum, the pick-up wand in its mouth"},
     "fire_hydrant": {"family": "equipment", "at": "base", "ports": ["out"], "about": "a fire main hydrant: riser, valve with handwheel, outlet with a hose coupling"},
-    "detector": {"family": "equipment", "at": "where it is fixed", "states": ["alarm"], "about": "a gas detector head; its lamp lights in alarm"},
+    "detector": {"family": "equipment", "at": "where it is fixed", "states": ["alarm"], "about": "a gas detector head, a leak sensor or a temperature sensor (kind); its lamp lights in alarm"},
     "person": {"family": "equipment", "at": "between the feet", "about": "a person for scale"},
     "air_intake": {"family": "equipment", "at": "centre", "about": "an air intake with louvres"},
     "dimension": {"family": "measures", "at": "origin of a and b", "states": ["on"], "about": "a measured line with arrow heads and its value"},
@@ -2377,7 +2395,8 @@
     k.box(x1 - x0, fl - bot, 2 * hz, k.mat('hull'), (x0 + x1) / 2, (bot + fl) / 2, 0, { cast: false });
     if (dbl) { k.anchor('label', [x1, (bot + fl) / 2, hz * 0.55]); back(); k.anchor('double_bottom', [x1, (bot + fl) / 2, hz * 0.55]); }
     back();
-    var sp = p.spaces && p.spaces.length ? p.spaces : [{ x: [x0, x1], tint: 'grey' }], bounds = [];
+    /* a gas carrier's hold with no spaces given is a sub-part of its own, <hull>_hold: the hold space round the tank */
+    var sp = p.spaces && p.spaces.length ? p.spaces : [{ x: [x0, x1], tint: 'grey', id: dbl ? subId(k, p, 'hold') : null, name: 'Hold space' }], bounds = [];
     var fw = dbl ? sec.zi - sec.hw : hz, wy0 = dbl ? fl + sec.hh : fl, wy1 = dbl ? top - sec.th : top;
     sp.forEach(function (s) {
       var a = s.x[0], b = s.x[1], t = tint(s.tint, TINT.grey), mid = (a + b) / 2;
@@ -2385,7 +2404,9 @@
       k.box(b - a, 0.1, 2 * fw, k.mat({ color: s.floor || mix(t, '#ffffff', 0.55), rough: 0.85, metal: 0 }), mid, fl + 0.05, 0, { cast: false });
       if (dbl) { k.add(new T.PlaneGeometry(b - a, wy1 - wy0), k.basic(t, num(s.wall, 0.26)), mid, (wy1 + wy0) / 2, -sec.zi + 0.05, { order: 1 }); }
       else if (!p.side_id) { k.add(new T.PlaneGeometry(b - a, top - fl), k.basic(t, num(s.wall, 0.26)), mid, (top + fl) / 2, -hz, { order: 1 }); }
-      k.anchor('label', [mid, top, 0]);
+      /* the space's point is on its tinted far wall, low and near its +x end: not on the deck where a deckhouse stands over
+         it (gas trial M01 s14), not behind a tank seated in it */
+      k.anchor('label', [b - Math.min(0.6, (b - a) / 4), wy0 + (wy1 - wy0) * 0.3, (dbl ? -sec.zi : -hz) + 0.06]);
       back();
       if (a > x0 + 1e-3 && bounds.indexOf(a) < 0) { bounds.push(a); }
       if (b < x1 - 1e-3 && bounds.indexOf(b) < 0) { bounds.push(b); }
@@ -2399,7 +2420,10 @@
       k.sub(p.side_id || subId(k, p, 'outer'), { pick: true, name: 'Outer shell' });
       k.add(new T.PlaneGeometry(L, top - bot), k.basic(TINT.grey, num(p.far, 0.24)), (x0 + x1) / 2, (top + bot) / 2, -hz, { order: 1 });
       k.add(new T.PlaneGeometry(L, top - bot), k.basic(TINT.grey, num(p.near, 0.1)), (x0 + x1) / 2, (top + bot) / 2, hz, { order: 1, noPick: true });
-      name('outer_shell', [x1, (wy0 + wy1) / 2, hz]);
+      /* each structure's point is on the far side (-z), at the +x end: the side the kit draws solid, and from a view of the
+         cut-open hold the tank never stands in front of it nor behind it - the near side is ghosted, a point there reads as
+         on the tank behind it (gas trial M01 s01, s05, s12: "Top wing tank" on the cargo tank) */
+      name('outer_shell', [x1, (wy0 + wy1) / 2, -hz]);
       k.sub(subId(k, p, 'inner'), { pick: true, name: 'Inner hull' });
       var pl = sec.pts, nf = k.mat('steel_mid', { opacity: num(p.inner_far, 0.5) }), nn = k.mat('steel_mid', { opacity: num(p.inner_near, 0.14) });
       for (i = 0; i < pl.length; i++) {
@@ -2407,21 +2431,23 @@
         if (Math.abs(dy) < 1e-6 || sl < 1e-6) { continue; }                          /* the inner bottom and the deck are not side plating */
         k.box(L, sl, 0.08, (a0[0] + b0[0]) / 2 < 0 ? nf : nn, (x0 + x1) / 2, (a0[1] + b0[1]) / 2, (a0[0] + b0[0]) / 2, { rx: Math.atan2(dz, dy) });
       }
-      name('inner_hull', [x1, (wy0 + wy1) / 2, zi]);
+      name('inner_hull', [x1, wy0 + (wy1 - wy0) * 0.62, -zi]);
       [['wing', 'wing_tank', 'Wing tank', zi < hz - 1e-6, function (sg) { return [[sg * zi, wy0], [sg * hz, wy0], [sg * hz, wy1], [sg * zi, wy1]]; }],
        ['hopper', 'hopper_tank', 'Hopper tank', hh > 0, function (sg) { return [[sg * (zi - hw), fl], [sg * hz, fl], [sg * hz, fl + hh], [sg * zi, fl + hh]]; }],
        ['topwing', 'top_wing_tank', 'Top wing tank', th > 0, function (sg) { return [[sg * zi, top - th], [sg * hz, top - th], [sg * hz, top], [sg * (zi - tw), top]]; }]
       ].forEach(function (r) {
         if (!r[3]) { return; }
         k.sub(subId(k, p, r[0]), { pick: true, name: r[2] });
-        var near = null;
+        var far = null;
         [-1, 1].forEach(function (sg) {
           var q = r[4](sg).filter(function (v, j, all) { var w = all[(j + all.length - 1) % all.length]; return Math.abs(v[0] - w[0]) + Math.abs(v[1] - w[1]) > 1e-6; });
           alongX(k, q, x0, x1, sg < 0 ? bfar : bnear, { cast: false });
-          faceX(k, q, bend, x1 + 0.01); faceX(k, q, bend, x0 - 0.01);         /* the section at both ends: the tank reads at once */
-          if (sg > 0) { near = centroid(q); }
+          /* the section at both ends: the tank reads at once; the near one lighter, so what stands behind it (a Type A tank's
+             chocks) still shows */
+          faceX(k, q, sg < 0 ? bend : bfar, x1 + 0.01); faceX(k, q, sg < 0 ? bend : bfar, x0 - 0.01);
+          if (sg < 0) { far = centroid(q); }
         });
-        name(r[1], [x1, near[1], near[0]]);
+        name(r[1], [x1, far[1], far[0]]);
       });
     } else if (p.side_id) {
       k.sub(p.side_id, { pick: true });
@@ -2564,6 +2590,126 @@
     for (j = -W * 0.32; j < W * 0.15; j += 0.9) { win.push([j, H + dh * 0.5, D * 0.35 + 0.02]); }
     if (win.length) { k.many(new T.BoxGeometry(0.8, dh * 0.38, 0.04), k.mat('window'), win, { cast: false }); }
     k.anchor('label', [0, H + dh * 0.9, 0]);
+    /* doors: a door in each side wall (+z and -z), that far from the -x end (the front, which faces the cargo area) -
+       sub-part <id>_doors; the front itself has none */
+    if (num(p.doors, 0) > 0) {
+      var self = k.cur, dx = -W / 2 + Math.min(p.doors, W - 0.6);
+      k.sub(subId(k, p, 'doors'), { pick: true, name: 'Doors' });
+      [-1, 1].forEach(function (sg) {
+        k.box(0.95, 2.05, 0.06, k.mat('steel_dark'), dx, 1.12, sg * (D / 2 + 0.03));
+        k.box(0.8, 1.9, 0.05, k.mat('steel_mid'), dx, 1.12, sg * (D / 2 + 0.06));
+      });
+      k.anchor('label', [dx, 2.1, D / 2 + 0.08]);
+      k.cur = self;
+    }
+  });
+
+  /* an airlock: the small steel space between a gas-dangerous open deck (-x) and a gas-safe space (+x) - two
+     self-closing gastight steel doors `gap` apart (2 m; 1.5 to 2.5), each on its sill with a door closer and no hook, and
+     an alarm lamp and sounder on both sides. at = the floor's centre; size [gap, h, w]; the near wall (+z) is glass so the
+     inside shows. Sub-parts <id>_door1 (the outer door, from the deck), <id>_door2 (the inner door), <id>_alarm (the
+     lamps and sounders); anchors door1, door2, alarm; states <id>.open (the outer door swings open) and <id>.alarm (the
+     lamps light: 0.5 amber, 1 red) */
+  define('airlock', function (k, p) {
+    var s = p.size || [num(p.gap, 2), 2.4, 1.6], L = s[0], H = s[1], Wd = s[2], t = 0.06, self = k.cur, wall = M(k, p, 'wall');
+    k.box(L, 0.06, Wd, k.mat('floor_dark'), 0, -0.03, 0, { cast: false });
+    k.box(L, H, t, wall, 0, H / 2, -Wd / 2 - t / 2, { cast: false });
+    k.add(new T.PlaneGeometry(L, H), k.basic('#cfe2ee', 0.16), 0, H / 2, Wd / 2, { order: 1, noPick: true });
+    k.box(L + 2 * t, t, Wd + t, wall, 0, H + t / 2, 0, { cast: false });
+    var dw = Math.min(0.8, Wd - 0.4), dh = Math.min(1.9, H - 0.4), sill = 0.3, open = [];
+    [-1, 1].forEach(function (sg) {                      /* the end walls round each door: steel to each side and above */
+      var x = sg * (L / 2 + t / 2), side = (Wd - dw) / 2;
+      k.box(t, H, side, wall, x, H / 2, -(dw + side) / 2, { cast: false });
+      k.box(t, H, side, wall, x, H / 2, (dw + side) / 2, { cast: false });
+      k.box(t, H - sill - dh, dw, wall, x, (sill + dh + H) / 2, 0, { cast: false });
+      k.box(t, sill, dw, k.mat('steel_dark'), x, sill / 2, 0, { cast: false });
+    });
+    ['door1', 'door2'].forEach(function (n, i) {
+      var sg = i ? 1 : -1, x = sg * (L / 2 + t / 2);
+      k.sub(subId(k, p, n), { pick: true, name: i ? 'Inner door' : 'Outer door' });
+      k.box(0.05, dh + 0.1, dw + 0.1, k.mat('steel_black'), x - sg * 0.02, sill + dh / 2, 0);   /* the frame and its gasket */
+      var g = k.push([x + sg * 0.05, sill, -dw / 2]);
+      k.box(0.05, dh, dw, k.mat('steel_mid'), 0, dh / 2, dw / 2, { keep: true });
+      k.box(0.03, 0.05, dw * 0.45, k.mat('steel_dark'), sg * 0.05, dh - 0.12, dw * 0.3, { keep: true });   /* the door closer */
+      k.cyl('x', 0.035, 0.12, k.mat('steel_dark'), sg * 0.06, dh - 0.12, dw * 0.08, { keep: true, seg: 12 });
+      k.box(0.04, 0.12, 0.03, k.mat('steel_black'), sg * 0.05, dh * 0.5, dw * 0.85, { keep: true });          /* the handle */
+      k.pop();
+      if (!i) { open.push(g); }
+      k.anchor('label', [x + sg * 0.08, sill + dh * 0.62, dw * 0.15]);
+      k.cur = self;
+      k.anchor(n, [x + sg * 0.08, sill + dh * 0.62, dw * 0.15]);
+    });
+    k.state(self.id + '.open', 0, function (v) { open.forEach(function (g) { g.rotation.y = v * 1.4; }); });
+    /* the alarm on both sides: a lamp and a sounder over the outer door on the deck, and over the inner door inside the
+       gas-safe space */
+    k.sub(subId(k, p, 'alarm'), { pick: true, name: 'Alarm' });
+    var lamps = [], off = k.col('#3a2a20'), amb = new T.Color('#ffb020'), red = new T.Color('#ff3030');
+    [-1, 1].forEach(function (sg) {
+      var x = sg * (L / 2 + t + 0.12), y = sill + dh + 0.25;
+      k.box(0.18, 0.12, 0.3, k.mat('steel_dark'), x, y, -dw * 0.2);
+      var lm = k.basic('#3a2a20', 1, { toneMapped: false });
+      k.ball(0.07, lm, x + sg * 0.04, y + 0.12, -dw * 0.2, { seg: 14, cast: false, keep: true });
+      lamps.push(lm);
+      k.cyl('x', 0.07, 0.08, k.mat('red'), x + sg * 0.04, y, dw * 0.25, { seg: 16 });          /* the sounder */
+    });
+    k.state(self.id + '.alarm', 0, function (v) {
+      var c = v < 0.5 ? off.clone().lerp(amb, v * 2) : amb.clone().lerp(red, (v - 0.5) * 2);
+      lamps.forEach(function (lm) { lm.color.copy(c); lm.userData.c0 = c.clone(); });
+    });
+    k.anchor('label', [-(L / 2 + t + 0.16), sill + dh + 0.4, -dw * 0.2]);
+    k.cur = self;
+    k.anchor('alarm', [-(L / 2 + t + 0.16), sill + dh + 0.4, -dw * 0.2]);
+    k.anchor('label', [0, H + t, 0]);
+  });
+
+  /* a cargo compressor house on deck: the compressor room (-x) and the electric motor room (+x) side by
+     side, divided by a gastight bulkhead the drive shaft passes through in a gastight seal. at = the floor's centre; size
+     [w, h, d]; split (0.5, where the bulkhead stands across w); the near wall (+z) and the roof are glass so both rooms
+     show. Sub-parts <id>_compressor (the room and its compressor), <id>_motor (the room and its motor), <id>_bulkhead,
+     <id>_shaft (the shaft and its seal). State <id>.on: the ventilation runs - air drawn out of the compressor room
+     (negative pressure, the arrow up out of its roof) and pushed into the motor room (positive pressure, the arrow down
+     into it) */
+  define('compressor_house', function (k, p) {
+    var s = p.size || [10, 4, 5], W = s[0], H = s[1], D = s[2], t = 0.08, self = k.cur, wall = M(k, p, 'wall');
+    var xb = -W / 2 + W * clamp(num(p.split, 0.5), 0.2, 0.8), arrows = [];
+    function room(n, name, a, b, tint0) {
+      k.cur = self;
+      k.sub(subId(k, p, n), { pick: true, name: name });
+      k.box(b - a, 0.06, D, k.mat({ color: mix(TINT[tint0], '#ffffff', 0.55), rough: 0.85, metal: 0 }), (a + b) / 2, -0.03, 0, { cast: false });
+      k.box(b - a, H, t, wall, (a + b) / 2, H / 2, -D / 2 - t / 2, { cast: false });
+      k.add(new T.PlaneGeometry(b - a, H), k.basic('#cfe2ee', 0.14), (a + b) / 2, H / 2, D / 2, { order: 1, noPick: true });
+      k.add(new T.PlaneGeometry(b - a, D), k.basic('#cfe2ee', 0.12), (a + b) / 2, H, 0, { order: 1, noPick: true, rx: -Math.PI / 2 });
+    }
+    room('compressor', 'Compressor room', -W / 2, xb, 'amber');
+    var cx = (-W / 2 + xb) / 2, cm = k.mat('engine');
+    k.box(Math.min(2.2, (xb + W / 2) * 0.6), 0.25, 1.4, k.mat('foundation'), cx, 0.125, -D * 0.1);
+    k.cyl('x', 0.55, Math.min(1.8, (xb + W / 2) * 0.5), cm, cx, 0.9, -D * 0.1, { seg: 28 });
+    k.cyl('y', 0.18, 1.2, k.mat('pipe'), cx - 0.3, 1.9, -D * 0.1, { seg: 16 });
+    k.box(t, H, D, wall, -W / 2 - t / 2, H / 2, 0, { cast: false });
+    k.anchor('label', [cx, 1.5, -D * 0.1]);
+    room('motor', 'Motor room', xb, W / 2, 'green');
+    var mx = (xb + W / 2) / 2;
+    k.box(Math.min(2.0, (W / 2 - xb) * 0.6), 0.25, 1.2, k.mat('foundation'), mx, 0.125, -D * 0.1);
+    k.cyl('x', 0.5, Math.min(1.6, (W / 2 - xb) * 0.45), k.mat({ color: '#4f6f8f', rough: 0.5, metal: 0.4 }), mx, 0.85, -D * 0.1, { seg: 28 });
+    k.box(t, H, D, wall, W / 2 + t / 2, H / 2, 0, { cast: false });
+    k.anchor('label', [mx, 1.4, -D * 0.1]);
+    k.cur = self;
+    k.sub(subId(k, p, 'bulkhead'), { pick: true, name: 'Gastight bulkhead' });
+    k.box(0.12, H, D, k.mat('steel_mid'), xb, H / 2, 0, { cast: false });
+    k.anchor('label', [xb, H * 0.75, D * 0.3]);
+    k.cur = self;
+    k.sub(subId(k, p, 'shaft'), { pick: true, name: 'Shaft seal' });
+    k.cyl('x', 0.06, mx - cx, k.mat('stainless'), (cx + mx) / 2, 0.88, -D * 0.1, { seg: 16 });
+    k.cyl('x', 0.2, 0.3, k.mat('steel_dark'), xb, 0.88, -D * 0.1, { seg: 24 });
+    k.anchor('label', [xb + 0.2, 0.88, -D * 0.1 + 0.2]);
+    k.cur = self;
+    [[cx, 0.3, 1], [mx, -0.3, -1]].forEach(function (a) {   /* out of the compressor room's roof; into the motor room's */
+      var y0 = a[2] > 0 ? H - 0.6 : H + 1.4, y1 = a[2] > 0 ? H + 1.4 : H - 0.6, m = k.mat('cold');
+      arrows.push(k.seg([a[0], y0, D * 0.2], [a[0], y1 - a[2] * 0.3, D * 0.2], 0.06, m, { keep: true }));
+      arrows.push(k.cone([a[0], y1, D * 0.2], [0, a[2], 0], 0.16, 0.3, m, { keep: true }));
+    });
+    k.state(self.id + '.on', 0, function (v) { arrows.forEach(function (m) { m.visible = v > 0.5; }); });
+    k.anchor('label', [0, H + 0.1, 0]);
   });
 
   /* -------------------------------------------------------------------- tanks */
@@ -2614,8 +2760,9 @@
         if (ti) { faceX(k, arc(sg, R + ti).concat(arc(sg, R).reverse()), k.mat('insulation'), 0.003); }
       }
     });
-    var base = num(p.base, -R - 0.6), Rr = R + ti + 0.03, zw = d + Rr * 0.88;
-    (p.saddles || [X0 + L * 0.2, X1 - L * 0.2]).forEach(function (sx) {
+    var base = num(p.base, -R - 0.6), Rr = R + ti + 0.03, zw = d + Rr * 0.88, sads = p.saddles || [X0 + L * 0.2, X1 - L * 0.2];
+    if (sads.length) { k.sub(subId(k, p, 'saddles'), { pick: true, name: 'Saddles' }); }
+    sads.forEach(function (sx) {
       var sh = new T.Shape(), n = 40;
       sh.moveTo(-zw, base); sh.lineTo(zw, base);
       for (j = 0; j <= n; j++) {
@@ -2627,9 +2774,11 @@
       g.rotateY(Math.PI / 2);
       k.add(g, k.mat('saddle', cutC ? { clip: [cutC] } : null), sx - dep / 2, 0, 0);
     });
-    if (p.dome) {
-      k.cyl('y', R * 0.18, R * 0.35, k.mat(p.cut ? 'shell' : 'tank'), X1 - L * 0.25, R + R * 0.12, -d, { seg: 32 });
+    if (sads.length) {                                   /* on the first saddle: a cut takes the +x half away */
+      k.anchor('label', [sads[0] + Math.max(0.5, R * 0.2) / 2, (base - h) / 2, -zw * 0.6]);
+      k.cur = self;
     }
+    if (p.dome) { tankDome(k, p, R, X1 - L * 0.25, -d); }
     if (lp.length) { lp.push(0.004, -h, 0, 0.004, h, 0); k.lines(lp, '#3f4a54'); }
     k.anchor('label', [cutC ? 0 : X0 + L * 0.3, R + ti, -d]);
     k.sub(bulkId, { pick: true, name: 'Centreline bulkhead' });
@@ -2657,6 +2806,17 @@
       k.cur = self;
     }
   }
+  /* a Type C tank's dome (sub-part <id>_dome, its point on top): on a tank seated "in" a hold it rises through the deck,
+     where the cargo pipes leave the tank (gas trial M01 s12: a stub that ended below the deck); otherwise a short manway */
+  function tankDome(k, p, R, x, z) {
+    var self = k.cur, r = R * 0.18, y0 = R * 0.94, y1 = R * 1.295, hold = p._hold;
+    if (hold && Array.isArray(p.at)) { y1 = Math.max(y1, hold.y0 + hold.sec.top - p.at[1] + 0.8); }
+    k.sub(subId(k, p, 'dome'), { pick: true, name: 'Tank dome' });
+    k.cyl('y', r, y1 - y0, k.mat(p.cut ? 'shell' : 'tank'), x, (y0 + y1) / 2, z, { seg: 32 });
+    k.cyl('y', r * 1.25, 0.08, k.mat('flange'), x, y1 - 0.04, z, { seg: 32 });
+    k.anchor('label', [x, y1, z]);
+    k.cur = self;
+  }
   define('tank_c', function (k, p) {
     var R = num(p.r, 3), L = num(p.len, 10), A = num(p.head, R / 2), X0 = -L / 2, X1 = L / 2, self = k.cur, i;
     if (num(p.lobes, 1) >= 2) { bilobe(k, p, R, L, A); return; }
@@ -2676,8 +2836,9 @@
     if (typeof rings === 'number') { var rr = []; for (i = 0; i < rings; i++) { rr.push(X0 + L * (i + 0.5) / rings); } rings = rr; }
     var rt = num(p.ring_t, Math.max(0.05, R * 0.027));  /* ring_t: a thicker band (IGF M02's insulation bands) */
     rings.forEach(function (x) { k.ring('x', R + 0.04 + (rt > 0.1 ? rt * 0.5 : 0), rt, ringM, x, 0, 0, { seg: 72 }); });
-    var base = num(p.base, -R - 0.6), zw = num(p.saddle_w, R * 0.88);
-    (p.saddles || [X0 + L * 0.2, X1 - L * 0.2]).forEach(function (sx) {
+    var base = num(p.base, -R - 0.6), zw = num(p.saddle_w, R * 0.88), sads = p.saddles || [X0 + L * 0.2, X1 - L * 0.2];
+    if (sads.length) { k.sub(subId(k, p, 'saddles'), { pick: true, name: 'Saddles' }); }
+    sads.forEach(function (sx) {
       var Rr = R + (p.insulation || 0) + 0.03, yt = -Math.sqrt(Math.max(0.01, Rr * Rr - zw * zw)), a0 = Math.atan2(yt, zw);
       var sh = new T.Shape();
       sh.moveTo(-zw, base); sh.lineTo(zw, base); sh.lineTo(zw, yt);
@@ -2687,6 +2848,11 @@
       g.rotateY(Math.PI / 2);
       k.add(g, k.mat('saddle'), sx - dep / 2, 0, 0);
     });
+    if (sads.length) {                                   /* the point on the last saddle's +x face, between its foot and its seat */
+      var Rs0 = R + (p.insulation || 0) + 0.03, ys = -Math.sqrt(Math.max(0.01, Rs0 * Rs0 - zw * zw));
+      k.anchor('label', [sads[sads.length - 1] + Math.max(0.5, R * 0.2) / 2, (base + ys) / 2, -zw * 0.6]);
+      k.cur = self;
+    }
     if (p.insulation) {
       var ti = p.insulation, im = k.mat('insulation', ex);
       var ic = new T.CylinderGeometry(R + ti, R + ti, L, 72, 1, true); ic.rotateZ(Math.PI / 2);
@@ -2697,10 +2863,7 @@
         k.box(L, ti, 0.02, k.mat('insulation'), 0, -R - ti / 2, 0.005);
       }
     }
-    if (p.dome) {
-      var dm = k.mat(p.cut ? 'shell' : 'tank');
-      k.cyl('y', R * 0.18, R * 0.35, dm, X1 - L * 0.25, R + R * 0.12, -(p.cut ? R * 0.3 : 0), { seg: 32 });
-    }
+    if (p.dome) { tankDome(k, p, R, X1 - L * 0.25, -(p.cut ? R * 0.3 : 0)); }
     if (p.cut) {                                        /* the cut rim: thin lines where the shell is cut */
       var lp = [X0, R, 0, X1, R, 0, X0, -R, 0, X1, -R, 0], n = 20, j, side, u, ra, rb;
       for (side = 0; side < 2; side++) {
@@ -2766,7 +2929,12 @@
     k.ball(R, M(k, p, p.cut ? 'shell' : 'tank', ex), 0, 0, 0, { seg: 72 });
     if (p.insulation) { k.ball(R + p.insulation, k.mat('insulation', ex), 0, 0, 0, { seg: 72 }); }
     var base = num(p.base, -R * 1.25), Rs = R + (p.insulation || 0);
-    if (p.dome !== false) { k.cyl('y', R * 0.14, R * 0.2, k.mat('tank'), 0, Rs + R * 0.08, 0, { seg: 24 }); }
+    if (p.dome !== false) {                             /* the dome on top: sub-part <id>_dome */
+      k.sub(subId(k, p, 'dome'), { pick: true, name: 'Tank dome' });
+      k.cyl('y', R * 0.14, R * 0.2, k.mat('tank'), 0, Rs + R * 0.08, 0, { seg: 24 });
+      k.anchor('label', [0, Rs + R * 0.18, 0]);
+      k.cur = self;
+    }
     if (p.cut) {
       var lp = [], n = 48, i, a0, a1;
       for (i = 0; i < n; i++) { a0 = i / n * Math.PI * 2; a1 = (i + 1) / n * Math.PI * 2; lp.push(R * Math.cos(a0), R * Math.sin(a0), 0, R * Math.cos(a1), R * Math.sin(a1), 0); }
@@ -2947,7 +3115,8 @@
         var nx = Math.max(2, Math.round(L / 4)), list = [], ci, cz;
         for (ci = 0; ci < nx; ci++) { for (cz = -1; cz <= 1; cz++) { list.push([-L / 2 + L * (ci + 0.5) / nx, fl + chH / 2, cz * bw * 0.65]); } }
         k.many(new T.BoxGeometry(0.5, chH, 0.7), k.mat('wood'), list);
-        k.anchor('label', [list[list.length - 1][0], fl + chH, list[list.length - 1][2]]);
+        /* the point on the last chock's +x face, halfway up: on the chock, not on the tank's bottom edge above it */
+        k.anchor('label', [list[list.length - 1][0] + 0.25, fl + chH * 0.5, list[list.length - 1][2]]);
         k.cur = self;
       }
     }
@@ -3654,12 +3823,24 @@
   });
 
   /* a gas detector head (IGF M09): base plate, yellow body, cap and a lamp that lights in alarm ("<id>.alarm" 0..1,
-     amber at half, red at 1). at = where it is fixed; face "down" (on a deckhead, default) or "up" */
+     amber at half, red at 1). at = where it is fixed; face "down" (on a deckhead, default) or "up". kind "leak": a liquid
+     leak sensor (a cold probe in its guard, at the bottom of a hold space); "temperature": a temperature sensor (a probe
+     with its head, in a hull's insulation or on the inner hull) - each with the same lamp */
   define('detector', function (k, p) {
-    var s = p.face === 'up' ? 1 : -1, self = k.cur;
+    var s = p.face === 'up' ? 1 : -1, self = k.cur, kind = p.kind || 'gas', top = 0.3;
     k.cyl('y', 0.11, 0.03, k.mat('steel_dark'), 0, s * 0.015, 0, { seg: 20 });
-    k.cyl('y', 0.07, 0.2, k.mat('yellow'), 0, s * 0.13, 0, { seg: 20 });
-    k.cyl('y', 0.085, 0.05, k.mat('steel_black'), 0, s * 0.255, 0, { seg: 20 });
+    if (kind === 'leak') {
+      k.cyl('y', 0.05, 0.28, k.mat('stainless'), 0, s * 0.17, 0, { seg: 16 });
+      k.cyl('y', 0.09, 0.12, k.mat('steel_black'), 0, s * 0.27, 0, { seg: 8, open: true });
+      k.box(0.16, 0.1, 0.12, k.mat('amber'), 0, s * 0.05, 0.12);
+    } else if (kind === 'temperature') {
+      k.box(0.12, 0.1, 0.12, k.mat('steel_mid'), 0, s * 0.08, 0);
+      k.cyl('y', 0.015, 0.5, k.mat('stainless'), 0, s * 0.38, 0, { seg: 10 });
+      top = 0.62;
+    } else {
+      k.cyl('y', 0.07, 0.2, k.mat('yellow'), 0, s * 0.13, 0, { seg: 20 });
+      k.cyl('y', 0.085, 0.05, k.mat('steel_black'), 0, s * 0.255, 0, { seg: 20 });
+    }
     var lm = k.basic('#3a2a20', 1, { toneMapped: false });
     k.ball(0.045, lm, 0.09, s * 0.16, 0.0, { seg: 12, cast: false });
     var off = k.col('#3a2a20'), amb = new T.Color('#ffb020'), red = new T.Color('#ff3030');
@@ -3667,7 +3848,7 @@
       var c = v < 0.5 ? off.clone().lerp(amb, v * 2) : amb.clone().lerp(red, (v - 0.5) * 2);
       lm.color.copy(c); lm.userData.c0 = c.clone();
     });
-    k.anchor('label', [0, s * 0.3, 0]);
+    k.anchor('label', [0, s * top, 0]);
   });
 
   /* a person for scale (1.8 m): at = between the feet, facing +z; h; wear "helmet" */

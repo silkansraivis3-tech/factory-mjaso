@@ -16,8 +16,9 @@ smoke3d, perf3d and a picture of every step in `working_claude\review\MNN_3d\` -
   shadow drawn once, the course palette (`steel`, `gas` yellow, `cold` pale blue, `red` handwheels ...), see-through
   ghost walls, cut-aways that show the insides with the cut edge drawn.
 - **Framing that fills the box**: the whole scene (or the spec's `box`) is fitted to the canvas at every size - room
-  kept above for the labels and below for the controls. A step's `frame` fits its parts; a tapped part is framed
-  from its own box. Full screen re-fits.
+  kept above for the labels and below for the controls. A step's `frame` fits its parts, and with them the whole of the
+  part it `select`s and the dots of the labels it names (its `labels`, a label's `steps`): a Moss sphere above its hull is
+  never cut at the top edge, its label never off the picture. A tapped part is framed from its own box. Full screen re-fits.
 - **Labels on the parts**: an amber dot on the part, a white stem, a white pill with a blue border. They never cover
   each other, a stem, a dot, a control, the Full screen button or the box edge: every frame each label that touches
   something tries other stem lengths, the other side of its point and a sideways shift (the hand-made
@@ -107,8 +108,12 @@ and ships `three.min.js`, `kit3d.js`, `kit3d.css` with the module. Alone (a test
 - `id` - a part with an id can be tapped, framed, lit and labelled; without one it is scenery.
   `"pick": false` keeps an id'd part from being tapped (a hull frame).
 - `mat` / `color` - another palette name or colour than the part's own.
-- Some parts make **sub-parts** (a double-walled pipe's `inner`, `annulus`, `outer`; a hull's spaces): each has its
-  own id (PARTS.md), is tapped and labelled alone, and selecting the parent lights them all.
+- Some parts make **sub-parts** (a double-walled pipe's `inner`, `annulus`, `outer`; a hull's spaces and its `hold`; a
+  tank's `dome` and `saddles`; an airlock's `door1`, `door2`, `alarm`): each has its own id (PARTS.md), is tapped and
+  labelled alone - its dot on the sub-part itself - and selecting the parent lights them all. What a label names is a part
+  or a sub-part of that kind: "Tank dome" on `<tank>_dome`, never on the tank (PARTS.md "A label names the part its words
+  are about"); a thing the words name that the kit has no part for is drawn - an `airlock`, a `compressor_house`, a
+  `detector` of its `kind` - never a plain room or a box with its name.
 - Some parts have **states** (`"<id>.cut"`, `"<id>.open"`, `"<id>.on"`, `"<id>.alarm"`): numbers 0..1 that steps and
   controls set; the kit tweens them. **Every** part has `"<id>.ghost"`: its steel turns see-through (what is inside a
   tank or a pipe, shown without cutting it).
@@ -129,7 +134,7 @@ and ships `three.min.js`, `kit3d.js`, `kit3d.css` with the module. Alone (a test
 | `side` | 1 hangs the pill to the right of its stem, -1 to the left (a cluster of labels round one valve); or `dx` in px |
 | `up_steps` | another stem on some steps: `{"1": -40}` |
 | `when` | shown only in a state: `"pipe.cut > 0.5"`, `"!tcs.open"` |
-| `steps` | shown only on these steps `[0, 1]` |
+| `steps` | shown only on these steps `[0, 1]` (counted from 0, as the steps are: a step whose `labels` names the part shows it only when its number is here) |
 | `tap_only` | shown only while its part is selected |
 | `small`, `tone` | a small dark pill (bow / stern, "LNG liquid"); `"amber"`, `"red"`, `"green"` border (a lamp that is / is not allowed) |
 | `tag` | a value tag with no stem (a dimension's "B/5 = 6 m"); `ox`, `oy` its offset |
@@ -185,6 +190,9 @@ choice; use steps for what the lesson walks through in order. 56 px buttons, bot
   shutdown, amber only on the label dots, the limits and zone 1, blue only for the selection.
 - The inside is the lesson: `cut` it open, ghost the near wall, never hide what the words name.
 - Every part a label names can be tapped; every label names a part (or a group) - no chips row under the scene.
+- Two things compared (two hulls, two tanks) are shown together at one scale: one step frames both, and they stand in a
+  row square to its view - one behind the other, the near one is drawn larger and from another angle, and nothing can be
+  compared (`check_kit3d.py`; `line_binding.py` refuses a step whose line compares while it frames one of them).
 - 3 to 9 labels on a step; more is a second step. A crowded box gets smaller pills by itself - weaker at the back
   of the room: walk the content in steps instead (IGF M02: the parts, then the limits, then the opened space).
 - The hand-made scenes are a reference, not the gold standard: they hide labels under labels and show rules no

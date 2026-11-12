@@ -1,0 +1,144 @@
+{
+ "label": "3D view of a gas carrier accommodation front: a cofferdam between the cargo area and accommodation, doors and air intake facing away from the cargo.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "hull",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -8,
+    14
+   ],
+   "half": 7,
+   "bottom": 0,
+   "floor": 1.2,
+   "top": 10,
+   "spaces": [
+    {
+     "id": "coff",
+     "x": [
+      8,
+      10
+     ],
+     "tint": "amber"
+    }
+   ]
+  },
+  {
+   "id": "acc",
+   "type": "accommodation",
+   "at": [
+    12,
+    10,
+    0
+   ],
+   "size": [
+    5,
+    6,
+    10
+   ],
+   "decks": 2
+  },
+  {
+   "id": "intake",
+   "type": "air_intake",
+   "at": [
+    14.6,
+    13,
+    0
+   ],
+   "size": [
+    1.2,
+    0.8,
+    0.3
+   ],
+   "rot": 90
+  }
+ ],
+ "labels": [
+  {
+   "part": "coff",
+   "text": "Cofferdam",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "acc",
+   "text": "Accommodation",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "intake",
+   "text": "Air intake",
+   "steps": [
+    2
+   ]
+  },
+  {
+   "part": "hull",
+   "text": "Distance from the front",
+   "steps": [
+    3
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 40,
+    "el": 22,
+    "frame": [
+     "hull",
+     "acc"
+    ]
+   },
+   "line": 1,
+   "select": "coff"
+  },
+  {
+   "view": {
+    "az": 60,
+    "el": 18,
+    "frame": [
+     "acc"
+    ]
+   },
+   "line": 2,
+   "select": "acc"
+  },
+  {
+   "view": {
+    "az": 110,
+    "el": 16,
+    "frame": [
+     "acc",
+     "intake"
+    ]
+   },
+   "line": 3,
+   "select": "intake"
+  },
+  {
+   "view": {
+    "az": 30,
+    "el": 28,
+    "frame": [
+     "hull",
+     "acc"
+    ]
+   },
+   "line": 4,
+   "select": "hull"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D view of a gas carrier accommodation front: a cofferdam between the cargo area and accommodation, doors and air intake facing away from the cargo."
+}

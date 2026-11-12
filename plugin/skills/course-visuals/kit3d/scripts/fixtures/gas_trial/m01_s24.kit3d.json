@@ -1,0 +1,117 @@
+{
+ "label": "3D cross-section of an LNG carrier with a prismatic Type B SPB tank: the whole tank below the main deck, standing clear of the inner hull on its seats.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "hull",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -8,
+    4
+   ],
+   "half": 9,
+   "bottom": 0,
+   "floor": 2,
+   "top": 14,
+   "double": 2,
+   "hopper": [
+    2.5,
+    2.5
+   ],
+   "topwing": [
+    2.5,
+    2.5
+   ]
+  },
+  {
+   "id": "spb",
+   "type": "tank_prism",
+   "kind": "type_b",
+   "in": "hull",
+   "fill": 0.6
+  }
+ ],
+ "labels": [
+  {
+   "part": "spb",
+   "text": "SPB prismatic Type B tank",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "hull_topwing",
+   "text": "Whole tank below the main deck",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "spb_liquid",
+   "text": "Design pressure up to 0.7 bar",
+   "steps": [
+    2
+   ]
+  },
+  {
+   "part": "hull_inner",
+   "text": "Partial secondary barrier only",
+   "steps": [
+    3
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 30,
+    "el": 22,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 1,
+   "select": "spb"
+  },
+  {
+   "view": {
+    "az": 30,
+    "el": 30,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 2,
+   "select": "hull_topwing"
+  },
+  {
+   "view": {
+    "az": 40,
+    "el": 16,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 3,
+   "select": "spb_liquid"
+  },
+  {
+   "view": {
+    "az": 45,
+    "el": 16,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 4,
+   "select": "hull_inner"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D cross-section of an LNG carrier with a prismatic Type B SPB tank: the whole tank below the main deck, standing clear of the inner hull on its seats."
+}

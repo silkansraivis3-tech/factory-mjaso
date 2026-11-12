@@ -14,7 +14,9 @@
     {"id": "room", "type": "room", "at": [12, 0, 0], "size": [5, 2.6, 3.5], "glass": ["right"], "hole": [1, 0.4, 2, 1.4]},
     {"id": "tcs", "type": "enclosure", "at": [20, 0, 0], "size": [3, 2.4, 3]},
     {"id": "panel", "type": "panel", "at": [26, 1.5, -1], "size": [3, 3], "tint": "green"},
-    {"id": "house", "type": "accommodation", "at": [34, 0, 0], "size": [6, 5, 5], "decks": 3},
+    {"id": "house", "type": "accommodation", "at": [34, 0, 0], "size": [6, 5, 5], "decks": 3, "doors": 1.5},
+    {"id": "airlock", "type": "airlock", "at": [0, 0, 36], "gap": 2},
+    {"id": "compressor_house", "type": "compressor_house", "at": [10, 0, 36], "size": [8, 3.2, 4]},
 
     {"id": "tank_c", "type": "tank_c", "at": [-28, 3, 12], "r": 2, "len": 6, "cut": true, "fill": 0.6, "insulation": 0.25, "base": -3, "dome": true},
     {"id": "tank_sphere", "type": "tank_sphere", "at": [-16, 3.5, 12], "r": 2.5, "cut": true, "fill": 0.5, "insulation": 0.2, "base": -3.5},
@@ -41,6 +43,8 @@
     {"id": "tray", "type": "drip_tray", "at": [6, 0, 24], "size": [2, 3]},
     {"id": "esd", "type": "esd_button", "at": [10, 0, 24]},
     {"id": "detector", "type": "detector", "at": [13, 2.5, 24]},
+    {"id": "leak_sensor", "type": "detector", "kind": "leak", "at": [20, 0, 36], "face": "up"},
+    {"id": "temp_sensor", "type": "detector", "kind": "temperature", "at": [22, 0, 36], "face": "up"},
     {"id": "person", "type": "person", "at": [16, 0, 24]},
     {"id": "foam_can", "type": "foam_extinguisher", "at": [19, 0, 24]},
     {"id": "hydrant", "type": "fire_hydrant", "at": [18, 0, 28]},
@@ -69,7 +73,7 @@
   "captions": [{"text": "Every part, every state on", "when": "gas.on"}],
   "steps": [
     {},
-    {"state": {"gas.on": 1, "plume.on": 1, "flow.on": 1, "pipe_dw.cut": 1, "tcs.open": 1, "detector.alarm": 1, "valve_act.shut": 1,
+    {"state": {"gas.on": 1, "plume.on": 1, "flow.on": 1, "pipe_dw.cut": 1, "tcs.open": 1, "detector.alarm": 1, "airlock.open": 1, "airlock.alarm": 1, "compressor_house.on": 1, "valve_act.shut": 1,
                "relief.open": 1, "tank_c.ghost": 1,
                "inductor.cut": 1, "inductor.on": 1, "branch.on": 1, "firehose.on": 1}}
   ]
