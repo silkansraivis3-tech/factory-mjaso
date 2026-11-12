@@ -205,6 +205,12 @@ async function load(url) {
   await send('Page.navigate', { url });
   await Promise.race([loaded, sleep(20000)]);
   await evaluate('document.fonts ? document.fonts.ready.then(() => 1) : 1');
+  /* 2.130.0 --app-css=<task-view.css> (or CF_APP_TASK_CSS): the page as the LND classroom presents it - html.nc-task and the
+     stylesheet the app injects into the task frame - so the contrast check judges what the trainee sees, not the bare page */
+  const appCss = opt['app-css'] || process.env.CF_APP_TASK_CSS;
+  if (appCss && url.startsWith('file:')) await evaluate(`document.documentElement.classList.add('nc-task');
+    var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = ${JSON.stringify(pathToFileURL(resolve(String(appCss))).href)};
+    document.head.appendChild(l); new Promise(function(r){ l.onload = l.onerror = function(){ r(1); }; setTimeout(r, 3000); })`);
   await mark();
   await pause(250);
 }
@@ -566,6 +572,43 @@ window.__rv = (function(){
       els.forEach(function(e){ var b = e.scrollTop; e.scrollTop = e.scrollHeight; if (e.scrollTop > b + 4) moved = true; });
       return moved; },
     blind: function(){ return document.body.hasAttribute('data-blind'); },
+    /* 2.130.0 (PM SC1, the LND preview: white words on a white card - the app's task-view.css forced a light ground under a
+       Navy-theme screen) - the contrast of the words a trainee must read on the question on show, as drawn: the stem, each
+       answer, the progress label, the hint. The colour is the computed one blended over every painted layer behind it (page
+       ground included) and every ancestor's opacity; below 4.5:1 is a finding. Waits out the ground's own fade first
+       (body transition .35 s), so a half-faded ground is never judged. */
+    contrast: function(){
+      return new Promise(function(done){ setTimeout(function(){
+        var sec = document.querySelector('.scr.on[data-script]'), out = [];
+        if (!sec) return done(out);
+        function parse(s){ var m = (s || '').match(/[\\d.]+/g); if (!m) return null; m = m.map(Number);
+          return { c: m.slice(0, 3), a: m.length > 3 ? m[3] : 1 }; }
+        function lum(c){ var v = c.map(function(x){ x /= 255; return x <= .03928 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4); });
+          return .2126 * v[0] + .7152 * v[1] + .0722 * v[2]; }
+        function ground(el){ var layers = [];
+          for (var e = el; e && e.nodeType === 1; e = e.parentElement) { var p = parse(getComputedStyle(e).backgroundColor);
+            if (p && p.a > 0) layers.push(p); if (p && p.a >= 1) break; }
+          var base = [255, 255, 255];
+          layers.reverse().forEach(function(l){ base = base.map(function(b, i){ return b * (1 - l.a) + l.c[i] * l.a; }); });
+          return base; }
+        function seen(el){ var o = 1; for (var e = el; e && e.nodeType === 1; e = e.parentElement) { var cs = getComputedStyle(e);
+          if (cs.display === 'none' || cs.visibility === 'hidden') return 0; o *= +cs.opacity; } return o; }
+        var list = [].slice.call(sec.querySelectorAll('.stem, .opt, .hint, .opts-say'));
+        var pill = document.querySelector('.state .part'); if (pill) list.push(pill);
+        list.forEach(function(el){
+          var words = (el.textContent || '').replace(/\\s+/g, ' ').trim(); if (!words) return;
+          var r = el.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return;
+          var o = seen(el); if (!o) return;
+          var fg = parse(getComputedStyle(el).color); if (!fg) return;
+          var bg = ground(el), a = fg.a * o;
+          var mix = fg.c.map(function(x, i){ return x * a + bg[i] * (1 - a); });
+          var l1 = lum(mix), l2 = lum(bg), ratio = (Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05);
+          if (ratio < 4.5) out.push('"' + words.slice(0, 40) + '" (' + (el.className || el.tagName).toString().slice(0, 24) + ') is hard to read: contrast '
+            + ratio.toFixed(2) + ':1 (needs 4.5:1)');
+        });
+        done(out);
+      }, 450); });
+    },
     done: function(){ return window.__rvDone; },
     /* 2.50.1 (M01 benchmark: three re-reviews were spent on these) - every leader line of the question on screen, as the
        engine placed it: it must end ON something drawn of the part it names, and cross no words but its own box's */
@@ -678,6 +721,7 @@ async function tasks(tiles, failures) {
               requestAnimationFrame(function(){ requestAnimationFrame(function(){ r(1); }); }); }); })`);
             await evaluate(SETTLE);
             for (const x of await evaluate('__rv.leaders()')) failures.push(`${name} ${q}: ${x}`);
+            for (const x of await evaluate('__rv.contrast()')) failures.push(`${name} ${q}: ${x}`);   // 2.130.0: words a trainee cannot read
           }
           if (!WALK && opt.asked && good) tiles.push({ id: `${name}/${q}/asked`, label: `${name} ${q} - as asked`, png: await shot() });
           if (WALK && mine && good) {          // as asked, at both sizes a tablet in the room may have
