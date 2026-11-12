@@ -15,7 +15,7 @@
    "tiles or a photograph in a row, a wide drawing or 3D scene"
   ],
   "x": [
-   "Table",
+   "Info",
    "lines 'cell | cell', the whole width, up to table_under_top_row rows and words (layout-templates.json budgets)"
   ]
  },

@@ -279,6 +279,37 @@ SHAPED_SCREENS = [
      "correct": "A", "feedback": "It holds every tank connection.", "mechanic": "single_choice"}]
 
 
+def tables_part(tmp):
+    """a table slide is laid out by its rows and words: beside its picture while it fits there, across a band only within the
+    band's budget, alone when it has no picture - M01 s03 and s14 of the factory trial (6 rows, 73 and 57 words) were cut"""
+    print("\n-- a table has a measured budget (rows and words) in every shape")
+    os.makedirs(os.path.join(tmp, "tb"))
+    wide = "\n".join("Row %d | %s" % (i, "one two three four five six seven eight") for i in range(1, 7))
+    short = "LNG | about -162 °C\nLPG | about -42 °C\nMethanol | room temperature\nAmmonia | about -33 °C"
+    sc = script(screens=[
+        {"id": "s01", "kind": "slide", "title": "Six rows beside a picture", "layout": "split", "visual_kind": "comparison", "visual": "Tanks.",
+         "minutes": 2, "text": wide},
+        {"id": "s02", "kind": "slide", "title": "Four fuels, no picture", "layout": "split", "visual_kind": "none", "visual": "None.",
+         "minutes": 2, "text": short}])
+    c, md = new_course(os.path.join(tmp, "tb"), sc, build=False)
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "", "visual_kind": "none"}}})
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    page = deck(md) if os.path.isfile(os.path.join(md, "presentation", "index.html")) else ""
+    check("the table fixture deck is built", bool(page), out[-1200:])
+    if not page:
+        return
+    tpl = lambda sid: (re.search(r'data-template="([\w-]+)\.v1" data-variant="([\w-]+)"', section(page, sid)) or re.search("$^", "")).groups()
+    check("6 rows and 48 words fit beside a picture and no band: the table stays beside it, never across a band (the plan reads "
+          "layout-templates.json budgets table_*)", tpl("s01") in (("reference-table", "with-figure"), ("reference-table", "figure-left")), tpl("s01"))
+    check("a table with no picture is the table template alone (text-only), the rows kept", tpl("s02") == ("reference-table", "text-only")
+          and section(page, "s02").count("<tr ") == 4, (tpl("s02"), section(page, "s02")[:900]))
+    import compile_module as cm
+    b = cm.layout_plan.table_budget("figure-top", "drawing")
+    check("the compiler's word budget of a table is the measured one", cm.word_budget("reference-table", "figure-top", False, "drawing")[0] == b["words"]
+          and cm.word_budget("reference-table", "with-figure")[0] == cm.BUDGETS["table_beside"]["words"], b)
+
+
 def shapes_part(tmp):
     """the information decides the slide: a slide's own approved words (a claim, choices, a worked example and the
     room's turn, short points, a drill, the summary's questions, the self-check list) and the shape of its lines (numbers,
@@ -4164,6 +4195,7 @@ def main():
         upgrade_part(tmp)
         review_fixes_part(tmp)
         shapes_part(tmp)
+        tables_part(tmp)
         reveal_part(tmp)
         tasks_part(tmp)
         figures_part(tmp)

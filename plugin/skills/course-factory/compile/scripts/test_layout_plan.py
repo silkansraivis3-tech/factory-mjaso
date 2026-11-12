@@ -78,6 +78,25 @@ def main():
     check("a slide whose build sheet names its template keeps it", [x["bp"] for x in o] == ["explain-figure.figure-right"]
           and why["top"] == "its build sheet names its template")
 
+    print("\n-- a table is measured by its rows and its words (budgets table_...)")
+    check("the table blueprints are there: beside, under and over a band, alone - each with its measured budget",
+          {"reference-table.with-figure", "reference-table.figure-top", "reference-table.figure-bottom", "reference-table.text-only"} <= set(lp.LIB)
+          and all(isinstance(lp.table_budget(v, f)["rows"], int) for v in ("with-figure", "figure-top", "figure-bottom", "text-only")
+                  for f in ("photo", "tiles", "drawing", "3d")))
+    wide = lambda rows, words, aspect=2.5: lp.options("reference-table.with-figure", words, "drawing", aspect, 3, None, None, "c|M01", "s03", rows)
+    o, why = wide(4, 36)
+    check("a table of 4 rows and 36 words beside or across a wide drawing fits every shape", {x["shape"] for x in o} >= {"beside", "top", "bottom"}, (o, why))
+    o, why = wide(6, 48)
+    check("6 rows and 48 words fit beside the picture, not a band - the plan never puts them in a band, and says why",
+          {x["shape"] for x in o} == {"beside"} and "6 rows" in why.get("top", "") and "holds 4 and 40" in why.get("top", ""), (o, why))
+    o, why = wide(6, 57, 1.3)
+    check("M01 s14 (6 rows, 57 words) fits no shape - the plan keeps its own, and the script check asks to split it",
+          [x["bp"] for x in o] == ["reference-table.with-figure"] and "holds" in why.get("top", ""), (o, why))
+    o, why = wide(6, 73, 1.3)
+    check("M01 s03 (6 rows, 73 words) the same", [x["bp"] for x in o] == ["reference-table.with-figure"], (o, why))
+    o, why = wide(3, 70)
+    check("few rows, many words: over the words of every shape, even with 3 rows", [x["bp"] for x in o] == ["reference-table.with-figure"], (o, why))
+
     print("\n-- the deck's plan")
     deck = [item("s%02d" % k, "explain-figure.figure-right", 50, "3d", 2.0) for k in range(1, 32)]
     plan = lp.plan(deck)

@@ -187,6 +187,8 @@ def note_once(text):
 def word_budget(tid, variant, inset=False, family="photo"):
     """(words the layout holds, what it is) - None for one with no measured budget (a recap, a task launch, a comparison).
     family: the picture's (photo, tiles, drawing, 3d) - the words under or over a band of a drawing hold fewer"""
+    if tid == "reference-table":
+        return layout_plan.table_budget(variant, family)["words"], "in a table " + layout_plan.table_budget(variant, family)["what"]
     if inset and tid not in ("photo-explain", "figure-stage"):
         return BUDGETS["beside_picture_with_inset"], "beside a picture with a photo under the words"
     if tid == "photo-explain":
@@ -210,7 +212,7 @@ TALL_TEXT = 0.62            # the words' share beside a tall picture (blueprint 
 DARK_SHARE = 0.2            # 2.62.1 - 80 / 20 (owner, 2026-10-21): at most a fifth of a module's slides on the dark ground
 PHOTO_LONG, PHOTO_LOW = 1600, 800        # L62: a photograph is shipped at 1600 px on its long side or more; under 800 is low
 FIGURE_FREE = {("explain-figure", "text-only"), ("procedure", "text-only"), ("opening", "statement"), ("key-numbers", "cards"),
-               ("drill", "quick-fire"), ("true-false", "text-only"), ("scenario", "text-only"), ("worked-example", "text-only")}
+               ("reference-table", "text-only"), ("drill", "quick-fire"), ("true-false", "text-only"), ("scenario", "text-only"), ("worked-example", "text-only")}
 FIGURE_FREE_IDS = {"opening"}
 RECORD = "compiled.json"
 FINAL_SET = re.compile(r"^F[A-Z]$")           # 2.49.2 - a final assessment's set: FA, and FB when it has a second variant
@@ -2590,7 +2592,9 @@ def auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col):
     if photo_col:                       # 2.116.0: the words stay beside the photo - never moved into parts by the factory
         return "photo-explain", "column"
     if not has_fig:
-        return ("procedure", "text-only") if is_steps(lines) else ("reference-table", "text-only") if is_table(lines)             else ("explain-figure", "text-only")
+        if is_steps(lines):
+            return "procedure", "text-only"
+        return ("reference-table", "text-only") if is_table(lines) else ("explain-figure", "text-only")
     if comp == "stage":
         return "figure-stage", "figure"
     if is_table(lines):
@@ -2921,7 +2925,8 @@ def plan_item(s, b, tid, variant, comp, fig, is_photo, lines, mdir, own_comp, wa
         aspect = layout_plan.figure_aspect(fig) or 1.3                 # a figure that does not say its shape: a usual one
     names = (layout_fit.names_shown(fig) if family in ("drawing", "3d") else 0) + len(b.get("spots") or [])
     opts, why = layout_plan.options(own_bp, cs.wc(" ".join(lines)), family, aspect, names,
-                                    top_words(tid, lines, b) if tid == "content-in-parts" else None, fixed, seed, s["id"])
+                                    top_words(tid, lines, b) if tid == "content-in-parts" else None, fixed, seed, s["id"],
+                                    len([x for x in lines if " | " in x]) if tid == "reference-table" else 0)
     out = [k[0] for k in measured_out(avoid, s, b) if k[1] == ground]
     for o in [o for o in opts if o["shape"] in out and o["bp"] != own_bp]:
         opts.remove(o)
@@ -4104,7 +4109,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if sb:
             return '<section %s>\n%s\n  %s\n  %s%s\n</section>' % (attrs(d), head, h2, sb, credit_html)
     figure = (box_of(fig) + "\n    ") if fig else ""      # 2.54.0 (L23): first in the markup, placed under the words by CSS
-    words, tabs = words_html(lines, emph=emph), ""
+    words, tabs = (table_html(lines) if tid == "reference-table" else words_html(lines, emph=emph)), ""
     if not fig and tid in ("explain-figure", "procedure") and text_steps(s, b, lines):
         ranges = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
         if ranges and sum(hi - lo + 1 for lo, hi in ranges) != len(lines):

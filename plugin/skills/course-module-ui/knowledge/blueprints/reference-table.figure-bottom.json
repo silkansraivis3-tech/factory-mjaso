@@ -11,7 +11,7 @@
  "rows": "auto 1fr",
  "fill": {
   "x": [
-   "Table",
+   "Info",
    "lines 'cell | cell', the whole width, up to table_over_photo_row rows and words (layout-templates.json budgets)"
   ],
   "p": [

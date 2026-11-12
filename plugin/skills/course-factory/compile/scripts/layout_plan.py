@@ -231,6 +231,20 @@ def band_budget(variant, family):
         (BUDGETS["over_band"], "over a picture band")
 
 
+def table_budget(variant, family):
+    """{"rows", "words", "what"} a table (reference-table) holds in this variant - measured, budgets "table_..." """
+    if variant == "text-only":
+        key, what = "table_alone", "alone"
+    elif variant in ("figure-top", "figure-bottom"):
+        top = variant == "figure-top"
+        photos = family in ("photo", "tiles")
+        key = ("table_under_top_row" if top else "table_over_photo_row") if photos else ("table_under_band" if top else "table_over_band")
+        what = ("under" if top else "over") + (" the photographs" if photos else " a picture band")
+    else:
+        key, what = "table_beside", "beside a picture"
+    return dict(BUDGETS[key], what=what)
+
+
 def aspect_score(rng, aspect, hard):
     """how well a picture of this shape sits in a box made for rng [lo, hi]: 1 inside, less the further out (None: it
     cannot - a band is never given a picture that is not wide); an unknown shape (a picture still to be drawn) 0.7"""

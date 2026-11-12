@@ -273,6 +273,31 @@ def budget_part():
     screen(own, "s02").pop("points")
     check("... nor a slide with no picture beside its words (steps_from says when it is shown in steps)", cs.over_budget(screen(own, "s02")) is None)
 
+    S14 = ("- -10 °C and above | no secondary barrier required\nBelow -10 °C down to -55 °C | the hull may act as the secondary barrier\n"
+           "Below -55 °C | a separate secondary barrier where one is required\nMembrane, semi-membrane, Type A | complete secondary barrier\n"
+           "Type B | partial secondary barrier\nType C | no secondary barrier required")
+    S03 = ("Fully pressurised | ambient temperature, Type C tanks, typical design pressure 17.5 bar gauge\n"
+           "Semi-refrigerated | Type C tanks, working pressure about 5-7 bar gauge, cooled cargo\n"
+           "Semi-pressurised / fully refrigerated | Type C, down to -48 °C (LPG)\nFully refrigerated LPG | near atmospheric pressure, down to -50 °C\n"
+           "LNG | about atmospheric pressure, -163 °C\nAbove 0.7 bar gauge | the IGC Code requires a pressure-vessel tank (Type C)")
+    tb = copy.deepcopy(SCRIPT)
+    for text in (S03, S14):
+        screen(tb, "s01")["text"] = text
+        f = [x for x in cs.theory_findings(tb)[0] if x["rule"] == "t_table_over"]
+        check("a table of 6 rows and %d words (M01 s03 / s14, cut at 1024 x 768 beside a picture) is a must-fix: split it, never shrink the text"
+              % cs.wc(" ".join(text.split("\n"))), [(x["screen"], x["level"]) for x in f] == [("s01", cs.FAIL)] and "split" in f[0]["fix"]
+              and "never" in f[0]["fix"] and "6 rows" in f[0]["detail"], f)
+    check("... it blocks approval", "t_table_over" in [x["rule"] for x in cs.blocking(cs.all_findings(tb))])
+    screen(tb, "s01")["text"] = "Fully pressurised | Type C, 17.5 bar\nSemi-refrigerated | Type C, 5-7 bar\nFully refrigerated | near atmospheric\nLNG | -163 °C"
+    check("a table of 4 short rows fits a shape (beside a picture, or a band): no finding",
+          cs.table_over(screen(tb, "s01")) is None and not [x for x in cs.theory_findings(tb)[0] if x["rule"] == "t_table_over"])
+    screen(tb, "s01")["text"] = "\n".join("Row %d | %s" % (i, "word " * 6) for i in range(1, 7))
+    check("6 rows of 7 words fit beside a picture (budgets table_beside: 6 rows, 48 words)", cs.table_over(screen(tb, "s01")) is None)
+    screen(tb, "s01")["text"] = "\n".join("Row %d | %s" % (i, "word " * 8) for i in range(1, 6))
+    check("5 rows of 10 words (50) are over: no shape holds 5 rows and 50 words", cs.table_over(screen(tb, "s01")) == (5, 50, 6, 48))
+    screen(tb, "s01")["text"] = "\n".join("Row %d | %s" % (i, "word " * 10) for i in range(1, 7))
+    check("6 rows of 12 words is over every shape", cs.table_over(screen(tb, "s01")) == (6, 72, 6, 48), cs.table_over(screen(tb, "s01")))
+
     row = copy.deepcopy(SCRIPT)
     screen(row, "s01").update(text=S01_TEXT + "\n" + MORE, in_parts="each risk on its own")
     f = cs.theory_findings(row)[0]

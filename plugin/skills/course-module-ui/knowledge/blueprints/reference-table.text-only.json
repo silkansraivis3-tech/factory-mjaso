@@ -9,7 +9,7 @@
  ],
  "fill": {
   "x": [
-   "Table",
+   "Info",
    "lines 'cell | cell', up to table_alone rows and words (layout-templates.json budgets)"
   ]
  }
