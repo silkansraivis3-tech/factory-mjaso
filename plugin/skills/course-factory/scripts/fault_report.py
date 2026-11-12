@@ -115,7 +115,7 @@ def rule_checks(deck, slides):
             out.append(_fault(sid, "layout", "rule check: picture against its blueprint",
                               "%s: \"%s\" - it takes %s" % (bp_id, bp.get("for", ""), ", ".join(fits.get("pictures") or []) or "no picture"),
                               src + " fits.pictures",
-                              "%s sits in %s, which takes no %s" % (said, bp_id, family) + _suit(lp, bp_id, s, family, aspect)))
+                              "%s, %s, sits in %s, which takes no %s" % (said, "%.2f:1" % aspect if aspect else "shape unknown", bp_id, family) + _suit(lp, bp_id, s, family, aspect)))
         elif family and aspect:
             lo, hi = (fits.get("aspect") or {}).get(family) or [0, 99]
             if not lo <= aspect <= hi:
