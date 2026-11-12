@@ -116,6 +116,9 @@ so and recommend the real photograph or the authored diagram instead.
 **Open the file and look at it.** A file named for one thing may show another — that has already
 happened in this project. A caption is not evidence of content. Record what you saw and the date, in words:
 `"visually_verified": "yes - <what you saw> <YYYY-MM-DD>"` - never `true` (`check_assets.py` warns on anything else).
+Record what is printed on it too: `"marks_seen"` - a watermark, copyright or credit, word for word, or `"none"` (a third
+party's mark is never the course's own: RIGHTS_REVIEW_REQUIRED with the credit), and `"printed_text"` - words or labels
+on it, or `"none"` (an enlarger must not invent them).
 
 If a candidate is a near-miss but still useful, say exactly how it differs, so the page can caption
 it honestly: *"a product tanker, not a gas carrier"* is a usable caption; silence is not.

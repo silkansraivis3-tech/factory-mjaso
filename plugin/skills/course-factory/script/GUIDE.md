@@ -83,6 +83,14 @@ tablets (L35), and the script says which screen is where:
   MC, FA). A set's questions come **straight after** the task slide that opens it. One question per
   screen; at the end the trainee sees their own score - it is for them, and a self-check or module
   check never counts (L27). No task list, no browsing, no "back to tasks".
+- **"On your tablet" means a task.** The trainee tablet holds only the sets a task slide opens. A slide whose
+  words or notes send the room to their tablet ("six ships on your tablet", "vote on the tablet") with no
+  task slide right after it - or a slide with its own activity (`"active"`) that says so - promises a page
+  nobody builds: make the activity a set (a task slide right after it, its questions the activity's own -
+  the build makes the page; the slide then keeps no `"active"` of its own), or say where the room does it
+  (on the screen, on paper). An activity approved
+  at Stage 2 as done on the tablet (architecture.json `active_learning`) is a set, whichever screen names
+  it. `content_script.py` refuses approval otherwise (`tb_no_task_page`, `tb_activity_off_tablet`).
 - `minutes_allocated` is the module's minutes from the programme (L1, L34); the instructor-tablet
   minutes must add up to it exactly.
 

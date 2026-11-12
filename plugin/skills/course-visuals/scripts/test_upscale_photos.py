@@ -62,6 +62,9 @@ def main():
         for name, (w, h), desc, extra in (("ship_small.png", (400, 300), "A gas carrier at sea.", {}),
                                           ("sds_page.png", (420, 600), "Page 1 of the propane SDS.", {}),
                                           ("pump_room.png", (500, 330), "The cargo pump room.", {"ai_enlarge": False}),
+                                          ("outfit.png", (398, 500), "A fire-fighter's outfit, its parts named beside it.",
+                                           {"title": "Fire-fighter's outfit with its parts labelled", "shows": "outfit"}),
+                                          ("bow.png", (400, 300), "The bow of a gas carrier.", {"printed_text": "GASCHEM BALTIC"}),
                                           ("deck_big.png", (1200, 800), "The cargo deck.", {})):
             io.open(os.path.join(md, "assets", "img", name), "wb").write(tc.png(w, h, (w % 200, 90, 150)))
             meta[name] = dict(tc.PHOTO_META["ship.jpg"], description=desc, url_or_origin="https://example.org/" + name, **extra)
@@ -74,6 +77,10 @@ def main():
         check("... a picture with words in it never - the enlarger would make them sharp and WRONG",
               "left as it is - it holds words or numbers" in out.split("sds_page.png")[1].splitlines()[0], out)
         check("... nor one whose record says \"ai_enlarge\": false", "ai_enlarge" in out.split("pump_room.png")[1].splitlines()[0], out)
+        check("... nor one whose title says its parts are labelled (a fire-fighter's outfit came out with garbled labels), "
+              "nor one whose look recorded words printed on it",
+              "it holds words or numbers" in out.split("outfit.png")[1].splitlines()[0]
+              and "GASCHEM BALTIC" in out.split("bow.png")[1].splitlines()[0], out)
         check("... nor one of 1000 px or more - the plain enlargement does well there", "1200 px already" in out.split("deck_big.png")[1].splitlines()[0], out)
         code, out = run(UP, c, "--modules", "1", env=env)
         keep = os.path.join(c, "working_claude", "photo_originals", "M01", "ship_small.png")

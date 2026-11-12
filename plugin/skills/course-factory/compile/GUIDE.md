@@ -650,8 +650,13 @@ Choosing a picture is the one judgement in a build, so it is split off and every
   the script's `from_old`; one pick per picture for the whole course - L58) and `visuals\PHOTOS_TO_FIND.md` for ONE
   visual-sourcer pass, which saves into `working_claude\photos_found\` with `"found_for": "M04 s05"`.
 - **`--auto`** (`build_module.py --auto`, `visual_needs.py fill --auto`): a SLIDE's photo slot whose pick scored 0.6 or more
-  and is 800 px or more takes it with no agent - copied in with its record, `"auto_picked"` in the sheet, listed in the
-  needs file for the visual review. A question's picture never (its answers' places need the real things). A module whose
+  and is 800 px or more takes it with no agent - once someone OPENED it (`photo_catalogue.py look`, the photo pass works down
+  `visuals\PHOTOS_TO_LOOK.md`) and recorded what it shows, any watermark or credit and any words printed on it, and that it
+  shows what the slide names. A pick matched only by its old slide's words is never taken: it stays a candidate. Copied
+  in with its record written from that look, `"auto_picked"` in the sheet, listed in the needs file for the visual review.
+  The pre-check stops a build on one of the course's own photographs with no dated look, a record that copies the script's
+  wanted picture or names little of it, no watermark looked for, a third party's mark called the course's own, printed
+  words enlarged by Real-ESRGAN; and on a task page's drawing with no `_figure_meta.json` entry. A question's picture never (its answers' places need the real things). A module whose
   slots all fill this way and whose figures pass from their starters is PASS with no agent - and still reviewed.
 - **Phase B** reads only the needs file and `CATALOGUE.md`, runs `build_module.py --auto` first, fills the rest (a photo
   with its record; a question's boxes onto the real things; the 3D parts placed), then builds until PASS. In the workflow

@@ -38,7 +38,10 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
   `"placeholder"` keys and file gone. A placeholder never ships. The record's
   `"rights_state"` is one of PUBLIC_DOMAIN, ATTRIBUTION_REQUIRED (CC BY, CC BY-SA: its `"author"` and `"licence"`
   make the credit), CLEARED, PROJECT_OWNED, OWNER_CLEARED, RIGHTS_REVIEW_REQUIRED, REJECTED - no other word. Its
-  `"visually_verified"` is words, once you opened it: `"yes - <what you saw> <YYYY-MM-DD>"`, never `true`.
+  `"visually_verified"` is words, once you opened it: `"yes - <what you saw> <YYYY-MM-DD>"`, never `true`; with
+  `"description"` in your words (never the script's wanted picture), `"fits_slide"`, `"marks_seen"` (a watermark or credit
+  on it, or `"none"` - a third party's: RIGHTS_REVIEW_REQUIRED) and `"printed_text"` (or `"none"`). A task drawing you
+  author in `assets/fig` gets its `_figure_meta.json` entry; one drawing, one name per part. The pre-check stops otherwise.
 - Fill the build sheet (each slide's picture, layout, photos - photos from `assets/img` or the Gas Library copy the
   operator names); a starter figure spec is edited only for what the build prints (`figures/MNN/sNN.kit.json`; parts and options:
   `course-visuals/kit/CATALOGUE.md`; never kit.js). **Kit first, a custom figure allowed (L55):** a machine, vessel, device or

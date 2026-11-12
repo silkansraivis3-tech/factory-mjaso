@@ -497,6 +497,17 @@ def check_rights(repo: str, plat: dict, sets: dict, out: list) -> None:
                                        "picture's rights are unclear. The owner clears it by name (course-visuals "
                                        "check_assets.py clear), or the picture is replaced and the module built again"))
                     continue
+                # a third party's watermark or credit seen on it: a record calling it the course's own is false
+                marks = str(val.get("marks_seen") or "") if isinstance(val, dict) else ""
+                if marks and not NO_MARK.match(marks) and str(val.get("rights_state") or "").upper() in ("OWNER_CLEARED", "PROJECT_OWNED") \
+                        and not NAMED_CLEARANCE.match(str(val.get("cleared_by") or "").strip()) \
+                        and os.path.isfile(os.path.join(os.path.dirname(f), key)) and not UNDER_FOLDER.search(rel(repo, f)):
+                    out.append(Finding("rights", FAIL, rel(repo, os.path.join(os.path.dirname(f), key)), 0,
+                                       "a third party's mark is printed on it (\"%s\") yet its record calls it the course's own "
+                                       "(%s) - nothing is published while that is unclear. The owner clears it by name "
+                                       "(course-visuals check_assets.py clear), or the picture is replaced"
+                                       % (marks[:80], val.get("rights_state"))))
+                    continue
                 blob = json.dumps(val) if not isinstance(val, str) else val
                 if any(d.search(blob) for d in deny):
                     out.append(Finding("rights", WARN, rel(repo, f), 0,
@@ -506,6 +517,8 @@ def check_rights(repo: str, plat: dict, sets: dict, out: list) -> None:
 
 
 UNDER_FOLDER = re.compile(r"(^|/)(?!_course_shell/)_[^/]*/")
+NO_MARK = re.compile(r"^\s*(?:none|no|nothing|-)?\s*\.?\s*$", re.I)
+NAMED_CLEARANCE = re.compile(r"^[^,\n]{2,},\s*\d{4}-\d{2}-\d{2}\s+-\s+\S")
 SHOWN_EXT = (".html", ".htm", ".css", ".js", ".svg", ".json")
 
 

@@ -212,15 +212,38 @@ def main():
             # --auto
             import visual_needs
             done = visual_needs.fill(c, 1)
+            check("--auto takes no pick nobody has opened: its catalogue words are its old slide's, not what it shows (an SPB "
+                  "tank cutaway went onto the slide naming the Type A, B and C shapes)", done == [], done)
+            pick1 = plan["slots"]["M01 s01"]["pick"]
+            to_open = pc.to_look(work)
+            check("... the pick is listed to be opened (PHOTOS_TO_LOOK.md)", any(k == "M01 s01" and ph_["id"] == pick1["id"]
+                                                                               for k, ph_, _, _ in to_open), to_open)
+            wants = cs.picture_of(next(s for s in cs.load(os.path.join(work, "working_claude", "script", "M01.json"))["screens"]
+                                       if s["id"] == "s01"))["shows"]
+            check("... a look whose words are the slot's wanted picture is refused - it is written from the picture",
+                  "word for word" in pc.record_look(work, pick1["id"], wants, "none", "none", "M01 s01", "yes - the same"))
+            check("... a look that finds a third party's watermark keeps it out of the slot",
+                  pc.record_look(work, pick1["id"], "A ship alongside a quay with hoses connected", "Shipfax (c) Mac Mackay",
+                                 "none", "M01 s01", "yes - bunkering alongside") == ""
+                  and visual_needs.fill(c, 1) == [])
+            pc.record_look(work, pick1["id"], "A ship alongside a quay with hoses connected to a truck", "none", "none",
+                           "M01 s01", "yes - the bunkering hoses alongside")
+            _, plan, _ = pc.assign(work)
+            done = visual_needs.fill(c, 1)
             sheet = cs.load(os.path.join(c, "working_claude", "script", "M01.build.json"))
             e = sheet["screens"]["s01"]
             meta = json.load(io.open(os.path.join(md, "assets", "img", "_photo_meta.json"), encoding="utf-8"))
             rec = meta.get(os.path.basename(e["figure"])) or {}
-            check("--auto: the slide's slot takes its pick - copied into the module with its record (rights, origin, what it "
-                  "shows), marked auto_picked; the placeholder and its record gone",
+            check("--auto: the slide's slot takes its pick once opened - copied into the module with its record (rights, origin, "
+                  "what it shows), marked auto_picked; the placeholder and its record gone",
                   [x[0] for x in done] == ["s01"] and e["figure"].startswith("assets/img/m01_s01_") and e.get("auto_picked")
                   and "placeholder" not in e and rec.get("auto_picked") is True and rec.get("rights_state") and rec.get("url_or_origin")
                   and rec.get("shows") and not os.path.isfile(ph) and "_placeholder_s01.png" not in meta, (done, e, rec))
+            check("... its record says what the one who opened it saw - never the script's wanted picture - with its marks, its "
+                  "printed words, its verdict and a dated look; no author is made up",
+                  "hoses connected to a truck" in rec.get("shows", "") and rec.get("shows") != wants and rec.get("marks_seen") == "none"
+                  and rec.get("printed_text") == "none" and str(rec.get("fits_slide")).startswith("yes")
+                  and rec.get("visually_verified", "").startswith("yes - ") and rec.get("author") != "Novikontas", rec)
             check("... a question's picture is never filled with no agent (its answers' places need the real things)",
                   sheet["screens"]["q02"]["figure"] == "assets/img/_placeholder_q02.png")
             needs = io.open(os.path.join(c, "working_claude", "visuals", "M01_VISUAL_NEEDS.md"), encoding="utf-8").read()

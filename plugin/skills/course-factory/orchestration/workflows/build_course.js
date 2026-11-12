@@ -321,8 +321,18 @@ const photoPass = (when) => `You are the course's ONE photo-sourcing pass (2.73.
   python ${SCRIPTS}/scripts/photo_catalogue.py index "${A.course}"     (only if working_claude/photo_catalogue.json is missing)
   python ${SCRIPTS}/scripts/photo_catalogue.py assign "${A.course}"
 
-When the operator's words below say no paid pictures, or a factory trial, stop here and report the catalogue's counts: the
-catalogue of the course's own photographs always runs, only the picture making stays off.
+Then OPEN each picture working_claude/visuals/PHOTOS_TO_LOOK.md lists - a slide slot's best candidates, matched only by the
+words of the old slide or page they sat on - and record what you see, once per row:
+  python ${SCRIPTS}/scripts/photo_catalogue.py look "${A.course}" --id <id> --shows "<what is in the picture, in your own
+  words>" --marks "<a watermark, copyright or credit printed on it, word for word, or none>" --text "<words, labels or
+  numbers printed on it, or none>" --slot "<the row's slot>" --fits "yes - <what of the slide's picture it shows>" | "no - <what it shows instead>"
+"yes" only when it shows the things the slide names (three tank shapes named: all three are in it); a third party's mark
+keeps it out whatever it shows. Never copy the row's wanted words into --shows. Then run assign again: only a candidate
+opened and found to fit is taken with no agent.
+
+When the operator's words below say no paid pictures, or a factory trial, stop here and report the catalogue's counts and
+how many you opened: the catalogue of the course's own photographs and the look at its candidates always run, only the
+picture making stays off.
 
 Then work down working_claude/visuals/PHOTOS_TO_FIND.md: for each row MAKE ONE PHOTOREALISTIC GENERATED picture of what it
 must show (2.73.2, owner 2026-10-28: nobody is asked to take a photo; equipment is generated too - it is fixed afterwards):
@@ -1045,8 +1055,12 @@ figures at their starter and the 3D scenes to place - with the build's own answe
 --module ${m.id} --no-course-pages --auto (the sourcing pass may have found photos since), then fill what is left (a photo:
 into assets/img with its _photo_meta.json record, 800 px or more - from Wikimedia Commons with python ${COMMONS} search /
 get, never a fetcher of your own and never a person's name, e-mail address or account in a request -
-"visually_verified": "yes - <what you saw> <YYYY-MM-DD>" once you opened it; a question's picture: its answers' boxes onto
-the real things), place the 3D parts, fix what the build printed, and build again until module clean. A placeholder never ships.` : ''
+"visually_verified": "yes - <what you saw> <YYYY-MM-DD>" once you opened it, "description" and "shows" in your own words of
+what is in it - never the script's wanted picture, "fits_slide": "yes - <what of the slide's picture it shows>",
+"marks_seen": a watermark or credit printed on it or "none" (a third party's mark: rights_state RIGHTS_REVIEW_REQUIRED, never
+OWNER_CLEARED), "printed_text": words or labels on it or "none" (never enlarged by Real-ESRGAN); a task-page drawing you
+author into assets/fig: its _figure_meta.json record beside it; a question's picture: its answers' boxes onto the real
+things), place the 3D parts, fix what the build printed, and build again until module clean. A placeholder never ships.` : ''
 }
 /* a finding's kind for the first-pass record: what the course office would call it */
 const kindOf = (text) => {

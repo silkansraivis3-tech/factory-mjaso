@@ -15,6 +15,11 @@ MUST (the build stops before its figures; build_module.py runs this first):
   * a picture the build sheet names that is not there (figure, figure_b, inset, aside, a photograph inside a drawing)
   * a photograph under 800 px on its long side - enlarging cannot make it sharp: find a larger original (1600 px or
     more), or record in its _photo_meta.json entry why this one stays: "low_resolution_ok": "<reason>"
+  * a slide's photograph nobody recorded opening, whose record copies the script's wanted picture or names little of
+    it, that its opener said does not fit, or that the course calls its own with no watermark looked for; one with a
+    third party's mark called the course's own, or with printed words enlarged by Real-ESRGAN
+  * a task page's picture with no record beside it (_figure_meta.json, _photo_meta.json), and two task pages on the
+    same drawing that name the same part differently
 NOTE (said, never stops it):
   * a picture whose rights are not cleared (RIGHTS_REVIEW_REQUIRED) - the build carries on; publishing is refused
   * a photograph of 800-1023 px - the compile enlarges it (L62), a larger original would be sharper; from 1024 px it is
@@ -229,7 +234,178 @@ def check(course, module, rebuild=False):
         notes.append("%d photograph(s) found under %d px (the size it was found at - the compile's enlargement is not judged; L62) "
                      "- a larger original would be sharper: %s"
                      % (len(soft), PHOTO_ACCEPT_LONG, ", ".join(soft)))
+    for found in (photo_looks(script, mdir, photos, rebuild), task_picture_records(script, sheets, mdir, rebuild),
+                  same_drawing_names(script, sheets, mdir, rebuild)):
+        must += found[0]
+        notes += found[1]
     return must, notes
+
+
+# ------------------------------------------------------------------ what a photograph shows, and what is printed on it
+GENERIC = {"photo", "photograph", "picture", "image", "drawing", "view", "close", "seen", "showing", "show", "real", "type",
+           "tile", "tiles", "example", "labelled", "labeled", "board", "ship", "vessel"}
+COVER = 3                # a photograph's record names at least a third of what its slide's picture must show
+
+
+def main_words(text):
+    """the words that name what a picture must show - the photo catalogue's tokens without the words any picture has"""
+    import photo_catalogue as pc
+    return {t for t in pc.tokens(text) if t not in GENERIC}
+
+
+def photo_looks(script, mdir, photos, rebuild=False):
+    """(must, notes) - each slide photograph's record written by whoever OPENED it: a dated look, what it shows in its own
+    words (never the script's wanted picture copied in), something the slide's picture names in it, its verdict for the
+    slide, a watermark or credit looked for; never a third party's mark on one the record calls the course's own, and never
+    printed words enlarged by Real-ESRGAN. A must for the course's own pictures (matched only by their old slide's words) and
+    a note for a downloaded one; a rebuild's photographs: notes, but a mark, invented letters and a copied record stop it"""
+    import compile_module as cm
+    import content_script as cs
+    import photo_catalogue as pc
+    from check_assets import NAMED_CLEARANCE, NO_MARK, OWN_RIGHTS
+    from upscale_photos import holds_words
+    by_id = {s.get("id"): s for s in script.get("screens", [])}
+    must, notes = [], []
+    for rel, ids in sorted(photos.items()):
+        if cm.PLACEHOLDER_IMG.search(rel) or not rel.startswith("assets/"):
+            continue
+        meta, on = cm.photo_meta(mdir, rel), ", ".join(sorted(set(ids)))
+        name = os.path.basename(rel)
+        if not meta:
+            (notes if rebuild else must).append("%s (on %s) has no record in its _photo_meta.json - where it is from, its rights "
+                                                "and what it shows (L12)" % (rel, on))
+            continue
+        # the course's own pictures (old course, knowledge base, the catalogue's picks) are matched by the words of the slide
+        # or page they sat on - what they show is known only from a look; a downloaded one comes with its page's own words
+        own = origin_of(meta) == "old" or bool(meta.get("catalogue_id") or meta.get("auto_picked"))
+        soft = notes if rebuild or not own else must
+        said = " ".join(pc.as_words(meta.get(k) or "") for k in ("title", "description", "shows", "fits_slide"))
+        rs, cleared = str(meta.get("rights_state") or ""), NAMED_CLEARANCE.match(str(meta.get("cleared_by") or "").strip())
+        marks = meta.get("marks_seen")
+        if marks is not None and not NO_MARK.match(str(marks)) and rs in OWN_RIGHTS and not cleared:
+            must.append("%s (on %s) carries a third party's mark (\"%s\"), yet its record says %s - it is not the course's own: "
+                        "rights_state RIGHTS_REVIEW_REQUIRED and the credit recorded, or another picture" % (rel, on, str(marks)[:60], rs))
+        if str(meta.get("enlarged") or "").startswith("Real-ESRGAN") and holds_words(name, meta):
+            must.append("%s (on %s) holds printed words or labels (%s) and was enlarged by Real-ESRGAN, which makes them sharp "
+                        "and wrong: put back its original (working_claude/photo_originals) and record \"ai_enlarge\": false"
+                        % (rel, on, holds_words(name, meta)))
+        if not pc.VERIFIED.match(str(meta.get("visually_verified") or "")):
+            if not own:
+                continue                                 # check_assets asks a downloaded one's record for it
+            soft.append("%s (on %s): nobody has recorded opening it - \"visually_verified\": \"yes - <what you saw> <YYYY-MM-DD>\" "
+                        "once you looked, with what it shows in your own words" % (rel, on))
+            continue
+        if marks is None and rs in OWN_RIGHTS and not cleared and not cm.is_generated(meta):
+            soft.append("%s (on %s) is called the course's own (%s), and nobody recorded looking for a watermark or credit "
+                        "printed on it: \"marks_seen\": the mark word for word, or \"none\"" % (rel, on, rs))
+        if str(meta.get("fits_slide") or "").strip().lower().startswith("no"):
+            soft.append("%s (on %s): whoever opened it said it does not show what the slide names (\"%s\") - another picture"
+                        % (rel, on, str(meta["fits_slide"])[:80]))
+            continue
+        for sid in sorted(set(ids)):
+            pic = cs.picture_of(by_id[sid]) if sid in by_id else {}
+            if pic.get("kind") != "photo" or not pic.get("shows"):
+                continue
+            wants = pic["shows"]
+            if not cm.is_generated(meta) and pc.copied(" ".join(pc.as_words(meta.get(k) or "") for k in ("description", "shows")), wants):
+                (notes if rebuild else must).append(
+                    "%s (on %s): its record's description is the script's wanted picture, word for word (\"%s\") - not what the "
+                    "file shows. Open it and write what is in it" % (rel, sid, wants[:80]))
+            elif not own or str(meta.get("fits_slide") or "").strip().lower().startswith("yes"):
+                continue                                 # its page's own words, or whoever opened it said how it fits
+            elif len(main_words(wants) & main_words(said)) * COVER < len(main_words(wants)):
+                soft.append("%s (on %s): what its record says it shows (\"%s\") has little of what the slide's picture names "
+                            "(\"%s\"; missing: %s) - another picture, or the record says how it shows them (\"fits_slide\")"
+                            % (rel, sid, pc.as_words(meta.get("description") or meta.get("shows") or "")[:80], wants[:80],
+                               ", ".join(sorted(main_words(wants) - main_words(said)))))
+    return must, notes
+
+
+# ------------------------------------------------------------------ the pictures of the trainee task pages
+def task_picture_records(script, sheets, mdir, rebuild=False):
+    """(must, notes) - every picture a task page shows from the module folder carries its record beside it: a drawing its
+    _figure_meta.json entry, a photograph its _photo_meta.json entry (L12) - found here, before the build, not by the QA's
+    check_assets after it"""
+    import content_script as cs
+    out = []
+    for s in script.get("screens", []):
+        if s.get("kind") not in cs.TASKS:
+            continue
+        rel = str((sheets.get(s["id"]) or {}).get("figure") or "").replace("\\", "/")
+        if not rel.startswith("assets/") or "_placeholder_" in rel or not os.path.isfile(os.path.join(mdir, rel)):
+            continue
+        meta_name = "_photo_meta.json" if rel.lower().endswith(PHOTO_EXT) else "_figure_meta.json"
+        try:
+            rec = json.load(io.open(os.path.join(mdir, os.path.dirname(rel), meta_name), encoding="utf-8")).get(os.path.basename(rel))
+        except (OSError, ValueError, AttributeError):
+            rec = None
+        if not isinstance(rec, dict):
+            out.append("%s (%s's picture) has no entry in %s/%s beside it - what it shows, whose it is, its rights, that it was "
+                       "looked at (L12)" % (rel, s["id"], os.path.dirname(rel), meta_name))
+    return ([], out) if rebuild else (out, [])
+
+
+AREA_TAG = re.compile(r"<g\b([^>]*?)(/?)>|</g>|<rect\b([^>]*)>")
+SHAPE_TAG = re.compile(r"<(?:rect|polygon|polyline|path|line|circle|ellipse)\b[^>]*>")
+
+
+def named_areas(svg):
+    """[(name, (x, y, w, h))] - each data-name group of a drawing and its tap area (its rect class="hit")"""
+    out, stack = [], []
+    for m in AREA_TAG.finditer(svg):
+        if m.group(0) == "</g>":
+            if stack:
+                stack.pop()
+        elif m.group(0).startswith("<g"):
+            if not m.group(2):
+                n = re.search(r'\bdata-name="([^"]+)"', m.group(1) or "")
+                stack.append(n.group(1) if n else None)
+        elif re.search(r'\bclass="[^"]*\bhit\b', m.group(3) or ""):
+            name = next((x for x in reversed(stack) if x), None)
+            box = [re.search(r'\b%s="(-?[\d.]+)"' % k, m.group(3)) for k in ("x", "y", "width", "height")]
+            if name and all(box):
+                out.append((name, tuple(float(b.group(1)) for b in box)))
+    return out
+
+
+def overlap(a, b):
+    """how much two boxes are one: their shared area over their joint area"""
+    w = min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0])
+    h = min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1])
+    if w <= 0 or h <= 0:
+        return 0.0
+    both = w * h
+    return both / (a[2] * a[3] + b[2] * b[3] - both)
+
+
+def same_drawing_names(script, sheets, mdir, rebuild=False):
+    """(must, notes) - two task pages drawn on the same drawing call the same part by the same name: a door that is an
+    "air intake" on one question and an "entrance" on the next teaches the trainee nothing true"""
+    import content_script as cs
+    import photo_catalogue as pc
+    draws = {}
+    for s in script.get("screens", []):
+        rel = str((sheets.get(s.get("id")) or {}).get("figure") or "").replace("\\", "/")
+        if s.get("kind") in cs.TASKS and rel.lower().endswith(".svg") and rel not in draws:
+            try:
+                svg = io.open(os.path.join(mdir, rel), encoding="utf-8").read()
+            except OSError:
+                continue
+            draws[rel] = (s["id"], set(x for x in SHAPE_TAG.findall(svg) if "hit" not in x), named_areas(svg))
+    out, keys = [], sorted(draws)
+    for i, a in enumerate(keys):
+        for b in keys[i + 1:]:
+            (qa, sa, na), (qb, sb, nb) = draws[a], draws[b]
+            if not sa or not sb or len(sa & sb) < 0.5 * len(sa | sb):
+                continue                                  # not the same drawing underneath
+            for name_a, box_a in na:
+                for name_b, box_b in nb:
+                    ta, tb = set(pc.tokens(name_a)), set(pc.tokens(name_b))
+                    if overlap(box_a, box_b) >= 0.6 and ta and tb and len(ta & tb) < 0.5 * len(ta | tb):
+                        out.append("%s and %s are the same drawing, but the part at one place is \"%s\" on %s and \"%s\" on %s "
+                                   "- one part, one name; draw a different part where a different one is meant"
+                                   % (a, b, name_a, qa, name_b, qb))
+    return ([], out) if rebuild else (out, [])
 
 
 def main(argv=None):

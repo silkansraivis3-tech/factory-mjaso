@@ -14,9 +14,11 @@ their starter and the 3D scenes whose parts are not placed. Phase B reads this, 
 catalogue rows - nothing else - fills the slots, and runs ONE build.
 
 --auto: a SLIDE's photo slot whose catalogue pick scored photo_catalogue.AUTO or more and is 800 px or more (each picture
-given to one slot of the whole course - L58) is filled with no agent: the picture copied into the module with its record
-(what it shows, where it came from, its rights - L56), the build sheet's entry pointed at it and marked "auto_picked", the
-placeholder removed. A question's picture is never filled this way - its answers' places must be put on the real things.
+given to one slot of the whole course - L58), and that someone opened and found to show what the slide names with no third
+party's mark on it (photo_catalogue.py look), is filled with no agent: the picture copied into the module with its record
+(what it shows as the one who opened it saw it, its marks and printed words, where it came from, its rights - L56), the
+build sheet's entry pointed at it and marked "auto_picked", the placeholder removed. A pick nobody opened stays a
+candidate: its catalogue words are the old slide's, not what the picture shows. A question's picture is never filled this way - its answers' places must be put on the real things.
 Every auto pick is listed here and in the build's answer, and the visual review looks at it like any other picture.
 """
 from __future__ import annotations
@@ -86,7 +88,10 @@ def rows_of(course, module):
                 c = None
             if c:
                 row["candidates"] = [{"path": x["path"], "score": x["score"], "px": [x.get("w"), x.get("h")], "origin": x.get("origin"),
-                                      "what": (x.get("description") or "")[:200]} for x in c["candidates"]]
+                                      "what": ("seen: " + x["look"]["shows"] if x.get("look") else "its old slide's words: "
+                                               + (x.get("description") or ""))[:200], "fits": x.get("fits") or "not opened yet",
+                                      "marks": (x.get("look") or {}).get("marks") or "not looked for"}
+                                     for x in c["candidates"]]
                 row["pick"] = c["pick"]["path"] if c.get("pick") else None
             rows.append(row)
         elif fig.endswith(cm.KIT3D_SPEC) and os.path.isfile(os.path.join(figdir, fig)):
@@ -125,7 +130,8 @@ def write(course, module):
         if r["candidates"]:
             L += ["- **From the course's own pictures** (score 0-1 - %s):" % ("the pick: %s" % os.path.basename(r["pick"]) if r.get("pick")
                                                                             else "none good enough to fill with no agent")]
-            L += ["    - %.2f · %s x %s px · `%s` - %s - %s" % (c["score"], c["px"][0], c["px"][1], c["path"], c["origin"], c["what"])
+            L += ["    - %.2f · %s x %s px · `%s` - %s - %s - fits: %s - marks: %s" % (c["score"], c["px"][0], c["px"][1], c["path"],
+                                                                                   c["origin"], c["what"], c["fits"], c["marks"])
                   for c in r["candidates"]]
         else:
             L.append("- **From the course's own pictures:** no catalogue yet, or nothing matches - `photo_catalogue.py assign <course>`; "
@@ -167,6 +173,10 @@ def fill(course, module, auto=True):
         pick = (c or {}).get("pick")
         if not pick or pick.get("id") in used or pick["score"] < pc.AUTO:          # 2.73.2: a small one is enlarged by the build
             continue
+        slot = "%s %s" % (cs.mid(module), sid)
+        ok, look = pc.ready(course, pick, slot)
+        if not ok:                         # matched by its old slide's words only: nobody has opened it for this slide
+            continue
         ext = os.path.splitext(pick["path"])[1].lower() or ".jpg"
         stem = re.sub(r"[^a-z0-9]+", "_", (cs.picture_of(s)["shows"] or sid).lower()).strip("_")[:40] or sid
         name = "%s_%s_%s%s" % (cs.mid(module).lower(), sid, stem, ext)
@@ -174,11 +184,14 @@ def fill(course, module, auto=True):
         os.makedirs(img, exist_ok=True)
         shutil.copyfile(pick["path"], os.path.join(img, name))
         rec = dict(pick.get("record") or {})
+        if look:                           # what it shows, its marks and its printed words, as the one who opened it saw them
+            rec.update({"description": look["shows"], "shows": look["shows"], "marks_seen": look.get("marks") or "none",
+                        "printed_text": look.get("text") or "none", "fits_slide": (look.get("fits") or {}).get(slot),
+                        "visually_verified": "yes - %s %s" % (look["shows"], look.get("looked") or "")})
         rec.update({"title": rec.get("title") or (pick.get("description") or "")[:80],
-                    "description": rec.get("description") or cs.picture_of(s)["shows"] or pick.get("description"),
-                    "shows": rec.get("shows") or cs.picture_of(s)["shows"],
+                    "description": rec.get("description") or pick.get("description"),
                     "source": rec.get("source") or ("Novikontas old course" if pick["source"] == "old course" else "course knowledge base"),
-                    "author": rec.get("author") or "Novikontas",
+                    "author": rec.get("author") or "not recorded - the course's own %s picture" % pick["source"],
                     "rights_state": rec.get("rights_state") or "OWNER_CLEARED", "url_or_origin": rec.get("url_or_origin") or pick["origin"],
                     "catalogue_id": pick["id"], "teaching_purpose": "%s - %s" % (sid, s.get("title") or ""), "auto_picked": True,
                     "width": pick.get("w"), "height": pick.get("h")})
