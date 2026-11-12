@@ -86,12 +86,16 @@ DRIVER = r"""
     await S(800);
     var s = sec(), TR = {'Propane vapour': 1, 'LPG boils': 0, 'Warm methane': 1, 'A reading of 0': 0};
     var cards = qa('.sw-card', s).map(function (c) { return q('.sw-st', c).textContent; });
+    q('.sw-why', s).textContent = 'its vapour is about 1.5 times as heavy as air';     /* a why written as a fragment */
     for (var i = 0; i < cards.length; i++) {
       var k = Object.keys(TR).filter(function (x) { return cards[i].indexOf(x) === 0; })[0];
       (TR[k] ? q('.sw-side.t', s) : q('.sw-side.f', s)).click(); await S(120);
       if (i < cards.length - 1) { q('.sw-next', s).click(); }
     }
-    await S(200); await go();
+    await S(200);
+    out.look.swipe = {cards: cards, deck: getComputedStyle(q('.sw-deck', s)).display, sum: qa('.sw-sum li', s).map(function (l) {
+      return [l.className, q('.sw-st', l).textContent, l.lastChild.textContent]; })};
+    await go();
     s = sec();
     t('.opt', WRONG.indexOf('q21') >= 0 ? '-0.5' : '-42', s).click(); qa('.sure button', s)[2].click(); await go();
     if (WRONG.indexOf('q21') >= 0) {
@@ -258,6 +262,12 @@ def main():
             longest = max((x.get("t") or "" for x in rep.get("items", [])), key=len)
             check("questions reach the classroom uncut (the longest is %d characters, never ending in …)" % len(longest),
                   len(longest) > 90 and not longest.endswith("…"), longest)
+            sw = look.get("swipe") or {}
+            check("true or false, after Check: every statement stays on screen with its own verdict and its own sentence, "
+                  "capitalised (M16 check m03: one lower-case fragment stood alone)",
+                  sw.get("deck") == "none" and [x[1] for x in sw.get("sum", [])] == sw.get("cards") and len(sw.get("cards") or []) == 4
+                  and all(x[0] == "ok" and x[2].startswith("Right. ") and x[2][7:8].isupper() and x[2].endswith(".") for x in sw["sum"])
+                  and sw["sum"][0][2] == "Right. Its vapour is about 1.5 times as heavy as air.", sw)
             check("work it out: the dock says what is handed in", "0.84" in look.get("calcDock", ""), look.get("calcDock"))
             check("explore: the detector is covered for the second challenge", look.get("covered") == 1, look)
             check("line it up: the dock starts the pump, and the cargo goes ashore",
