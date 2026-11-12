@@ -47,7 +47,7 @@ Tints (hull spaces, panels): amber, green, blue, grey, red, violet - or any `#he
 | `valve` | on the pipe axis | `axis` x / z, `wheel` red / grey, `actuator` (a remote-operated valve), `scale`; state **shut** turns a grey wheel (or the actuator) red; `kind` "relief" - inlet below, outlet to the side, its bonnet lifts by `lift` (0.16) with state **open** | M01-M03, M06, M15 |
 | `flange` | on the pipe axis | `r` (the pipe's), `axis`, `bolts` (8) | M03, M04 |
 | `coupling` | on the pipe axis | `kind` "dry" / "breakaway", `r` (0.11), `axis` z / x | M03 |
-| `hose` | the path's origin | `path`, `r` (0.13) | M03 |
+| `hose` | the path's origin | `path`, `r` (0.13); `from` / `to` (or a point of `path`): `"<id>.<port>"` - it starts / ends on that port, leaving it straight, with a hose coupling there (`path` is then only the bends; `ends` "coupling" for a free end); ports **start**, **end**; state **on** (named in a step): water arrows along its top, `color` | M03, foam |
 | `vent_mast` | its foot | `h`, `r`, `stays` | M07, M15 |
 
 ## Equipment
@@ -61,11 +61,29 @@ Tints (hull spaces, panels): amber, green, blue, grey, red, violet - or any `#he
 | `drip_tray` | base centre | `size` [w, d], `wall` | M03 |
 | `esd_button` | its foot, facing +z | `h` | M03 |
 | `foam_extinguisher` | its foot, hose to +z | `h` (0.6), `mat` | foam |
-| `foam_inductor` | its middle, along x | `len` (0.4), `r` (0.04) | foam |
-| `foam_branch_pipe` | the handle's foot, barrel to +z | `len` (0.9), `r`, `mat` | foam |
+| `fire_hydrant` | its foot | `h` (outlet height, 0.75); the riser, the valve with its red handwheel, the outlet turned down to +x with a hose coupling; port **out** | foam |
+| `foam_inductor` | the body's middle, on its axis; water along +x | `len` (0.42), `r` (bore, 0.032), `pickup` (`"<container>.mouth"` or [x, y, z]: where its wand goes in), `cut` (opened at the start); light-alloy body, couplings at both ends, the metering valve on top (dial up, hose tail to -z), the clear pick-up tube (the concentrate seen rising) and its rigid wand; sub-parts **valve**, **pickup**, **venturi** (anchors `nozzle`, `throat`, `port` - a label's `"anchor"`); states **cut** (the near half away: the jet nozzle, the suction chamber, the throat and the diffuser in section), **on** (water through the jet, the concentrate drawn up the tube and in at the port); ports **in**, **out**, **pickup** | foam |
+| `foam_branch_pipe` | the inlet coupling's face; barrel along +x | `kind` "medium" (default: the medium-expansion branch - nozzle and grip, the air inlets between six struts, the wide head `r` 0.13 with the fine mesh across its mouth, `len` 0.75 in all, a carrying handle) / "low" (a barrel `r` 0.032, `len` 0.85, air holes behind the nozzle), `mat` (head, red); `connect`: `"<inductor>.out"`; sub-parts **air**, **mesh**; state **on** (air drawn in, foam out of the mouth); ports **in**, **out** | foam |
+| `foam_container` | base centre | `kind` "jerrycan" (default, `size` [0.3, 0.4, 0.2]: a plastic can with its top handle, screw neck and front label) / "drum" (r 0.15, h 0.42, rolling rings); `open` (the cap off - by itself when an inductor's `pickup` is in its mouth); port **mouth** | foam |
 | `detector` | where it is fixed | `face` down / up; state **alarm** (0.5 amber, 1 red) | M09 |
 | `person` | between the feet, facing +z | `h`, `wear` | scale |
 | `air_intake` | centre, louvres to +z | `size` | M15 |
+
+## Joining parts end to end
+
+A part never stands beside another with a gap guessed in metres. Parts with **ports** (above) join by name,
+`"<id>.<port>"`, and the kit places them:
+
+- `"connect": "ind.out"` puts this part's `in` port on that port, turned round the vertical to face it
+  (`{"to": "ind.out", "port": "in"}` names another own port). Its `at` and `rot` are then worked out.
+- a hose's `"from": "hyd.out", "to": "ind.in"` starts and ends on those ports, leaving each straight, a coupling at
+  each end; its `path` is only the bends between.
+- an inductor's `"pickup": "can.mouth"` stands its pick-up wand in the container's mouth.
+
+The parts named are built first, whatever the order of the list. `check_kit3d.py` refuses a port a part does not have,
+a foam branch pipe or an inductor joined to nothing, an inductor whose pick-up tube goes nowhere beside a container, and
+a box or cylinder named for something the kit draws (an inductor, a branch pipe, a foam container, a hydrant).
+`examples/m16_foam.kit3d.json` is the rig: hydrant, fire hose, inductor (cut open on step 3), branch pipe, container.
 
 ## Measures and effects
 

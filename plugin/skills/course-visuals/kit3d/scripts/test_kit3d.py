@@ -193,8 +193,8 @@ check("the catalogue builds every part with no warning and no page error", not a
 check("the catalogue has one of every part type the kit defines", set(a.get("all") or ["?"]) <= set(a.get("types") or []),
       sorted(set(a.get("all") or []) - set(a.get("types") or [])))
 check("every part draws something (a box to frame)", a.get("empty") == [], a.get("empty"))
-check("the foam equipment has parts: a portable foam extinguisher, an in-line inductor, a foam branch pipe (stand-ins before)",
-      {"foam_extinguisher", "foam_inductor", "foam_branch_pipe"} <= set(a.get("types") or []), a.get("types"))
+check("the foam equipment has parts: an extinguisher, a hydrant, an in-line inductor, a branch pipe, a concentrate container",
+      {"foam_extinguisher", "fire_hydrant", "foam_inductor", "foam_branch_pipe", "foam_container"} <= set(a.get("types") or []), a.get("types"))
 check("every state a step sets arrives (cut, open, alarm, shut, gas, flow)", all(b.get(k) == 1 for k in
       ("pipe_dw.cut", "tcs.open", "detector.alarm", "valve_act.shut", "gas.on", "plume.on", "flow.on", "relief.open", "tank_c.ghost")), b)
 
@@ -446,6 +446,47 @@ for (name, w_, h_), x in zip(BOXES, r):
     check("%s in a %d x %d box, a slow search: every step searched once its view stands, every pill inside the box, none on "
           "another" % (name, w_, h_), st and all(s["searched"] and not s["edge"] and not s["on"] for s in st)
           and any(s["n"] for s in st), (st, x.get("errors")))
+
+# ---------------------------------------------------------------- portable foam: the parts join by their ports (no gap between
+# the branch pipe and the inductor), the inductor opens to its venturi, no two leader lines in one column or through a dot
+CROSS = r"""window.T3.cross = function () {
+  var S = k3.scene, L = S.labels.filter(function (l) { return l.shown && !l.tag; }), out = [];
+  function stem(l) { var y1 = l.up ? l.sy - l.gap : l.sy + l.gap; return [l.sx, Math.min(l.sy, y1), Math.max(l.sy, y1)]; }
+  L.forEach(function (a, i) {
+    var s = stem(a);
+    L.forEach(function (b, j) {
+      if (i === j) { return; }
+      var t = stem(b);
+      if (j > i && Math.abs(s[0] - t[0]) < 4 && s[1] < t[2] && t[1] < s[2]) { out.push(a.text + ' / ' + b.text + ': one column'); }
+      if (Math.abs(s[0] - b.sx) < 5 && b.sy > s[1] + 5 && b.sy < s[2] - 5) { out.push(a.text + ' runs through the dot of ' + b.text); }
+    });
+  });
+  return out;
+};"""
+JOIN = ("(function(){var S=k3.scene,V=THREE.Vector3;function d(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2])}"
+        "function P(id,n){return S.parts[id].ports[n].at}"
+        "var m=P('can','mouth'),b=S.parts.ind_pickup.box;"
+        "return {branch:d(P('br','in'),P('ind','out')),hoseA:d(P('hose','start'),P('hyd','out')),hoseB:d(P('hose','end'),P('ind','in')),"
+        "wand:b.containsPoint(new V(m[0],m[1],m[2])),warn:k3.info().warnings,calls:k3.info().calls,tri:k3.info().triangles}})()")
+FOAMSTEP = ("(function(){k3.render();var S=k3.scene,v=S.parts.ind_venturi.items.filter(function(m){return m.visible}).length;"
+            "return {off:T3.off(),over:T3.overlaps(),cross:T3.cross(),shown:T3.shown(),cut:k3.info().states['ind.cut'],faces:v}})()")
+plan = [{"url": STUDIO % ("m16_foam", 1280, 720), "wait": "window.k3ready", "do": [HELP, CROSS], "settle": 600, "probe": J % JOIN}]
+plan += [{"do": "k3.step(%d)" % i, "settle": 1500, "probe": J % FOAMSTEP} for i in range(6)]
+r = run(plan, "--w=1280", "--h=720")
+a = r[0].get("probe") or {}
+check("foam rig builds with no warning and no page error", a and not a.get("warn") and not any(x.get("errors") for x in r), (a, [x.get("errors") for x in r]))
+check("foam rig: the branch pipe sits on the inductor's outlet (\"connect\": \"ind.out\" - no gap)", a.get("branch", 1) < 1e-3, a.get("branch"))
+check("foam rig: the fire hose runs from the hydrant's outlet to the inductor's inlet", a.get("hoseA", 1) < 1e-3 and a.get("hoseB", 1) < 1e-3, a)
+check("foam rig: the pick-up wand stands in the container's mouth (\"pickup\": \"can.mouth\")", a.get("wand") is True, a)
+check("foam rig stays light (under 80 draw calls, 120,000 triangles)", 0 < (a.get("calls") or 0) < 80 and 0 < (a.get("tri") or 0) < 120000, a)
+steps = [x.get("probe") or {} for x in r[1:]]
+for i, st in enumerate(steps):
+    check("foam rig step %d: labels on their parts, touching nothing, no two stems in one column or through a dot" % i,
+          st.get("off") == [] and st.get("over") == [] and st.get("cross") == [] and len(st.get("shown") or []) >= 3, st)
+check("foam rig step 3: the inductor opens - its venturi's cut faces show; closed on step 0 they do not",
+      steps[3].get("cut") == 1 and (steps[3].get("faces") or 0) > 0 and steps[0].get("faces") == 0, (steps[0], steps[3]))
+check("foam rig step 3: the inside is named - jet nozzle, throat, concentrate port",
+      {"Jet nozzle", "Throat", "Concentrate port"} <= set(steps[3].get("shown") or []), steps[3].get("shown"))
 
 srv.shutdown()
 print()

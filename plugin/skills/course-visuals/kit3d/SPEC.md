@@ -97,6 +97,9 @@ and ships `three.min.js`, `kit3d.js`, `kit3d.css` with the module. Alone (a test
 - `on` (2.72.0) - `"H.deck"` / `"H.floor"` / `"H.bottom"` of a `hull` (or `"D.deck"` of a `deck_plate`): the part's height
   is that level (+ `gap`), its x and z its own `at` - a vent mast, a drip tray, an ESD button, an air intake stand ON the
   deck. `check_kit3d.py` fails one of those standing below a hull's deck, inside the hull (the 2D kit: SPEC.md "Relations").
+- `connect` - `"I.out"`: the part's own `in` port on another part's port, turned to face it (a branch pipe on the inductor's
+  outlet); a hose's `from` / `to` name ports the same way. Parts that join are joined by name, never set side by side by
+  hand (PARTS.md "Joining parts end to end").
 - `id` - a part with an id can be tapped, framed, lit and labelled; without one it is scenery.
   `"pick": false` keeps an id'd part from being tapped (a hull frame).
 - `mat` / `color` - another palette name or colour than the part's own.
@@ -117,6 +120,7 @@ and ships `three.min.js`, `kit3d.js`, `kit3d.css` with the module. Alone (a test
 | `part` | the part it names - the pill becomes that part's button (data-3d-part) |
 | `text` | the words - the script's own words for the part |
 | `at` | the point the dot sits on (default: the part's own label point, else the top of its box) |
+| `anchor` | a named point of the part instead of its label point (an inductor's venturi: `"nozzle"`, `"throat"`, `"port"`; any part's ports) |
 | `up` | stem length in px, negative = the pill hangs below (48); the kit moves it when it would touch something |
 | `side` | 1 hangs the pill to the right of its stem, -1 to the left (a cluster of labels round one valve); or `dx` in px |
 | `up_steps` | another stem on some steps: `{"1": -40}` |

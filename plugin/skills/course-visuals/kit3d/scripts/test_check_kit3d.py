@@ -347,5 +347,55 @@ try:
 finally:
     shutil.rmtree(tmp2, ignore_errors=True)
 
+# portable foam: the parts join by their ports - never set side by side by hand - and the kit's parts, not stand-ins
+print("\n-- portable foam: joined by ports, the kit's own parts")
+FOAM = json.loads(io.open(os.path.join(os.path.dirname(HERE), "examples", "m16_foam.kit3d.json"), encoding="utf-8").read())
+check("the foam rig example is clean (hydrant, hose, inductor, branch pipe, container joined by their ports)", run(FOAM) == ([], []), run(FOAM))
+for t, ports in (("foam_inductor", {"in", "out", "pickup"}), ("foam_branch_pipe", {"in", "out"}), ("foam_container", {"mouth"}),
+                 ("fire_hydrant", {"out"}), ("hose", {"start", "end"})):
+    check("the catalogue gives %s its ports %s" % (t, sorted(ports)), ports <= set(TYPES.get(t, {}).get("ports") or []), TYPES.get(t))
+check("the inductor's states cut and on, its sub-parts valve, pick-up tube and venturi are known",
+      {"cut", "on"} <= set(TYPES["foam_inductor"].get("states") or []) and
+      {"valve", "pickup", "venturi"} <= set(TYPES["foam_inductor"].get("subs") or []), TYPES["foam_inductor"])
+
+
+def foam(fn):
+    s = copy.deepcopy(FOAM)
+    fn(s)
+    return run(s)[0]
+
+
+def part(s, pid):
+    return [q for q in s["parts"] if q.get("id") == pid][0]
+
+
+p = foam(lambda s: (part(s, "br").pop("connect"), part(s, "br").update(at=[0.4, 0.14, 0])))
+check("caught: a branch pipe set beside the inductor by hand, joined to nothing (a gap between them)",
+      any("branch pipe br is joined to nothing" in x for x in p) and any("inductor ind: its outlet is joined to nothing" in x for x in p), p)
+p = foam(lambda s: part(s, "hose").update(to="ind.inlet"))
+check("caught: a port the part does not have (ind.inlet - an inductor has in, out, pickup)", any("has no port 'inlet'" in x for x in p), p)
+p = foam(lambda s: part(s, "br").update(connect="nope.out"))
+check("caught: a joint to a part that is not there", any("names no part's port" in x for x in p), p)
+p = foam(lambda s: part(s, "ind").pop("pickup"))
+check("caught: an inductor's pick-up tube that goes nowhere beside a container", any("pick-up tube goes nowhere" in x for x in p), p)
+p = foam(lambda s: part(s, "hose").pop("to"))
+check("caught: an inductor whose inlet no hose reaches", any("inductor ind: its inlet is joined to nothing" in x for x in p), p)
+STAND = {"label": "t", "units": "m", "parts": [
+    {"id": "hydrant", "type": "cylinder", "axis": "y", "r": 0.1, "len": 0.8, "at": [-2, 0.4, 0], "mat": "red"},
+    {"id": "inductor", "type": "cylinder", "axis": "x", "r": 0.07, "len": 0.4, "at": [0, 0.12, 0]},
+    {"id": "branch", "type": "cylinder", "axis": "x", "r": 0.05, "len": 0.8, "at": [0.6, 0.12, 0]},
+    {"id": "container", "type": "cylinder", "axis": "y", "r": 0.16, "len": 0.3, "at": [0, 0.15, 1]}],
+    "labels": [{"part": "hydrant", "text": "Fire hydrant"}, {"part": "inductor", "text": "Inductor (foam ejector)"},
+               {"part": "branch", "text": "Foam branch pipe"}, {"part": "container", "text": "20-litre foam container"}]}
+p = run(STAND)[0]
+check("caught: cylinders standing in for the hydrant, the inductor, the branch pipe and the container - each named with its kit part",
+      all(any(n in x and k in x for x in p) for n, k in (("hydrant", "fire_hydrant"), ("inductor", "foam_inductor"),
+                                                          ("branch", "foam_branch_pipe"), ("container", "foam_container"))), p)
+check("a cylinder named for something the kit does not draw is no stand-in",
+      not run(dict(STAND, labels=[{"part": "branch", "text": "Spare pipe"}]))[0])
+js = io.open(os.path.join(os.path.dirname(HERE), "kit3d.js"), encoding="utf-8").read()
+check("kit3d.js builds the parts a joint names first, then joins them (joinOrder, joinRelation)",
+      "joinOrder(list, S)" in js and "joinRelation(deckRelation(list, list[i], S), S)" in js)
+
 print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
 sys.exit(1 if FAILS else 0)

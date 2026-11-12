@@ -177,5 +177,26 @@ h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);fon
   "readouts": [{"label": "Level", "value": "T.level", "scale": 100, "unit": "%"}, {"label": "Flow", "value": "U.flow", "scale": 100, "unit": "%"}]
 }
 </script>
+<section id="m-inductor">
+  <div class="kind">Object · inductor</div>
+  <h2>How the inductor draws the foam concentrate in</h2>
+  <p class="lead">The water speeds up through the jet nozzle; the jet draws the concentrate in at the port and carries it off through the throat.</p>
+  <div class="host" data-kit2d="#spec-inductor"></div>
+  <div class="demo-note">A generic in-line inductor, not a maker's drawing.</div>
+</section>
+<script type="application/json" id="spec-inductor">
+{ "label": "An in-line foam inductor cut open: water through the jet nozzle draws the foam concentrate in at the port and carries it through the throat.",
+  "size": [1000, 600], "state": {"on": 0}, "rates": {"on": 3},
+  "parts": [
+    {"id": "I", "type": "inductor", "x": 200, "y": 360, "w": 600, "flow": "@on", "label": "Inductor", "sub": "cut open",
+     "names": {"nozzle": "Jet nozzle", "port": "Concentrate port", "throat": "Throat"}}
+  ],
+  "steps": [
+    {"title": "The inductor in the hose line, cut open"},
+    {"title": "Water on: the jet draws the concentrate in", "set": {"on": 1}}
+  ],
+  "readouts": [{"label": "Concentrate drawn in", "value": "I.suction", "words": ["No", "Yes"]}]
+}
+</script>
 <script src="kit2d.js"></script>
 </body></html>

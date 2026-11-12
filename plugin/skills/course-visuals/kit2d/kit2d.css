@@ -166,6 +166,8 @@
 .k2-skin{fill:var(--k2-skin)}.k2-skin-hi{fill:var(--k2-hi);opacity:.18}
 .k2-bubble{fill:var(--k2-face)}
 .k2-surface{stroke:var(--k2-particle);stroke-width:2.5;opacity:.8}
+.k2-in-cavity{fill:var(--k2-cavity)}.k2-in-conc{fill:var(--k2-cat-3);opacity:.7}.k2-in-cp{fill:var(--k2-cat-3);stroke:var(--k2-outline);stroke-width:1}
+.k2-in-tube{stroke:var(--k2-metal-hi);stroke-opacity:.45;stroke-linecap:round}.k2-in-cflow{stroke:var(--k2-cat-3);stroke-linecap:round;opacity:0}
 .k2-vane{fill:none;stroke:var(--k2-metal-lo);stroke-width:7;stroke-linecap:round}
 
 /* tanker_section: crude oil, the sea outside, the faces of the web frames */

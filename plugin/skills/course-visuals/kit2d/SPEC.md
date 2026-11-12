@@ -96,6 +96,7 @@ Steps, sliders, toggles and drags all write the same states, so they never fight
 | `gauge` | `x y r min max step value unit label stem` |
 | `tank` | `x y w h`, `level` (0..1), `inlet` (the y where a pipe comes in through its left wall), `label`, `sub`, `scale`, `unit` - cut open, the liquid rising and falling, its level on a tag; publishes `level` |
 | `pump` | `x y` (the shaft), `r`, `speed` (0..1; the impeller stops at 0), `rpm`, `vanes`, `label`, `sub` - a centrifugal pump cut open, its volute widening into a flanged discharge nozzle; publishes `flow`, `speed` |
+| `inductor` | `x y` (the inlet face, on the axis), `w`, `r` (bore), `flow` (0..1), `speed`, `label`, `sub`, `names: {nozzle, port, throat}` - an in-line foam inductor (eductor) cut open, water left to right: the jet nozzle, the suction chamber, the metering valve and the pick-up tube over the port, the throat and the diffuser; the water streaks speed up through the jet and the concentrate is drawn in at the port and carried off; publishes `flow`, `suction` (the equipment picture of a foam rig is the figure kit's `foam_inductor`, `foam_branch_pipe`, `foam_container`) |
 
 **Concepts**
 

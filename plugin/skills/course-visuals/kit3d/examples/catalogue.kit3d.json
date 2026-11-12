@@ -43,8 +43,14 @@
     {"id": "detector", "type": "detector", "at": [13, 2.5, 24]},
     {"id": "person", "type": "person", "at": [16, 0, 24]},
     {"id": "foam_can", "type": "foam_extinguisher", "at": [19, 0, 24]},
-    {"id": "inductor", "type": "foam_inductor", "at": [22, 0.6, 24]},
-    {"id": "branch", "type": "foam_branch_pipe", "at": [25, 0, 24], "rot": 90},
+    {"id": "hydrant", "type": "fire_hydrant", "at": [18, 0, 28]},
+    {"id": "firehose", "type": "hose", "r": 0.034, "from": "hydrant.out", "to": "inductor.in", "path": [[19, 0.04, 28.3]]},
+    {"id": "inductor", "type": "foam_inductor", "at": [20, 0.14, 28], "pickup": "can.mouth"},
+    {"id": "branch", "type": "foam_branch_pipe", "connect": "inductor.out"},
+    {"id": "branch_low", "type": "foam_branch_pipe", "kind": "low", "at": [22, 0.1, 29]},
+    {"id": "lowhose", "type": "hose", "r": 0.034, "path": [[21.2, 0.04, 29.4], [21.6, 0.04, 29.1]], "to": "branch_low.in"},
+    {"id": "can", "type": "foam_container", "at": [20.1, 0, 27.5]},
+    {"id": "drum", "type": "foam_container", "kind": "drum", "at": [21.5, 0, 27.4]},
     {"id": "intake", "type": "air_intake", "at": [20, 1, 24]},
 
     {"id": "dim", "type": "dimension", "at": [24, 0, 24], "a": [0, 0, 0], "b": [0, 3, 0], "tick": [0.4, 0, 0], "text": "3 m"},
@@ -64,6 +70,7 @@
   "steps": [
     {},
     {"state": {"gas.on": 1, "plume.on": 1, "flow.on": 1, "pipe_dw.cut": 1, "tcs.open": 1, "detector.alarm": 1, "valve_act.shut": 1,
-               "relief.open": 1, "tank_c.ghost": 1}}
+               "relief.open": 1, "tank_c.ghost": 1,
+               "inductor.cut": 1, "inductor.on": 1, "branch.on": 1, "firehose.on": 1}}
   ]
 }
