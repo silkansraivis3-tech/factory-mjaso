@@ -998,6 +998,23 @@ def main():
                            ("a scenario marked active", "\"active\": \"scenario\""), ("a why for each choice", "one line for each choice"),
                            ("the right letter one of the choices", "\"right\" is the letter"), ("never the same look twice in a row", "(L62)")):
             check("... caught: %s" % what, any(word in x for x in pb), pb)
+        qs = ["Which two kinds of portable foam equipment are there?", "What limits applicator foam?",
+              "What is the rigging order?", "What do you use on a liquefied gas fire?", "How do you recognise a foam extinguisher?"]
+        ans = ["Two kinds - portable foam extinguishers and the foam applicator set kept at a foam station.",
+               "Medium expansion - applicator foam expands about 15:1 to 150:1, throws short and wind disperses it.",
+               "Not on gas - foam will not extinguish a liquefied gas fire; use dry powder.",
+               "Foam extinguisher - pale cream zone on a red body; never on an electrical fire.",
+               "An applicator's throw is limited; foam applicators supplement the foam monitors."]
+        paired = copy.deepcopy(good)
+        screen(paired, "s04").update(asks="\n".join(qs[:2] + qs[3:]), text="\n".join(ans[:4]))
+        check("a summary whose questions each have their own line passes", cs.shape_problems(paired) == [], cs.shape_problems(paired))
+        shifted = copy.deepcopy(good)
+        screen(shifted, "s04").update(asks="\n".join(qs), text="\n".join(ans))
+        pb = cs.shape_problems(shifted)
+        check("a summary whose cards ask one question and show another card's answer is caught, naming both cards (gas M16 s06)",
+              any("card 3 asks \"What is the rigging order?\"" in x and "card 4's question" in x for x in pb)
+              and any("card 5 asks" in x and "card 2's question" in x for x in pb), pb)
+        check("... and approval is refused", any("Pair each question" in x for x in cs.validate(shifted)), cs.validate(shifted))
         dr = copy.deepcopy(SCRIPT)
         dr["screens"].insert(5, {"id": "s05", "kind": "slide", "title": "Quick fire", "drill": "quick-fire", "text": "No answer here",
                                  "notes": "", "minutes": 0, "seconds": 500})

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - the lit line's frame in a list that flows in two columns</title>
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_shell.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_compose.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_layouts.css">
+<style>
+  #c2 .copy .support > li{display:block}
+</style>
+</head>
+<body>
+<!-- Regression fixture for fit_probe.js and gb_layouts.css: a picture on top and four lines under it, the points in two
+     columns - the third line opens the second column. c1 is the template as it ships: every frame whole. c2 is the same
+     slide with its points as plain blocks: when the third line is lit, its frame's top edge is left at the foot of the
+     first column, an empty outlined box under the second line (M01 s06, s13, s21b) - fit_gate must name it. -->
+<div id="landing"><button id="startBtn" type="button">Start</button></div>
+<div id="progress"></div>
+<div id="blockTag"></div>
+<div id="overview"><button class="fbtn" id="ovClose" type="button">Close</button><div class="ov-grid" id="ovGrid"></div></div>
+<div id="cue"></div>
+<div id="chrome">
+  <button class="cbtn" id="btnPrev" type="button" aria-label="Back">&lt;</button>
+  <span id="counter"><b>1</b> / 1</span>
+  <button class="cbtn" id="btnNext" type="button" aria-label="Next">&gt;</button>
+</div>
+<main id="stage">
+  <section class="slide" id="c1" data-title="Ethylene carriers" data-template="figure-stage.v1" data-variant="figure-top">
+    <h2>Ethylene (LEG) carriers</h2>
+    <div class="slide-body two-col fig-top">
+      <div style="--ar:1.522" class="fill fig" data-fit="cover"><img src="wide.png" alt="a wide picture"></div>
+      <div class="copy">
+        <p class="statement" data-i="1">Ethylene carriers look much like semi-pressurised ships; the main difference is a design temperature of -104 C.</p>
+        <ul class="support">
+          <li data-i="2">Independent Type C tanks of nickel steel or stainless steel need no secondary barrier and have thicker insulation.</li>
+          <li data-i="3">A cascade reliquefaction plant keeps the ethylene fully refrigerated.</li>
+          <li data-i="4">Sizes are typically 2,000-12,000 m3.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  <section class="slide" id="c2" data-title="Ethylene carriers" data-template="figure-stage.v1" data-variant="figure-top">
+    <h2>Ethylene (LEG) carriers</h2>
+    <div class="slide-body two-col fig-top">
+      <div style="--ar:1.522" class="fill fig" data-fit="cover"><img src="wide.png" alt="a wide picture"></div>
+      <div class="copy">
+        <p class="statement" data-i="1">Ethylene carriers look much like semi-pressurised ships; the main difference is a design temperature of -104 C.</p>
+        <ul class="support">
+          <li data-i="2">Independent Type C tanks of nickel steel or stainless steel need no secondary barrier and have thicker insulation.</li>
+          <li data-i="3">A cascade reliquefaction plant keeps the ethylene fully refrigerated.</li>
+          <li data-i="4">Sizes are typically 2,000-12,000 m3.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  <section class="slide" id="c3" data-title="End"><h2>End</h2></section>
+</main>
+<script src="../../../assets/gb_steps.js"></script>
+<script src="../../../assets/gb_deck.js"></script>
+<script>GBDeck.init({ hooks: {} });</script>
+</body></html>

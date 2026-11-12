@@ -9,6 +9,8 @@ Pinned, on fixtures/deck_fit.html:
   * a slide that fits at every step is not named (f1);
   * a wide picture cropped into a square box fails; the same picture as a backdrop (data-fit="cover") does not (f3);
   * a framed card whose border the box that holds it cuts fails, though every word shows (f4 - M01 s06's question card);
+  * a lit point that opens the second column of a two-column list, its frame split at the break, fails (deck_columns c2);
+    the template's own points keep their frames whole (c1);
   * no deck -> exit 2; the exit is 1 when something does not fit.
 Skips, and says so, when Playwright or Chrome/Edge is not installed.
 """
@@ -86,6 +88,16 @@ def main():
           any("cut" in x and "(its frame)" in x and "Why no insulation" in x for x in f4), out)
     check("... the card that stays inside its column is not named", not any("cooling gain" in x for x in f4), out)
     check("the deck is not changed", DECK.read_bytes() == before)
+    print("-- the lit line's frame in points that flow in two columns (M01 s06, s13, s21b)")
+    code, out = cli(str(HERE / "fixtures" / "deck_columns.html"), "--viewport", "1280x800", "--viewport", "1024x768",
+                    "--viewport", "1280x720")
+    rows = [x.strip() for x in out.splitlines()]
+    check("a point that opens the second column, lit as a plain block, leaves its frame's top edge at the foot of the first "
+          "column: named at that step, at every size (c2 step 3)",
+          code == 1 and sum(1 for x in rows if x.startswith("c2 step 3 ") and "split at the column break" in x
+                            and "cascade reliquefaction" in x) == 3, out)
+    check("... the template's own points (one unbreakable box each) keep every frame whole (c1 is never named)",
+          not any(x.startswith("c1 ") for x in rows), out)
     print("-- a drawing that never changes, and lines walked twice (2.115.0)")
     check("dead_figures: a figure with steps that drew the same at every stop is named",
           [x[0] for x in fit_gate.dead_figures({"a": {"steps": 3, "sigs": {"x"}, "stops": 5}})] == ["a"])

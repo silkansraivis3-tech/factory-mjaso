@@ -879,6 +879,26 @@ def shape_of(s):
     return None
 
 
+def misasked(sid, asks, answers):
+    """the summary's cards whose line answers another card's question (gas M16 s06: three of five cards shifted by one -
+    the room is asked one thing and shown the answer to another). Only on a summary where a card's question shares no
+    key word (terms) with its own line; the words two or more questions share (the module's topic, "foam") are left out;
+    then a line that shares two or more key words with another card's question - more than with its own question, and
+    more than that card's own line does - is named with both cards"""
+    qs, ts = [terms(q)[1] for q in asks], [terms(t)[1] for t in answers]
+    if all(q & t for q, t in zip(qs, ts)):
+        return []
+    topic = {x for q in qs for x in q if sum(x in o for o in qs) > 1}
+    qs, ts = [q - topic for q in qs], [t - topic for t in ts]
+    probs = []
+    for i, ans in enumerate(answers):
+        hit, j = max(((len(ts[i] & q), j) for j, q in enumerate(qs) if j != i), key=lambda x: x[0], default=(0, i))
+        if hit >= 2 and hit > len(ts[i] & qs[i]) and hit > len(ts[j] & qs[j]):
+            probs.append("%s: card %d asks \"%s\" and shows \"%s\" - the answer to card %d's question \"%s\". Pair each "
+                         "question in \"asks\" with its own line of the text" % (sid, i + 1, asks[i], ans, j + 1, asks[j]))
+    return probs
+
+
 def shape_problems(script):
     """L61, L62 - the new words each template needs, and where it may stand"""
     probs, prev = [], None
@@ -897,6 +917,8 @@ def shape_problems(script):
                 elif len(L("asks")) != len(ls):
                     probs.append("%s: the summary has %d lines and %d questions in \"asks\" - one question for each line"
                                  % (sid, len(ls), len(L("asks"))))
+                else:
+                    probs += misasked(sid, L("asks"), ls)
             if s.get("points"):
                 pts = L("points")
                 if not 2 <= len(pts) <= 6:

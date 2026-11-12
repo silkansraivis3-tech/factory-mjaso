@@ -39,6 +39,7 @@
   var PIXEL_BUDGET = 2.4e6;           /* 2.70.0 - the most pixels a frame draws (P.size) */
   var TURN_SEARCH_MS = 8;             /* a label search slower than this waits for the view to stand (P.settle) */
   var EDGE = 40;                      /* a pill past the box's edge counts as this many touches: inside always wins (P.settle) */
+  var CLOSE_UP = 3;                   /* a step's frame closes in only this many times nearer than the whole model (P.viewFor) */
   /* lite light: a device a scene juddered on is remembered, and every scene after builds lite there (P.goLite) */
   var LITE_KEY = 'kit3d.lite';
   function slowDevice(set) {
@@ -744,11 +745,17 @@
   P.reserve = function () {
     var S = this, W = S.W || 640, H = S.H || 400, top = num(S.spec.frame && S.spec.frame.top, 56);
     var bot = 16, ch = S.ctl && S.ctl.offsetHeight ? S.ctl.offsetHeight + 20 : 0, cw = S.ctl && S.ctl.offsetWidth || 0, x1 = W - 16;
+    if (S.cap && S.cap.offsetHeight) { top = Math.max(top, S.cap.offsetHeight + 24); }   /* the caption, top left */
+    top = Math.min(top, H * 0.2);
     if (S.spec.controls_at === 'right' && cw) { x1 = W - Math.min(cw + 28, W * 0.3); }   /* a column of buttons takes the right */
     else if (ch && cw > W * 0.55) { bot = ch; }             /* a wide control bar takes the bottom; a small one sits in a corner */
-    else if (ch) { bot = Math.max(bot, ch * 0.5); }
-    if (S.cap && S.cap.offsetHeight) { top = Math.max(top, S.cap.offsetHeight + 24); }   /* the caption, top left */
-    top = Math.min(top, H * 0.2); bot = Math.min(bot, ch && cw > W * 0.55 ? H * 0.34 : H * 0.25);   /* a bar of buttons: never over the model */
+    else if (ch) {
+      /* ... and the model keeps off it too (the Labels button lay over the end of the model, gas trial M01 s04): the strip
+         beside it or the strip above it, whichever leaves the model more room - a wide low band gives up the strip beside it */
+      var side = W - cw - 28;
+      if (ch > H * 0.25 || (side - 16) * (H - 16 - top) > (W - 32) * (H - ch - top)) { x1 = side; } else { bot = ch; }
+    }
+    bot = Math.min(bot, ch && cw > W * 0.55 ? H * 0.34 : H * 0.25);   /* a bar of buttons: never over the model */
     return { x0: 16, x1: x1, y0: top, y1: H - bot };
   };
   /* the distance and target that show box b from (az, el) as large as fill allows inside the reserve */
@@ -764,11 +771,14 @@
     var nx0 = rs.x0 / W * 2 - 1, nx1 = rs.x1 / W * 2 - 1, ny0 = 1 - rs.y1 / H * 2, ny1 = 1 - rs.y0 / H * 2;
     var hw = (nx1 - nx0) / 2 * (fill || 0.94), hh = (ny1 - ny0) / 2 * (fill || 0.94), cx = (nx0 + nx1) / 2, cy = (ny0 + ny1) / 2;
     var sx = 0, sy = 0, D = 0, it, q, x, y, minx, maxx, miny, maxy, z;
+    /* the room's sides seen from the middle of the canvas, where the target is: a room off the middle (the controls'
+       strip, the labels' band) has a near side and a far one - each corner is fitted to the side it lies towards */
+    var xr = Math.max(hw + cx, 0.05), xl = Math.max(hw - cx, 0.05), yt = Math.max(hh + cy, 0.05), yb = Math.max(hh - cy, 0.05);
     for (it = 0; it < 6; it++) {
-      D = 0;                                             /* the closest distance where every corner fits the half-sizes */
+      D = 0;                                             /* the closest distance where every corner fits the room */
       for (i = 0; i < 8; i++) {
-        q = corners[i];
-        D = Math.max(D, q[2] + Math.abs(q[0] - sx) / (hw * th * asp), q[2] + Math.abs(q[1] - sy) / (hh * th));
+        q = corners[i]; x = q[0] - sx; y = q[1] - sy;
+        D = Math.max(D, q[2] + (x > 0 ? x / xr : -x / xl) / (th * asp), q[2] + (y > 0 ? y / yt : -y / yb) / th);
       }
       minx = miny = 1e9; maxx = maxy = -1e9;
       for (i = 0; i < 8; i++) {
@@ -790,6 +800,14 @@
     var b = S.box;
     if (v.frame && v.frame.length) { b = S.stepBox(v.frame, n) || S.box; }
     var f = S.fit(b, az, el0, num(v.fill, num(home.fill, 0.94)));
+    if (b !== S.box) {
+      /* a close-up that brings its parts less than CLOSE_UP times nearer than the whole model does only cuts the model at
+         the box edge (gas trial M01 s12: one of four rooms side by side in a wide low band, 1.8 times nearer, the rest ran
+         off under the Labels button; s15: the airlock 2.9 times nearer, the room beside it blown up past the edge) - the
+         step shows the whole model, its part still the one selected */
+      var whole = S.box.clone().union(b), fw = S.fit(whole, az, el0, num(v.fill, num(home.fill, 0.94)));
+      if (f.d * CLOSE_UP > fw.d) { f = fw; }
+    }
     if (!v.frame || !v.frame.length) { S.fitDist = f.d; }
     var zoom = (f.d / (S.fitDist || f.d)) * num(v.zoom, 1);
     if (v.target) { f.tx = v.target[0]; f.ty = v.target[1]; f.tz = v.target[2]; }

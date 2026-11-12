@@ -1,0 +1,86 @@
+{
+ "label": "A long row of six tanks on the deck, framed whole in a wide low band.",
+ "units": "m",
+ "view": {
+  "az": 24,
+  "el": 23
+ },
+ "parts": [
+  {
+   "id": "t0",
+   "type": "tank_c",
+   "at": [
+    -25,
+    2.0,
+    0
+   ],
+   "r": 1.6,
+   "len": 9.0
+  },
+  {
+   "id": "t1",
+   "type": "tank_c",
+   "at": [
+    -15,
+    2.0,
+    0
+   ],
+   "r": 1.6,
+   "len": 9.0
+  },
+  {
+   "id": "t2",
+   "type": "tank_c",
+   "at": [
+    -5,
+    2.0,
+    0
+   ],
+   "r": 1.6,
+   "len": 9.0
+  },
+  {
+   "id": "t3",
+   "type": "tank_c",
+   "at": [
+    5,
+    2.0,
+    0
+   ],
+   "r": 1.6,
+   "len": 9.0
+  },
+  {
+   "id": "t4",
+   "type": "tank_c",
+   "at": [
+    15,
+    2.0,
+    0
+   ],
+   "r": 1.6,
+   "len": 9.0
+  },
+  {
+   "id": "t5",
+   "type": "tank_c",
+   "at": [
+    25,
+    2.0,
+    0
+   ],
+   "r": 1.6,
+   "len": 9.0
+  }
+ ],
+ "labels": [
+  {
+   "part": "t0",
+   "text": "Tank 1"
+  },
+  {
+   "part": "t5",
+   "text": "Tank 6"
+  }
+ ]
+}
