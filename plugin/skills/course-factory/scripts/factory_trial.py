@@ -751,10 +751,9 @@ def measured(fn, *args):
 CUT_KINDS = ("cut", "spill", "picture", "figure")      # fit_gate.py's findings of something shown in part
 
 
-def fit_slides(deck, no_browser):
-    """{size: slides with words cut or a picture cropped at that size, every Next pressed} - fit_gate.py at the tablets'
-    1280 x 800 and at 1024 x 768; {} when nothing could be measured. Only what is cut or cropped counts: the gate's other
-    findings (a drawing that never changes, lines walked twice) are not a cut slide"""
+def fit_found(deck, no_browser):
+    """{size: [[slide, step, kind, what]]} - every finding of fit_gate.py at the tablets' 1280 x 800 and at 1024 x 768, every
+    Next pressed; {} when nothing could be measured"""
     if no_browser or not os.path.isfile(deck):
         return {}
     sys.path.insert(0, os.path.join(PLUGIN, "skills", "course-module-ux", "measure", "scripts"))
@@ -769,8 +768,14 @@ def fit_slides(deck, no_browser):
         found = load(out) if code in (0, 1) else None
     finally:
         shutil.rmtree(os.path.dirname(out), ignore_errors=True)
-    if not isinstance(found, dict):
-        return {}
+    return found if isinstance(found, dict) else {}
+
+
+def fit_slides(deck, no_browser, found=None):
+    """{size: slides with words cut or a picture cropped at that size} from fit_found; {} when nothing could be measured. Only
+    what is cut or cropped counts: the gate's other findings (a drawing that never changes, lines walked twice) are not a
+    cut slide"""
+    found = fit_found(deck, no_browser) if found is None else found
     return {size: len({x[0] for x in found.get(size) or [] if x[2] in CUT_KINDS}) for size in FIT_SIZES if size in found}
 
 
@@ -915,7 +920,7 @@ def first_pass_row(course, m):
     return row
 
 
-def score_module(course, m, no_browser=False):
+def score_module(course, m, no_browser=False, found=None):
     mid = cs.mid(m)
     row = {"module": m}
     sp = cs.paths(course, m)["script"]
@@ -925,7 +930,7 @@ def score_module(course, m, no_browser=False):
     row["build_says"], row["passed"] = measured(build_verdict, course, mid) or ("", None)
     row["build_says"] = row["build_says"][:90]
     row["build_minutes"] = measured(build_minutes, course, mid)
-    fit = measured(fit_slides, deck, no_browser) or {}
+    fit = measured(fit_slides, deck, no_browser, found) or {}
     row["cut_or_cropped_slides"], row["cut_at_1024x768"] = fit.get("1280x800"), fit.get("1024x768")
     row["slides_3d_lagging"] = measured(perf_slides, deck, no_browser)
     slides = measured(scan_deck, deck) if row["built"] else None
@@ -1072,7 +1077,17 @@ def course_to_score(folder):
     return course, mark
 
 
-def report(home, run_dir=None, no_browser=False, course=None, against=None):
+def fault_report_of(course, mods, run_dir, found):
+    """FAULTS.html, faults.json and the pictures beside the scorecard (fault_report.py); -> the html path"""
+    import fault_report
+    decks = {}
+    for m in mods:
+        deck = os.path.join(module_dir(course, m), "presentation", "index.html")
+        decks[m] = (deck, measured(scan_deck, deck) if os.path.isfile(deck) else None, found.get(m))
+    return fault_report.write(run_dir, fault_report.collect(course, mods, decks))
+
+
+def report(home, run_dir=None, no_browser=False, course=None, against=None, faults=False):
     if course:
         course, mark = course_to_score(course)
         if not mark:
@@ -1092,8 +1107,10 @@ def report(home, run_dir=None, no_browser=False, course=None, against=None):
     if against and not isinstance(load(against), dict):
         print("Stopped - %s is not a scorecard.json" % against)
         return 2
+    found = {m: measured(fit_found, os.path.join(module_dir(course, m), "presentation", "index.html"), no_browser) or {}
+             for m in mark.get("modules") or []}
     card = {"plugin": mark.get("plugin"), "started": mark.get("started"), "scored": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "course": course, "modules": [score_module(course, m, no_browser) for m in mark.get("modules") or []]}
+            "course": course, "modules": [score_module(course, m, no_browser, found[m]) for m in mark.get("modules") or []]}
     if mark.get("reused"):
         card["reused"] = mark["reused"]
     card["practical"] = measured(lambda: sim_cov().practical_lines(sim_cov().practical(course)))
@@ -1111,6 +1128,9 @@ def report(home, run_dir=None, no_browser=False, course=None, against=None):
             break
     code = show(card, before)
     print("\n    %s" % (os.path.join(run_dir, "scorecard.json") if run_dir else "not saved - --run <folder> keeps it"))
+    if run_dir and (faults or mark.get("first_pass")):
+        page = measured(fault_report_of, course, mark.get("modules") or [], run_dir, found)
+        print("    faults for the owner: %s" % (page or "could not be written"))
     return code
 
 
@@ -1182,6 +1202,7 @@ def main(argv=None):
     ap.add_argument("--no-browser", action="store_true")
     ap.add_argument("--reuse")
     ap.add_argument("--fresh", action="store_true")
+    ap.add_argument("--faults", action="store_true", help="report: also write the fault report (a first-pass trial always does)")
     ap.add_argument("--full", action="store_true", help="the full build with its fix round, not the first pass alone")
     a = ap.parse_args(argv)
     home = home_of(a.home)
@@ -1197,7 +1218,7 @@ def main(argv=None):
                                                         ": " + ", ".join(runs[-5:]) if runs else ""))
         return 0
     if a.cmd == "report":
-        return report(home, a.run, a.no_browser, a.course, a.against)
+        return report(home, a.run, a.no_browser, a.course, a.against, a.faults)
     if a.cmd == "compare":
         cards = [load(p) for p in a.files]
         if len(cards) != 2 or not all(isinstance(c, dict) for c in cards):

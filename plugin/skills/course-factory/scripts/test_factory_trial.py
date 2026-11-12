@@ -456,6 +456,7 @@ def main():
         moved = ft.compare({"modules": [{"module": 1, "interactive_3d_share": 75}]}, {"modules": [{"module": 1, "interactive_3d_share": 70}]})
         check("... and inside the band neither", moved == [(1, "interactive_3d_share", 70, 75, "-")], moved)
         reuse_part(tmp, src)
+        faults_part(tmp)
     finally:
         os.environ.clear()
         os.environ.update(old_env)
@@ -466,6 +467,73 @@ def main():
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0
+
+
+def faults_part(tmp):
+    """the fault report: rule checks on a built deck, the fit gate's cuts, the judges' fails, and the page for the owner"""
+    import fault_report as fr
+    from PIL import Image
+    print("\n-- the fault report")
+    course = os.path.join(tmp, "fr", "course")
+    pres = os.path.join(course, "modules", "module01", "presentation")
+    os.makedirs(os.path.join(pres, "..", "assets", "img"))
+    Image.new("RGB", (300, 200)).save(os.path.join(pres, "..", "assets", "img", "wide.jpg"))      # 1.50:1
+    Image.new("RGB", (200, 300)).save(os.path.join(pres, "..", "assets", "img", "tall.jpg"))      # 0.67:1
+    Image.new("RGB", (250, 250)).save(os.path.join(pres, "..", "assets", "img", "square.jpg"))
+    words = " ".join(["word"] * 90)
+
+    def slide(sid, tid, var, img, text):
+        return ('<section class="slide" id="%s" data-template="%s.v1" data-variant="%s"><h2>T</h2><img src="../assets/img/%s">'
+                '<p>%s</p></section>' % (sid, tid, var, img, text))
+    page = "<html><body>%s</body></html>" % (slide("s01", "explain-figure", "figure-right", "wide.jpg", "a few words")
+                                              + slide("s02", "photo-explain", "column", "square.jpg", "a few words")
+                                              + slide("s03", "photo-explain", "column", "tall.jpg", words))
+    io.open(os.path.join(pres, "index.html"), "w", encoding="utf-8").write(page)
+    deck = os.path.join(pres, "index.html")
+    slides = ft.scan_deck(deck)
+    found = fr.rule_checks(deck, slides)
+    by = {(f["slide"], f["kind"]): f for f in found}
+    check("a photograph in a blueprint that takes none is a layout fault, with the rule, its file and what it did",
+          ("s01", "layout") in by and "takes no photo" in by[("s01", "layout")]["did"]
+          and "explain-figure.figure-right" in by[("s01", "layout")]["source"] and "1.50:1" in by[("s01", "layout")]["did"] and "a photograph" in by[("s01", "layout")]["did"], found)
+    check("... a photograph inside its blueprint's box, and words inside its budget, are no fault", not any(f["slide"] == "s02" for f in found), found)
+    check("... a slide over its blueprint's word budget is a words fault with the numbers",
+          ("s03", "words") in by and "against" in by[("s03", "words")]["did"], found)
+    check("... a picture outside the box's shape range names the range",
+          ("s03", "layout") in by and "outside 0.85-1.3:1" in by[("s03", "layout")]["did"], found)
+    fit = fr.fit_faults({"1024x768": [["s03", 2, "cut", "the table is cut by 66 px"], ["s03", 2, "static", "a drawing never changes"]]}, None)
+    check("the fit gate's cuts are overflow faults at the size they were found (its other findings are none)",
+          len(fit) == 1 and fit[0]["kind"] == "overflow_cut" and "1024x768" in fit[0]["found_by"] and "66 px" in fit[0]["did"], fit)
+    check("... with no browser, the build's own list of slides it measured out", fr.fit_faults({}, ["s09"])[0]["slide"] == "s09")
+    agents = os.path.join(course, "working_claude", "_build", "agents")
+    os.makedirs(agents)
+    io.open(os.path.join(agents, "walk_1.json"), "w", encoding="utf-8").write(json.dumps({"fails": [
+        {"slide": "s04", "what": "stop 3: the chart is cut off at the right edge"}, {"slide": "tasks/q2", "what": "the answer boxes overlap"}]}))
+    io.open(os.path.join(agents, "qa_1.json"), "w", encoding="utf-8").write(json.dumps({"findings": [
+        {"severity": "BROKEN", "where": "SCRIPT: s05", "what": "a Your turn activity counts 5 practice minutes"},
+        {"severity": "POLISH", "where": "s02", "what": "a label could sit closer"}]}))
+    walk = os.path.join(course, "working_claude", "_build", "walk", "M01")
+    os.makedirs(walk)
+    for n in ("s04_k1.png", "s04_k3.png", "s01_k1.png"):
+        Image.new("RGB", (40, 30)).save(os.path.join(walk, n))
+    judged = fr.judge_faults(course, 1)
+    kinds = sorted((f["slide"], f["kind"]) for f in judged)
+    check("the judges' fails: the walk's (a task page apart), QA's BROKEN script finding; a POLISH line is no fault",
+          kinds == [("s04", "overflow_cut"), ("s05", "script"), ("tasks/q2", "task_page")], kinds)
+    run = os.path.join(tmp, "fr", "run")
+    os.makedirs(run)
+    allf = fr.collect(course, [1], {1: (deck, slides, {"1280x800": [["s04", 3, "cut", "the chart is cut"]]})})
+    path = fr.write(run, allf)
+    data = json.load(io.open(os.path.join(run, "faults.json"), encoding="utf-8"))
+    pics = {f["slide"]: f["picture"] for f in data if f["picture"]}
+    check("the report: faults.json, FAULTS.html, the pictures copied beside it (the stop the judge named), each fault with an "
+          "empty decision",
+          os.path.isfile(path) and pics.get("s04") == "faults/M01_s04_s04_k3.png" and os.path.isfile(os.path.join(run, pics["s04"]))
+          and pics.get("s01") == "faults/M01_s01_s01_k1.png" and all(f["decision"] == "" and f["rule"] and f["did"] and f["source"] for f in data), data)
+    page = io.open(path, encoding="utf-8").read()
+    check("... the page is self-contained: relative picture links, the rule, what it did, the decision field, no script",
+          'src="faults/M01_s04' in page and "The rule" in page and "What it did" in page and "Owner" in page and "<script" not in page
+          and "http" not in page.replace("https://", ""), page[:300])
 
 
 def write(path, text):
