@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fixture - a task page's drawing shown smaller than its own units (audit_drawing.js check 6)</title>
+<style>body{margin:0;font-family:sans-serif} svg{display:block;margin:8px}</style>
+</head><body>
+<!-- M01 check m04: a 600-unit drawing shown 363 px wide (its label bands, the screen's height) - its numbers, 18 units, were
+     11 px on the tablet. small: the same at 60 %; whole: the drawing at its own size, 18 units = 18 px; big: at 60 % with
+     its words 21 units; plain: an svg that is not a task drawing is not this check's -->
+<svg id="small" class="taskfig" viewBox="0 0 600 450" style="width:360px">
+  <rect id="r1" x="40" y="40" width="200" height="120" fill="#dfe6ee" stroke="#2c3e50" stroke-width="3"/>
+  <text id="n1" x="300" y="100" font-size="18">1</text>
+</svg>
+<svg id="whole" class="taskfig" viewBox="0 0 600 450" style="width:600px">
+  <rect id="r2" x="40" y="40" width="200" height="120" fill="#dfe6ee" stroke="#2c3e50" stroke-width="3"/>
+  <text id="n2" x="300" y="100" font-size="18">1</text>
+</svg>
+<svg id="big" class="taskfig" viewBox="0 0 600 450" style="width:360px">
+  <rect id="r3" x="40" y="40" width="200" height="120" fill="#dfe6ee" stroke="#2c3e50" stroke-width="3"/>
+  <text id="n3" x="300" y="100" font-size="21">1</text>
+</svg>
+<svg id="plain" viewBox="0 0 600 450" style="width:360px">
+  <rect id="r4" x="40" y="40" width="200" height="120" fill="#dfe6ee" stroke="#2c3e50" stroke-width="3"/>
+  <text id="n4" x="300" y="100" font-size="18">1</text>
+</svg>
+<pre id="out"></pre>
+<script src="../scripts/audit_drawing.js"></script>
+<script>
+  console.log = function () {};
+  var res = AuditDrawing.page();
+  document.getElementById("out").textContent = JSON.stringify({
+    findings: res.findings.map(function (f) {
+      var el = f.els && f.els[0], svg = el && (el.ownerSVGElement || el);
+      return { check: f.check, svg: svg && svg.id, part: el && el.id, detail: f.detail };
+    })
+  });
+</script>
+</body>
+</html>

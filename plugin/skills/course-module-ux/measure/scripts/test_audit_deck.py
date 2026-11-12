@@ -14,7 +14,12 @@ animation paused (what a hidden / preview pane does). Pinned:
     colour, and the mark check restores the last line with no fade left running (M01 benchmark run 4);
   * (deck_svg_floor.html) drawing words 0.03 px under the floor pass, as in audit_drawing.js (2.72.7, one rule);
   * (deck_tap_hitbox.html) a small control with an invisible ::before hit box of 44 px passes tap; without one, or with a
-    box that takes no tap, it fails.
+    box that takes no tap, it fails;
+  * (deck_tap_lines.html) with the shipped templates and no kit.css (a 3D deck), every line a figure's step makes a tap -
+    a one-line lead line, a one-line bullet, a step in a worked example's card - is a 44 px tap target at 1280 x 800,
+    1024 x 768 and 1280 x 720, its bullet on its words; the room's current card stays inside the picture's column;
+  * (deck_dark_shapes.html) on a dark slide the true-false claim and the name-parts names pass contrast, beside the picture
+    and above or under a band - and on the light ground too.
 Skips, and says so, when no Chrome or Edge is installed.
 """
 from __future__ import annotations
@@ -38,6 +43,8 @@ CALL = FIX.parent / "deck_call_dark.html"
 LOGO = FIX.parent / "deck_logo_overhang.html"
 FLOOR = FIX.parent / "deck_svg_floor.html"
 TAP = FIX.parent / "deck_tap_hitbox.html"
+LINES = FIX.parent / "deck_tap_lines.html"
+DARK = FIX.parent / "deck_dark_shapes.html"
 PASS, FAIL = [], []
 
 
@@ -46,9 +53,9 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)[:600]) if detail and not ok else ""))
 
 
-def run(exe, prof, query="", fix=FIX):
+def run(exe, prof, query="", fix=FIX, size="1280,800"):
     p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
-                        "--window-size=1280,800", "--virtual-time-budget=4000", "--dump-dom", fix.as_uri() + query],
+                        "--window-size=" + size, "--virtual-time-budget=4000", "--dump-dom", fix.as_uri() + query],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
     m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
     return json.loads(unescape(m.group(1))) if m and m.group(1).strip() else None
@@ -94,6 +101,18 @@ def main():
         tp = run(exe, prof, "", TAP)
         check("a 26 px label with a 44 px hit box passes; the same label without one, or whose box takes no tap, fails",
               bool(tp) and tp.get("tap") == 2 and tp.get("sels") == ["26x90", "26x90"], tp)
+        # the lines a 3D figure's steps make taps were 23-30 px high: kit3d.css gives them no size (M01 s04 s05 s25)
+        for size in ("1280,800", "1024,768", "1280,720"):
+            ln = run(exe, prof, "", LINES, size)
+            check("%s: every tap line of the templates is 44 px, with no kit.css - a lead line, a bullet, a step in a card"
+                  % size.replace(",", "x"), bool(ln) and ln.get("tap") == 0, ln)
+            check("%s: ... each bullet on its line's words, and the room's current card inside its column (M01 s06, s20)"
+                  % size.replace(",", "x"), bool(ln) and max(ln.get("bulletOff") or [99]) <= 2 and ln.get("cardOver", 99) <= 0, ln)
+        # the true-false claim and the name-parts names were navy on the dark slide's navy ground
+        for q, ground in (("", "dark"), ("?light", "light")):
+            dk = run(exe, prof, q, DARK)
+            check("on the %s ground the true-false claim and the name-parts names read (beside a picture, with a band)" % ground,
+                  bool(dk) and dk.get("low") == 0, dk)
     finally:
         shutil.rmtree(prof, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

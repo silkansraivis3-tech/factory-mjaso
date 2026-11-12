@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fixture - the lines a figure's steps make taps, with the shipped templates and no kit.css (audit_deck.js tap)</title>
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_shell.css">
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_compose.css">
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_layouts.css">
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_upgrade.css">
+<style>
+  html,body{margin:0;height:100%}
+  .slide{display:none;position:absolute;inset:0}
+  .slide.active{display:flex;flex-direction:column}
+  .fill{background:#123}
+</style></head>
+<body>
+<!-- A 3D deck loads kit3d.css, not kit.css: its tap lines (kit3d.js adds .kit-tap and role=button to each line a step lights)
+     were 23-30 px high (M01 s04 s05 s12 s21 s22 s25). t1: a lead line, one-line and two-line bullets beside a picture.
+     t2: a worked example - a step in a card, the room's question card in the picture's column, the current card. -->
+<main id="stage">
+  <section class="slide" id="t1" data-template="explain-figure.v1" data-variant="figure-right" style="--lt-text:42">
+    <h2>Ethylene carriers</h2>
+    <div class="slide-body two-col fig-wide dom-fig">
+      <div class="fill fig" style="--ar:1.132"></div>
+      <div class="copy">
+        <p class="lead kit-tap cur" data-i="1" role="button" tabindex="0">Type C tanks, cooled.</p>
+        <ul class="support">
+          <li class="kit-tap" data-i="2" role="button" tabindex="0">Typical size: 2,000 to 12,000 m3.</li>
+          <li class="kit-tap" data-i="3" role="button" tabindex="0">Type C tanks of nickel steel or stainless steel, thicker insulation and a cascade reliquefaction plant.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  <section class="slide" id="t2" data-template="worked-example.v1" data-variant="figure">
+    <h2>Find the gas-dangerous zones</h2>
+    <div class="slide-body lt-split" style="--cols:56fr 44fr"><div class="copy"><ol class="lt-work">
+        <li data-k="0" class="cur"><span class="n">1</span><div class="kit-tap" data-i="1" role="button" tabindex="0"><b>A 3D deck is on your tablet.</b></div></li>
+      </ol></div>
+      <div class="lt-scol"><div class="lt-in fill fig"></div><ol class="lt-work lt-you">
+        <li data-k="1" class="you cur"><span class="n">?</span><div><b class="ask">Why no insulation, yet a small ship? What does cooling gain?</b></div></li>
+      </ol></div></div>
+  </section>
+</main>
+<pre id="out"></pre>
+<script src="../scripts/audit_deck.js"></script>
+<script>
+  AuditDeck.all().then(function (res) {
+    var sels = [];
+    (res.failingSlides || []).forEach(function (s) { (s.tap || []).forEach(function (f) { sels.push(s.id + " " + f.sel + " " + f.w + "x" + f.h); }); });
+    /* the room's card stays inside the picture's column; each bullet sits on its line's first line of words */
+    var slides = document.querySelectorAll(".slide");
+    slides[0].classList.remove("active"); slides[1].classList.add("active");
+    var card = document.querySelector("#t2 .lt-you > li").getBoundingClientRect(),
+        col = document.querySelector("#t2 .lt-scol").getBoundingClientRect();
+    slides[1].classList.remove("active"); slides[0].classList.add("active");
+    var bullets = [].map.call(document.querySelectorAll("#t1 .support li"), function (li) {
+      var ps = getComputedStyle(li, "::before"), moved = (ps.translate || "").split(" ")[1],
+          b = parseFloat(ps.top) + parseFloat(ps.height) / 2 + (parseFloat(moved) || 0),
+          r = document.createRange(); r.selectNodeContents(li);
+      var first = r.getClientRects()[0], top = li.getBoundingClientRect().top;
+      return Math.round(Math.abs(b - (first.top + first.height / 2 - top)));
+    });
+    document.getElementById("out").textContent = JSON.stringify({tap: (res.totals || {}).tap, sels: sels,
+      cardOver: Math.round(card.right - col.right), bulletOff: bullets});
+  });
+</script>
+</body></html>

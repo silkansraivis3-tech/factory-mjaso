@@ -570,6 +570,26 @@ window.__rv = (function(){
       return moved; },
     blind: function(){ return document.body.hasAttribute('data-blind'); },
     done: function(){ return window.__rvDone; },
+    /* every placed label inside its box and every card's words inside the card, as the trainee sees them (M01 check m03,
+       m04: two-line labels spilled out of their pills) */
+    spill: function(){
+      var sec = document.querySelector('.scr.on[data-script]'); if (!sec) return [];
+      var out = [];
+      $$('.chip, .opt, .lbox', sec).forEach(function(el){
+        if (!el.offsetParent || !el.textContent.trim()) return;
+        var r = el.getBoundingClientRect(), rg = document.createRange(); rg.selectNodeContents(el);
+        var t = rg.getBoundingClientRect();
+        if (r.width < 4 || r.height < 4 || !t.width) return;
+        var by = Math.max(r.top - t.top, t.bottom - r.bottom, r.left - t.left, t.right - r.right);
+        if (by > 1.5) out.push('the words "' + txt(el).slice(0, 40) + '" run ' + Math.round(by) + ' px out of their ' + (el.classList.contains('lbox') ? 'label box' : 'card'));
+      });
+      $$('.lbox .chip', sec).forEach(function(c){
+        var r = c.getBoundingClientRect(), b = c.closest('.lbox').getBoundingClientRect();
+        var by = Math.max(b.top - r.top, r.bottom - b.bottom, b.left - r.left, r.right - b.right);
+        if (by > 1.5) out.push('the label "' + txt(c).slice(0, 40) + '" runs ' + Math.round(by) + ' px out of its box on the drawing');
+      });
+      return out;
+    },
     /* 2.50.1 (M01 benchmark: three re-reviews were spent on these) - every leader line of the question on screen, as the
        engine placed it: it must end ON something drawn of the part it names, and cross no words but its own box's */
     leaders: function(){
@@ -692,6 +712,13 @@ async function tasks(tiles, failures) {
           const r = await evaluate(`__rv.answer(${good}${WALK && blind ? ', true' : ''})`);   // a blind page: next() records it
           await mark();
           await pause(220); await evaluate(SETTLE); await pause(80);
+          if (mine && !r.error) {         // the answer on the drawing, at every size a tablet in the room may have
+            for (const [w, h] of [[W, H], [1024, 768], [1280, 720]]) {
+              if (w !== W || h !== H) await size(w, h);
+              for (const x of await evaluate('__rv.spill()')) failures.push(`${name} ${q}, answered ${good ? 'right' : 'wrong'} at ${w}x${h}: ${x}`);
+            }
+            await size(W, H);
+          }
           if (!good) await evaluate('__rv.overlay(true)');      // the tap areas and drop zones, outlined on the wrong-answer screen
           if (r.error) {
             failures.push(`${name} ${q}: answered ${good ? 'right' : 'wrong'} by the script - ${r.error}`);

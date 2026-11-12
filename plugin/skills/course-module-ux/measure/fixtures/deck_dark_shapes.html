@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fixture - the true-false claim and the names of name-parts on the dark ground (audit_deck.js low contrast)</title>
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_shell.css">
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_compose.css">
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_layouts.css">
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_upgrade.css">
+<style>
+  html,body{margin:0;height:100%}
+  .slide{display:none;position:absolute;inset:0}
+  .slide.active{display:flex;flex-direction:column}
+  .pic{width:100%;height:100%;background:#2a3d55}
+</style></head>
+<body>
+<!-- The true-false claim and the name-parts names were navy on the navy ground of a dark slide: unreadable, in the
+     picture-beside and the band variants alike. d1, d2: true-false beside a picture and above a band; d3, d4: name-parts
+     beside its picture and above a band, its names opened (lit, current). ?light: the same slides on the light ground. -->
+<main id="stage">
+  <section class="slide dark" id="d1" data-template="true-false.v1" data-variant="picture">
+    <h2>True or false?</h2>
+    <div class="slide-body lt-split" style="--cols:48fr 52fr"><div class="copy lt-tf">
+      <p class="lt-claim lt-in" style="--i:1">A membrane tank carries its own loads.</p>
+      <div class="lt-vote lt-in" style="--i:2"><button type="button" data-v="t">True</button><button type="button" data-v="f" class="ok">False</button></div>
+      </div><div class="lt-scol"><figure class="lt-pic"><div class="pic"></div></figure></div></div>
+  </section>
+  <section class="slide dark" id="d2" data-template="true-false.v1" data-variant="figure-top">
+    <h2>True or false?</h2>
+    <div class="slide-body lt-split fig-top" style="--cols:1fr"><figure class="lt-pic"><div class="pic" style="height:200px"></div></figure>
+      <div class="copy lt-tf"><p class="lt-claim lt-in" style="--i:1">A Type C tank needs a secondary barrier.</p>
+      <div class="lt-vote lt-in" style="--i:2"><button type="button" data-v="t">True</button><button type="button" data-v="f" class="ok">False</button></div></div></div>
+  </section>
+  <section class="slide dark" id="d3" data-template="name-parts.v1" data-variant="picture">
+    <h2>Name the parts</h2>
+    <div class="slide-body lt-split" style="--cols:38fr 62fr"><div class="copy"><p class="lt-ask lt-in" style="--i:0">Name each numbered part.</p>
+      <ol class="lt-name lt-in" style="--i:1">
+        <li data-k="1" class="lit"><span class="n">1</span><span class="blank"></span><b data-i="1">Dome</b></li>
+        <li data-k="2" class="cur"><span class="n">2</span><span class="blank"></span><b data-i="2">Insulation</b></li>
+        <li data-k="3"><span class="n">3</span><span class="blank"></span><b data-i="3">Drip pan</b></li>
+      </ol></div>
+      <figure class="lt-pic lt-in" style="--i:1"><div class="pic"></div></figure></div>
+  </section>
+  <section class="slide dark" id="d4" data-template="name-parts.v1" data-variant="figure-bottom">
+    <h2>Name the parts</h2>
+    <div class="slide-body lt-split fig-bottom" style="--cols:1fr"><div class="copy"><p class="lt-ask lt-in" style="--i:0">Name each numbered part.</p>
+      <ol class="lt-name lt-in" style="--i:1">
+        <li data-k="1" class="lit"><span class="n">1</span><span class="blank"></span><b data-i="1">Skirt</b></li>
+        <li data-k="2" class="cur"><span class="n">2</span><span class="blank"></span><b data-i="2">Sphere</b></li>
+      </ol></div>
+      <figure class="lt-pic lt-in" style="--i:1"><div class="pic" style="height:200px"></div></figure></div>
+  </section>
+</main>
+<pre id="out"></pre>
+<script src="../scripts/audit_deck.js"></script>
+<script>
+  if (location.search.indexOf("light") >= 0) {
+    [].forEach.call(document.querySelectorAll(".slide"), function (s) { s.classList.remove("dark"); });
+  }
+  AuditDeck.all().then(function (res) {
+    var low = [];
+    (res.failingSlides || []).forEach(function (s) { (s.low || []).forEach(function (f) { low.push(s.id + " " + (f.sel || "") + " " + (f.txt || "")); }); });
+    document.getElementById("out").textContent = JSON.stringify({low: (res.totals || {}).low, which: low});
+  });
+</script>
+</body></html>

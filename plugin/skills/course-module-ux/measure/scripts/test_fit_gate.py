@@ -8,6 +8,7 @@ Pinned, on fixtures/deck_fit.html:
     reveal that every audit passed because none pressed Next;
   * a slide that fits at every step is not named (f1);
   * a wide picture cropped into a square box fails; the same picture as a backdrop (data-fit="cover") does not (f3);
+  * a framed card whose border the box that holds it cuts fails, though every word shows (f4 - M01 s06's question card);
   * no deck -> exit 2; the exit is 1 when something does not fit.
 Skips, and says so, when Playwright or Chrome/Edge is not installed.
 """
@@ -80,6 +81,10 @@ def main():
     f3 = [x for x in lines if x.strip().startswith("f3 ")]
     check("a wide picture cropped into a square box fails (f3)", any("picture" in x and "wide.png shows" in x for x in f3), out)
     check("... the same picture as a backdrop (data-fit=\"cover\") is allowed", len([x for x in f3 if "wide.png shows" in x]) == 1, out)
+    f4 = [x for x in lines if x.strip().startswith("f4 ")]
+    check("a card whose frame its column cuts fails, though every word shows (f4)",
+          any("cut" in x and "(its frame)" in x and "Why no insulation" in x for x in f4), out)
+    check("... the card that stays inside its column is not named", not any("cooling gain" in x for x in f4), out)
     check("the deck is not changed", DECK.read_bytes() == before)
     print("-- a drawing that never changes, and lines walked twice (2.115.0)")
     check("dead_figures: a figure with steps that drew the same at every stop is named",

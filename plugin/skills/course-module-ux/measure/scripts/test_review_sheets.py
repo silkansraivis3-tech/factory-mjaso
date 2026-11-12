@@ -10,7 +10,9 @@ figure-kit drawing; task pages on photographs and on the kit drawing, every mech
     byte for byte, and the same labels;
   * every question is graded the same (the same failures, none here) - item 4 of the review is the same check;
   * a page timer the fixed wait let run still runs before the picture (a word put on the slide 120 ms after a click);
-  * it is faster.
+  * it is faster;
+  * words out of their card or label box, once answered, are a failure at 1280 x 800, 1024 x 768 and 1280 x 720 (M01
+    check m03, m04: two-line labels spilled out of their pills).
 Skips, and says so, when no Chrome or Edge or no node is installed.
 """
 from __future__ import annotations
@@ -214,6 +216,20 @@ def blind_part(md, tmp):
     check("... and an engine that reports every answer right is caught on them", code == 1 and bad, (code, (sheets.get("failures") or [])[:3]))
 
 
+def spill_part(md, tmp):
+    """a label or a card whose words run out of it, once the question is answered (M01 check m03, m04)"""
+    print("\n-- words out of their card or label box")
+    sd = os.path.join(tmp, "spill_module")
+    shutil.copytree(md, sd)
+    css = os.path.join(sd, "assets", "gb_answer.css")
+    src = io.open(css, encoding="utf-8").read()
+    io.open(css, "w", encoding="utf-8").write(src + "\n.chip,.opt{height:22px!important;min-height:0!important;max-height:22px!important}\n")
+    code, out, man, sheets, took = review(sd, os.path.join(tmp, "spill_out"))
+    bad = [x for x in sheets.get("failures") or [] if "px out of their" in x]
+    check("a card too low for its words is a failure, at each size it is answered at", code == 1 and bad
+          and all(any(s in x for x in bad) for s in ("1280x800", "1024x768", "1280x720")), (code, (sheets.get("failures") or [])[:4]))
+
+
 def main():
     exe = browser()
     node = shutil.which("node")
@@ -250,6 +266,7 @@ def main():
         shots_part(md, tmp)
         k3_part(md, tmp)
         blind_part(md, tmp)
+        spill_part(md, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
