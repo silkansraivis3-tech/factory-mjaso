@@ -8,7 +8,8 @@ figure-kit drawing; task pages on photographs and on the kit drawing, every mech
   * the review with the new waits photographs the same screens as with the fixed waits (--fixed-waits, the waits before
     2.61.0): every picture the same by the review's own "changed" test (its fingerprint, 16 x 16 px cells), most of them
     byte for byte, and the same labels;
-  * every question is graded the same (the same failures, none here) - item 4 of the review is the same check;
+  * every question is graded the same (the same failures, none here) - item 4 of the review is the same check; among them a
+    label the drawing has twice, each of its cards put on a place of its own;
   * a page timer the fixed wait let run still runs before the picture (a word put on the slide 120 ms after a click);
   * it is faster;
   * words out of their card or label box, once answered, are a failure at 1280 x 800, 1024 x 768 and 1280 x 720 (M01
@@ -62,13 +63,20 @@ def worst(a, b):
     return 999 if len(x) != len(y) else max([abs(i - j) for i, j in zip(x, y)] or [0])
 
 
+# a label the drawing has twice (M01 q11, two "Insulation" layers): the review put both cards on the first of its places, the
+# second pushed the first back to the bank, and Check never came on - answered right and answered wrong
+REPEAT = {"id": "m03", "kind": "module-check", "set": "MC", "mechanic": "label_diagram", "question": "Drag each label to its place.",
+          "visual": "the pump room", "answer": "Relief valve\nPump\nRelief valve", "feedback": "Two relief valves and the pump."}
+
+
 def module(tmp):
     """the compile tests' slides and task pages in one module - s03 the stepping kit drawing (its pump runs: an endless
     animation), s05 a slide whose words a timer changes 120 ms after it is shown"""
     screens = tcm.SCREENS[:4] + [{"id": "s05", "kind": "slide", "title": "Later words", "layout": "split", "visual_kind": "comparison",
                                   "text": "The words change.\nA timer changes them.", "visual": "Thermometer scale.", "minutes": 4}] \
-        + tcm.FIGURE_TASKS
+        + tcm.FIGURE_TASKS + [REPEAT]
     build = json.loads(json.dumps(tcm.FIGURE_BUILD))
+    build["screens"]["m03"] = {"figure": "assets/img/pump.png", "areas": {"Relief valve": [62.5, 31, 12, 18], "Pump": [20, 40, 30, 35]}}
     build["screens"].update({"s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/fig/scale.svg"},
                              "s03": {"figure": "plant.kit.json"}, "s05": {"figure": "assets/fig/scale.svg"},
                              "s04": {"figure": "hull.svg", "dark": True, "declined_3d": "the fixture's hull section stays a flat drawing"}})

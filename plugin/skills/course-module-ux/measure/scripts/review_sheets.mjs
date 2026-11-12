@@ -343,12 +343,15 @@ window.__rv = (function(){
     });
     var chips = $$('.chip', el), zones = $$('.zone', el);
     if (chips.length && zones.length) {
-      var to = chips.map(function(c){ return zones.filter(function(z){ return key(id, txt(c), zv(z)) === place(c); })[0] || null; });
+      /* a label the drawing has twice: each of its cards to its own place of that name, never both to the first */
+      var to = [];
+      chips.forEach(function(c){ var m = zones.filter(function(z){ return key(id, txt(c), zv(z)) === place(c); });
+        to.push(m.filter(function(z){ return to.indexOf(z) < 0; })[0] || m[0] || null); });
       if (!good) {                       /* wrong: the first two cards that belong in different places swap places */
         var a = -1, b = -1;
-        to.forEach(function(z, i){ if (z && a < 0) a = i; else if (z && b < 0 && z !== to[a]) b = i; });
+        to.forEach(function(z, i){ if (z && a < 0) a = i; else if (z && b < 0 && z !== to[a] && zv(z) !== zv(to[a])) b = i; });
         if (a >= 0 && b >= 0) { var t = to[a]; to[a] = to[b]; to[b] = t; }
-        else if (a >= 0) { to[a] = zones.filter(function(z){ return z !== to[a]; })[0] || to[a]; }
+        else if (a >= 0) { to[a] = zones.filter(function(z){ return zv(z) !== zv(to[a]); })[0] || to[a]; }
       }
       chips.forEach(function(c, ci){ if (to[ci]) { press(c); to[ci].click(); } });
       did = true;
