@@ -273,6 +273,8 @@
     "c_cut_quote": "\"{text}\" is proved by a source sentence that ends mid-clause (\"...{quote}\") - the knowledge base may have cut the sentence off: read it in the source document and make the slide's line a whole sentence.",
     "t_over_budget": "{w} words beside {pic} - the column beside it holds {max} on a 1024 x 768 tablet (layout-templates.json \"budgets\"), so the build would page them into number tabs, which trainees find confusing. The template is the rule: split the slide or give it another slide type, never squeeze it.",
     "t_fix_over_budget": "split it into two slides, each with its own picture (another photograph, view or 3D view), or give it short \"points\", or move detail the screen does not need to the instructor notes or the handout - never cut what a later task asks. Kept in parts on purpose: \"in_parts\": \"<why>\" on the slide (at most {most} in a module, never two in a row)",
+    "t_table_over": "a table of {rows} rows and {w} words - no layout holds it on a 1024 x 768 tablet (layout-templates.json \"budgets\" table_...: at most {max_rows} rows and {max_w} words, and fewer across the slide over or under a picture band), so it would be cut off or scroll. The table is the rule: split it, never shrink the text.",
+    "t_fix_table_over": "split the table in two, each on its own slide with its own picture, or put the rows that belong together on one slide and the rest on the next - never make the text smaller or cut a row a later task asks",
     "t_pic_3d": "its 3D model",
     "t_pic_other": "its picture",
     "t_parts_many": "{n} slides are kept in parts with number tabs ({sids}) - at most {most} in a module. Split the others into two slides each.",

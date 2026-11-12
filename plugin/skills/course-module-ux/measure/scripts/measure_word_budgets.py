@@ -54,7 +54,15 @@ LAYOUTS = {   # layout -> (the picture, the build-sheet entry)
     "under-band-drawing": ("wide", {"composition": "two-col", "variant": "figure-top"}),
     "over-band-drawing": ("wide", {"composition": "two-col", "variant": "figure-bottom"}),
     "parts-under-band-drawing": ("wide", {"composition": "two-col", "template": "content-in-parts", "variant": "figure-top"}),
+    "table-beside-drawing": ("kit", {"composition": "two-col", "template": "reference-table", "variant": "with-figure"}),
+    "table-beside-photo": ("photo", {"composition": "wide-left", "template": "reference-table", "variant": "figure-left"}),
+    "table-under-top-tiles": ("tiles", {"composition": "two-col", "template": "reference-table", "variant": "figure-top"}),
+    "table-over-bottom-tiles": ("tiles", {"composition": "two-col", "template": "reference-table", "variant": "figure-bottom"}),
+    "table-under-band-drawing": ("wide", {"composition": "two-col", "template": "reference-table", "variant": "figure-top"}),
+    "table-over-band-drawing": ("wide", {"composition": "two-col", "template": "reference-table", "variant": "figure-bottom"}),
+    "table-alone": ("none", {"template": "reference-table", "variant": "text-only"}),
 }
+TABLE_ROWS = (4, 5, 6, 7, 8)       # a table layout is measured by its rows and the words of a row: --words are the row's
 SIZES = ("1024x768", "1280x800", "1280x720")
 
 
@@ -80,7 +88,17 @@ def text_of(pool, n, k):
     return "\n".join([out[0]] + ["• " + x for x in out[1:]])
 
 
-def measure(tcm, pool, lay, n0):
+def table_of(pool, rows, per, k):
+    """rows lines "a b | c d e ..." of per words each (the first cell two words), cut from the course's own lines"""
+    out = []
+    for r in range(rows):
+        w = pool[(k + 5 * r) % len(pool)].split()
+        w = (w * 3)[:per]
+        out.append("%s | %s" % (" ".join(w[:2]), " ".join(w[2:]).rstrip(",;:")))
+    return "\n".join(out)
+
+
+def measure(tcm, pool, lay, n0, rows=0):
     pic, entry = LAYOUTS[lay]
     tmp = tempfile.mkdtemp(prefix="budget_")
     try:
@@ -88,10 +106,12 @@ def measure(tcm, pool, lay, n0):
         for j in range(4):
             sid = "s%02d" % (j + 1)
             screens.append({"id": sid, "kind": "slide", "title": "The fuel system of an IGF ship", "layout": "split",
-                            "visual_kind": "photo" if pic in ("photo", "portrait") else "comparison", "text": text_of(pool, n0, 7 * j + 3 * n0),
+                            "visual_kind": "photo" if pic in ("photo", "portrait") else "none" if pic == "none" else "comparison", "text": table_of(pool, rows, n0, 7 * j + 3 * n0) if rows else text_of(pool, n0, 7 * j + 3 * n0),
                             "visual": "A picture.", "notes": "- Say it.", "minutes": 2})
             e = dict(entry, figure=("assets/img/p%02d.jpg" % j) if pic in ("photo", "portrait") else "w.kit.json" if pic == "wide" else "k.kit.json",
                      declined_3d="flat")
+            if pic == "none":
+                e = dict(entry, figure="", visual_kind="none")
             if pic == "tiles":           # two wide photographs: a row on top, the words under them
                 e = dict(entry, figure="", tiles=["assets/img/p%02d.jpg" % j, "assets/img/i%02d.jpg" % j], declined_3d="flat")
             if e.get("template") == "content-in-parts" and pic in ("tiles", "wide"):   # in parts: two of about n words each
@@ -137,7 +157,7 @@ def measure(tcm, pool, lay, n0):
                 row.setdefault(sid, {"built": built.get(sid)})[size] = max(px) if px else 0
             if "NOT MEASURED" in p.stdout:
                 row["error"] = "not measured at %s" % size
-        return lay, n0, row
+        return lay, ("%dx%d" % (rows, n0)) if rows else n0, row
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -149,19 +169,30 @@ def main(argv=None):
     ap.add_argument("--out", required=True)
     ap.add_argument("--layouts", default="")
     ap.add_argument("--words", default="40,50,55,60,65,70,75,80,85,90,95,100,110,120,130")
+    ap.add_argument("--rows", default=",".join(str(r) for r in TABLE_ROWS), help="the table layouts' rows")
+    ap.add_argument("--row-words", default="6,9,12,16", help="the table layouts' words in a row")
     o = ap.parse_args(argv)
     import test_compile_module as tcm  # noqa: E402 - the same fixture course the compiler's own tests build
     pool = lines_of(o.course)
     if not pool:
         print("Stopped - no approved script lines in %s\\working_claude\\script" % o.course)
         return 2
-    jobs = [(lay, int(n)) for lay in (o.layouts.split(",") if o.layouts else LAYOUTS) for n in o.words.split(",")]
+    jobs = []
+    for lay in (o.layouts.split(",") if o.layouts else LAYOUTS):
+        if lay.startswith("table-"):                  # a table: rows by the words of a row (--rows, --row-words)
+            jobs += [(lay, int(n), int(r)) for r in o.rows.split(",") for n in o.row_words.split(",")]
+        else:
+            jobs += [(lay, int(n)) for n in o.words.split(",")]
     res = {}
     with cf.ThreadPoolExecutor(2) as ex:
         for lay, n, row in ex.map(lambda a: measure(tcm, pool, *a), jobs):
             res.setdefault(lay, {})[str(n)] = row
     json.dump(res, io.open(o.out, "w", encoding="utf-8"), indent=1)
     for lay, rows in res.items():
+        if lay.startswith("table-"):
+            fits = sorted(k for k, r in rows.items() if all(v.get(z, 1) == 0 for q, v in r.items() if q != "error" for z in SIZES))
+            print("%-26s fits all four: %s; spills: %s" % (lay, " ".join(fits) or "none", " ".join(sorted(set(rows) - set(fits))) or "-"))
+            continue
         fit = [int(n) for n, r in rows.items() if all(v.get(z, 1) == 0 for k, v in r.items() if k != "error" for z in SIZES)]
         bad = sorted(int(n) for n in rows if int(n) not in fit)
         print("%-22s fits all four up to %s words; first spill at %s" % (lay, max([x for x in fit if not bad or x < bad[0]] or [0]),

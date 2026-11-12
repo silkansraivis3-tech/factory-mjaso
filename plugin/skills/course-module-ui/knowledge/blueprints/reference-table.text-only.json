@@ -1,0 +1,16 @@
+{
+ "id": "reference-table.text-only",
+ "template": "reference-table",
+ "variant": "text-only",
+ "shape": "words",
+ "for": "a table with no picture: the whole slide",
+ "grid": [
+  "x"
+ ],
+ "fill": {
+  "x": [
+   "Info",
+   "lines 'cell | cell', up to table_alone rows and words (layout-templates.json budgets)"
+  ]
+ }
+}

@@ -1169,6 +1169,28 @@ def over_budget(s):
     return w, most
 
 
+TABLE_SHAPES = ("table_beside", "table_under_top_row", "table_over_photo_row", "table_under_band", "table_over_band")
+
+
+def table_over(s):
+    """(its rows, its words, the rows and the words the widest shape holds) of a table slide - lines with cells separated by
+    " | " - that no shape fits (layout-templates.json budgets "table_..."): beside its picture, under or over a band across the
+    slide, or alone when it has no picture. The compiler plans only a shape the table fits, so a table over all of them would
+    spill whatever shape it takes - or None"""
+    if s.get("kind") != "slide" or s.get("recap"):
+        return None
+    lines = lines_of(s.get("text"))
+    rows = [x for x in lines if " | " in x]
+    if len(rows) < 2 or len({len(x.split(" | ")) for x in rows}) != 1:
+        return None
+    B = LAYOUT_RULES["budgets"]
+    shapes = [B[k] for k in (TABLE_SHAPES if picture_of(s)["kind"] not in ("", "none") else ("table_alone",))]
+    n, w = len(rows), wc(" ".join(lines))
+    if any(n <= b["rows"] and w <= b["words"] for b in shapes):
+        return None
+    return n, w, max(b["rows"] for b in shapes), max(b["words"] for b in shapes)
+
+
 def in_parts(s):
     """the writer keeps this slide's words in parts on purpose, and says why: "in_parts": "<why>" """
     return bool(str(s.get("in_parts") or "").strip())
@@ -1199,6 +1221,10 @@ def theory_check(script):
             th_words += w_slide + w_notes
             th_min += minutes(s)
         over = over_budget(s)
+        tover = table_over(s)
+        if tover:                             # a table has no template that pages it: the slide is split, the text never made smaller
+            add(s["id"], "text", FAIL, "t_table_over", rows=tover[0], w=tover[1], max_rows=tover[2], max_w=tover[3])
+            found[-1]["fix"] = T(script, "t_fix_table_over")
         if s.get("recap"):
             pass                              # L51: a recap is short on purpose - recap_findings checks its points
         elif w_floor < R["slide"]["min_words"]:
@@ -1726,7 +1752,7 @@ def build_findings(course, script):
 
 def review_build_findings(course, script, th_found):
     """build_findings for the review page: a slide the theory check already asks to split (t_over_budget) is said once"""
-    split = {f["screen"] for f in th_found if f["rule"] == "t_over_budget"}
+    split = {f["screen"] for f in th_found if f["rule"] in ("t_over_budget", "t_table_over")}
     return [f for f in build_findings(course, script) if not (f["rule"] == "v_paged_slide" and f["screen"] in split)]
 
 

@@ -231,6 +231,20 @@ def band_budget(variant, family):
         (BUDGETS["over_band"], "over a picture band")
 
 
+def table_budget(variant, family):
+    """{"rows", "words", "what"} a table (reference-table) holds in this variant - measured, budgets "table_..." """
+    if variant == "text-only":
+        key, what = "table_alone", "alone"
+    elif variant in ("figure-top", "figure-bottom"):
+        top = variant == "figure-top"
+        photos = family in ("photo", "tiles")
+        key = ("table_under_top_row" if top else "table_over_photo_row") if photos else ("table_under_band" if top else "table_over_band")
+        what = ("under" if top else "over") + (" the photographs" if photos else " a picture band")
+    else:
+        key, what = "table_beside", "beside a picture"
+    return dict(BUDGETS[key], what=what)
+
+
 def aspect_score(rng, aspect, hard):
     """how well a picture of this shape sits in a box made for rng [lo, hi]: 1 inside, less the further out (None: it
     cannot - a band is never given a picture that is not wide); an unknown shape (a picture still to be drawn) 0.7"""
@@ -250,12 +264,13 @@ def jitter(seed, *keys):
     return int(h[:12], 16) / float(16 ** 12)
 
 
-def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None, fixed=None, seed="", sid=""):
+def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None, fixed=None, seed="", sid="", rows=0):
     """([{"bp", "shape", "cost"}], {shape: why not}) - the blueprints a teaching slide built as own_bp fits, cheapest first:
     every blueprint of its group (blueprints/*.json "fits") that takes its picture (family: photo, tiles, drawing, 3d) and
     its words (part_words: its largest part, when they are in parts), whose box suits the picture's shape (aspect, None
     while it is not drawn yet) and that shows its names. The cost: 0 a perfect fit, up to 10, and a seeded fraction that
-    settles near-equal fits. fixed: why the slide keeps its own blueprint."""
+    settles near-equal fits. fixed: why the slide keeps its own blueprint. rows: the rows of a table slide - a table's budget
+    (budgets "table_...") is rows and words, and it must fit both"""
     own = LIB.get(own_bp) or {}
     own_shape = own.get("shape") or "beside"
     group = (own.get("fits") or {}).get("group")
@@ -279,7 +294,9 @@ def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None,
             no = "on the dark ground"
         elif not lo <= words <= hi:
             no = "for %d-%d words" % (lo, hi)
-        elif most is not None and w > most:
+        elif isinstance(most, dict) and (w > most["words"] or rows > most["rows"]):
+            no, stage = "%d rows and %d words, it holds %d and %d" % (rows, w, most["rows"], most["words"]), 2
+        elif not isinstance(most, dict) and most is not None and w > most:
             no, stage = "%d words, it holds %d" % (w, most), 2
         elif f.get("names") and names > f["names"]:
             no, stage = "%d names on the picture, it shows %d" % (names, f["names"]), 3
