@@ -48,6 +48,21 @@ window.FitProbe = function () {
     var dy = Math.max(0, r.bottom - k.B) + Math.max(0, k.T - r.top), dx = Math.max(0, r.right - k.R) + Math.max(0, k.L - r.left);
     if (dy > 8 || dx > 8) out.cut.push({ el: name(el), words: words(el), px: Math.round(Math.max(dy, dx)), by: k.by });
   }
+  // 1b. a card's frame cut by the box that holds it: its words may all show and its right or bottom border still be cut
+  //     (a question card nudged past its column's edge)
+  for (i = 0; i < all.length; i++) {
+    el = all[i];
+    if (el.closest("svg") || el.closest(".mediabar") || el.closest("[data-fit-skip]") || shown(el) < 0.05) continue;
+    var bs = getComputedStyle(el);
+    if (!["Top", "Right", "Bottom", "Left"].some(function (k) {
+      return parseFloat(bs["border" + k + "Width"]) > 0 && bs["border" + k + "Style"] !== "none" &&
+             !/rgba\([^)]*,\s*0\)|transparent/.test(bs["border" + k + "Color"]);
+    })) continue;
+    var f = seen(el), fr = f.r;
+    if (fr.width < 2 || fr.height < 2 || f.R <= f.L || f.B <= f.T) continue;
+    var cutBy = Math.max(fr.right - f.R, fr.bottom - f.B, f.L - fr.left, f.T - fr.top);
+    if (cutBy > 2) out.cut.push({ el: name(el) + " (its frame)", words: words(el), px: Math.round(cutBy), by: f.by });
+  }
   // 2. a card, a line, a picture that spills out of the slide
   var sr = s.getBoundingClientRect(), body = s.querySelector(".slide-body") || s;
   var parts = body.querySelectorAll(".copy, .fill, figure, li, .lt-in, .lt-pic, .lt-opt, img");

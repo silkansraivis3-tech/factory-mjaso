@@ -190,6 +190,12 @@ def main():
               bool(photo("bad-photo")) and photo("bad-photo")[0]["part"] == "pic-on", ph)
         check("a photo in its own column beside the drawing, and a marker drawn on a photo, are silent",
               not photo("good-beside") and not photo("good-marker"), ph)
+        tt = (page_out(exe, FIX / "drawing_task_text.html", prof) or {}).get("findings", [])
+        small = lambda svg: [x for x in tt if x["check"] == "small text" and x["svg"] == svg]
+        check("a task page's drawing shown at 60 % of its units: its 18-unit number, 10.8 px, is small text - with the units "
+              "it needs (M01 check m03, m04)", len(small("small")) == 1 and 'font-size="21"' in small("small")[0]["detail"], tt)
+        check("... the same drawing at its own size, its words made 21 units, and an svg that is not a task drawing are silent",
+              not small("whole") and not small("big") and not small("plain"), tt)
         sc = (page_out(exe, FIX / "deck_scroll.html", prof) or {}).get("findings", [])
         scrolls = lambda sid: [x for x in sc if x["check"] == "scrolls" and "(%s)" % sid in x["where"]]
         check("a slide whose box scrolls 8 px is reported - no scrollbar on a slide (owner, 2026-10-16)",

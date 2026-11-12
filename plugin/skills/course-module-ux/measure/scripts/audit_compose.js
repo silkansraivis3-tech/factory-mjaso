@@ -278,7 +278,7 @@ var AuditCompose = (function (w, d) {
 
   function wait(ms) { return new Promise(function (r) { w.setTimeout(r, ms); }); }
 
-  /* only = [screen index from 0, ...]: the walk is the same, every screen in turn with Next, but just those screens are
+  /* only = [slide index from 0, ...]: the walk is the same, every slide in turn with Next, but just those slides are
      measured (run_audits.py 2.57.0 - the slides changed since their last clean audit) */
   function run(only) {
     var slides = d.querySelectorAll(CONFIG.slideSel);
@@ -292,27 +292,55 @@ var AuditCompose = (function (w, d) {
 
     var results = [];
     var chain = Promise.resolve();
-    if (start && !d.querySelector("." + CONFIG.activeClass)) {
+    /* the title screen still up (another probe may have shown a slide by its class alone): the deck has not started */
+    if (start && (!d.querySelector("." + CONFIG.activeClass) || start.offsetParent !== null)) {
       chain = chain.then(function () { start.click(); return wait(CONFIG.settleMs); });
     }
-    /* walk from wherever we are back to the first screen, then forward */
+    /* A screen is a slide, not a press of Next: a slide with stops takes several presses, and a walk that measured after
+       every press measured the first slides' stops, never the deck's end, and named a slide by the wrong number - and
+       caught a slide still coming in (M01 s25 "only 6 % of the screen", its words and picture not yet shown). So: back
+       to the first slide, then Next until each slide is the one shown, its entrance finished, then measured */
+    var prev = d.querySelector("#btnPrev");
+    var cap = slides.length * 30;
+    function at() {
+      var a = d.querySelector(CONFIG.slideSel + "." + CONFIG.activeClass);
+      return a ? Array.prototype.indexOf.call(slides, a) : -1;
+    }
+    function press(btn, more, n) {
+      if (n <= 0 || !btn || btn.disabled || !more()) { return Promise.resolve(); }
+      btn.click();
+      return wait(40).then(function () { return press(btn, more, n - 1); });
+    }
     chain = chain.then(function () {
-      var prev = d.querySelector("#btnPrev");
-      var back = Promise.resolve(), i;
-      for (i = 0; i < slides.length; i++) {
-        back = back.then(function () { if (prev) { prev.click(); } return wait(40); });
-      }
-      return back;
+      /* a slide shown by its class while the deck stands at its first: one Next makes the deck show its own slide */
+      if (at() > 0 && prev && prev.disabled) { next.click(); }
+      return press(prev, function () { return at() > 0; }, cap);
     }).then(function () { return wait(CONFIG.settleMs); });
 
-    for (var i = 0; i < slides.length; i++) {
-      /* jshint loopfunc:true */
+    slides = Array.prototype.slice.call(slides);
+    slides.forEach(function (slide, i) {
       chain = chain.then(function () {
-        results.push(only && only.indexOf(results.length) < 0 ? { verdict: "NOT MEASURED" } : one());
-        next.click();
-        return wait(CONFIG.settleMs);
+        if (at() < 0) { return null; }          /* a page with no shown slide: each Next is a screen, as it was */
+        return press(next, function () { return at() < i; }, cap).then(function () {
+          return only && only.indexOf(i) < 0 ? null : wait(CONFIG.settleMs);
+        });
+      }).then(function () {
+        if (only && only.indexOf(i) < 0) { results.push({ verdict: "NOT MEASURED" }); }
+        else if (at() >= 0 && at() !== i) {
+          results.push({ title: slide.getAttribute("data-title") || "", verdict: "NOT MEASURED",
+                         findings: ["the walk never showed this slide"] });
+        } else {
+          if (at() >= 0 && typeof slide.getAnimations === "function") {
+            slide.getAnimations({ subtree: true }).forEach(function (a) {
+              try { a.finish(); } catch (e) { /* an endless animation has no end */ }
+            });
+          }
+          results.push(one(at() >= 0 ? slide : null));
+        }
+        if (at() < 0) { next.click(); return wait(CONFIG.settleMs); }
+        return null;
       });
-    }
+    });
 
     return chain.then(function () {
       var weak = results.filter(function (r) { return r.verdict === "WEAK"; });

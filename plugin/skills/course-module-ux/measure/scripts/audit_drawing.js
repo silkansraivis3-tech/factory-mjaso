@@ -48,8 +48,10 @@
                      steel) vanishes there. The kit's own parts (colour set in kit.css) are exempt; data-low-contrast
                      marks a part meant to be quiet. See checkContrast(). Since 2.48.0 the kit colours every part
                      for the panel it is on (kit.css .kit-light): this check is the safety net.
-     6  SMALL TEXT   (a figure-kit drawing, 2.48.0) no word under CONFIG.minTextPx as rendered. The kit grows its
-                     own type classes when a figure is shown smaller than 1:1; a size a course part sets is judged.
+     6  SMALL TEXT   (a figure-kit drawing, 2.48.0; a task page's drawing, svg.taskfig) no word under
+                     CONFIG.minTextPx as rendered. The kit grows its own type classes when a figure is shown smaller
+                     than 1:1; a size a course part sets is judged. A task drawing is shown smaller than its own units
+                     (its label bands, the screen's height): its words are judged as the trainee sees them.
      7  PHOTO OVER   (2.49.6) a real photograph (<image> of a .jpg/.png, or <foreignObject> holding an <img>) is
                      painted over parts of the drawing. A photo goes beside the drawing; a marker drawn after the
                      photo is fine. data-may-overlap does not excuse it. See checkPhotos().
@@ -436,18 +438,22 @@
     }).filter(function (it) { return it.pts.length && (it.b.w >= CONFIG.minPartPx || it.b.h >= CONFIG.minPartPx); });
   }
 
-  /* ---- 6 SMALL TEXT ---- no word of a kit figure under CONFIG.minTextPx as it is shown (2.48.0) */
+  /* ---- 6 SMALL TEXT ---- no word of a kit figure or a task drawing under CONFIG.minTextPx as it is shown (2.48.0) */
   function smallText(svg, where, items, out) {
-    if (!(svg.classList && svg.classList.contains("kit"))) { return; }
+    var task = svg.classList && svg.classList.contains("taskfig") && !svg.classList.contains("kit");
+    if (!(svg.classList && svg.classList.contains("kit")) && !task) { return; }
     /* 2.63.3 - a deck figure's floor is its --kit-floor (16 px on a slide, kit.css), the kit's own */
     var floor = Math.max(CONFIG.minTextPx, parseFloat(getComputedStyle(svg).getPropertyValue("--kit-floor")) || 0);
     items.forEach(function (T) {
       if (T.t !== "text" || !(T.el.textContent || "").trim()) { return; }
-      var m = T.el.getScreenCTM(), px = parseFloat(getComputedStyle(T.el).fontSize) * (m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1);
+      var m = T.el.getScreenCTM(), k = m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1,
+          px = parseFloat(getComputedStyle(T.el).fontSize) * k;
       if (px < floor - 0.05) {
         report(out, { check: "small text", where: where, part: label(T.el), other: "",
-                      detail: "drawn at " + (Math.round(px * 10) / 10) + " px - the floor is " + floor + " px (the kit sets " +
-                              "its own type classes larger by itself; a size set in a course part's css does not grow)" }, [T.el]);
+                      detail: "drawn at " + (Math.round(px * 10) / 10) + " px - the floor is " + floor + " px " + (task
+                        ? "(the drawing is shown at " + Math.round(k * 100) + " % of its own units: its words at least " +
+                          Math.ceil(floor / k) + " units, font-size=\"" + Math.ceil(floor / k) + "\")"
+                        : "(the kit sets its own type classes larger by itself; a size set in a course part's css does not grow)") }, [T.el]);
       }
     });
   }

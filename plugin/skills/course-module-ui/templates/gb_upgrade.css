@@ -481,7 +481,10 @@
 .lt-work li .n{width:min(4.4vmin,35px);height:min(4.4vmin,35px);border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--up-a25525525512);color:var(--lt-white)}
 .lt-work li b{display:block;color:var(--lt-white);font-size:var(--lt-fs);line-height:1.3}
 .lt-work li div > span{display:block;color:var(--lt-dim-d);font-size:clamp(13px,2vmin,23px);line-height:1.35;margin-top:.2em}
-.lt-work li.cur{opacity:1;background:var(--up-a8316721916);border-color:var(--lt-blue);transform:translateX(min(1vmin,8px))}
+.lt-work li.cur{opacity:1;background:var(--up-a8316721916);border-color:var(--lt-blue)}
+/* the current card steps aside into the gap after its column; a column with no gap after it (the picture's column, a
+   words column alone) keeps its cards inside it, so a card never runs past the margin and its border is never cut */
+.lt-split > .copy:not(:last-child) .lt-work li.cur{transform:translateX(min(1vmin,8px))}
 .lt-work li.cur .n{background:var(--lt-blue);color:var(--lt-navy)}
 .lt-work li.lit{opacity:.85}.lt-work li.lit .n{background:var(--up-4fd6a0);color:var(--lt-navy)}
 .lt-work li.you{border-style:dashed;border-color:var(--up-a2552552554)}
@@ -535,6 +538,7 @@
 .lt-tf{gap:min(2.6vmin,21px)}
 .lt-claim{margin:0;font-size:clamp(22px,4.4vmin,46px);line-height:1.18;font-weight:800;color:var(--lt-navy);position:relative;padding-left:min(3vmin,24px)}
 .lt-claim::before{content:"";position:absolute;left:0;top:.15em;bottom:.15em;width:min(.8vmin,6px);border-radius:99px;background:var(--lt-blue)}
+.slide.dark .lt-claim{color:var(--lt-white)}
 .lt-vote{display:flex;gap:min(1.6vmin,13px)}
 .lt-vote button{flex:1;padding:min(1.8vmin,14px);border-radius:min(1.6vmin,13px);border:2px solid var(--lt-line);background:var(--lt-white);font:800 var(--lt-fs-lead)/1 inherit;
   color:var(--lt-navy);cursor:pointer;transition:all .3s;box-shadow:0 10px 24px -14px var(--up-a1036994)}
@@ -587,6 +591,13 @@
 .lt-name li.cur{background:var(--up-e6f2fa);box-shadow:0 10px 24px -14px var(--up-a10369945)}
 .lt-name li.cur b,.lt-name li.lit b{opacity:1;transform:none}.lt-name li.cur .blank,.lt-name li.lit .blank{opacity:0}
 .lt-name li.lit .n{background:var(--up-4fd6a0);color:var(--lt-navy)}
+/* on the dark ground the names are the ground's words, their cards see-through (as the worked example's) */
+.slide.dark .lt-name li{background:var(--up-a25525525504);border-color:var(--up-a8316721925)}
+.slide.dark .lt-name li b{color:var(--lt-white)}
+.slide.dark .lt-name li .n{background:var(--up-a25525525512);color:var(--lt-white)}
+.slide.dark .lt-name li.cur,.slide.dark .lt-name li.lit{border-color:var(--lt-blue)}
+.slide.dark .lt-name li.cur{background:var(--up-a8316721916)}
+.slide.dark .lt-name li.lit .n{background:var(--up-4fd6a0);color:var(--lt-navy)}
 .slide .lt-3dbox .lt-tag.num{width:2.2em;height:2.2em;padding:0;display:grid;place-items:center;border-radius:50%;margin:-1.1em 0 0 -1.1em;font-size:clamp(13px,1.9vmin,20px);
   font-weight:800;background:var(--lt-navy);border:2px solid var(--lt-white);box-shadow:0 6px 16px var(--up-a0004);transition:background .3s,box-shadow .3s,opacity .45s}
 .slide .lt-3dbox .lt-tag.num.hot{background:var(--lt-blue);color:var(--lt-navy);box-shadow:0 0 0 6px var(--up-a8316721935),0 6px 16px var(--up-a0004)}

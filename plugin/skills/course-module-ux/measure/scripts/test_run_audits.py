@@ -8,6 +8,8 @@ Pinned, on measure/fixtures decks (and the step-figure deck beside the scripts):
   * a failing deck (deck_steps: every screen a corner cluster) exits 1 and names the screens; a passing probe is not listed with --quiet;
   * a sideways-scrolling deck (deck_scroll) fails the deck probe; a deck with no Next control cannot be composed -> exit 2, never a pass;
   * audit_compose.js answers `.all()` like the other probes and sets window.__auditExit;
+  * compose measures every slide once, in order, however many Nexts a slide's stops take, and `only` names slides (M01 s25:
+    a walk of Next presses measured the first slides' stops, a slide still coming in, and never the deck's end);
   * the page injected beside the deck is gone afterwards, and the deck file is untouched;
   * what is printed and returned for a clean run (a stubbed browser: a clean run needs a real clean deck).
 Skips, and says so, when no Chrome or Edge is installed.
@@ -158,8 +160,23 @@ def main():
           not leftovers() and (STEPS.read_bytes(), SCROLL.read_bytes()) == before, leftovers())
     overlay_part()
     cut_and_strip_part()
+    compose_walk_part(exe)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0
+
+
+def compose_walk_part(exe):
+    kd = HERE / "fixtures" / "deck_kit_steps.html"
+    res, err = ra.measure(exe, kd, (1280, 800), 60000)
+    alls = ((res or {}).get("compose") or {}).get("res", {}).get("all", [])
+    check("compose: each slide once, in order, though two of them take five Nexts each",
+          [r.get("title") for r in alls] == ["Moves", "Dead", "End"] and all(r.get("verdict") != "NOT MEASURED" for r in alls),
+          (err, [(r.get("title"), r.get("verdict")) for r in alls]))
+    res, err = ra.measure(exe, kd, (1280, 800), 60000, (0, 0), [2])
+    alls = ((res or {}).get("compose") or {}).get("res", {}).get("all", [])
+    check("... `only` measures the slides it names: the third is the last slide, after the stepping ones",
+          [r.get("verdict") == "NOT MEASURED" for r in alls] == [True, True, False] and alls[2].get("title") == "End",
+          (err, [(r.get("title"), r.get("verdict")) for r in alls]))
 
 
 def overlay_part():

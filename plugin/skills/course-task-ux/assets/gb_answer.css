@@ -137,6 +137,10 @@ html{scroll-padding-top:68px}
   margin:0 auto;border-radius:var(--r-m);box-shadow:0 0 0 1px var(--line-l)}
 .ga.lab{--gaw:min(100%,calc((100vh - 400px) * var(--ar,2.575)))}
 .ga svg.taskfig,.ga img.taskfig{display:block;width:100%;height:auto;background:var(--white);border-radius:var(--r-m)}
+/* the drawing's box has its view box's shape (--ar), whatever width and height its file says: the label bands grow the
+   view box, and a drawing kept at its file's 600 x 450 was drawn small inside it, its label boxes too short for their
+   words (M01 check m03, m04) - the boxes, leaders and tap areas are laid out in that view box */
+.ga svg.taskfig{aspect-ratio:var(--ar)}
 /* a figure-kit drawing is the deck's dark screen in a task too (kit.css: "a monitor in the room"): drawn for a dark
    ground, it read inverted on white - a closed valve pale grey, an open one solid (2.46.0) */
 .ga svg.taskfig.kit{background:var(--deep-2)}
@@ -236,10 +240,17 @@ html{scroll-padding-top:68px}
 
 /* label the drawing: empty boxes on the drawing */
 .lbox{position:absolute;height:56px;padding:0;border:2px dashed var(--navy);
-  border-radius:12px;background:var(--white);display:flex}
+  border-radius:12px;background:var(--white);display:flex;container-type:size}
+/* a label's two lines always fit its box: the box is a share of the drawing, lower on a 1024 x 768 or 1280 x 720 screen,
+   so its words are as large as two lines in it allow - 16 px, never under the 12.5 px floor */
 .lbox .chip{width:100%;height:100%;min-height:0;padding:2px 8px;gap:6px;font-size:16px;
-  line-height:1.15;box-shadow:none}
+  font-size:max(12.5px,min(16px,calc((100cqh - 8px) / 2.3)));line-height:1.15;box-shadow:none;overflow-wrap:anywhere}
 .lbox .chip::before{display:none}
+/* its tick or its moved-here mark sits on the box's top left corner, off its words, so they keep the box's whole width */
+.lbox .chip.right::after,.lbox .chip.fixed::after{position:absolute;top:-11px;left:-11px;width:18px;height:18px;margin:0;padding:0;
+  display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:13px;line-height:1;color:var(--white)}
+.lbox .chip.right::after{background:var(--good)}
+.lbox .chip.fixed::after{background:var(--amber)}
 .lbox.zone.over{border-color:var(--blue);background:var(--blue-wash-l)}
 
 /* ---- parts: a scenario's steps, the incident's order and then its stop point ---- */

@@ -580,7 +580,17 @@ figure{margin:0}
 .slide.dark .copy [data-i].cur:not(.box):not(.call){--hl-wash:var(--amber-wash-d)}
 .copy [data-i].lit:not(.box):not(.call),.copy [data-i].cur:not(.box):not(.call){
   box-shadow:0 calc(-1 * var(--hl-y)) 0 0 var(--hl-wash),0 var(--hl-y) 0 0 var(--hl-wash)}
-/* a line that is a way to its figure's step (.kit-tap, kit.css) has that gap above and under its words already, inside it */
+/* a line that is a way to its figure's step (.kit-tap: kit.js and kit3d.js both make it) is a control, the 44 px touch
+   target (audit_deck), in every deck whichever kit's stylesheet it loads: 5 px above and under its words, given back to
+   the list's own gap, and at least 44 px high. A one-line line grows only by what it lacks; its bullet or number moves
+   down with its words. A step in a card (.lt-work) is tapped on the whole card: its tap area is the card, not the words */
+.copy .kit-tap{min-height:44px;box-sizing:border-box}
+.copy .kit-tap:not(.box):not(.call):not(.lt-work *){padding-top:5px;padding-bottom:5px;margin-top:-5px;margin-bottom:-5px}
+.copy .support li.kit-tap[data-i]:not(.box):not(.call)::before,.copy .support li.kit-tap[data-i]:not(.box):not(.call) > .n{translate:0 5px}
+.copy .lt-work li > .kit-tap{min-height:0}
+.copy .lt-work li > .kit-tap::before{content:"";position:absolute;top:50%;height:max(calc(100% + 2 * min(1.6vmin,13px)),44px);
+  transform:translateY(-50%);left:calc(-1 * (min(4.4vmin,35px) + min(1.6vmin,13px) + min(2vmin,16px)));right:calc(-1 * min(2vmin,16px))}
+/* ... and has the mark's gap above and under its words already, inside it */
 .copy .kit-tap[data-i].lit:not(.box):not(.call),.copy .kit-tap[data-i].cur:not(.box):not(.call){box-shadow:none}
 .copy .kit-tap[data-i].cur:not(.box):not(.call)::after{top:0;bottom:0}
 .copy .call[data-i].lit,.copy .call[data-i].cur{color:var(--ink)}

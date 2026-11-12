@@ -311,9 +311,10 @@ def check(pages, root=None, cache=None, full=False):
                     probs.append("%s, %s: contrast - %s %s (L54: colour the part for the figure's dark panel, or mark one "
                                  "meant to be quiet data-low-contrast)" % (name, f.get("where"), f.get("part"), f.get("detail")))
                     continue
-                if f.get("check") == "small text":   # a kit figure's word under 12.5 px at 1280 x 800 (2.48.0)
-                    probs.append("%s, %s: small text - %s %s (try the figure in the studio: course-visuals\\kit\\scripts\\"
-                                 "studio.py <figure>.kit.json)" % (name, f.get("where"), f.get("part"), f.get("detail")))
+                if f.get("check") == "small text":   # a kit figure's or a task drawing's word under 12.5 px at 1280 x 800
+                    probs.append("%s, %s: small text - %s %s%s" % (name, f.get("where"), f.get("part"), f.get("detail"),
+                                 "" if "units" in (f.get("detail") or "") else " (try the figure in the studio: "
+                                 "course-visuals\\kit\\scripts\\studio.py <figure>.kit.json)"))
                     continue
                 if f.get("check") == "photo over drawing":   # a real photo hiding the drawing it sits on (IGF M02, 2.49.6)
                     probs.append("%s, %s: photo over drawing - %s covers %s (L54: a photo goes beside the drawing - its own "
