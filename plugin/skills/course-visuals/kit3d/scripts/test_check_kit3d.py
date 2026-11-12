@@ -489,5 +489,86 @@ check("check_kit3d.seat mirrors kit3d.js inRelation (the skirt 1.25 (r + insulat
       and ck.seat({"type": "tank_sphere", "in": "h", "r": 4}, [H])["base"] == -5.0
       and ck.seat({"type": "tank_c", "in": "h", "r": 4}, [H])["base"] == -(0.6 + 4))
 
+# ---------------------------------------------------------------- the gas trial: its 3D scenes as built (fixtures/gas_trial)
+print("\n-- the gas trial's scenes: what a label names, what stands where, what is compared")
+TRIAL = os.path.join(HERE, "fixtures", "gas_trial")
+
+
+def trial(name):
+    return json.loads(io.open(os.path.join(TRIAL, name + ".kit3d.json"), encoding="utf-8").read())
+
+
+def problems(spec):
+    return run(spec)[0]
+
+
+for name, needle in (("m01_s16", "label 'Alarm on both sides' names an alarm, and its dot is on lock (a room)"),
+                     ("m01_s16", "part door1 (box) is named 'Self-closing gastight door' - the kit draws that: an \"airlock\""),
+                     ("m01_s16", "part lock (room) is named 'Airlock from the open deck' - the kit draws that: an \"airlock\""),
+                     ("m01_s17", "part comp (room) is named 'Compressor room: negative pressure' - the kit draws that: a \"compressor_house\""),
+                     ("m01_s25", "label 'Leak sensors in the hold' names a sensor, and its dot is on hull_bottom"),
+                     ("m01_s22", "label 'Hold space: inert gas' names a hold space, and its dot is on hull_bottom"),
+                     ("m01_s24", "label 'Partial secondary barrier only' names a partial secondary barrier, and its dot is on hull_inner"),
+                     ("m01_s24", "label 'Whole tank below the main deck' names a tank, and its dot is on hull_topwing"),
+                     ("m01_s18", "label 'Hull as secondary barrier' names a secondary barrier, and its dot is on hull_inner"),
+                     ("m01_s12", "label 'Tank dome through the deck' names a dome, and its dot is on tank (a tank_c) - put it on tank_dome"),
+                     ("m01_s13", "label 'Tank dome' names a dome"),
+                     ("m01_s27", "label 'Temperature sensors in insulation' names a sensor, and its dot is on membrane_barrier2"),
+                     ("m01_s04", "label 'No insulation, no reliquefaction plant' says what a tank has not (insulation), and its dot is on hull_bottom"),
+                     ("m01_s13", "the accommodation acc stands at y 10 on nothing"),
+                     ("m01_s29", "step 0 shows h1 and h2 and h3 together, but from its view (az 30) they stand one behind another"),
+                     ("m01_s31", "step 0 shows h1 and h2 together, but from its view (az 30) they stand one behind another"),
+                     ("m01_s21", "step 0 shows ha and hb and hc together")):
+    caught("%s as built: %s" % (name, needle[:90]), problems(trial(name)), needle)
+
+fixed = trial("m01_s16")
+fixed["parts"] = [{"id": "lock", "type": "airlock", "at": [0, 0, 0], "gap": 2}]
+fixed["labels"] = [{"part": "lock", "text": "Airlock from the open deck", "steps": [0]},
+                   {"part": "lock_door1", "text": "Self-closing gastight door", "steps": [1]},
+                   {"part": "lock_door2", "text": "Second door, no hook", "steps": [1]}, {"part": "lock_alarm", "text": "Alarm on both sides", "steps": [2]}]
+fixed["steps"][1]["select"], fixed["steps"][2]["select"] = "lock_door1", "lock_alarm"
+check("... m01_s16 drawn with the kit's airlock - its doors and its alarm named on them: clean", not problems(fixed), problems(fixed))
+fixed = trial("m01_s12")
+fixed["labels"][2]["part"] = "tank_dome"
+check("... m01_s12 with 'Tank dome through the deck' on tank_dome (the dome a sub-part of a tank_c with \"dome\"): no label problem",
+      not [x for x in problems(fixed) if "Tank dome" in x], problems(fixed))
+fixed = trial("m01_s25")
+fixed["parts"].append({"id": "leak", "type": "detector", "kind": "leak", "at": [1, 1.25, -5], "face": "up"})
+fixed["labels"][3]["part"], fixed["labels"][4]["part"] = "hull_hold", "leak"
+check("... m01_s25 with a leak sensor drawn and the hold space on <hull>_hold: clean", not problems(fixed), problems(fixed))
+fixed = trial("m01_s17")
+fixed["parts"] = [{"id": "house", "type": "compressor_house", "at": [0, 0, 0], "size": [10, 3, 4]},
+                  {"id": "lock", "type": "airlock", "at": [3, 0, 3.5], "rot": 0}]
+fixed["labels"] = [{"part": "house_compressor", "text": "Compressor room: negative pressure", "steps": [0, 2]},
+                   {"part": "house_motor", "text": "Motor room: positive pressure", "steps": [1, 3]}, {"part": "lock", "text": "Airlock", "steps": [4]}]
+for st, sel in zip(fixed["steps"], ("house_compressor", "house_motor", "house_compressor", "house_motor", "lock")):
+    st["select"], st["view"]["frame"] = sel, [sel]
+check("... m01_s17 drawn with the kit's compressor house (the gastight bulkhead between its rooms) and airlock: clean",
+      not problems(fixed), problems(fixed))
+fixed = trial("m01_s13")
+fixed["parts"][0]["x"] = [-8, 18]
+check("... m01_s13 with the hull running under the accommodation (it stands on the deck): the deckhouse is no longer in the air",
+      not [x for x in problems(fixed) if "on nothing" in x], problems(fixed))
+through = trial("m01_s13")
+through["parts"][3]["at"] = [-3, 4, 0]
+caught("a deckhouse placed through the cargo tank (M01 s13, as the review saw it)", problems(through), "acc stands through tank tank")
+full = trial("m01_s04")
+full["parts"][1]["fill"] = 1
+caught("a pressure tank drawn 100 % full - no vapour space (M01 s02, s05b)", problems(full), "tank tank is filled to 1")
+abreast = trial("m01_s31")
+abreast["parts"][0].update({"at": [0, 0, 0], "x": [-5, 5]})
+abreast["parts"][2].update({"at": [0, 0, -24], "x": [-5, 5]})
+abreast["steps"][0]["view"] = {"az": 90, "el": 14, "frame": ["h1", "h2"]}
+check("... m01_s31 with its two hulls abreast, looked at square to the row (az 90): one scale, clean",
+      not [x for x in problems(abreast) if "one behind another" in x], problems(abreast))
+caught("m16_s02 as built: step 4 names the venturi's label, kept to step 3 - the cutaway's point unnamed (F070)",
+       problems(trial("m16_s02")), "step 4: \"labels\" names ind_venturi, but its label 'Suction (ejector function)' shows only on step 3")
+fixed = trial("m16_s02")
+fixed["labels"][6]["steps"] = [4]
+check("... the label on step 4: no such problem", not [x for x in problems(fixed) if "shows only on" in x], problems(fixed))
+for name in ("m16_s02", "m16_s03"):
+    check("%s (the foam rig as built) names nothing the checker misreads: no label-kind problem" % name,
+          not [x for x in problems(trial(name)) if x.startswith("label ") and " names " in x], problems(trial(name)))
+
 print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
 sys.exit(1 if FAILS else 0)
