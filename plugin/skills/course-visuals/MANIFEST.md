@@ -146,6 +146,10 @@ lane, `trace` and `region` on charts, and the minified copy modules ship (`min/k
 changing the kit - `test_minify_engines.py` fails a stale copy).
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
+## 2.133.0 · Real foam and gas-carrier parts, the figure on its line, no boxes with titles (2026-11-12)
+
+`kit3d/kit3d.js`: `foam_inductor`, `foam_branch_pipe`, `foam_container`, `fire_hydrant`, ports and `connect`; `hull` `double` / `hopper` / `topwing` and tanks `"in"` it, bilobe `lobes: 2`; `check_kit3d.py` construction checks; `kit/kit.js` and `kit2d` foam parts; `kit/scripts/kit_meaning.py` BOXES and CHAIN; SPEC.md one step per line. Tests: test_kit3d, test_check_kit3d, test_kit, test_meaning, test_kit2d.
+
 ## 2.131.2 · Foam equipment in the 3D kit (2026-11-11)
 
 - `kit3d`: `foam_extinguisher`, `foam_inductor`, `foam_branch_pipe` (PARTS.md, the catalogue); minified copy rebuilt.

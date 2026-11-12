@@ -7,6 +7,10 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.133.0 · The trial's faults fixed in the factory (2026-11-12)
+
+- `compile/scripts/layout_plan.py` picture shape hard, `picture_misfits`; `compile_module.py` misfit must-fix, room activities, one step per line in the 3D starter, no box-and-arrow starter; new `compile/scripts/line_binding.py`; `precheck.py` photo looks, task picture records, same drawing names; `scripts/content_script.py` `t_no_shape`, `tablet_findings`, `i_item_not_checked`; `scripts/fault_report.py` the plan's checks; `photo_catalogue.py look`, `visual_needs.py`, `upscale_photos.py`, publisher `gates.py`; `BUILDER_CARD.md`, `compile/GUIDE.md`. Tests: test_layout_plan, test_compile_module, test_line_binding, test_precheck, test_content_script, test_factory_trial, test_build_course.
+
 ## 2.132.0 · The trial measures the first pass; a fault report for the owner (2026-11-12)
 
 - `scripts/factory_trial.py`: first pass by default, `--full`; `first_pass_row`; `report --faults`. `orchestration/workflows/build_course.js`: `first_pass`, `builds`. New `scripts/fault_report.py` (`FAULTS.html`, `faults.json`, `faults/`). Tests: test_factory_trial, test_build_course.

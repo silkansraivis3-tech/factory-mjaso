@@ -6,6 +6,10 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.133.0 · Labels inside their pills, a drawing in its own shape (2026-11-12)
+
+`assets/gb_answer.css`: a task drawing's box takes its viewBox shape (`--ar`), label words fit two lines and never under 12.5 px, the badge in the corner. Checks: `review_sheets.mjs` words outside their box, `audit_drawing.js` drawing text at its shown size.
+
 ## 2.130.0 · A result screen that reads on Navy, placements by name, a bar nothing runs under (2026-11-11)
 
 `assets/gb_task_look.css`: the result screen's answer, reason and debrief lines, a folded scenario step and a check's opening card readable on

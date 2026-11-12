@@ -103,6 +103,10 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## Every picture blueprint has its shape; bands for scenario, worked example, true-false, name-parts; screens right first time — 2.133.0 (2026-11-12)
+
+`knowledge/blueprints`: `fits` on every blueprint with a picture box, `.figure-top` / `.figure-bottom` for scenario, worked-example, true-false and name-parts, their budgets in `layout-templates.json` measured at the three sizes. `templates/gb_compose.css`: every tap line 44 px; `gb_upgrade.css`: the current question card stays in its column; true-false and name-parts on dark ground.
+
 ## Tables measured, three table layouts — 2.131.3 (2026-11-12)
 
 `knowledge/blueprints/reference-table.figure-top`, `.figure-bottom`, `.text-only` (new), `.with-figure` with its `fits`; `layout-templates.json` budgets `table_beside` and `table_alone` 6 rows / 48 words, the band ones 4 rows / 40 words, measured at the three sizes.
