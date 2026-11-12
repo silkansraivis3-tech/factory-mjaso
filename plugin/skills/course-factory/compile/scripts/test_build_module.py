@@ -709,6 +709,14 @@ def walk_part():
         check("... the other sizes save none, and --no-walk keeps the fit walk from writing the walk pictures (the workflow's QA "
               "check runs beside the walk judge)", "--walk-dir" not in b.fit_job(course, 1, deck, "1024x768")
               and "--walk-dir" not in b.fit_job(course, 1, deck, "1280x800", True))
+        was = io.open(deck, encoding="utf-8").read()
+        check("a --no-walk build of the deck that was walked leaves the walk as it is", b.walk_behind(course, 1) == [],
+              b.walk_behind(course, 1))
+        io.open(deck, "w", encoding="utf-8").write(page % "Two, its figure changed after the builder's last build")
+        check("... a deck changed since its walk (the QA check built a figure the builder changed after its last build): "
+              "that slide is behind, and that build walks the deck again (M01 s02, the trial of 2.133.0)",
+              b.walk_behind(course, 1) == ["s02"], b.walk_behind(course, 1))
+        io.open(deck, "w", encoding="utf-8").write(was)
         wdir = walk_review.walk_dir(course, 1)
         job = b.task_job("m", wdir, "logs")
         check("the task pages' job walks them into the module's walk folder, beside the deck's stops",

@@ -1484,8 +1484,12 @@ def main(argv=None):
         jobs["audits 1280x800 %s" % " ".join(sizes)] = a
         # the deck walked with Next to every slide's last step (fit_gate.py, Playwright): the audits measure each slide as
         # it opens, and an answer or a last line that arrives later was never measured - one job a size, side by side
+        behind = walk_behind(course, o.module) if o.no_walk and not o.draft else []
+        if behind:
+            notes.append("WALK - the deck changed since its walk pictures (%s): walked again, so the walk review sees this "
+                         "build" % ", ".join(behind[:8]))
         for v in ["1280x800"] + sizes:
-            jobs["fit %s (every Next)" % v] = fit_job(course, o.module, deck, v, o.no_walk)
+            jobs["fit %s (every Next)" % v] = fit_job(course, o.module, deck, v, o.no_walk and not behind)
 
     if not o.no_course_pages:
         jobs["course pages (compile_course.py)"] = [PY, os.path.join(HERE, "compile_course.py"), course]
@@ -1699,6 +1703,19 @@ def walk_review_py():
         sys.path.insert(0, MEASURE)
     import walk_review
     return walk_review
+
+
+def walk_behind(course, module):
+    """the deck's slides whose walk pictures are of an older deck, or that its walk has no picture of. A build with --no-walk
+    (the workflow's QA check) that built a changed deck - a figure changed after the builder's last build - walks it all
+    the same: the walk judge after it sees the last build, never pictures it must refuse as older"""
+    try:
+        d = walk_review_py().Deck(course, module)
+    except Exception:                                    # noqa: BLE001 - no deck or no walk to compare with
+        return []
+    if not d.walked:
+        return []
+    return [s for s in (d.ids or d.walked) if s not in d.walked or d.walked_as(s) != d.now(s)]
 
 
 def task_job(mdir, walk_dir, logdir):
