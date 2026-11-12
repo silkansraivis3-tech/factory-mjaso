@@ -248,8 +248,16 @@ scene's home view - `layout_plan.py`) and its words, then plans the whole deck: 
 of the teaching slides, at least four shapes in ten where the slides fit them, near-equal fits settled by a choice seeded by
 the course and the module (a rebuild is the same). A wide photograph or a wide drawing / 3D scene takes a band across the
 slide with the words over or under it in two columns; a tall picture a tall box beside the words; a picture beside words
-gets a box of its own shape, the words and the picture centred. A slide whose build sheet names a template, a variant or a
-layout keeps it; so does a slide that fits one shape only - `Layout plan (M01): ...` and its `Note:` lines say each.
+gets a box of its own shape, the words and the picture centred. **The picture's real shape is a hard rule** for every
+blueprint that holds a picture (its `fits.pictures` and `fits.aspect`): a wide photograph is never put in a tall box, a tall
+one never in a band - the plan moves it to a blueprint that takes it, and the compiler refuses a deck with a picture in a box
+of another shape (`layout_plan.picture_misfits`, the same check as the trial's fault report), naming the blueprints that
+take it. A slide whose build sheet names a template, a variant or a layout keeps it while its picture fits it; so does a
+slide that fits one shape only - `Layout plan (M01): ...` and its `Note:` lines say each. The words are counted one way
+everywhere: the slide's text (its title apart - every budget was measured under a one-line title; its largest part when
+it is in parts) against the blueprint's measured budget (`layout_plan.holds`, layout-templates.json `budgets`) - the
+script check, the plan and the fault report alike. A slide whose words no blueprint its picture takes holds is built in the
+one over by least, said in a `Note:`, and the fit gate measures it; the script check asks to split it (`t_no_shape`).
 Words are never cut or moved. A slide the plan moved carries `data-varied`, so `build_module.py`'s pre-check measures it
 and a shape it does not fit is not planned again (`MNN_layout_avoid.json`). The package check refuses a deck that breaks
 the shape rules where its slides fit another blueprint (`data-shapes`). `CF_LAYOUT_PLAN=0` builds each slide in its own

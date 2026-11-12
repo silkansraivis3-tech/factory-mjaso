@@ -310,6 +310,59 @@ def tables_part(tmp):
           and cm.word_budget("reference-table", "with-figure")[0] == cm.BUDGETS["table_beside"]["words"], b)
 
 
+def picture_shape_part(tmp):
+    """the picture's real shape is a hard rule: a wide photograph never lands in a tall box (the 2.131.0 trial's M01 s08,
+    s11b, s15b, s18 in photo-explain.column, M16 s03 and a01 in content-in-parts beside, M16 s04's two photographs in
+    figure-stage) - the plan moves it to a blueprint that takes it, a build sheet that names a box it does not fit is refused
+    with the blueprints that do, and the built deck is checked like the fault report checks it"""
+    print("\n-- a picture is never put in a box of another shape")
+    import layout_plan
+    os.makedirs(os.path.join(tmp, "ps"))
+    words = "A small gas carrier has Type C tanks well inboard, cooled only indirectly.\n" \
+            "• Chlorine is very toxic but not flammable.\n• Its tanks stand at least B/5 from the side."
+    sc = script(screens=[
+        {"id": "s01", "kind": "slide", "title": "A wide photograph", "layout": "split", "visual_kind": "photo", "visual": "A ship.",
+         "minutes": 2, "text": words},
+        {"id": "s02", "kind": "slide", "title": "Another wide photograph", "layout": "split", "visual_kind": "photo", "visual": "A ship.",
+         "minutes": 2, "text": words},
+        {"id": "a01", "kind": "activity", "title": "Rig the applicator", "visual_kind": "photo", "visual": "The fire ground.",
+         "minutes": 5, "text": "Lay out the hose from the hydrant to the foam station, connect the inductor to the hose and the "
+                               "branch pipe to the inductor, and put the pick-up tube into the open concentrate container first.\n"
+                               "• Open the hydrant slowly and watch the foam at the branch pipe.\n"
+                               "• Aim the foam at the back wall of the tray."}] + SCREENS[-2:])
+    c, md = new_course(os.path.join(tmp, "ps"), sc, build=False)
+    meta = cs.load(os.path.join(md, "assets", "img", "_photo_meta.json"))
+    for n in ("w1", "w2", "w3"):
+        io.open(os.path.join(md, "assets", "img", "%s.png" % n), "wb").write(png(358, 200, (60, 90, 120)))   # 1.79:1, M01 s08
+        meta["%s.png" % n] = dict(PHOTO_META["ship.jpg"], description="Ship %s." % n, url_or_origin="https://example.org/%s" % n)
+    cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s01": {"figure": "assets/img/w1.png"}, "s02": {"figure": "assets/img/w2.png"},
+        "a01": {"figure": "assets/img/w3.png", "parts": [[1, 1], [2, 3]]}}})       # a part over a band's 40 words, as M16 a01
+    os.environ["CF_LAYOUT_PLAN"] = "1"
+    try:
+        code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+        page = deck(md) if os.path.isfile(os.path.join(md, "presentation", "index.html")) else ""
+        tpl = lambda sid: (re.search(r'data-template="([\w-]+)\.v1" data-variant="([\w-]+)"', section(page, sid)) or re.search("$^", "")).groups()
+        check("a 1.79:1 photograph whose slide asks for nothing is built in a blueprint that takes it - a band, never a side "
+              "column or a framed box", page and all(layout_plan.picture_fit("%s.%s" % tpl(x), "photo", 358 / 200.0) is None
+                                                    and layout_plan.LIB["%s.%s" % tpl(x)]["shape"] != "beside" for x in ("s01", "s02")),
+              (tpl("s01"), tpl("s02"), out[-900:]))
+        check("... a room activity laid out like a slide moves too: its own box (content-in-parts beside) does not take the "
+              "photograph (the trial's M16 a01)", page and layout_plan.picture_fit("%s.%s" % tpl("a01"), "photo", 358 / 200.0) is None
+              and tpl("a01")[0] == "content-in-parts", tpl("a01"))
+        check("... and the built deck has no picture in a box of another shape (layout_plan.picture_misfits, the fault report's "
+              "check)", page and layout_plan.picture_misfits(page, md) == [] and "whose box takes" not in out, out[-900:])
+        build_of(c, lambda b: b["screens"]["s01"].update(composition="wide-left"))
+        code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+        check("a build sheet that names a box the photograph does not fit (composition wide-left: photo-explain.column, "
+              "0.85-1.3:1) is refused, naming the blueprints that take it and what to change",
+              code != 0 and "s01" in out and "whose box takes a photo of 0.85-1.3:1" in out and "reading-with-figure.figure-top" in out
+              and "take it out of the build sheet" in out, out[-1500:])
+    finally:
+        os.environ["CF_LAYOUT_PLAN"] = "0"
+
+
 def shapes_part(tmp):
     """the information decides the slide: a slide's own approved words (a claim, choices, a worked example and the
     room's turn, short points, a drill, the summary's questions, the self-check list) and the shape of its lines (numbers,
@@ -1608,6 +1661,11 @@ def variety_part(tmp):
           and "Note: " in out and "looks exactly like the slide before it" in out and "a note only" in out, out[-700:])
     out_first = out                           # the first build is the one that enlarges the small photographs (L62)
     os.environ["CF_LAYOUT_PLAN"] = "1"        # the owner, 2026-11-11: real variety in every build - the deck's layout plan
+    # a 2:1 drawing: a box beside the words, a band and the stage all take it (a square one takes the box beside only - the
+    # plan never puts a picture in a box of another shape)
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "ga_wide.html"), "w", encoding="utf-8").write(
+        FRAGMENT.replace('viewBox="0 0 10 10"', 'viewBox="0 0 20 10"'))
+    build_of(c, lambda b: [b["screens"][x["id"]].update(figure="ga_wide.html") for x in drawn])
     code, out = run(COMPILE, c, "--module", "1", "--force")
     page1 = deck(md)
     import layout_plan
@@ -1620,6 +1678,9 @@ def variety_part(tmp):
     check("... and each slide still says exactly the approved words", run(MATCH, c, "--module", "1", "--part", "instructor")[0] == 0)
     code2, out2 = run(COMPILE, c, "--module", "1", "--force")
     check("... the same input gives the same plan", deck(md) == page1 or layout_plan.deck_shapes(deck(md))[1] == shapes)
+    check("... and no picture in a box of another shape (layout_plan.picture_misfits)", not layout_plan.picture_misfits(page1, md),
+          layout_plan.picture_misfits(page1, md))
+    build_of(c, lambda b: [b["screens"][x["id"]].update(figure="ga.html") for x in drawn])
     os.environ["CF_LAYOUT_PLAN"] = "0"
     for x in ("M01_layouts.json", "M01_layout_avoid.json"):   # the old flip below starts from no remembered way
         if os.path.isfile(os.path.join(c, "working_claude", "_build", x)):
@@ -4196,6 +4257,7 @@ def main():
         review_fixes_part(tmp)
         shapes_part(tmp)
         tables_part(tmp)
+        picture_shape_part(tmp)
         reveal_part(tmp)
         tasks_part(tmp)
         figures_part(tmp)
