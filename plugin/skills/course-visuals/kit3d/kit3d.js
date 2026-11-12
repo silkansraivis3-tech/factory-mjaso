@@ -1920,6 +1920,9 @@
     if (old.step || fns.step) {
       cur.step = function (dir) { if (old.step && old.step(dir)) { return true; } return !!(fns.step && fns.step(dir)); };
     }
+    /* the next slide's scene hooks this slide too (it prepares on enter): the way the deck walks this slide's figure with
+       its lines stays */
+    ['lines', 'line0', 'go'].forEach(function (k) { if (old[k] !== undefined) { cur[k] = old[k]; } });
     H[id] = cur;
   }
   function deck(S, slide) {

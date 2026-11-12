@@ -331,7 +331,10 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   into the page as data with the deck's own step buttons (`.mediabar`: previous, next, replay), and loads `kit.css` and
   `kit.js` (installed by `design_system.py` like `gb_deck.js`) and, when the course made parts of its own,
   `assets\kit_parts.js` after them. Each spec step lights its slide line (`"line": 2` -> `[data-i="2"]` `.cur`, earlier
-  steps `.lit`); entering the slide starts the figure at step 0. Check the specs first:
+  steps `.lit`); entering the slide starts the figure at step 0. Every line gets one step that changes the figure to what
+  the line names, in order, each line once (a slide of points: point k is `"line": k`); the compile refuses a line no step
+  lights, steps naming no line, two steps in a row on one line, a step showing a part its line does not name, and a 2D
+  figure of word boxes and arrows (`compile/scripts/line_binding.py`, `kit_meaning.py kit2d_boxes`). Check the specs first:
   `course-visuals\kit\scripts\check_kit.py module <module> --figures <figures\M02>`.
 - **Draw a kit figure in the studio, not in the compile.** `course-visuals\kit\scripts\studio.py
   working_claude\figures\M03\s07.kit.json` draws the spec on its real slide (the script's words, the build sheet's

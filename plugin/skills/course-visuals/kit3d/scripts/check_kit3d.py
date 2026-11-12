@@ -1098,6 +1098,8 @@ def deck_line_problems(page):
         if "data-kit3d=" not in body:
             continue
         lines = len(set(DATA_I.findall(re.sub(r"<svg\b.*?</svg>", "", body, flags=re.S))))
+        if not lines and '<ul class="lt-points">' in body:      # a slide of points: its points are its lines (gb_steps.js)
+            lines = len(re.findall(r'<li\b[^>]*\bdata-k="\d+"', body.split('<ul class="lt-points">', 1)[1].split("</ul>", 1)[0]))
         for m in SCENE.finditer(body):
             try:
                 spec = json.loads(m.group(1).replace("<\\/", "</"))

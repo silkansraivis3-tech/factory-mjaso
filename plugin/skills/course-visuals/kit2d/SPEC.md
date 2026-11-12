@@ -26,8 +26,9 @@ and for courses already built with it. A new 2D figure is a 2D-kit spec.
 - **The deck.** Inside a slide the deck's Next and Back walk the steps (GB_HOOKS); a step's `line` lights the
   slide's line. Lines count from 1, as the deck counts them (`"line": 1` is `data-i="1"`, never 0), as a 3D scene's do:
   the deck walks the figure, its lines and, on a slide whose words are in parts, the part that holds the lit line with
-  one counter - a line no step names is a Next of its own, before the step after it. Light up to the slide's last
-  line; the compile refuses a line outside 1..n and lines left after the last one lit (as for a 3D scene). On a slide
+  one counter. One step per line, in order, each changing the drawing to what its line names (its `"set"`); step 0 shows
+  line 1's subject. The compile refuses a line outside 1..n, a line no step lights, two steps in a row on one line (a
+  step tells its story in order with `"after"` instead) and a step that changes nothing (as for a 3D scene). On a slide
   whose last Next shows an answer (a vote, a pick, a question), the steps that light the lines on screen play first and
   the answer last; a step lighting a line of the answer (or marked `"reveal": true`) plays once it shows. Outside a deck
   the kit draws its own step bar.
@@ -74,6 +75,13 @@ A part's value is a number, `"@name"` (a state) or `"id.key"` (what another part
 Steps, sliders, toggles and drags all write the same states, so they never fight.
 
 ## Parts
+
+**Never the flat boxes-with-titles figure.** `node` boxes holding the slide's words, joined by arrows, are the slide's
+text again and teach nothing: the compile refuses a figure that is only word boxes (`node`, `callout`) and arrows, and one
+with four word boxes or more outnumbering what it draws (BOXES, `kit/scripts/kit_meaning.py kit2d_boxes`). Draw the thing
+the words are about (a part drawing - `tank`, `pump`, `pipe`, `gate_valve`, `gauge`, a hero figure; `bars`, `chart`,
+`events` for numbers and times), a 3D scene or a photograph - or no figure and a blueprint for the words alone. Options a
+slide compares stand side by side: an arrow from one option to the next reads as a process and is refused (CHAIN).
 
 **Graphs**
 
