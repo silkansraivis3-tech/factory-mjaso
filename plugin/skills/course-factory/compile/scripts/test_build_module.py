@@ -129,6 +129,9 @@ def blanks_part():
         got = b.starter_blanks(c, 1)
         check("the starter's blanks are found: a slide with no picture, a question on no picture, a planned 3D scene not written",
               [x[0] for x in got] == [["s01"], ["q02"], ["s04 (m01_s04_3d.html)"]], got)
+        check("... a slide's missing picture says how it comes back (--fill-slots) and the one key that drops it (no_figure) - "
+              "the 2.135.0 trial's builder spent two builds not finding it", "--fill-slots" in got[0][1] and '"no_figure"' in got[0][1],
+              got[0][1])
         check("a module with no question on a placeholder has none to fail", b.blind_tasks(c, 1) == [], b.blind_tasks(c, 1))
         was = io.open(cs.paths(c, 1)["dir"] + os.sep + "M01.build.json", encoding="utf-8").read()
         tcm.build_of(c, lambda s: s["screens"].update(q02={"figure": "assets/img/_placeholder_q02.png", "placeholder": "figure",

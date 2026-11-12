@@ -712,6 +712,9 @@ def main():
         check("... and the builder is told they were placed and to keep them",
               "WERE PLACED BEFORE YOU" in ps.get("build:1", "") and "s09" in ps.get("build:1", "")
               and "WERE PLACED BEFORE YOU" not in ps.get("build:2", ""), ps.get("build:1", "")[-700:])
+        check("every brief that changes a module forbids deleting a folder (the 2.135.0 trial: a builder ran rm -rf in "
+              "working_claude and lost working_claude/modules - the course has no undo)",
+              all("NEVER DELETE A FOLDER" in ps.get(k, "") for k in ("build:1", "scenes:1:s01")), ps.get("build:1", "")[-900:])
         # 2.66.0 (Raivis) - a builder reads its instructions by their path, never the whole skill (SKILL.md, 48 KB, the router
         # for every mode); (merge) what it reads is the builder card (2.65.0 / 2.72.x), the GUIDE named for reference
         b1 = pr.get("build:1", "")

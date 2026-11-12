@@ -117,7 +117,8 @@ tool of your own (a screenshot or probe script, a web server, a copy of a page).
 changed, python ${A.factory ? `${A.factory}/course-visuals/kit3d/scripts` : '<the course-visuals skill folder>/kit3d/scripts'}/scene3d_check.py <course> --module <N> --slides <ids> --no-perf
 (its pictures in a minute); and the pictures the build and the judges already made. What no setting you are given can
 fix is the factory's: say so in your report as "FACTORY: <what>" and go on. Open pictures up to 4 in one message, and
-chain commands in one shell call.`
+chain commands in one shell call. NEVER DELETE A FOLDER (rm -r, rm -rf, Remove-Item -Recurse, rmdir): the course has no
+undo - a picture you will not use stays where it is and goes in your report (a trial's builder deleted working_claude/modules).`
 const CARD = A.factory ? `${SCRIPTS}/compile/BUILDER_CARD.md`
   : 'compile/BUILDER_CARD.md in the course-factory skill\'s folder (the Skill tool, name "course-factory", names the folder)'
 const SEED = A.seed_from ? ` --seed-from "${A.seed_from}"` : ''

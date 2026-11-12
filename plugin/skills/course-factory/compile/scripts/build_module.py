@@ -240,7 +240,12 @@ def starter_blanks(course, module):
                 scenes.append(s["id"] + " (" + fig + ")")
     out = []
     if pics:
-        out.append((pics, "its picture: \"figure\" - a photo in assets\\img, a drawing, or a kit spec"))
+        # the 2.135.0 trial: a builder took four planned pictures out and spent its last two builds here, not finding the
+        # key - the picture the approved script plans is put back and drawn; "no_figure" only for words that read on their own
+        out.append((pics, "its picture: \"figure\" - a photo in assets\\img, a drawing, or a kit spec. A picture taken out comes "
+                          "back with compile_module.py <course> --module N --fill-slots (its starter or placeholder, then draw "
+                          "it); a slide whose words read on their own drops it only with \"no_figure\": \"<the reason>\" on its "
+                          "entry - never a picture that shows how something works or where it is"))
     if ons:
         out.append((ons, "the drawing or photo the question is answered on: \"figure\" (and its places, \"areas\" / \"labels\")"))
     if scenes:
@@ -1271,7 +1276,8 @@ def main(argv=None):
     blanks = [] if o.draft else starter_blanks(course, o.module)
     if blanks:                       # 2.52.0: nothing is built on a sheet with the starter's blanks in it
         print("FAIL %s - nothing built: the build sheet %s still has the starter's blanks - fill %s (or let Phase A hold "
-              "them: compile_module.py <course> --module %s --fill-slots, 2.73.0)"
+              "them: compile_module.py <course> --module %s --fill-slots, 2.73.0). Nothing was built: this run is not one "
+              "of your builds"
               % (m, os.path.basename(cm.build_path(course, o.module)),
                  "; ".join("%s: %s" % (", ".join(ids), what) for ids, what in blanks), o.module))
         return 1
