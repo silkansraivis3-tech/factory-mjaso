@@ -1,6 +1,6 @@
 # The Instructor-Led Course Development Guideline - what the course owes it (L68)
 
-Read §0 before a module's content script is written, and the rest after a module's exercises are written (the Trainee
+Read §0 before a module's content script is written, §4 (the day sheets) when the scripts are approved, and the rest after a module's exercises are written (the Trainee
 and Instructor forms in `to_review\exercises\`) and before the course is handed over. The rules, limits, TLA pool and review checklist are `knowledge/instructor-led.json`;
 the check is `scripts/instructor_led.py`; the module plan shows the result (`compile/scripts/module_plan.py`) and the
 additional materials print the paper (`compile/scripts/additional_materials.py`).
@@ -132,8 +132,58 @@ Any change afterwards makes it unapproved again (`status` says so), and the prac
 - **The practical kit** (`course\additional-materials\practical-kit\`, by day): the pre-brief card and the debrief card
   with the observation card for every practical, the assessment form for every recorded run, the employer sheet - Word and
   PDF, linked from `INDEX.html`. Only from an approved file.
+- **The day sheets and the course on one page** (`course\additional-materials\day-sheets\`) - section 4.
 
-## 4 · Not the factory's yet
+## 4 · The day sheets (2.129.0)
+
+Aigars Kluga (Project Management, 2026-11-12) asked for the day-by-day sequence of the project work, and for it in every
+course's plan. Every instructor-led course gets, on every build (`compile/scripts/day_sheets.py`, called by
+`additional_materials.py`), one **day sheet** per day and **the course on one page**, as HTML, PDF and Word:
+
+- **A day sheet**: the title and an intro; **Today, in this order** - *What is done | Where* - with **no clock times and no
+  break or lunch rows** (the course lead's decision: the real times always differ); each task of the day with its
+  requirements; the day's extra sections (consistency checks, a rubric); **Before you leave** (an AI log, the daily sign-off).
+- **The course on one page**: the order of the work; per day the lecture and the practical, in hours from the scripts'
+  minutes, and what the day ends with; optionally which file is used when.
+
+Nothing in them is typed by the factory:
+
+| What | From |
+|---|---|
+| which screen falls on which day | `course.build.json` `"days"` - the ACP's own split, `[[1], [2], [{"module": 3, "minutes": 383}], [{"module": 3, "minutes": 177}]]`; else the modules fill the programme's day. The final's activities are on the last day |
+| the rows, in order | the approved scripts: the course's opening slides without a Sub-ILO = *Course start*; a run of teaching slides and self-checks = one *Theory* row (its passive slides' titles, its class exercises and self-checks counted, about N academic hours); each activity = a row; a team task and the module check = a row each. A project block's briefing slides (no Sub-ILO, just before an activity) and a recap slide make no row |
+| the tasks and their requirements | `working_claude\day_sheets.json` `"tasks"`; without it each activity of the day is a task and its own lines - the words the trainee sees - its requirements |
+| titles, intro, sections, Before you leave, the one-page words | `working_claude\day_sheets.json`; without it the day's module titles, and no intro or Before you leave |
+
+**`working_claude\day_sheets.json`** - optional, written with the course lead at the STOP after the scripts (L31); every key
+may be left out. The Project Management course's file is the worked example.
+
+- `sheet_name` (`"Day {n} task sheet - {title}"`), `subtitle`, `audience` (a small line under the title), `where_head`
+  (`"Where (template tab)"`).
+- `tasks` - `{"n": 5, "name": "Work breakdown structure", "where": "5 WBS", "title": "Task 5 ... (tab '5 WBS')",
+  "requirements": [...]}`. A task lands on the day of the activity whose title or text names it ("Task 5", "Tasks 7 and
+  8"); `"at": "M03.a01"` (the module and the activity's id; `FINAL.a01` for the final) places one the words do not name.
+  The activity's row then says the task names, and its *Where* the tasks' `where`. A task placed nowhere is said.
+- `rows` - `{"M01.S19": [["Groups formed, project draw", "Instructor"], ["Task 1 ...", "1 Charter"]]}`: the course lead's
+  own rows instead of the one a screen makes (a theory row is keyed by its first screen); `[]` drops the row. Use it for
+  words, never for times.
+- `days` - `{"1": {"title", "intro", "sections": ["consistency"], "before_leave": ["@ai_log", "..."], "lecture",
+  "practical", "output"}}` - `lecture`, `practical` and `output` are the one-page table's cells.
+- `lines` - named lines, used as `"@name"` in `before_leave` and in a task's requirements.
+- `sections` - named blocks, the additional materials' format: `["h2", "..."]`, `["p", "..."]`, `["ul"|"ol", [...]]`,
+  `["table", [head], [[row], ...]]`.
+- `one_page` - `title`, `subtitle`, `order` (the chain of the work), `order_note`, `files` (`{"title", "head", "rows"}`).
+
+Preview before a build, written outside the course:
+
+```
+python compile/scripts/day_sheets.py <course> --out <folder> [--no-data]
+```
+
+`--no-data` shows what the scripts alone give. A day sheet never carries a clock time: a script's "Timing:" notes and an
+activity's minutes stay on the instructor's own pages (the module plan, the practical kit).
+
+## 5 · Not the factory's yet
 
 - The final test on the trainees' phones, and filling the assessment form on the instructor's tablet: the training app's.
   The factory writes each recorded-run assessment form as `modules\classroom\forms\<CODE>.json` (`classroom_files.py`), which

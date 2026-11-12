@@ -824,6 +824,9 @@ course\
       MNN_<code>_<title>_DEBRIEF.pdf / .docx       the debrief card, the observation card under it
       MNN_<code>_<title>_ASSESSMENT.pdf / .docx    the assessment form of a recorded run, one per candidate
     practical-kit\EMPLOYER_SHEET_<course>.pdf / .docx   one page for the company (`instructor-led/GUIDE.md`)
+    day-sheets\Day_N_<title>.html / .pdf / .docx       what is done on day N, in order, no clock times; the tasks and
+    day-sheets\Course_on_one_page.*                    their requirements; and the course on one page
+                                                       (`day_sheets.py`, `instructor-led/GUIDE.md` section 4)
   modules\_course_shell\advanced_course_plan.html      the ACP on the instructor's tablet
   modules\moduleNN\instructor\advanced_module_plan.html   the module explained step by step, for the tablet
 ```

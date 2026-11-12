@@ -26,6 +26,10 @@ WHAT IT WRITES
           M05_A01_<title>_ASSESSMENT.pdf / .docx  assessment form, one per candidate
       practical-kit\\EMPLOYER_SHEET_<course>.pdf / .docx   one page for the company: what the trainee can now do, what decays
                                                   fastest, an on-board drill at 1-3 months, what to watch for
+      day-sheets\\Day_1_<title>.html / .pdf / .docx   (2.129.0, day_sheets.py) what is done on the day, in order, with
+      day-sheets\\Course_on_one_page.*             no clock times; each task's requirements; Before you leave - and the
+                                                  whole course on one page: the order of the work, lecture and practical
+                                                  per day, what each day ends with
   course\\modules\\_course_shell\\advanced_course_plan.html   the same plan for the instructor's tablet
   course\\modules\\moduleNN\\instructor\\advanced_module_plan.html   one module explained step by step, for the tablet
   The two tablet pages are self-contained (their style inline, no link out, no script): the instructor panel opens them
@@ -143,6 +147,7 @@ W = {
     # the index
     "index": "Additional materials", "index_sub": "{course} - every document beside the tablets",
     "i_acp": "Advanced Course Plan (Word for the auditor, HTML for reading)",
+    "i_days": "Day sheets - what is done each day, in order (no clock times), and the course on one page",
     "i_tasks": "Practical task descriptions - {n} tasks, each as PDF and Word",
     "i_sim": "Simulator and equipment exercises to print, by day", "i_none": "This course has no simulator or equipment exercise.",
     "i_plans": "On the instructor's tablet: the course plan (_course_shell) and each module's step-by-step plan (instructor)",
@@ -928,6 +933,10 @@ def plan(course, infos, title, probs):
                 out.append((os.path.join(dd, t["stem"] + "_TRAINEE.docx"), "docx", card))
                 out.append((os.path.join(dd, t["stem"] + "_INSTRUCTOR.pdf"), "pdf", to_html("%s %s - %s" % (m["mid"], t["code"], t["title"]), doc)))
     out += kit(course, title, mods, days, root, probs)
+    # 2.129.0 - the day sheets and the course on one page (course lead Aigars Kluga, 2026-11-12): what is done each day,
+    # in order, no clock times - from the same day split as the ACP above
+    import day_sheets as ds                           # here, not at the top: it imports this file
+    out += ds.files(course, title, prog, mods, days, root, probs)
     # the instructor-only classroom files the tablet app reads on publish (classroom_files.py): the Prepare lists and the
     # recorded runs' assessment forms - in the modules folder, beside _course_shell, never in additional-materials
     import classroom_files as cf                      # here, not at the top: it reads this file's helpers only through the build
@@ -951,8 +960,11 @@ def index_blocks(title, root, out, mods):
     for p, k, _ in out:
         if rel(p).startswith("simulator-and-equipment/"):
             by_day.setdefault(rel(p).split("/")[1].replace("_", " "), []).append(link(p))
-    blocks = [("h1", W["index"]), ("p", W["index_sub"].format(course=title)), ("h2", W["i_acp"]), ("ul", acp),
-              ("h2", W["i_sim"])]
+    days_ = [link(p) for p, k, _ in out if rel(p).startswith("day-sheets/")]
+    blocks = [("h1", W["index"]), ("p", W["index_sub"].format(course=title)), ("h2", W["i_acp"]), ("ul", acp)]
+    if days_:
+        blocks += [("h2", W["i_days"]), ("ul", days_)]
+    blocks.append(("h2", W["i_sim"]))
     if by_day:
         for d, items in by_day.items():
             blocks += [("h3", d), ("ul", items)]

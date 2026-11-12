@@ -7,6 +7,30 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.129.0 · Day sheets and the course on one page, for every instructor-led course (2026-11-12)
+
+- WHY: the Project Management practical pack's day task sheets and one-page overview were written by hand
+  (`working_claude/practical_pack/build_trainee_docs.py` `TIMETABLE`, `build_one_pager.py`). Course lead Aigars Kluga liked
+  them, asked for the day-by-day sequence, and for it in the advanced course plan of every course; on 2026-11-12 he
+  decided: no clock times and no break or lunch rows - the real times always differ.
+- `compile/scripts/day_sheets.py` (new): `items_by_day` (every instructor-device screen on the day of
+  `course.build.json` `"days"`, the ACP's split via `additional_materials.days_of`/`day_of`; the final - a module folder or
+  `FINAL.json` - on the last day), `rows_of` (course start, one theory row per run of teaching slides and self-checks,
+  a row per activity, team task and module check; briefing and recap slides make none), `place_tasks` (a task on the day
+  of the activity naming "Task N", or its `"at"`), `day_sheet`, `one_page`, `documents`, `files`; a preview CLI
+  (`--out`, `--no-data`) that writes outside the course.
+- `working_claude/day_sheets.json` (optional, per course): the words the scripts do not hold - tasks with requirements and
+  where, row overrides, titles, intros, sections, Before you leave, the one-page cells. `instructor-led/GUIDE.md` §4.
+- `additional_materials.py` `plan()` writes them into `additional-materials/day-sheets/` (HTML, PDF, Word); `INDEX.html`
+  links them. `compile/GUIDE.md` file map.
+- Checked on Project Management (scripts v1.0.4, its new `day_sheets.json` taken from the hand-built pack): the four
+  sheets and the one-page overview match the hand-built ones row for row except the theory rows (now the slides' own
+  titles, counted exercises and self-checks, about N academic hours) and the activity rows the file does not override (the
+  activity's title with its task names). The hand-built files were not touched.
+- Tests: `compile/scripts/test_day_sheets.py` (new, 15).
+- Not done: the classroom platform does not show them yet (`additional-materials` is not uploaded to the classroom);
+  `day_sheets.json` has no `draft` or approval step - it is the course lead's words, checked at the STOP like the scripts.
+
 ## 2.128.0 · Varied practical-activity formats, chosen while a module is written (2026-11-11)
 
 - WHY (course expert Aigars Kluga, 2026-11-11: "the factory is good but cannot vary - fine for one-direction courses like
