@@ -103,7 +103,7 @@
     foundation: ['#4d5660', 0.7, 0.4], cabinet: ['#e6eaee', 0.5, 0.1], panel: ['#cdd5db', 0.5, 0.15],
     screen: ['#2f3a44', 0.3, 0.2], accommodation: ['#e8ecef', 0.7, 0.05], window: ['#2a3d52', 0.2, 0.3],
     skin: ['#e0b58f', 0.7, 0.0], overall: ['#e46b1f', 0.8, 0.0], helmet: ['#f2f2f2', 0.4, 0.0],
-    lng: ['#5fb4ea', 0.15, 0.0], glass: ['#cfe6f4', 0.12, 0.0]
+    lng: ['#5fb4ea', 0.15, 0.0], glass: ['#cfe6f4', 0.12, 0.0], wood: ['#a8865a', 0.85, 0.0]
   };
   var TINT = { amber: '#f0c36a', green: '#7fcf9d', blue: '#86b8ee', grey: '#b8c6d4', red: '#f08f86', violet: '#b9a3e3' };
   var ZONE = ['#ff4040', '#ff9a1f', '#f4e04d'];   /* zone 0 red, 1 amber, 2 yellow (IGF M07) */
@@ -548,7 +548,7 @@
     S.k = k;
     for (oi = 0; oi < order.length; oi++) {
       i = order[oi];
-      p = joinRelation(deckRelation(list, list[i], S), S);
+      p = joinRelation(inRelation(list, deckRelation(list, list[i], S), S), S);
       fn = PART[p.type];
       if (!fn) { S.warn('part "' + (p.id || i) + '": the kit has no part type "' + p.type + '"'); continue; }
       k.g = S.root; k.stack = [];
@@ -2067,7 +2067,8 @@
     "cylinder": {"family": "primitives", "at": "centre", "about": "a cylinder: r, len, axis x|y|z"},
     "sphere": {"family": "primitives", "at": "centre", "about": "a ball: r"},
     "hull": {"family": "structures", "at": "the hull's own origin: x as given, y = bottom shell 0, z = centre line",
-             "subs_from": ["spaces"], "about": "a hull section: double bottom, spaces between bulkheads, ghost walls, frames"},
+             "subs_from": ["spaces"], "anchors": ["outer_shell", "inner_hull", "double_bottom", "wing_tank", "hopper_tank", "top_wing_tank"],
+             "about": "a hull section: double bottom, spaces between bulkheads, ghost walls, frames; a gas carrier's double hull - outer shell, inner hull, wing, hopper and top-wing tanks"},
     "deck_plate": {"family": "structures", "at": "deck top at the ship's side (z = 0 is the side, inboard is -z)",
                    "about": "a piece of steel deck and ship's side plating with seams"},
     "room": {"family": "structures", "at": "floor centre", "about": "a cut-open room: floor, back and side walls, frames, the front open"},
@@ -2075,10 +2076,11 @@
     "panel": {"family": "structures", "at": "centre", "about": "a see-through wall"},
     "accommodation": {"family": "structures", "at": "base centre", "about": "a deckhouse with window rows and a wheelhouse"},
     "tank_c": {"family": "tanks", "at": "axis centre", "subs": ["liquid"],
-               "about": "IMO type C: cylinder, dished ends, rings, saddles; cut open, liquid level, insulation"},
-    "tank_sphere": {"family": "tanks", "at": "centre", "subs": ["liquid"], "about": "a spherical (Moss) tank on its skirt; cut open, liquid, insulation"},
+               "about": "IMO type C: cylinder, dished ends, rings, saddles; cut open, liquid level, insulation; a bilobe (lobes 2) with its centreline bulkhead; seated in a hold (in)"},
+    "tank_sphere": {"family": "tanks", "at": "centre", "subs": ["liquid", "skirt"],
+                    "about": "a spherical (Moss) tank on its skirt at the equator; cut open, liquid, insulation, drip tray, tank cover; seated in a hold (in)"},
     "tank_prism": {"family": "tanks", "at": "centre", "subs": ["liquid"], "subs_from": ["layers"],
-                   "about": "prismatic / membrane / semi-membrane tank: chamfered (or rounded) section, the layers of insulation and barriers seen at the cut"},
+                   "about": "prismatic / membrane / semi-membrane tank: chamfered (or rounded) section, the layers of insulation and barriers seen at the cut; lining the hold, or a Type A / B tank on chocks with its centreline bulkhead (in)"},
     "pipe": {"family": "piping", "at": "the path's origin", "about": "a pipe run through points: bends, flanges, ID bands"},
     "pipe_dw": {"family": "piping", "at": "the pipe's middle", "subs": ["inner", "annulus", "outer"], "states": ["cut"],
                 "about": "a double-walled gas pipe: yellow inner pipe, see-through outer pipe, the annulus; cut open"},
@@ -2237,31 +2239,194 @@
     }
     return q;
   }
+  /* "in": "<hull>" (or one of its spaces' ids): a tank in a hull's hold, seated by the kit as a gas carrier carries it -
+     never at a guessed height beside guessed wing boxes. tank_prism: a membrane or semi-membrane tank lines the hold
+     (the inner hull) end to end; a Type A / Type B prismatic tank stands in it with its clearance (clear, 0.8) on chocks.
+     tank_sphere: its skirt runs from the equator down to the inner bottom (skirt: the equator's height above it).
+     tank_c: its saddles stand on the inner bottom (clear: the tank's bottom above it); the length fills the hold
+     unless given. The tank's x (and a tank_c's z) are its own "at"'s when given; its height is the hold's. */
+  var SEATED = ['tank_c', 'tank_sphere', 'tank_prism'];
+  function holdOf(list, ref) {
+    var f = null;
+    list.forEach(function (q) {
+      if (f || !q || q.type !== 'hull') { return; }
+      if (q.id === ref) { f = { h: q, x: q.x || [-10, 10] }; return; }
+      (q.spaces || []).forEach(function (s) { if (!f && s.id === ref) { f = { h: q, x: s.x }; } });
+    });
+    return f;
+  }
+  function inRelation(list, p, S) {
+    if (typeof p.in !== 'string' || SEATED.indexOf(p.type) < 0) { return p; }
+    var f = holdOf(list, p.in);
+    if (!f) {
+      if (!list.some(function (q) { return q && q.id === p.in; })) { S.warn('part "' + (p.id || p.type) + '" is "in" ' + p.in + ' - there is no hull or hull space ' + p.in); }
+      return p;
+    }
+    var q = {}, key, o = v3(f.h.at), sec = holdSection(f.h), X0 = o[0] + f.x[0], X1 = o[0] + f.x[1];
+    for (key in p) { q[key] = p[key]; }
+    var own = Array.isArray(p.at) && p.at.length === 3, ax = own ? p.at[0] : (X0 + X1) / 2, az = own ? p.at[2] : o[2];
+    var R = num(p.r, p.type === 'tank_sphere' ? 5 : 3), ins = num(p.insulation, 0), fl = o[1] + sec.fl, h;
+    q._hold = { sec: sec, x0: X0, x1: X1, y0: o[1], z0: o[2] };
+    if (p.type === 'tank_prism') {
+      q.at = [(X0 + X1) / 2, o[1], o[2]];
+    } else if (p.type === 'tank_sphere') {
+      h = num(p.skirt, (R + ins) * 1.25);
+      q.at = [ax, fl + h, az];
+      q.base = -h;
+      q._deck = o[1] + sec.top - q.at[1];
+    } else {
+      h = num(p.clear, Math.max(0.5, R * 0.15)) + R + ins;
+      q.at = [ax, fl + h, az];
+      q.base = -h;
+      if (p.len == null) { q.len = Math.max(1, (X1 - X0) - 2 * num(p.head, R / 2) - 2); }
+    }
+    return q;
+  }
+  /* the hold's section in a hull (y-z, the hull's own coordinates, counter-clockwise): the inner bottom, the hopper's slope,
+     the inner side, the top wing's slope, the deck. double: the double side's width; hopper [w, h]; topwing [w, h]. None of
+     them: the hull's own sides over its double bottom. */
+  function holdSection(p) {
+    var hz = num(p.half, num(p.breadth, 12) / 2), bot = num(p.bottom, 0), fl = num(p.floor, bot + 1.2), top = num(p.top, fl + 9);
+    var zi = hz - num(p.double, 0), hp = p.hopper || [0, 0], tw = p.topwing || [0, 0];
+    var a = num(hp[0], 0), b = num(hp[1], 0), c = num(tw[0], 0), e = num(tw[1], 0), pts = [], raw;
+    raw = [[-(zi - a), fl], [zi - a, fl], [zi, fl + b], [zi, top - e], [zi - c, top], [-(zi - c), top], [-zi, top - e], [-zi, fl + b]];
+    raw.forEach(function (q) {
+      var l = pts[pts.length - 1];
+      if (!l || Math.abs(l[0] - q[0]) + Math.abs(l[1] - q[1]) > 1e-6) { pts.push(q); }
+    });
+    if (Math.abs(pts[0][0] - pts[pts.length - 1][0]) + Math.abs(pts[0][1] - pts[pts.length - 1][1]) < 1e-6) { pts.pop(); }
+    return { hz: hz, zi: zi, bot: bot, fl: fl, top: top, hw: a, hh: b, tw: c, th: e, pts: pts, inner: zi < hz - 1e-6 || b > 0 || e > 0 };
+  }
+  /* a convex section moved inwards by d (the layers of a tank that lines the hold, the clearance round a prismatic tank) */
+  function inset(pts, d) {
+    if (!d) { return pts.slice(); }
+    var n = pts.length, area = 0, i, a, b, out = [], L = [];
+    for (i = 0; i < n; i++) { a = pts[i]; b = pts[(i + 1) % n]; area += a[0] * b[1] - b[0] * a[1]; }
+    var sg = area > 0 ? 1 : -1;
+    for (i = 0; i < n; i++) {
+      a = pts[i]; b = pts[(i + 1) % n];
+      var dx = b[0] - a[0], dy = b[1] - a[1], l = Math.sqrt(dx * dx + dy * dy) || 1;
+      L.push([a[0] - dy / l * sg * d, a[1] + dx / l * sg * d, dx, dy]);
+    }
+    for (i = 0; i < n; i++) {
+      var p1 = L[(i + n - 1) % n], p2 = L[i], den = p1[2] * p2[3] - p1[3] * p2[2];
+      if (Math.abs(den) < 1e-9) { out.push([p2[0], p2[1]]); continue; }
+      var t = ((p2[0] - p1[0]) * p2[3] - (p2[1] - p1[1]) * p2[2]) / den;
+      out.push([p1[0] + p1[2] * t, p1[1] + p1[3] * t]);
+    }
+    return out;
+  }
+  /* the same section with every corner rounded to radius r (a semi-membrane tank: flat sides, large round corners) */
+  function rounded(pts, r) {
+    var n = pts.length, out = [], i, j;
+    for (i = 0; i < n; i++) {
+      var v = pts[i], a = pts[(i + n - 1) % n], b = pts[(i + 1) % n];
+      var ux = a[0] - v[0], uy = a[1] - v[1], la = Math.sqrt(ux * ux + uy * uy) || 1, wx = b[0] - v[0], wy = b[1] - v[1], lb = Math.sqrt(wx * wx + wy * wy) || 1;
+      ux /= la; uy /= la; wx /= lb; wy /= lb;
+      var th = Math.acos(clamp(ux * wx + uy * wy, -1, 1));
+      if (th > Math.PI - 0.02) { out.push(v); continue; }
+      var t = Math.min(r / Math.tan(th / 2), la * 0.5, lb * 0.5), rr = t * Math.tan(th / 2);
+      var bx = ux + wx, by = uy + wy, bl = Math.sqrt(bx * bx + by * by) || 1, dc = rr / Math.sin(th / 2);
+      var cx = v[0] + bx / bl * dc, cy = v[1] + by / bl * dc;
+      var a0 = Math.atan2(v[1] + uy * t - cy, v[0] + ux * t - cx), a1 = Math.atan2(v[1] + wy * t - cy, v[0] + wx * t - cx), da = a1 - a0;
+      while (da > Math.PI) { da -= 2 * Math.PI; }
+      while (da < -Math.PI) { da += 2 * Math.PI; }
+      for (j = 0; j <= 4; j++) { out.push([cx + rr * Math.cos(a0 + da * j / 4), cy + rr * Math.sin(a0 + da * j / 4)]); }
+    }
+    return out;
+  }
+  function centroid(pts) {
+    var x = 0, y = 0;
+    pts.forEach(function (q) { x += q[0]; y += q[1]; });
+    return [x / pts.length, y / pts.length];
+  }
+  function spanY(pts) {
+    var lo = 1e9, hi = -1e9;
+    pts.forEach(function (q) { lo = Math.min(lo, q[1]); hi = Math.max(hi, q[1]); });
+    return [lo, hi];
+  }
+  function shapeZY(pts, hole) {
+    var s = shapeXY(pts);
+    if (hole) { var h = new T.Path(), i; h.moveTo(hole[0][0], hole[0][1]); for (i = hole.length - 1; i >= 0; i--) { h.lineTo(hole[i][0], hole[i][1]); } s.holes.push(h); }
+    return s;
+  }
+  /* a section [[z, y] ...] (with a hole) drawn along x from x0 to x1 - a wing tank, a layer of a tank that lines the hold */
+  function alongX(k, pts, x0, x1, m, o, hole) {
+    var g = new T.ExtrudeGeometry(shapeZY(pts, hole), { depth: x1 - x0, bevelEnabled: false, curveSegments: 4 });
+    g.rotateY(-Math.PI / 2); g.translate(x1, 0, 0);
+    return k.add(g, m, 0, 0, 0, o);
+  }
+  /* a section [[z, y] ...] standing across the ship at x, facing +x (the cut face of a tank) */
+  function faceX(k, pts, m, x, hole, o) {
+    var flip = function (q) { return q.map(function (v) { return [-v[0], v[1]]; }); };
+    var g = new T.ShapeGeometry(shapeZY(flip(pts), hole ? flip(hole) : null));
+    g.rotateY(Math.PI / 2);
+    return k.add(g, m, x, 0, 0, o || { cast: false });
+  }
   define('hull', function (k, p) {
     var x = p.x || [-10, 10], x0 = x[0], x1 = x[1], hz = num(p.half, num(p.breadth, 12) / 2), bot = num(p.bottom, 0);
     var fl = num(p.floor, bot + 1.2), top = num(p.top, fl + 9), self = k.cur, edge = '#41566b', i;
+    var sec = holdSection(p), dbl = sec.inner;
     function back() { k.cur = self; }
-    if (p.bottom_id) { k.sub(p.bottom_id, { pick: true }); }
+    /* a gas carrier's hull (double, hopper, topwing): each structure is a sub-part a label names - the outer shell, the inner
+       hull, the double bottom, the wing, hopper and top-wing tanks - with its point on the section at the +x end */
+    if (dbl) { k.sub(p.bottom_id || subId(k, p, 'bottom'), { pick: true, name: 'Double bottom' }); } else if (p.bottom_id) { k.sub(p.bottom_id, { pick: true }); }
     k.box(x1 - x0, fl - bot, 2 * hz, k.mat('hull'), (x0 + x1) / 2, (bot + fl) / 2, 0, { cast: false });
+    if (dbl) { k.anchor('label', [x1, (bot + fl) / 2, hz * 0.55]); back(); k.anchor('double_bottom', [x1, (bot + fl) / 2, hz * 0.55]); }
     back();
     var sp = p.spaces && p.spaces.length ? p.spaces : [{ x: [x0, x1], tint: 'grey' }], bounds = [];
+    var fw = dbl ? sec.zi - sec.hw : hz, wy0 = dbl ? fl + sec.hh : fl, wy1 = dbl ? top - sec.th : top;
     sp.forEach(function (s) {
       var a = s.x[0], b = s.x[1], t = tint(s.tint, TINT.grey), mid = (a + b) / 2;
       if (s.id) { k.sub(s.id, { pick: true, name: s.name || '' }); } else { back(); }
-      k.box(b - a, 0.1, 2 * hz, k.mat({ color: s.floor || mix(t, '#ffffff', 0.55), rough: 0.85, metal: 0 }), mid, fl + 0.05, 0, { cast: false });
-      if (!p.side_id) { k.add(new T.PlaneGeometry(b - a, top - fl), k.basic(t, num(s.wall, 0.26)), mid, (top + fl) / 2, -hz, { order: 1 }); }
+      k.box(b - a, 0.1, 2 * fw, k.mat({ color: s.floor || mix(t, '#ffffff', 0.55), rough: 0.85, metal: 0 }), mid, fl + 0.05, 0, { cast: false });
+      if (dbl) { k.add(new T.PlaneGeometry(b - a, wy1 - wy0), k.basic(t, num(s.wall, 0.26)), mid, (wy1 + wy0) / 2, -sec.zi + 0.05, { order: 1 }); }
+      else if (!p.side_id) { k.add(new T.PlaneGeometry(b - a, top - fl), k.basic(t, num(s.wall, 0.26)), mid, (top + fl) / 2, -hz, { order: 1 }); }
       k.anchor('label', [mid, top, 0]);
       back();
       if (a > x0 + 1e-3 && bounds.indexOf(a) < 0) { bounds.push(a); }
       if (b < x1 - 1e-3 && bounds.indexOf(b) < 0) { bounds.push(b); }
     });
-    if (p.side_id) {
+    if (dbl) {
+      var L = x1 - x0, zi = sec.zi, hw = sec.hw, hh = sec.hh, tw = sec.tw, th = sec.th;
+      var bal = tint(p.ballast, TINT.blue), op = num(p.ballast_opacity, 0.3);
+      var bfar = k.mat({ color: bal, rough: 0.8, metal: 0 }, { opacity: op }), bnear = k.mat({ color: bal, rough: 0.8, metal: 0 }, { opacity: op * 0.4 });
+      var bend = k.mat({ color: bal, rough: 0.8, metal: 0 }, { opacity: Math.min(0.8, op * 2), double: true });
+      var name = function (label, at) { k.anchor('label', at); back(); k.anchor(label, at); };
+      k.sub(p.side_id || subId(k, p, 'outer'), { pick: true, name: 'Outer shell' });
+      k.add(new T.PlaneGeometry(L, top - bot), k.basic(TINT.grey, num(p.far, 0.24)), (x0 + x1) / 2, (top + bot) / 2, -hz, { order: 1 });
+      k.add(new T.PlaneGeometry(L, top - bot), k.basic(TINT.grey, num(p.near, 0.1)), (x0 + x1) / 2, (top + bot) / 2, hz, { order: 1, noPick: true });
+      name('outer_shell', [x1, (wy0 + wy1) / 2, hz]);
+      k.sub(subId(k, p, 'inner'), { pick: true, name: 'Inner hull' });
+      var pl = sec.pts, nf = k.mat('steel_mid', { opacity: num(p.inner_far, 0.5) }), nn = k.mat('steel_mid', { opacity: num(p.inner_near, 0.14) });
+      for (i = 0; i < pl.length; i++) {
+        var a0 = pl[i], b0 = pl[(i + 1) % pl.length], dz = b0[0] - a0[0], dy = b0[1] - a0[1], sl = Math.sqrt(dz * dz + dy * dy);
+        if (Math.abs(dy) < 1e-6 || sl < 1e-6) { continue; }                          /* the inner bottom and the deck are not side plating */
+        k.box(L, sl, 0.08, (a0[0] + b0[0]) / 2 < 0 ? nf : nn, (x0 + x1) / 2, (a0[1] + b0[1]) / 2, (a0[0] + b0[0]) / 2, { rx: Math.atan2(dz, dy) });
+      }
+      name('inner_hull', [x1, (wy0 + wy1) / 2, zi]);
+      [['wing', 'wing_tank', 'Wing tank', zi < hz - 1e-6, function (sg) { return [[sg * zi, wy0], [sg * hz, wy0], [sg * hz, wy1], [sg * zi, wy1]]; }],
+       ['hopper', 'hopper_tank', 'Hopper tank', hh > 0, function (sg) { return [[sg * (zi - hw), fl], [sg * hz, fl], [sg * hz, fl + hh], [sg * zi, fl + hh]]; }],
+       ['topwing', 'top_wing_tank', 'Top wing tank', th > 0, function (sg) { return [[sg * zi, top - th], [sg * hz, top - th], [sg * hz, top], [sg * (zi - tw), top]]; }]
+      ].forEach(function (r) {
+        if (!r[3]) { return; }
+        k.sub(subId(k, p, r[0]), { pick: true, name: r[2] });
+        var near = null;
+        [-1, 1].forEach(function (sg) {
+          var q = r[4](sg).filter(function (v, j, all) { var w = all[(j + all.length - 1) % all.length]; return Math.abs(v[0] - w[0]) + Math.abs(v[1] - w[1]) > 1e-6; });
+          alongX(k, q, x0, x1, sg < 0 ? bfar : bnear, { cast: false });
+          faceX(k, q, bend, x1 + 0.01); faceX(k, q, bend, x0 - 0.01);         /* the section at both ends: the tank reads at once */
+          if (sg > 0) { near = centroid(q); }
+        });
+        name(r[1], [x1, near[1], near[0]]);
+      });
+    } else if (p.side_id) {
       k.sub(p.side_id, { pick: true });
       k.add(new T.PlaneGeometry(x1 - x0, top - fl), k.basic(TINT.grey, num(p.far, 0.24)), (x0 + x1) / 2, (top + fl) / 2, -hz, { order: 1 });
       k.anchor('label', [(x0 + x1) / 2, (fl + top) / 2, -hz]);
       back();
     }
-    if (p.near) { k.add(new T.PlaneGeometry(x1 - x0, top - fl), k.basic(TINT.grey, p.near), (x0 + x1) / 2, (top + fl) / 2, hz, { order: 1, noPick: true }); }
+    if (p.near && !dbl) { k.add(new T.PlaneGeometry(x1 - x0, top - fl), k.basic(TINT.grey, p.near), (x0 + x1) / 2, (top + fl) / 2, hz, { order: 1, noPick: true }); }
     var bh = bounds.map(function (bx) { return { x: bx, opacity: 0.16 }; });
     bh.push({ x: x0, opacity: num(p.ends, 0.1) }, { x: x1, opacity: num(p.ends, 0.1) });
     (p.bulkheads || []).forEach(function (o) {
@@ -2279,6 +2444,17 @@
     });
     var ln = k.boxEdges(x0, x1, bot, top, -hz, hz);
     bounds.forEach(function (bx) { ln = ln.concat(rectX(bx, fl, top, -hz, hz)); });
+    if (dbl) {                                          /* the inner hull's lines at both ends and along x, the tanks' tops */
+      var pp = sec.pts;
+      for (i = 0; i < pp.length; i++) {
+        var u = pp[i], w = pp[(i + 1) % pp.length];
+        ln.push(x0, u[1], u[0], x0, w[1], w[0], x1, u[1], u[0], x1, w[1], w[0], x0, u[1], u[0], x1, u[1], u[0]);
+      }
+      [-1, 1].forEach(function (sg) {
+        if (sec.hh > 0) { ln.push(x0, fl + sec.hh, sg * sec.zi, x0, fl + sec.hh, sg * hz, x1, fl + sec.hh, sg * sec.zi, x1, fl + sec.hh, sg * hz); }
+        if (sec.th > 0) { ln.push(x0, top - sec.th, sg * sec.zi, x0, top - sec.th, sg * hz, x1, top - sec.th, sg * sec.zi, x1, top - sec.th, sg * hz); }
+      });
+    }
     if (p.ribs) {
       for (i = x0 + p.ribs; i < x1 - 0.5; i += p.ribs) { ln.push(i, fl, -hz, i, top, -hz); }
       ln.push(x0, fl, -hz, x1, fl, -hz, x0, fl, hz, x1, fl, hz);
@@ -2393,8 +2569,94 @@
      [x] or a count, saddles [x], base (the floor's y under it, -r - 0.6); cut: true takes the front half (z > 0) away;
      fill (0..1 of the diameter) draws the liquid, sub-part "liquid"; insulation (thickness) its own layer, seen at
      the cut; dome: true a manway dome on top */
+  /* a bilobe Type C tank ("lobes": 2): two cylinders that meet in ONE vessel, a centreline bulkhead where they join (sub-part
+     <id>_bulkhead). spread: each lobe's axis off the centre line (0.55 r); "cut": the +x half away, so the section shows
+     both lobes, the bulkhead and the liquid on each side of it. Saddles carry both lobes. */
+  function bilobe(k, p, R, L, A) {
+    var X0 = -L / 2, X1 = L / 2, self = k.cur, d = num(p.spread, R * 0.55), h = Math.sqrt(Math.max(0.01, R * R - d * d));
+    var ti = num(p.insulation, 0), cutC = p.cut ? k.clip([-1, 0, 0], 0) : null, i, j, lp = [];
+    var rings = p.rings != null ? p.rings : 4, rt = num(p.ring_t, Math.max(0.05, R * 0.027));
+    if (typeof rings === 'number') { var rr = []; for (i = 0; i < rings; i++) { rr.push(X0 + L * (i + 0.5) / rings); } rings = rr; }
+    var halves = {}, bulkId = subId(k, p, 'bulkhead'), liqId = subId(k, p, 'liquid');
+    function head(sign, x, r, m, zc) {
+      var g = new T.SphereGeometry(r, 72, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+      g.scale(1, (A + r - R) / r, 1);
+      g.rotateZ(sign * Math.PI / 2);
+      return k.add(g, m, x, 0, zc);
+    }
+    /* the arc of one lobe's circle (radius r) on its own side of the centre line, top to bottom, in [z, y] */
+    function arc(sg, r) {
+      var t0 = Math.acos(clamp(-d / r, -1, 1)), out = [], n = 36;
+      for (j = 0; j <= n; j++) { var t = t0 - 2 * t0 * j / n; out.push([sg * (d + r * Math.cos(t)), r * Math.sin(t)]); }
+      return out;
+    }
+    [-1, 1].forEach(function (sg) {
+      var half = k.clip([0, 0, sg], 0), cl = cutC ? [half, cutC] : [half], ex = { clip: cl }, zc = sg * d;
+      halves[sg] = cl;
+      var shell = M(k, p, p.cut ? 'shell' : 'tank', ex), ringM = k.mat('ring', ex);
+      var cyl = new T.CylinderGeometry(R, R, L, 72, 1, true);
+      cyl.rotateZ(Math.PI / 2);
+      k.add(cyl, shell, 0, 0, zc);
+      head(1, X0, R, shell, zc); head(-1, X1, R, shell, zc);
+      rings.forEach(function (x) { k.ring('x', R + 0.04 + (rt > 0.1 ? rt * 0.5 : 0), rt, ringM, x, 0, zc, { seg: 72 }); });
+      if (ti) {
+        var im = k.mat('insulation', ex), ic = new T.CylinderGeometry(R + ti, R + ti, L, 72, 1, true);
+        ic.rotateZ(Math.PI / 2);
+        k.add(ic, im, 0, 0, zc);
+        head(1, X0, R + ti, im, zc); head(-1, X1, R + ti, im, zc);
+      }
+      if (p.cut) {                                       /* the section: each lobe's wall, its insulation */
+        var a = arc(sg, R);
+        for (j = 0; j < a.length - 1; j++) { lp.push(0.004, a[j][1], a[j][0], 0.004, a[j + 1][1], a[j + 1][0]); }
+        if (ti) { faceX(k, arc(sg, R + ti).concat(arc(sg, R).reverse()), k.mat('insulation'), 0.003); }
+      }
+    });
+    var base = num(p.base, -R - 0.6), Rr = R + ti + 0.03, zw = d + Rr * 0.88;
+    (p.saddles || [X0 + L * 0.2, X1 - L * 0.2]).forEach(function (sx) {
+      var sh = new T.Shape(), n = 40;
+      sh.moveTo(-zw, base); sh.lineTo(zw, base);
+      for (j = 0; j <= n; j++) {
+        var z = zw - 2 * zw * j / n, u = Math.abs(z) - d;
+        sh.lineTo(z, -Math.sqrt(Math.max(0, Rr * Rr - u * u)));
+      }
+      sh.lineTo(-zw, base);
+      var dep = Math.max(0.5, R * 0.2), g = new T.ExtrudeGeometry(sh, { depth: dep, bevelEnabled: false, curveSegments: 24 });
+      g.rotateY(Math.PI / 2);
+      k.add(g, k.mat('saddle', cutC ? { clip: [cutC] } : null), sx - dep / 2, 0, 0);
+    });
+    if (p.dome) {
+      k.cyl('y', R * 0.18, R * 0.35, k.mat(p.cut ? 'shell' : 'tank'), X1 - L * 0.25, R + R * 0.12, -d, { seg: 32 });
+    }
+    if (lp.length) { lp.push(0.004, -h, 0, 0.004, h, 0); k.lines(lp, '#3f4a54'); }
+    k.anchor('label', [cutC ? 0 : X0 + L * 0.3, R + ti, -d]);
+    k.sub(bulkId, { pick: true, name: 'Centreline bulkhead' });
+    var ah = A * h / R, bs = new T.Shape();
+    bs.moveTo(X0, -h); bs.lineTo(X1, -h);
+    bs.absellipse(X1, 0, ah, h, -Math.PI / 2, Math.PI / 2, false);
+    bs.lineTo(X0, h);
+    bs.absellipse(X0, 0, ah, h, Math.PI / 2, Math.PI * 1.5, false);
+    k.add(new T.ShapeGeometry(bs, 24), k.mat('steel_mid', cutC ? { clip: [cutC] } : { double: true }), 0, 0, 0);
+    k.anchor('label', [cutC ? 0 : X0 + L * 0.3, h * 0.45, 0]);
+    k.cur = self;
+    if (p.fill > 0) {
+      k.sub(liqId, { pick: true });
+      var Rl = R * 0.985, lv = -Rl + p.fill * 2 * Rl;
+      [-1, 1].forEach(function (sg) {
+        k.push([0, 0, sg * d]);
+        liquidC(k, Rl, A * 0.985, X0, X1, p.fill, halves[sg], p.liquid_color, { face: false });
+        k.pop();
+        if (p.cut) {
+          var poly = below(arc(sg, Rl), lv), col = p.liquid_color || '#5fb4ea';
+          if (poly.length > 2) { faceX(k, poly, k.mat({ color: mix(col, '#2a8fd6', 0.3), rough: 0.2, metal: 0 }, { opacity: 0.8, double: true }), 0.01, null, { order: 3, cast: false }); }
+        }
+      });
+      k.anchor('label', [cutC ? 0 : X0 + L * 0.15, lv - R * 0.3, d]);
+      k.cur = self;
+    }
+  }
   define('tank_c', function (k, p) {
     var R = num(p.r, 3), L = num(p.len, 10), A = num(p.head, R / 2), X0 = -L / 2, X1 = L / 2, self = k.cur, i;
+    if (num(p.lobes, 1) >= 2) { bilobe(k, p, R, L, A); return; }
     var clip = p.cut ? [k.clip([0, 0, -1], 0)] : null, ex = clip ? { clip: clip } : null;
     var shell = M(k, p, p.cut ? 'shell' : 'tank', ex), ringM = k.mat('ring', ex);
     var cyl = new T.CylinderGeometry(R, R, L, 72, 1, true);
@@ -2456,8 +2718,8 @@
     }
   });
   /* the liquid in a horizontal tank with dished ends: a real volume below the level, its surface, and its flat section
-     where the tank is cut (IGF M01) */
-  function liquidC(k, Rl, A, X0, X1, fill, clip, color) {
+     where the tank is cut (IGF M01); o.face false leaves that section out (a bilobe draws its own at its end cut) */
+  function liquidC(k, Rl, A, X0, X1, fill, clip, color, o) {
     var level = -Rl + fill * 2 * Rl, slices = [], i, j, nh = 14, nc = 8, Mn = 40, u;
     for (i = 0; i <= nh; i++) { u = -1 + i / nh; slices.push({ x: X0 + u * A, R: Rl * Math.sqrt(Math.max(0, 1 - u * u)) }); }
     for (i = 1; i < nc; i++) { slices.push({ x: X0 + (X1 - X0) * i / nc, R: Rl }); }
@@ -2485,20 +2747,22 @@
     if (clip) { ex1.clip = clip; ex2.clip = clip; }
     k.add(geo(pos, idx), k.mat({ color: col, rough: 0.15, metal: 0 }, ex1), 0, 0, 0, { order: 2 });
     k.add(geo(spos, sidx), k.mat({ color: mix(col, '#ffffff', 0.4), rough: 0.1, metal: 0 }, ex2), 0, 0, 0, { order: 3 });
-    if (clip) {
+    if (clip && !(o && o.face === false)) {
       k.add(geo(cpos, cidx), k.mat({ color: mix(col, '#2a8fd6', 0.3), rough: 0.2, metal: 0 }, { opacity: 0.78, double: true }), 0, 0, 0, { order: 3 });
       k.lines(lvl, '#2f86c0');
     }
     return cut;
   }
 
-  /* a spherical (Moss) tank on its skirt (cut, fill, insulation as tank_c). at = the sphere's centre; r; base (floor y) */
+  /* a spherical (Moss) tank on its skirt (cut, fill, insulation as tank_c). at = the sphere's centre; r; base: the skirt's foot
+     below the centre (negative) - the skirt (sub-part <id>_skirt) carries the sphere at its equator, its equatorial ring there,
+     and stands on the inner bottom ("in": "<hull>" puts it there). drip: the drip tray under the sphere, the partial secondary
+     barrier (<id>_drip); cover: the tank cover above the deck (<id>_cover; the deck's height above the centre, or the hull's) */
   define('tank_sphere', function (k, p) {
     var R = num(p.r, 5), self = k.cur, clip = p.cut ? [k.clip([0, 0, -1], 0)] : null, ex = clip ? { clip: clip } : null;
     k.ball(R, M(k, p, p.cut ? 'shell' : 'tank', ex), 0, 0, 0, { seg: 72 });
     if (p.insulation) { k.ball(R + p.insulation, k.mat('insulation', ex), 0, 0, 0, { seg: 72 }); }
     var base = num(p.base, -R * 1.25), Rs = R + (p.insulation || 0);
-    k.cyl('y', Rs, -base, k.mat('saddle', ex || { double: true }), 0, base / 2, 0, { open: true, seg: 72 });
     if (p.dome !== false) { k.cyl('y', R * 0.14, R * 0.2, k.mat('tank'), 0, Rs + R * 0.08, 0, { seg: 24 }); }
     if (p.cut) {
       var lp = [], n = 48, i, a0, a1;
@@ -2506,6 +2770,29 @@
       k.lines(lp, '#3f4a54');
     }
     k.anchor('label', [0, Rs, 0]);
+    k.sub(subId(k, p, 'skirt'), { pick: true, name: 'Skirt' });
+    if (base < 0) {
+      k.cyl('y', Rs, -base, k.mat('saddle', ex || { double: true }), 0, base / 2, 0, { open: true, seg: 72 });
+      k.ring('y', Rs + 0.03, Math.max(0.08, R * 0.022), k.mat('steel_dark', ex), 0, 0, 0, { seg: 72 });
+      k.anchor('label', p.cut ? [Rs, base * 0.45, -0.05] : [Rs * 0.71, base * 0.45, Rs * 0.71]);
+    } else { k.S.warn('part "' + self.id + '": a skirt\'s "base" is its foot below the sphere\'s centre - a negative number'); }
+    k.cur = self;
+    if (p.drip && base < 0) {
+      k.sub(subId(k, p, 'drip'), { pick: true, name: 'Drip tray' });
+      var dr = typeof p.drip === 'number' ? p.drip : R * 0.45, dm = k.mat('stainless');
+      k.cyl('y', dr, 0.06, dm, 0, base + 0.03, 0, { seg: 48 });
+      k.ring('y', dr, 0.05, dm, 0, base + 0.08, 0, { seg: 48 });
+      k.anchor('label', [dr * 0.7, base + 0.1, dr * 0.5]);
+      k.cur = self;
+    }
+    var deck = typeof p.cover === 'number' ? p.cover : p._deck;
+    if (p.cover && deck != null) {
+      k.sub(subId(k, p, 'cover'), { pick: true, name: 'Tank cover' });
+      var Rc = Rs + Math.max(0.4, R * 0.08), th = Math.acos(clamp(deck / Rc, -1, 1));
+      k.add(new T.SphereGeometry(Rc, 64, 20, 0, Math.PI * 2, 0, th), k.mat('cover', clip ? { opacity: 0.42, clip: clip } : { opacity: 0.42 }), 0, 0, 0, { order: 2 });
+      k.anchor('label', p.cut ? [Rc * 0.6, Rc * 0.8, -0.05] : [Rc * 0.45, Rc * 0.8, Rc * 0.4]);
+      k.cur = self;
+    }
     if (p.fill > 0) {
       k.sub(subId(k, p, 'liquid'), { pick: true });
       var Rl = R * 0.985, lv = -Rl + p.fill * 2 * Rl, prof = [], j, t0 = Math.acos(clamp(lv / Rl, -1, 1));
@@ -2527,13 +2814,31 @@
      insulation and barriers inside the inner hull seen where it is cut. size [L, H, B]; chamfer; kind "membrane"
      (default) | "semi_membrane" (the section's corners rounded, the tank a plate thicker than a membrane) | "type_b" |
      "type_a"; or layers [{id, name, t, mat}] from the inner hull inwards; cut "end" (x > 0 away, the section shows every
-     layer) or "front" (z > 0 away); fill (0..1 of the height) */
+     layer) or "front" (z > 0 away); fill (0..1 of the height).
+     "in": "<hull>" (inRelation): the hold gives the section and the length. A membrane or semi-membrane tank lines the
+     inner hull with no gap - its layers <id>_ins2 (secondary insulation), _barrier2 (secondary barrier), _ins1 (primary
+     insulation), _barrier1 (the membrane, or the semi-membrane's tank plate); the hull draws the inner hull. A "type_a" /
+     "type_b" tank stands clear of the hull (clear, 0.8) on its chocks (<id>_chocks), insulated outside (<id>_insulation,
+     <id>_shell) with its centreline bulkhead (<id>_bulkhead; "bulkhead": false leaves it out); type_b, or "drip": true, has
+     the drip tray under it (<id>_drip). The section shows at the +x end, the hull's own. */
   var LAYERS = {
     membrane: [{ t: 0.45, mat: 'insulation' }, { t: 0.03, mat: 'barrier' }, { t: 0.25, mat: 'insulation' }, { t: 0.03, mat: 'membrane' }],
     semi_membrane: [{ t: 0.45, mat: 'insulation' }, { t: 0.03, mat: 'barrier' }, { t: 0.25, mat: 'insulation' }, { t: 0.08, mat: 'tank' }],
     type_b: [{ t: 0.3, mat: 'insulation' }, { t: 0.04, mat: 'tank' }],
     type_a: [{ t: 0.08, mat: 'tank' }, { t: 0.0, mat: 'insulation' }]
   };
+  function holdLayers(k, p, kind) {
+    var id = function (n) { return subId(k, p, n); };
+    if (kind === 'membrane' || kind === 'semi_membrane') {
+      return [{ id: id('ins2'), name: 'Secondary insulation', t: 0.4, mat: 'insulation' },
+              { id: id('barrier2'), name: 'Secondary barrier', t: 0.05, mat: 'barrier' },
+              { id: id('ins1'), name: 'Primary insulation', t: 0.25, mat: 'insulation' },
+              { id: id('barrier1'), name: kind === 'membrane' ? 'Primary barrier (membrane)' : 'Primary barrier (tank)',
+                t: kind === 'membrane' ? 0.05 : 0.1, mat: kind === 'membrane' ? 'membrane' : 'tank' }];
+    }
+    return [{ id: id('insulation'), name: 'Insulation', t: num(p.insulation, 0.25), mat: 'insulation' },
+            { id: id('shell'), name: 'Tank shell', t: 0.08, mat: 'tank' }];
+  }
   function octagon(hy, hz, c) {
     c = Math.max(0, Math.min(c, hy * 0.9, hz * 0.9));
     return [[-hz + c, -hy], [hz - c, -hy], [hz, -hy + c], [hz, hy - c], [hz - c, hy], [-hz + c, hy], [-hz, hy - c], [-hz, -hy + c]];
@@ -2564,10 +2869,22 @@
   }
   define('tank_prism', function (k, p) {
     var s = p.size || [20, 12, 14], L = s[0], hy = s[1] / 2, hz = s[2] / 2, c = num(p.chamfer, Math.min(hy, hz) * 0.3), self = k.cur;
-    var layers = p.layers || LAYERS[p.kind || 'membrane'] || LAYERS.membrane, octo = p.kind === 'semi_membrane' ? round4 : octagon;
+    var hold = p._hold, kind = p.kind || 'membrane', lining = kind === 'membrane' || kind === 'semi_membrane';
+    var layers = p.layers || LAYERS[kind] || LAYERS.membrane, prof, hullT = num(p.hull, 0.2);
+    if (hold) {
+      var sect = hold.sec.pts, rc = num(p.chamfer, 2.2), clear = lining ? 0 : num(p.clear, 0.8);
+      sect = inset(sect, clear);
+      L = hold.x1 - hold.x0 - 2 * clear;
+      prof = function (off) { var q = inset(sect, off); return kind === 'semi_membrane' ? rounded(q, Math.max(0.3, rc - off)) : q; };
+      hullT = 0;
+      if (!p.layers) { layers = holdLayers(k, p, kind); }
+    } else {
+      var octo = kind === 'semi_membrane' ? round4 : octagon;
+      prof = function (off) { return octo(hy - off, hz - off, c - off * 0.414); };
+    }
     var cut = p.cut === undefined ? 'end' : p.cut, clip = null;
-    if (cut === 'end') { clip = [k.clip([-1, 0, 0], 0)]; } else if (cut === 'front' || cut === true) { clip = [k.clip([0, 0, -1], 0)]; }
-    var ex = clip ? { clip: clip } : null, hullT = num(p.hull, 0.2), off = 0, i;
+    if (cut === 'end' && !hold) { clip = [k.clip([-1, 0, 0], 0)]; } else if (cut === 'front' || cut === true) { clip = [k.clip([0, 0, -1], 0)]; }
+    var ex = clip ? { clip: clip } : null, off = 0, i, endX = hold ? L / 2 : 0, endCut = cut === 'end';
     function extr(outer, inner, m, len) {
       var g = new T.ExtrudeGeometry(shapeOf(outer, inner), { depth: len, bevelEnabled: false, curveSegments: 4 });
       g.rotateY(-Math.PI / 2); g.translate(len / 2, 0, 0);
@@ -2578,39 +2895,77 @@
       g.rotateY(Math.PI / 2);
       return k.add(g, m, x, 0, 0, { cast: false });
     }
-    var outer = octo(hy, hz, c), inner = octo(hy - hullT, hz - hullT, c - hullT * 0.414);
-    var hm = M(k, p, 'steel', ex);
-    extr(outer, inner, hm, L);
-    cap(outer, null, k.mat('steel'), -L / 2);
-    if (cut === 'end') { cap(outer, inner, k.mat('steel_dark'), 0.003); }
-    off = hullT;
-    k.anchor('label', [0, hy, 0]);
+    /* the top of a section: its height and how far across its flat top runs */
+    function topOf(q) {
+      var y = spanY(q)[1], z = 0;
+      q.forEach(function (v) { if (v[1] > y - 1e-6) { z = Math.max(z, Math.abs(v[0])); } });
+      return [y, z];
+    }
+    var outer = prof(0), t0 = topOf(outer);
+    if (hullT > 0) {
+      var inner = prof(hullT), hm = M(k, p, 'steel', ex);
+      extr(outer, inner, hm, L);
+      cap(outer, null, k.mat('steel'), -L / 2);
+      if (endCut) { cap(outer, inner, k.mat('steel_dark'), 0.003); }
+      off = hullT;
+    }
+    k.anchor('label', [hold ? endX : 0, t0[0], hold ? -t0[1] * 0.5 : 0]);
     layers.forEach(function (ly, li) {
       if (!(ly.t > 0)) { return; }
       if (ly.id) { k.sub(ly.id, { pick: true, name: ly.name || '' }); }
-      var o = octo(hy - off, hz - off, c - off * 0.414), n2 = octo(hy - off - ly.t, hz - off - ly.t, c - (off + ly.t) * 0.414);
-      var lenL = L - 2 * off, m = k.mat(ly.mat || 'insulation', ex);
+      var o = prof(off), n2 = prof(off + ly.t), lenL = L - 2 * off, m = k.mat(ly.mat || 'insulation', ex), tp = topOf(o);
       extr(o, n2, m, lenL);
-      cap(o, n2, k.mat(ly.mat || 'insulation'), -lenL / 2);
-      if (cut === 'end') { cap(o, n2, k.mat(ly.mat || 'insulation'), 0.004 + li * 0.0005); }
-      k.anchor('label', [cut === 'end' ? 0 : -lenL / 4, hy - off - ly.t / 2, cut === 'end' ? hz * 0.4 : 0]);
+      if (!hold) { cap(o, n2, k.mat(ly.mat || 'insulation'), -lenL / 2); }
+      if (endCut && !hold) { cap(o, n2, k.mat(ly.mat || 'insulation'), 0.004 + li * 0.0005); }
+      /* each layer's point on the section's top, a step further across than the one outside it: no two in one column */
+      k.anchor('label', [endCut ? (hold ? lenL / 2 : 0) : -lenL / 4, tp[0] - ly.t / 2, endCut ? tp[1] * Math.min(0.85, 0.2 + 0.14 * li) : 0]);
       off += ly.t;
       k.cur = self;
     });
+    var inn = prof(off), sy = spanY(inn), lenIn = L - 2 * off;
+    if (hold) { cap(inn, null, k.mat((layers[layers.length - 1] || {}).mat || 'tank'), -lenIn / 2); }   /* the tank's far end, seen from inside */
+    if (hold && !lining) {
+      if (p.bulkhead !== false) {
+        k.sub(subId(k, p, 'bulkhead'), { pick: true, name: 'Centreline bulkhead' });
+        k.box(lenIn, sy[1] - sy[0], 0.05, k.mat('steel_mid', ex), 0, (sy[0] + sy[1]) / 2, -0.03);
+        k.anchor('label', [endCut ? lenIn / 2 : -lenIn / 4, sy[0] + (sy[1] - sy[0]) * 0.55, -0.03]);
+        k.cur = self;
+      }
+      var ob = spanY(outer)[0], fl = hold.sec.fl, chH = ob - fl, bw = 0;
+      outer.forEach(function (v) { if (v[1] < ob + 1e-6) { bw = Math.max(bw, Math.abs(v[0])); } });
+      if (kind === 'type_b' || p.drip) {
+        k.sub(subId(k, p, 'drip'), { pick: true, name: 'Drip tray' });
+        k.box(L * 0.92, 0.06, bw * 1.9, k.mat('stainless'), 0, fl + 0.03, 0, { cast: false });
+        k.anchor('label', [endCut ? L * 0.4 : -L / 4, fl + 0.06, bw * 0.9]);
+        k.cur = self;
+      }
+      if (chH > 0.05) {
+        k.sub(subId(k, p, 'chocks'), { pick: true, name: 'Chocks' });
+        var nx = Math.max(2, Math.round(L / 4)), list = [], ci, cz;
+        for (ci = 0; ci < nx; ci++) { for (cz = -1; cz <= 1; cz++) { list.push([-L / 2 + L * (ci + 0.5) / nx, fl + chH / 2, cz * bw * 0.65]); } }
+        k.many(new T.BoxGeometry(0.5, chH, 0.7), k.mat('wood'), list);
+        k.anchor('label', [list[list.length - 1][0], fl + chH, list[list.length - 1][2]]);
+        k.cur = self;
+      }
+    }
     if (p.fill > 0) {
       k.sub(subId(k, p, 'liquid'), { pick: true });
-      var inn = octo(hy - off, hz - off, c - off * 0.414), lv = -(hy - off) + p.fill * 2 * (hy - off), poly = below(inn, lv), lenQ = L - 2 * off - 0.02;
+      var lv = sy[0] + p.fill * (sy[1] - sy[0]), poly = below(inn, lv), lenQ = lenIn - 0.02;
       var col = p.liquid_color || '#5fb4ea';
       extr(poly, null, k.mat({ color: col, rough: 0.15, metal: 0 }, clip ? { opacity: 0.6, clip: clip } : { opacity: 0.6 }), lenQ).renderOrder = 2;
-      if (cut === 'end') { cap(poly, null, k.mat({ color: mix(col, '#2a8fd6', 0.3), rough: 0.2, metal: 0 }, { opacity: 0.8, double: true }), 0.01).renderOrder = 3; }
-      k.anchor('label', [cut === 'end' ? 0 : -L / 4, lv - (hy - off) * 0.3, 0]);
+      if (endCut && !hold) { cap(poly, null, k.mat({ color: mix(col, '#2a8fd6', 0.3), rough: 0.2, metal: 0 }, { opacity: 0.8, double: true }), 0.01).renderOrder = 3; }
+      k.anchor('label', [endCut ? (hold ? lenQ / 2 : 0) : -L / 4, lv - (sy[1] - sy[0]) * 0.15, 0]);
       k.cur = self;
     }
-    if (clip) {
-      var lp = [], j;
-      for (j = 0; j < outer.length; j++) {
-        var a = outer[j], b = outer[(j + 1) % outer.length];
-        if (cut === 'end') { lp.push(0, a[1], a[0], 0, b[1], b[0]); }
+    if (clip || hold) {
+      var lp = [], j, ends = hold ? [-L / 2, L / 2] : [0];
+      if (endCut || hold) {
+        ends.forEach(function (ex0) {
+          for (j = 0; j < outer.length; j++) {
+            var a = outer[j], b = outer[(j + 1) % outer.length];
+            lp.push(ex0, a[1], a[0], ex0, b[1], b[0]);
+          }
+        });
       }
       if (lp.length) { k.lines(lp, '#2a3640'); }
     }

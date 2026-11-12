@@ -33,18 +33,18 @@ GOOD = {
     "units": "m",
     "view": {"az": 24, "el": 23},
     "parts": [
-        {"id": "tank", "type": "tank_c", "at": [0, 3, 0], "r": 3.4, "len": 14, "cut": True, "fill": 0.6},
+        {"id": "tank", "type": "tank_c", "at": [0, 5.2, 0], "r": 3.4, "len": 14, "cut": True, "fill": 0.6},
         {"id": "pipe", "type": "pipe_dw", "at": [0, 0, 0], "subs": {"inner": "gas_in"}},
         {"id": "hull", "type": "hull", "at": [0, 0, 0], "pick": False,
          "spaces": [{"id": "ds", "name": "Double side"}], "bottom_id": "db"},
-        {"id": "v1", "type": "valve", "at": [2, 1, 0]},
+        {"id": "v1", "type": "valve", "at": [2, 9.5, 0]},
         {"id": "box", "type": "box", "at": [5, 0, 0], "size": [1, 1, 1], "pick": False},
     ],
     "groups": {"leak": ["pipe", "v1"]},
     "states": {"pipe.cut": 0},
 }
 GOOD["labels"] = [
-    {"part": "tank", "text": "Fuel tank", "at": [0, 6, 0]},
+    {"part": "tank", "text": "Fuel tank", "at": [0, 8.6, 0]},
     {"part": "tank_liquid", "text": "LNG liquid", "tone": "amber"},
     {"part": "pipe", "text": "Gas pipe"},
     {"part": "gas_in", "text": "Gas inside", "when": "pipe.cut > 0.5"},
@@ -148,7 +148,7 @@ check("a part nobody names is a note, not a problem", p == [] and any("'lonely'"
 p, n = run(GOOD)
 check("pick:false parts (hull, box) are not reported as nobody-names", not any("'box'" in x or "'hull'" in x for x in n), n)
 note("a step showing more than 9 labels",
-     lambda s: s["labels"].extend({"part": "tank", "text": "T%d" % i} for i in range(10)), "step 0 shows")
+     lambda s: s["labels"].extend({"part": "tank", "text": "T%d" % i, "at": [i * 1.2 - 6, 8.6, -1.5]} for i in range(10)), "step 0 shows")
 note("a step showing fewer than 2 labels", lambda s: s["steps"][1].update(labels=["pipe"]), "step 1 shows 1 label")
 note("a scene with no steps and no controls", lambda s: (s.pop("steps"), s.pop("controls")), "one view only")
 note("units missing", lambda s: s.pop("units"), "\"units\" missing")
@@ -395,7 +395,99 @@ check("a cylinder named for something the kit does not draw is no stand-in",
       not run(dict(STAND, labels=[{"part": "branch", "text": "Spare pipe"}]))[0])
 js = io.open(os.path.join(os.path.dirname(HERE), "kit3d.js"), encoding="utf-8").read()
 check("kit3d.js builds the parts a joint names first, then joins them (joinOrder, joinRelation)",
-      "joinOrder(list, S)" in js and "joinRelation(deckRelation(list, list[i], S), S)" in js)
+      "joinOrder(list, S)" in js and "joinRelation(inRelation(list, deckRelation(list, list[i], S), S), S)" in js)
+
+# ---------------------------------------------------------------- a gas carrier's hull and tanks (factory trial M01, 3D review)
+print("\n-- gas carriers: hulls, tanks, what is measured, what a label names")
+GAS = json.loads(io.open(os.path.join(os.path.dirname(HERE), "examples", "m01_gas_carriers.kit3d.json"), encoding="utf-8").read())
+check("the gas carrier example is clean (five sections, every tank \"in\" its hull, every label on a hull's or a tank's own sub-part)",
+      run(GAS) == ([], []), run(GAS))
+
+
+def scene(parts, labels=(), steps=None):
+    s = {"label": "a hull section", "units": "m", "view": {"az": 24, "el": 18}, "parts": parts, "labels": list(labels)}
+    if steps is not None:
+        s["steps"] = steps
+    return run(s)[0]
+
+
+def caught(what, p, needle):
+    check("caught: " + what, any(needle in x for x in p), p)
+
+
+H = {"id": "h", "type": "hull", "pick": False, "x": [-9, 9], "half": 6, "bottom": 0, "floor": 1.2, "top": 9}
+HD = dict(H, double=1.5, hopper=[2, 2], topwing=[2, 2])
+caught("a membrane tank standing free in its hold (M01 s08, s11)",
+       scene([H, {"id": "m", "type": "tank_prism", "at": [0, 5, 0], "size": [16, 7, 9], "kind": "membrane"}]), "stands free in hull h")
+check("... \"in\": \"h\" lines the hold: clean", not scene([HD, {"id": "m", "type": "tank_prism", "kind": "membrane", "in": "h"}]))
+caught("two Type C cylinders side by side through each other - a bilobe (M01 s15, s17)",
+       scene([H, {"id": "t", "type": "tank_c", "at": [0, 5, -1.9], "r": 3, "len": 8, "base": -3.8},
+              {"id": "t", "type": "tank_c", "at": [0, 5, 1.9], "r": 3, "len": 8, "base": -3.8}]), "\"lobes\": 2")
+check("... one tank_c \"lobes\": 2 \"in\": \"h\": clean", not scene([H, {"id": "t", "type": "tank_c", "in": "h", "r": 3, "lobes": 2}]))
+caught("two tanks in tandem through each other and out through the hull's end walls (M01 s11)",
+       scene([dict(H, x=[16, 26]), {"id": "c", "type": "tank_c", "at": [19, 4.6, 0], "r": 2.8, "len": 5, "head": 1.4, "base": -3.4},
+              {"id": "c", "type": "tank_c", "at": [23, 4.6, 0], "r": 2.8, "len": 5, "head": 1.4, "base": -3.4}]), "pass through each other")
+caught("... and out through the end wall", scene([dict(H, x=[16, 26]), {"id": "c", "type": "tank_c", "at": [23, 4.6, 0], "r": 2.8,
+                                                                         "len": 5, "head": 1.4, "base": -3.4}]), "end walls of hull h")
+caught("a Moss sphere whose skirt does not reach the inner bottom (M01 s13: \"base\" 1.2)",
+       scene([H, {"id": "s", "type": "tank_sphere", "at": [0, 7.5, 0], "r": 5, "base": 1.2, "cut": True}]), "Moss sphere s: its skirt")
+check("... \"in\": \"h\": the skirt from the equator to the inner bottom, clean",
+      not scene([H, {"id": "s", "type": "tank_sphere", "in": "h", "r": 5, "cut": True, "drip": True, "cover": True}],
+                [{"part": "s_skirt", "text": "Skirt"}, {"part": "s_drip", "text": "Drip tray"}, {"part": "s_cover", "text": "Tank cover"}]))
+caught("saddles that end in the air above the inner bottom (M01 s03: base = -r)",
+       scene([H, {"id": "t", "type": "tank_c", "at": [0, 5, 0], "r": 3.2, "len": 8, "base": -3.2}]), "stands on nothing")
+caught("a Type A tank placed by hand: no clearance, chocks, insulation or centreline bulkhead (M01 s07)",
+       scene([H, {"id": "a", "type": "tank_prism", "kind": "type_a", "at": [0, 5, 0], "size": [12, 6, 9]}]), "prismatic tank a is placed by hand")
+check("... \"in\": \"h\" with kind type_a makes <id>_bulkhead, _insulation, _shell, _chocks (labels on them pass)",
+      not scene([HD, {"id": "a", "type": "tank_prism", "kind": "type_a", "in": "h"}],
+                [{"part": "a_" + n, "text": n} for n in ("bulkhead", "insulation", "shell", "chocks")] +
+                [{"part": "h_" + n, "text": n} for n in ("outer", "inner", "bottom", "wing", "hopper", "topwing")]))
+check("... a hull with no double hull makes none of those sub-parts: a label on h_wing is refused",
+      any("'h_wing'" in x for x in scene([H], [{"part": "h_wing", "text": "Wing tank"}])))
+caught("a dimension ending past the tank's end, in the air (M01 s09: B/5 to z 2.6 at x 6.5)",
+       scene([dict(H, x=[-7, 7]), {"id": "t", "type": "tank_c", "at": [0, 4.2, 0], "r": 2.6, "len": 9, "head": 1.3, "cut": True, "base": -3},
+              {"id": "d", "type": "dimension", "a": [6.5, 4.2, -6], "b": [6.5, 4.2, -2.6]}]), "dimension d: its end b")
+check("... the same dimension across the drawn half, from the side shell to the tank wall: clean",
+      not scene([dict(H, x=[-7, 7]), {"id": "t", "type": "tank_c", "at": [0, 4.2, 0], "r": 2.6, "len": 9, "head": 1.3, "cut": True, "base": -3},
+                 {"id": "d", "type": "dimension", "a": [0, 4.2, -6], "b": [0, 4.2, -2.6]}]))
+caught("... a dimension to the half a cut took away",
+       scene([dict(H, x=[-7, 7]), {"id": "t", "type": "tank_c", "at": [0, 4.2, 0], "r": 2.6, "len": 9, "head": 1.3, "cut": True, "base": -3},
+              {"id": "d", "type": "dimension", "a": [0, 4.2, 6], "b": [0, 4.2, 2.6]}]), "the half its cut took away")
+caught("a pump placed inside a tank (M01 s04)",
+       scene([H, {"id": "t", "type": "tank_c", "in": "h", "r": 3}, {"id": "p", "type": "pump", "at": [1, 4.6, 0.5]}]), "pump p stands inside tank t")
+check("... a submerged pump \"in\" its tank: clean",
+      not scene([H, {"id": "t", "type": "tank_c", "in": "h", "r": 3}, {"id": "p", "type": "pump", "at": [1, 4.6, 0.5], "in": "t"}]))
+for txt, part, typ, needle in (("Double hull", "w", "box", "\"double\""), ("Skirt at the equator", "k", "cylinder", "<tank>_skirt"),
+                               ("Centreline bulkhead", "b", "box", "<tank>_bulkhead"), ("Drip pan: partial secondary barrier", "d", "box", "<tank>_drip"),
+                               ("Complete secondary barrier: the hull", "s", "box", "\"double\"")):
+    caught("a %s named %r stands in for what the kit draws" % (typ, txt),
+           scene([H, {"id": part, "type": typ, "at": [0, 2, -5.5], "size": [8, 1, 1]}], [{"part": part, "text": txt}]), needle)
+caught("\"Double hull\" on the double bottom (M01 s08)",
+       scene([dict(H, bottom_id="db")], [{"part": "db", "text": "Double hull"}]), "the double bottom")
+check("... on the inner hull of a hull with \"double\": clean", not scene([HD], [{"part": "h_inner", "text": "Double hull: the inner hull"}]))
+caught("\"Single hull\" on a double bottom (M01 s15)", scene([dict(H, bottom_id="db")], [{"part": "db", "text": "Single hull is acceptable"}]),
+       "a single hull is the side shell")
+caught("a hull's words on a tank: the secondary barrier, the side shell (M01 s12, s17)",
+       scene([H, {"id": "t", "type": "tank_c", "in": "h", "r": 3}], [{"part": "t", "text": "Complete secondary barrier"}]), "its dot is on tank t")
+check("... \"Type C: no secondary barrier\" on the tank says what the tank has not: clean",
+      not scene([H, {"id": "t", "type": "tank_c", "in": "h", "r": 3}], [{"part": "t", "text": "Type C: no secondary barrier"}]))
+caught("two dots of one part on one spot on a step (M01 s19b)",
+       scene([H, {"id": "t", "type": "tank_c", "in": "h", "r": 3}], [{"part": "t", "text": "Type 2G", "at": [0, 7.8, 0]},
+                                                                    {"part": "t", "text": "Type 2PG", "at": [0, 7.8, 0.3]}]), "two dots on one spot")
+caught("a dot behind a tank from the step's view (M01 s15: the side shell's dot seen on the tank)",
+       scene([dict(H, side_id="side"), {"id": "t", "type": "tank_c", "in": "h", "r": 3}],
+             [{"part": "side", "text": "Side shell", "at": [-1, 4.6, -6]}], [{"view": {"az": 0, "el": 5}}]), "has its dot behind tank_c t")
+check("... the same dot from a view where the tank does not hide it: clean",
+      not scene([dict(H, side_id="side"), {"id": "t", "type": "tank_c", "in": "h", "r": 3}],
+                [{"part": "side", "text": "Side shell", "at": [-1, 4.6, -6]}], [{"view": {"az": 90, "el": 5}}]))
+caught("a tank \"in\" a hull that is not there", scene([H, {"id": "t", "type": "tank_c", "in": "nohull", "r": 3}]), "no hull or hull space")
+check("kit3d.js seats a tank \"in\" its hull before it builds it, and holds the hold's section (inRelation, holdSection)",
+      "function inRelation" in js and "function holdSection" in js)
+# the kit and the checker seat a tank the same way: the numbers of kit3d.js inRelation, read in its source
+check("check_kit3d.seat mirrors kit3d.js inRelation (the skirt 1.25 (r + insulation), the clearance max(0.5, 0.15 r))",
+      "(R + ins) * 1.25" in js and "Math.max(0.5, R * 0.15)" in js
+      and ck.seat({"type": "tank_sphere", "in": "h", "r": 4}, [H])["base"] == -5.0
+      and ck.seat({"type": "tank_c", "in": "h", "r": 4}, [H])["base"] == -(0.6 + 4))
 
 print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
 sys.exit(1 if FAILS else 0)

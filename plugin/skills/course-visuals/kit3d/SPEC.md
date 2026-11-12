@@ -97,6 +97,10 @@ and ships `three.min.js`, `kit3d.js`, `kit3d.css` with the module. Alone (a test
 - `on` (2.72.0) - `"H.deck"` / `"H.floor"` / `"H.bottom"` of a `hull` (or `"D.deck"` of a `deck_plate`): the part's height
   is that level (+ `gap`), its x and z its own `at` - a vent mast, a drip tray, an ESD button, an air intake stand ON the
   deck. `check_kit3d.py` fails one of those standing below a hull's deck, inside the hull (the 2D kit: SPEC.md "Relations").
+- `in` - `"H"` (a `hull`, or one of its spaces): a tank in that hull's hold, seated by the kit - a membrane tank lines the
+  inner hull, a Type A / B tank stands clear on its chocks, a Moss skirt and Type C saddles stand on the inner bottom
+  (PARTS.md "Gas carrier hull sections"); its `at` gives only its x (and a tank_c's z). On any other part, `"in": "<tank>"`
+  says it is that tank's content (a submerged pump): `check_kit3d.py` refuses any other part inside a tank.
 - `connect` - `"I.out"`: the part's own `in` port on another part's port, turned to face it (a branch pipe on the inductor's
   outlet); a hose's `from` / `to` name ports the same way. Parts that join are joined by name, never set side by side by
   hand (PARTS.md "Joining parts end to end").
