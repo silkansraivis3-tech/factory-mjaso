@@ -19,7 +19,8 @@ animation paused (what a hidden / preview pane does). Pinned:
     a one-line lead line, a one-line bullet, a step in a worked example's card - is a 44 px tap target at 1280 x 800,
     1024 x 768 and 1280 x 720, its bullet on its words; the room's current card stays inside the picture's column;
   * (deck_dark_shapes.html) on a dark slide the true-false claim and the name-parts names pass contrast, beside the picture
-    and above or under a band - and on the light ground too.
+    and above or under a band - and on the light ground too; the why of a true-false, opened in the picture's column, shows
+    the line a figure's step is on (M16 s03).
 Skips, and says so, when no Chrome or Edge is installed.
 """
 from __future__ import annotations
@@ -113,6 +114,8 @@ def main():
             dk = run(exe, prof, q, DARK)
             check("on the %s ground the true-false claim and the name-parts names read (beside a picture, with a band)" % ground,
                   bool(dk) and dk.get("low") == 0, dk)
+            check("on the %s ground the line a figure lights in a true-false's why, opened beside the picture, looks selected "
+                  "(M16 s03)" % ground, bool(dk) and dk.get("mark") == 0, dk)
     finally:
         shutil.rmtree(prof, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
