@@ -482,8 +482,10 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .lt-compare-note{margin-top:min(2vmin,16px);text-align:center;color:var(--lt-steel)}
 .slide[data-template].dark .lt-card{background:var(--lt-blue-06);border-color:var(--lt-line-d)}
 
-/* 2.109.0 (F2) - a room activity with no code of its own: one column, no empty first column; a long text is a lead and bullets */
-.slide[data-template^="task-launch."] .slide-body.activity.no-code{grid-template-columns:1fr}
+/* 2.109.0 (F2) - a room activity with no code of its own: one column, no empty first column; a long text is a lead and bullets.
+   The column is as wide as its words and stands in the middle of the slide - at the left edge, with its lines at reading
+   width, the right half of the slide stayed empty (M16 a04, a07: compose WEAK, a cluster) */
+.slide[data-template^="task-launch."] .slide-body.activity.no-code{grid-template-columns:minmax(0,auto);justify-content:center}
 .slide[data-template^="task-launch."] .slide-body.activity.no-code .act-title{grid-column:1}
 .slide[data-template^="task-launch."] .slide-body.activity.no-code > svg{grid-column:1}
 .slide[data-template^="task-launch."] .slide-body.activity.no-code .act-lines{grid-column:1}

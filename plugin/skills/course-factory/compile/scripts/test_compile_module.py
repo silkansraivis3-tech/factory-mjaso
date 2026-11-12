@@ -3614,6 +3614,15 @@ def review_fixes_part(tmp):
           and "no-code" in a and 'data-script-field="title">Workshop' in a, a[:1200])
     check("F2: ... a long activity text is a lead statement and bullets (first line, then the rest)",
           'class="act-inst act-lead" data-script-field="text" data-i="1"' in a and a.count("act-bullet") == 3, a[:1600])
+    audits = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "run_audits.py")
+    code_a, aout = run(audits, os.path.join(md, "presentation", "index.html"), "--viewport", "1280x720")
+    if code_a == 2:
+        print("  (no Chrome or Edge here: the activity's composition was not measured)")
+    else:
+        n63 = [x["id"] for x in screens].index("s63") + 1
+        weak = [x for x in aout.splitlines() if re.search(r"screen %d WEAK" % n63, x)]
+        check("F2: ... its one column stands in the middle of the slide - not a cluster at the left edge (M16 a04, a07: compose "
+              "WEAK, the right half under 8 %), at 1280 x 800 and 1280 x 720", not weak and "compose" in aout, weak or aout[-900:])
     r = section(page, "s62")
     check("F3: the intro line is not numbered (a lead), the five jobs are A-E - an ordering must not hand out an order",
           '<li data-k="0" class="lead">' in r
