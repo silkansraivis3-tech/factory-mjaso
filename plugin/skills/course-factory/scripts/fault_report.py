@@ -6,7 +6,8 @@
 One entry per fault, by module and slide or task page: the picture of that slide, the rule that applies (quoted short, with
 its file), what the build did (a measured fact), the kind, which check found it, and an empty field for the owner's decision.
 Two sources: the rule checks this script runs on the built deck itself (a picture's shape against the box of the blueprint it
-landed in, the words against that blueprint's budget, slides the fit gate found cut) and what the judges of the run found
+landed in, the words of its text against that blueprint's measured budget - the compiler's, the layout plan's and the
+script check's own rules, layout_plan.py -, slides the fit gate found cut) and what the judges of the run found
 (the walk review, QA, the 3D and figure reviews). Nothing here changes a course or the factory.
 """
 from __future__ import annotations
@@ -25,9 +26,6 @@ KNOWLEDGE = "course-module-ui/knowledge/"
 KINDS = ("layout", "overflow_cut", "words", "blueprint", "3d", "highlight", "task_page", "script", "other")
 CUT_KINDS = ("cut", "spill", "picture", "figure")
 DECISIONS = ("fix it in the factory", "leave it", "not a fault")
-
-SLIDE = re.compile(r'<section class="slide"[^>]*>.*?(?=<section class="slide"|\Z)', re.S)
-IMG = re.compile(r'<img\b[^>]*?\bsrc="([^"]+)"')
 
 
 def kind_of(text):
@@ -58,96 +56,51 @@ def _json(path):
         return None
 
 
-def _aspect_of_file(p):
-    try:
-        from PIL import Image
-        with Image.open(p) as im:
-            w, h = im.size
-        return w / float(h) if h else None
-    except Exception:  # noqa: BLE001
-        return None
-
-
-def slide_picture(html_slide, deck_dir):
-    """(family, aspect, how it is said) of a slide's main picture as the compiler plans one: a photograph or a row of them
-    (their files' own shape), a 3D scene, a drawing - (None, None, "") for a slide with none"""
-    if COMPILE not in sys.path:
-        sys.path.insert(0, COMPILE)
-    import layout_plan
-    files = [s for s in IMG.findall(html_slide) if "/assets/img/" in s.replace("\\", "/")]
-    if files:
-        asp = [_aspect_of_file(os.path.normpath(os.path.join(deck_dir, s))) for s in files]
-        asp = [a for a in asp if a]
-        if not asp:
-            return None, None, ""
-        family = "tiles" if len(files) > 1 else "photo"
-        return family, min(asp), "a photograph" if len(files) == 1 else "%d photographs (the narrowest counts)" % len(files)
-    if " data-kit3d=" in html_slide:
-        return "3d", layout_plan.figure_aspect(html_slide), "a 3D scene"
-    if " data-kit2d=" in html_slide:
-        return "drawing", layout_plan.figure_aspect(html_slide), "a drawing"
-    return None, None, ""
-
-
 def rule_checks(deck, slides):
-    """[fault] the deck breaks by its own blueprints: the picture's shape against its box, the words against its budget.
-    slides: factory_trial.scan_deck's list (id, template, variant, seen_words, parts)"""
+    """[fault] the deck breaks by its own blueprints: the picture's shape against its box (layout_plan.picture_misfits, the
+    compiler's own check), the words of its text against its blueprint's measured budget (layout_plan.holds, the budget the
+    plan and the script check use). slides: factory_trial.scan_deck's list (id, template, variant, text_words, parts)"""
     if COMPILE not in sys.path:
         sys.path.insert(0, COMPILE)
     import layout_plan as lp
     page = io.open(deck, encoding="utf-8", errors="replace").read()
-    deck_dir = os.path.dirname(deck)
+    mdir = os.path.dirname(os.path.dirname(deck))
     by_id = {s["id"]: s for s in slides}
     out = []
-    for block in SLIDE.findall(page):
+    for m in lp.picture_misfits(page, mdir):
+        bp, bp_id, rng = lp.LIB.get(m["bp"]) or {}, m["bp"], m["range"]
+        src = "%sblueprints/%s.json" % (KNOWLEDGE, bp_id)
+        fit = "; the blueprints that fit it: %s" % ", ".join(m["fit"][:4]) if m["fit"] else "; no blueprint of its kind fits it"
+        if not rng:
+            out.append(_fault(m["slide"], "layout", "rule check: picture against its blueprint",
+                              "%s: \"%s\" - it takes %s" % (bp_id, bp.get("for", ""), ", ".join(bp["fits"].get("pictures") or []) or "no picture"),
+                              src + " fits.pictures",
+                              "%s, %s, sits in %s, which takes no %s" % (m["said"], "%.2f:1" % m["aspect"] if m["aspect"] else "shape unknown",
+                                                                         bp_id, m["family"]) + fit))
+        else:
+            out.append(_fault(m["slide"], "layout", "rule check: picture against its blueprint",
+                              "%s: \"%s\" - its box is for a %s of %g-%g:1" % (bp_id, bp.get("for", ""), m["family"], rng[0], rng[1]),
+                              src + " fits.aspect.%s = [%g, %g]" % (m["family"], rng[0], rng[1]),
+                              "%s, %.2f:1, placed in %s (%s box, %s) - outside %g-%g:1" % (
+                                  m["said"], m["aspect"], bp_id, bp.get("shape"), bp.get("cols") or bp.get("grid") or "", rng[0], rng[1]) + fit))
+    for block in lp.SLIDE_BLOCK.findall(page):
         sid = (re.search(r'\bid="([^"]+)"', block) or [None, ""])[1]
         tid = (re.search(r'\bdata-template="([\w-]+)', block) or [None, ""])[1]
         var = (re.search(r'\bdata-variant="([\w-]+)"', block) or [None, ""])[1]
         bp_id = "%s.%s" % (tid, var)
-        bp = lp.LIB.get(bp_id) or {}
-        fits = bp.get("fits") or {}
+        fits = (lp.LIB.get(bp_id) or {}).get("fits") or {}
         if not fits or sid not in by_id:
             continue
         s = by_id[sid]
-        family, aspect, said = slide_picture(block, deck_dir)
-        src = "%s%sblueprints/%s.json" % (KNOWLEDGE, "", bp_id)
-        if family and family not in (fits.get("pictures") or []):
-            out.append(_fault(sid, "layout", "rule check: picture against its blueprint",
-                              "%s: \"%s\" - it takes %s" % (bp_id, bp.get("for", ""), ", ".join(fits.get("pictures") or []) or "no picture"),
-                              src + " fits.pictures",
-                              "%s, %s, sits in %s, which takes no %s" % (said, "%.2f:1" % aspect if aspect else "shape unknown", bp_id, family) + _suit(lp, bp_id, s, family, aspect)))
-        elif family and aspect:
-            lo, hi = (fits.get("aspect") or {}).get(family) or [0, 99]
-            if not lo <= aspect <= hi:
-                out.append(_fault(sid, "layout", "rule check: picture against its blueprint",
-                                  "%s: \"%s\" - its box is for a %s of %g-%g:1" % (bp_id, bp.get("for", ""), family, lo, hi),
-                                  src + " fits.aspect.%s = [%g, %g]" % (family, lo, hi),
-                                  "%s, %.2f:1, placed in %s (%s box, %s) - outside %g-%g:1" % (
-                                      said, aspect, bp_id, bp.get("shape"), bp.get("cols") or bp.get("grid") or "", lo, hi)
-                                  + _suit(lp, bp_id, s, family, aspect)))
-        key = (fits.get("budget") or {}).get(family) if family else None
-        most = lp.budget(key) if key is not None else None
-        use = max(s["parts"].values(), default=0) if fits.get("group") == "parts" else s["seen_words"]
-        if isinstance(most, dict):
-            most = most.get("words")
-        limit, name = most, "layout-templates.json budgets.%s" % key
-        if fits.get("words") and fits["words"][1] < (limit if limit is not None else 10 ** 6):
-            limit, name = fits["words"][1], src + " fits.words"
-        if limit is not None and use > limit:
+        family = lp.slide_picture(block, mdir)[0]
+        most = lp.holds(bp_id, family) if family else None
+        use = max(s["parts"].values(), default=0) if fits.get("group") == "parts" else s.get("text_words", s["seen_words"])
+        if most and use > most["words"]:
+            name = "layout-templates.json budgets.%s" % most["key"]
             out.append(_fault(sid, "words", "rule check: words against the budget of the slide's own shape",
-                              "a slide in %s holds up to %d words (%s)" % (bp_id, limit, name), name,
-                              "%d words the room sees at once against %d in %s" % (use, limit, bp_id)))
+                              "a slide in %s holds up to %d words %s, measured (%s)" % (bp_id, most["words"], most["what"], name), name,
+                              "%d words in its text (the title apart, as measured) against %d in %s" % (use, most["words"], bp_id)))
     return out
-
-
-def _suit(lp, bp_id, s, family, aspect):
-    """what the plan would have taken: the blueprints that take this picture and these words"""
-    try:
-        opts, _ = lp.options(bp_id, s["seen_words"], family, aspect or 1.3)
-        names = [o["bp"] for o in opts if o["bp"] != bp_id][:3]
-        return "; the blueprints that fit it: %s" % ", ".join(names) if names else ""
-    except Exception:  # noqa: BLE001
-        return ""
 
 
 def _fault(slide, kind, found_by, rule, source, did, picture_stop=None):

@@ -58,12 +58,20 @@ def main():
     check("a 2D drawing's shape is its size", abs(lp.figure_aspect('<script type="application/json">{"size": [900, 300], "parts": []}</script>') - 3.0) < 1e-6)
 
     print("\n-- each slide scored like an engineer would")
-    o, _ = lp.options("photo-explain.column", 55, "photo", 1.6, seed="c|M01", sid="s01")
-    best = {}
-    for x in o:
-        best.setdefault(x["shape"], x["cost"])
-    check("a wide photograph (1.6:1) costs more in a side column than in a band across the slide - never letterboxed beside",
-          best.get("top", 99) < best.get("beside", 0) and best.get("bottom", 99) < best.get("beside", 0), best)
+    o, why = lp.options("photo-explain.column", 55, "photo", 1.6, seed="c|M01", sid="s01")
+    check("a wide photograph (1.6:1) is never planned into a side column, its own blueprint neither - a band across the slide",
+          {x["shape"] for x in o} >= {"top", "bottom"} and "beside" not in {x["shape"] for x in o}
+          and "1.6:1" in why.get("beside", "") and "0.85-1.3" in why.get("beside", ""), (o, why))
+    for bp, wds, fam, asp, label in (("photo-explain.column", 81, "photo", 1.79, "M01 s08: a 1.79:1 photograph, 81 words"),
+                                     ("photo-explain.column", 60, "photo", 1.73, "M01 s15b: a 1.73:1 photograph, 60 words"),
+                                     ("photo-explain.column", 75, "photo", 1.33, "M01 s18: a 1.33:1 photograph, 75 words"),
+                                     ("photo-explain.split", 45, "photo", 0.71, "M01 s04b: a 0.71:1 photograph"),
+                                     ("explain-figure.figure-right", 60, "3d", 3.40, "M01 s11: a 3.40:1 3D scene"),
+                                     ("figure-stage.figure", 32, "tiles", 0.80, "M16 s04: two photographs side by side"),
+                                     ("content-in-parts.with-figure", 81, "photo", 1.65, "M16 s03: a 1.65:1 photograph in parts")):
+        o, _ = lp.options(bp, wds, fam, asp, part_words=42 if bp.startswith("content-in-parts") else None, seed="c|M01", sid="s")
+        check("%s: every blueprint the plan may give it takes its picture's real shape (the 2.131.0 trial put it in %s)" % (label, bp),
+              o and all(lp.picture_fit(x["bp"], fam, asp) is None for x in o), o)
     o, _ = lp.options("explain-figure.figure-right", 40, "photo", 0.7, seed="c|M01", sid="s02")
     check("a portrait photograph (0.7:1) takes the tall box beside the words", o[0]["bp"] == "explain-figure.figure-tall", o[:3])
     o, why = lp.options("long-explanation.model", 64, "3d", 0.84, seed="c|M01", sid="s03")
@@ -71,31 +79,47 @@ def main():
           {x["shape"] for x in o} == {"beside"} and "0.8:1" in why.get("top", ""), (o, why))
     o, why = lp.options("explain-figure.figure-right", 58, "3d", 2.0, names=20, seed="c|M01", sid="s04")
     check("a band shows at most band_names names; more stay beside", "top" not in {x["shape"] for x in o} and "names" in why.get("top", ""), why)
-    o, why = lp.options("reading-with-figure.figure-right", 95, "drawing", 2.5, seed="c|M01", sid="s05")
-    check("words over a band's measured budget never go into the band - the words are never cut",
-          "top" not in {x["shape"] for x in o} and "holds" in why.get("top", ""), why)
-    o, why = lp.options("explain-figure.figure-right", 40, "drawing", 2.5, fixed="its build sheet names its template", sid="s06")
-    check("a slide whose build sheet names its template keeps it", [x["bp"] for x in o] == ["explain-figure.figure-right"]
+    o, why = lp.options("reading-with-figure.figure-right", 80, "drawing", 2.0, seed="c|M01", sid="s05")
+    check("words over a band's measured budget never go into the band while a shape that holds them takes the picture",
+          "top" not in {x["shape"] for x in o} and "holds" in why.get("top", "") and not any(x.get("over") for x in o), why)
+    o, why = lp.options("photo-explain.column", 81, "photo", 1.79, seed="c|M01", sid="s08")
+    check("words no shape its picture takes holds: the blueprints over by least, marked over - never a box the picture "
+          "does not fit (the script check asks to split the slide)",
+          o and all(x.get("over") == (11, 0, 0) and x["shape"] in ("top", "bottom") for x in o), (o, why))
+    o, why = lp.options("explain-figure.figure-right", 40, "drawing", 2.0, fixed="its build sheet names its template", sid="s06")
+    check("a slide whose build sheet names its template keeps it while its picture fits it", [x["bp"] for x in o] == ["explain-figure.figure-right"]
           and why["top"] == "its build sheet names its template")
+    o, why = lp.options("photo-explain.column", 40, "photo", 2.5, fixed="its build sheet names its template", sid="s07")
+    check("... and keeps nothing when its picture does not fit it: the compiler refuses the deck, naming the blueprints that do",
+          o == [] and "0.85-1.3" in why["beside"] and "photo-explain.full" in lp.fitting("photo", 2.5, "text-figure"), (o, why))
+    check("a blueprint's mirror (the picture on the left) takes the pictures and the words of its base",
+          lp.LIB["reference-table.figure-left"]["fits"] == lp.LIB["reference-table.with-figure"]["fits"])
+    check("one budget: a blueprint holds the measured words of layout-templates.json, never its template's word range "
+          "(explain-figure's 60 is where reading-with-figure starts, not what fits)",
+          lp.holds("explain-figure.figure-left", "3d")["words"] == lp.BUDGETS["beside_3d"]
+          and lp.holds("explain-figure.figure-top", "3d")["words"] == lp.BUDGETS["under_band"]
+          and lp.holds("photo-explain.column", "photo")["words"] == lp.BUDGETS["photo_column"]
+          and lp.holds("figure-stage.figure", "photo")["words"] == lp.BUDGETS["stage"])
 
     print("\n-- a table is measured by its rows and its words (budgets table_...)")
     check("the table blueprints are there: beside, under and over a band, alone - each with its measured budget",
           {"reference-table.with-figure", "reference-table.figure-top", "reference-table.figure-bottom", "reference-table.text-only"} <= set(lp.LIB)
           and all(isinstance(lp.table_budget(v, f)["rows"], int) for v in ("with-figure", "figure-top", "figure-bottom", "text-only")
                   for f in ("photo", "tiles", "drawing", "3d")))
-    wide = lambda rows, words, aspect=2.5: lp.options("reference-table.with-figure", words, "drawing", aspect, 3, None, None, "c|M01", "s03", rows)
+    wide = lambda rows, words, aspect=2.0: lp.options("reference-table.with-figure", words, "drawing", aspect, 3, None, None, "c|M01", "s03", rows)
     o, why = wide(4, 36)
     check("a table of 4 rows and 36 words beside or across a wide drawing fits every shape", {x["shape"] for x in o} >= {"beside", "top", "bottom"}, (o, why))
     o, why = wide(6, 48)
     check("6 rows and 48 words fit beside the picture, not a band - the plan never puts them in a band, and says why",
           {x["shape"] for x in o} == {"beside"} and "6 rows" in why.get("top", "") and "holds 4 and 40" in why.get("top", ""), (o, why))
     o, why = wide(6, 57, 1.3)
-    check("M01 s14 (6 rows, 57 words) fits no shape - the plan keeps its own, and the script check asks to split it",
-          [x["bp"] for x in o] == ["reference-table.with-figure"] and "holds" in why.get("top", ""), (o, why))
+    check("M01 s14 (6 rows, 57 words) fits no shape - the plan keeps it beside, over by least, and the script check asks to split it",
+          {x["shape"] for x in o} == {"beside"} and all(x.get("over") for x in o) and "holds" in why.get("top", ""), (o, why))
     o, why = wide(6, 73, 1.3)
-    check("M01 s03 (6 rows, 73 words) the same", [x["bp"] for x in o] == ["reference-table.with-figure"], (o, why))
+    check("M01 s03 (6 rows, 73 words) the same", {x["shape"] for x in o} == {"beside"} and all(x.get("over") for x in o), (o, why))
     o, why = wide(3, 70)
-    check("few rows, many words: over the words of every shape, even with 3 rows", [x["bp"] for x in o] == ["reference-table.with-figure"], (o, why))
+    check("few rows, many words: over the words of every shape, even with 3 rows", {x["shape"] for x in o} == {"beside"}
+          and all(x.get("over") == (22, 0, 0) for x in o), (o, why))
 
     print("\n-- the deck's plan")
     deck = [item("s%02d" % k, "explain-figure.figure-right", 50, "3d", 2.0) for k in range(1, 32)]
@@ -157,6 +181,35 @@ def main():
     alt = "".join(section("s%02d" % k, ("explain-figure.figure-right", "explain-figure.figure-top", "explain-figure.figure-bottom",
                                          "figure-stage.figure")[k % 4], ["beside", "top", "bottom", "stage"]) for k in range(1, 13))
     check("a planned deck passes", lp.problems(alt) == [], lp.problems(alt))
+
+    print("\n-- a picture in a box of another shape (picture_misfits: the compiler's must-fix, the fault report's layout fault)")
+    import tempfile
+    from PIL import Image
+    mdir = tempfile.mkdtemp(prefix="lp_")
+    os.makedirs(os.path.join(mdir, "assets", "img"))
+    for name, size in (("wide.jpg", (358, 200)), ("tall.jpg", (142, 200)), ("square.jpg", (220, 200))):
+        Image.new("RGB", size).save(os.path.join(mdir, "assets", "img", name))
+    pic = lambda sid, bp, img, extra="": ('<section class="slide" id="%s" data-template="%s.v1" data-variant="%s"><h2>T</h2>'
+                                          '<div class="fill fig"><img src="../assets/img/%s"></div>%s</section>'
+                                          % (sid, bp.split(".")[0], bp.split(".")[1], img, extra))
+    page = (pic("s08", "photo-explain.column", "wide.jpg") + pic("s04b", "figure-stage.figure", "tall.jpg")
+            + pic("s02", "photo-explain.column", "square.jpg")
+            + pic("s05", "explain-figure.figure-top", "wide.jpg", '<figure class="inset"><img src="../assets/img/tall.jpg"></figure>')
+            + pic("s09", "worked-example.figure", "wide.jpg"))
+    got = {x["slide"]: x for x in lp.picture_misfits(page, mdir)}
+    check("a 1.79:1 photograph in photo-explain.column and a 0.71:1 one in figure-stage are misfits, with the box's range and "
+          "the blueprints that take them", set(got) == {"s08", "s04b"} and got["s08"]["range"] == [0.85, 1.3]
+          and "reading-with-figure.figure-top" in got["s08"]["fit"] and "explain-figure.figure-tall" in got["s04b"]["fit"], got)
+    check("... a photograph of its box's shape is none, an inset photograph is not the slide's picture, and a template with no "
+          "rule for pictures is not judged", "s02" not in got and "s05" not in got and "s09" not in got, got)
+    two = pic("s04", "figure-stage.figure", "square.jpg").replace("</div>", '<img src="../assets/img/tall.jpg"></div>', 1)
+    t = lp.picture_misfits(two, mdir)
+    check("two photographs in a blueprint that takes no tiles (M16 s04): a misfit, the narrowest counts",
+          len(t) == 1 and t[0]["family"] == "tiles" and t[0]["range"] is None and abs(t[0]["aspect"] - 0.71) < 0.01, t)
+    over = [item("s08", "photo-explain.column", 81, "photo", 1.79)]
+    n = lp.notes(over, lp.plan(over))
+    check("the plan's note names a slide over every shape its picture takes, and asks to split it",
+          any("s08" in x and "11 words over" in x and "split" in x for x in n), n)
 
     print("\n%d passed, %d failed" % (len(PASSED), len(FAILS)))
     return 1 if FAILS else 0

@@ -1211,6 +1211,11 @@ def theory_check(script):
 
     th_words = th_min = 0.0
     for s in screens:
+        room = no_shape(s) if s.get("kind") == "activity" else None      # a room activity with a picture: laid out like a slide
+        if room:
+            add(s["id"], "text", FAIL, "t_no_shape", w=room[0], max=room[1], aspect=room[3], fits=", ".join(room[2][:4]) or "-",
+                pic=T(script, "t_pic_3d" if picture_of(s)["kind"] == "3d" else "t_pic_other"))
+            found[-1]["fix"] = T(script, "t_fix_no_shape", max=room[1])
         if s.get("kind") != "slide":
             continue
         w_slide = wc(s.get("title", ""), s.get("text", ""))
@@ -1225,6 +1230,11 @@ def theory_check(script):
         if tover:                             # a table has no template that pages it: the slide is split, the text never made smaller
             add(s["id"], "text", FAIL, "t_table_over", rows=tover[0], w=tover[1], max_rows=tover[2], max_w=tover[3])
             found[-1]["fix"] = T(script, "t_fix_table_over")
+        room = None if over or tover else no_shape(s)
+        if room:                              # the layouts its picture's shape takes hold fewer words: split, never a misfit
+            add(s["id"], "text", FAIL, "t_no_shape", w=room[0], max=room[1], aspect=room[3], fits=", ".join(room[2][:4]) or "-",
+                pic=T(script, "t_pic_3d" if picture_of(s)["kind"] == "3d" else "t_pic_other"))
+            found[-1]["fix"] = T(script, "t_fix_no_shape", max=room[1])
         if s.get("recap"):
             pass                              # L51: a recap is short on purpose - recap_findings checks its points
         elif w_floor < R["slide"]["min_words"]:
@@ -1752,7 +1762,7 @@ def build_findings(course, script):
 
 def review_build_findings(course, script, th_found):
     """build_findings for the review page: a slide the theory check already asks to split (t_over_budget) is said once"""
-    split = {f["screen"] for f in th_found if f["rule"] in ("t_over_budget", "t_table_over")}
+    split = {f["screen"] for f in th_found if f["rule"] in ("t_over_budget", "t_table_over", "t_no_shape")}
     return [f for f in build_findings(course, script) if not (f["rule"] == "v_paged_slide" and f["screen"] in split)]
 
 
@@ -3685,34 +3695,78 @@ def instructor_notes_md(script):
     return "\n".join(o).rstrip() + "\n"
 
 
-def shape_line(script):
-    """the module's planned shapes as one line, read from the script before its pictures exist (compile/scripts/layout_plan.py:
-    a picture still to be drawn is drawn for the shape it gets) - "beside top words beside stage bottom ... - longest run 1,
-    beside 9 of 20 (45 %), 5 shapes". The compile plans again from the pictures themselves"""
+def _planner():
     sys.path.insert(0, os.path.join(os.path.dirname(HERE), "compile", "scripts"))
     import compile_module as cm
     import layout_plan as lp
+    return cm, lp
+
+
+def script_blueprint(s):
+    """(its blueprint, its picture's family, why it keeps its own or None) of a teaching slide as the compiler builds it from
+    the script alone, before any build sheet (compile_module.shaped_template / auto_template, layout_plan.py)"""
+    cm, lp = _planner()
+    lines = lines_of(s.get("text"))
+    vk = s.get("visual_kind") or "none"
+    fam = None if vk == "none" else "photo" if vk in ("photo", "annotated_photo", "photo_to_take") \
+        else "3d" if (MEDIA["visual_kinds"].get(vk) or {}).get("family") == "3d" else "drawing"
+    if fam == "photo" and len(picture_of(s)["items"]) > 1:         # several photographs, one a thing: shown as tiles
+        fam = "tiles"
+    shaped, fixed = cm.shaped_template(s, {}, lines), None
+    if shaped:
+        tid, var = shaped
+        fixed = "its words make it the %s template" % tid
+    else:
+        comp = cm.composition(s, {}, fam == "photo", bool(fam))
+        split_photo, photo_col = fam == "photo" and comp == "two-col", fam == "photo" and comp in ("wide-left", "wide-right")
+        tid, var = cm.auto_template(s, {}, "photo" if split_photo else comp, fam == "photo", bool(fam), lines, split_photo, photo_col)
+        if not fam and (tid, var) not in cm.FIGURE_FREE:
+            var = "text-only" if "text-only" in lp.variants(tid) else var
+    return "%s.%s" % (tid, var), fam, fixed
+
+
+def no_shape(s):
+    """(its words, the most a layout its picture takes holds, [those layouts], the picture's declared shape) of a teaching
+    slide whose words no layout holds once its picture keeps the shape the script gives it ("picture" "aspect") - or None.
+    The layout plan's own rules (layout_plan.options: the picture's shape is hard, the words of the text against each
+    layout's measured budget, the title apart), so a slide that passes here fits a shape at the build while its picture
+    keeps that shape. A room activity with a picture is laid out like a teaching slide, and judged the same. A slide of its
+    own template (overfull), a table (table_over) and one kept in parts on purpose are judged by their own"""
+    if s.get("recap") or in_parts(s) or not (s.get("kind") == "slide" or s.get("kind") == "activity"
+                                             and picture_of(s)["kind"] not in ("", "none")):
+        return None
+    lines = lines_of(s.get("text"))
+    if sum(1 for x in lines if " | " in x) >= 2:
+        return None
+    _, lp = _planner()
+    own_bp, fam, fixed = script_blueprint(s)
+    group = ((lp.LIB.get(own_bp) or {}).get("fits") or {}).get("group")
+    if not fam or fixed or not group:
+        return None
+    said = picture_of(s)["aspect"]
+    aspect, w = None if fam == "tiles" else aspect_of(said), wc(" ".join(lines))     # tiles: each photograph its own shape
+    opts, _ = lp.options(own_bp, w, fam, aspect, 0, None, None, "", s.get("id", ""))
+    if opts and not any(o.get("over") for o in opts):
+        return None
+    fit = lp.fitting(fam, aspect, group)
+    most = max([(lp.holds(b, fam) or {}).get("words", 0) for b in fit] or [0])
+    return w, most, fit, said
+
+
+def shape_line(script):
+    """the module's planned shapes as one line, read from the script before its pictures exist (compile/scripts/layout_plan.py:
+    each picture of the shape its "picture" "aspect" gives it) - "beside top words beside stage bottom ... - longest run 1,
+    beside 9 of 20 (45 %), 5 shapes". The compile plans again from the pictures themselves"""
+    cm, lp = _planner()
     items, seed = [], cm.plan_seed(script)
     for s in [x for x in script.get("screens", []) if x.get("kind") in INSTRUCTOR]:
         if s.get("kind") != "slide" or s.get("recap"):
             items.append({"id": s["id"], "own": ""})
             continue
         lines = lines_of(s.get("text"))
-        vk = s.get("visual_kind") or "none"
-        fam = None if vk == "none" else "photo" if vk in ("photo", "annotated_photo", "photo_to_take") \
-            else "3d" if (MEDIA["visual_kinds"].get(vk) or {}).get("family") == "3d" else "drawing"
-        shaped, fixed = cm.shaped_template(s, {}, lines), None
-        if shaped:
-            tid, var = shaped
-            fixed = "its words make it the %s template" % tid
-        else:
-            comp = cm.composition(s, {}, fam == "photo", bool(fam))
-            split_photo, photo_col = fam == "photo" and comp == "two-col", fam == "photo" and comp in ("wide-left", "wide-right")
-            tid, var = cm.auto_template(s, {}, "photo" if split_photo else comp, fam == "photo", bool(fam), lines, split_photo, photo_col)
-            if not fam and (tid, var) not in cm.FIGURE_FREE:
-                var = "text-only" if "text-only" in lp.variants(tid) else var
-        own_bp = "%s.%s" % (tid, var)
-        opts, why = lp.options(own_bp, wc(" ".join(lines)), fam, None, 0, None, fixed, seed, s["id"])
+        own_bp, fam, fixed = script_blueprint(s)
+        tid, vk = own_bp.split(".")[0], s.get("visual_kind") or "none"
+        opts, why = lp.options(own_bp, wc(" ".join(lines)), fam, aspect_of(picture_of(s)["aspect"]), 0, None, fixed, seed, s["id"])
         items.append({"id": s["id"], "own": lp.MAP.get(own_bp) or "beside", "own_bp": own_bp, "options": opts, "why": why,
                       "fixed": fixed, "echo": lp.comparison(tid, vk, s.get("title"))})
     choice = lp.plan(items)

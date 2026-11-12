@@ -501,6 +501,28 @@ def faults_part(tmp):
           ("s03", "words") in by and "against" in by[("s03", "words")]["did"], found)
     check("... a picture outside the box's shape range names the range",
           ("s03", "layout") in by and "outside 0.85-1.3:1" in by[("s03", "layout")]["did"], found)
+
+    def titled(sid, tid, var, img, text, cls="slide"):
+        return ('<section class="%s" id="%s" data-template="%s.v1" data-variant="%s"><h2 data-script-field="title">Chlorine ships '
+                'and LPG chemical ships</h2><div class="fill fig"><img src="../assets/img/%s"></div><p data-script-field="text">%s</p>'
+                '</section>' % (cls, sid, tid, var, img, text))
+    one = os.path.join(pres, "one.html")
+    io.open(one, "w", encoding="utf-8").write("<html><body>%s</body></html>" % (
+        titled("s08", "photo-explain", "column", "square.jpg", " ".join(["word"] * 82))
+        + titled("s06", "explain-figure", "figure-top", "wide.jpg", " ".join(["word"] * 65), cls="slide dark")
+        + titled("s09", "photo-explain", "column", "wide.jpg", "a few words", cls="slide photo")
+        + titled("s10", "photo-explain", "column", "square.jpg", "a few words")))
+    sl = ft.scan_deck(one)
+    found1 = fr.rule_checks(one, sl)
+    by1 = {(f["slide"], f["kind"]): f for f in found1}
+    check("the words a budget counts are the text's, the title apart, as measure_word_budgets.py measured them: 82 words "
+          "under a 6-word title beside a photo column (85) are no fault (the 2.131.0 trial's M01 s08: '87 against 85')",
+          {s["id"]: s["text_words"] for s in sl}["s08"] == 82 and ("s08", "words") not in by1, (sl, found1))
+    check("... and the budget is the blueprint's measured one, never its template's word range: 65 words under a band of "
+          "photographs (70) are no fault (the trial's '65 against 60 in explain-figure.figure-top')", ("s06", "words") not in by1, found1)
+    check("... a slide whose section has more classes (dark, photo) is read on its own: its picture is judged, and the slide "
+          "before it does not take its photograph", ("s09", "layout") in by1 and "1.50:1" in by1[("s09", "layout")]["did"]
+          and ("s10", "layout") not in by1 and ("s06", "layout") not in by1, found1)
     fit = fr.fit_faults({"1024x768": [["s03", 2, "cut", "the table is cut by 66 px"], ["s03", 2, "static", "a drawing never changes"]]}, None)
     check("the fit gate's cuts are overflow faults at the size they were found (its other findings are none)",
           len(fit) == 1 and fit[0]["kind"] == "overflow_cut" and "1024x768" in fit[0]["found_by"] and "66 px" in fit[0]["did"], fit)

@@ -118,7 +118,8 @@ import shutil
 import sys
 import unicodedata
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stdout, "reconfigure"):          # imported by the script check while its output is captured
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(os.path.dirname(HERE))                 # course-factory
 SKILLS = os.path.dirname(SKILL)
@@ -2906,15 +2907,16 @@ def plan_seed(script):
 
 
 def plan_item(s, b, tid, variant, comp, fig, is_photo, lines, mdir, own_comp, want_t, ph_keys, act, avoid, ground, seed):
-    """the layout plan's item for one teaching slide (layout_plan.plan): its own blueprint, the blueprints it fits
-    (layout_plan.options - its picture's real shape against each box, its words against each budget) and why not the other
-    shapes, and why it keeps its own when it does"""
+    """the layout plan's item for one teaching slide (layout_plan.plan), or a room activity laid out like one: its own
+    blueprint, the blueprints it fits (layout_plan.options - its picture's real shape against each box, a hard rule, its
+    words against each budget) and why not the other shapes, and why it keeps its own when it does - while its picture fits
+    it. A shape measured out at the last build is left out while another its picture fits is left"""
     own_bp = "%s.%s" % (tid, variant)
     own = layout_plan.shape_of(tid, variant) or "beside"
     family = picture_family(fig, is_photo, b)
     named = [k for k, v in (("template", want_t), ("variant", b.get("variant")), ("layout", own_comp)) if v]
     laid = [k for k in PLAN_KEEPS if b.get(k)]
-    fixed = ("its build sheet names its %s" % " and ".join(named)) if named else "the module's opening" if comp == "opener"         else "a carousel of photographs" if ph_keys else "a room activity" if act         else ("its build sheet's \"%s\" is laid out for its own shape" % laid[0]) if laid else None
+    fixed = ("its build sheet names its %s" % " and ".join(named)) if named else "the module's opening" if comp == "opener"         else "a carousel of photographs" if ph_keys         else ("its build sheet's \"%s\" is laid out for its own shape" % laid[0]) if laid else None
     aspect = None
     if family == "photo":
         aspect = photo_aspect(mdir, b.get("figure")) or 1.0
@@ -2928,9 +2930,10 @@ def plan_item(s, b, tid, variant, comp, fig, is_photo, lines, mdir, own_comp, wa
                                     top_words(tid, lines, b) if tid == "content-in-parts" else None, fixed, seed, s["id"],
                                     len([x for x in lines if " | " in x]) if tid == "reference-table" else 0)
     out = [k[0] for k in measured_out(avoid, s, b) if k[1] == ground]
-    for o in [o for o in opts if o["shape"] in out and o["bp"] != own_bp]:
-        opts.remove(o)
-        why.setdefault(o["shape"], "measured out: its words did not fit there at the last build")
+    if any(o["shape"] not in out for o in opts):
+        for o in [o for o in opts if o["shape"] in out]:
+            opts.remove(o)
+            why.setdefault(o["shape"], "measured out: its words did not fit there at the last build")
     return {"id": s["id"], "own": own, "own_bp": own_bp, "options": opts, "why": why, "fixed": fixed,
             "echo": comparison(tid, s.get("visual_kind"), s.get("title")), "family": family, "aspect": aspect}
 
@@ -3830,6 +3833,13 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                          plan_seed(script))
         if info is not None:
             info[sid] = item
+    elif LAYOUT_PLAN and act and fig:
+        # a room activity is not in the deck's plan: it moves only when its picture does not fit its own box, to the
+        # blueprint that takes it best
+        item = plan_item(s, b, tid, variant, comp, fig, is_photo, lines, mdir, own_comp, want_t, ph_keys, act, avoid, ground,
+                         plan_seed(script))
+        if item["options"] and not any(o["bp"] == item["own_bp"] for o in item["options"]):
+            plan = item["options"][0]["bp"]
     if item and plan and plan != item["own_bp"] and any(o["bp"] == plan for o in item["options"]):
         tid, variant, comp, first = layout_plan.way(plan, item["family"])
         varied, b = (layout_plan.MAP[plan], ground), dict(b, figure_first=first)
@@ -5652,6 +5662,19 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         slides.append(mark_slot(page, s["id"]))
         if chosen is not None and s["kind"] == "slide" and not s.get("recap"):    # 2.62.1: kept for the next compile
             chosen[s["id"]] = {"words": words_key(s, b), "key": list(layout_key(slides[-1]))}
+    if LAYOUT_PLAN:          # the picture's real shape is a hard rule: never a picture in a box its blueprint does not take
+        for x in layout_plan.picture_misfits("\n".join(slides), mdir):
+            fixed = ((info or {}).get(x["slide"]) or {}).get("fixed")
+            rng = "a %s of %s:1" % (x["family"], "-".join("%g" % v for v in x["range"])) if x["range"] else "no %s" % x["family"]
+            probs.append("%s (%s): %s%s in %s, whose box takes %s - a picture is never cut down to a box of another shape "
+                         "(layout_plan.py); the blueprints that take it: %s - %s" % (
+                             cs.place(script, x["slide"]), x["slide"], x["said"], " (%.2f:1)" % x["aspect"] if x["aspect"] else "",
+                             x["bp"], rng, ", ".join(x["fit"]) or "none of its kind",
+                             "%s: take it out of the build sheet, or name one of these" % fixed if fixed and "build sheet" in fixed
+                             else "it keeps its own (%s): change that, or choose a picture of its box's shape" % fixed if fixed
+                             else "none of them takes its words: split the slide in two (content_script.py propose), or choose "
+                                  "a picture of its box's shape" if x["fit"]
+                             else "choose a picture of its box's shape, or another kind of picture"))
     for i, _ in ([] if LAYOUT_PLAN else look_repeats(slides)):    # the plan's own notes say what it could not vary
         note_once("Note: %s: looks exactly like the slide before it (%s, %s ground) - a note only (2.116.0): the factory does not "
                   "change a slide to avoid a repeat; ask for another template in the build sheet if you want one"

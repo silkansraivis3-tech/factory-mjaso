@@ -10,8 +10,13 @@ blueprint of its group is scored - the picture's real shape (a photograph's pixe
 home view) against the box's, the words against the budget, the names it shows. plan() then chooses across the deck: the
 same shape never twice in a row, beside on at most about half of the teaching slides, at least four shapes in a module of
 ten teaching slides or more, and among near-equal fits a choice seeded by the course and the module, so a rebuild is the
-same and two modules do not look alike. A slide whose build sheet names its template, variant or layout keeps it; so does
-a slide that fits one blueprint only. Words are never cut or moved: only blueprints the slide already fits are chosen.
+same and two modules do not look alike. The picture's real shape is a hard rule: a picture is never planned into a box its
+blueprint does not take (picture_fit), the slide's own blueprint and one its build sheet names included - the compiler
+refuses a deck with one (picture_misfits, the fault report's own check). A slide whose build sheet names its template,
+variant or layout keeps it while its picture fits; so does a slide that fits one blueprint only. Words are never cut or
+moved: a slide's text is counted against each blueprint's measured budget (holds - the script check's and the fault
+report's count too), and when no blueprint its picture fits holds them, the plan takes the one over by least and the
+script check asks to split the slide.
 
     python layout_plan.py <deck index.html | module folder>     the deck's shape line, its longest run and its beside share
     python test_layout_plan.py
@@ -52,8 +57,9 @@ def library(folder=None):
     for b in out.values():
         base = out.get(b.get("mirror") or "")
         if base:
-            for k in ("for", "fill", "grid", "cols", "rows"):
-                b.setdefault(k, base.get(k))
+            for k in ("for", "fill", "grid", "cols", "rows", "fits"):
+                if base.get(k) is not None:
+                    b.setdefault(k, base.get(k))
     return out
 
 
@@ -245,17 +251,56 @@ def table_budget(variant, family):
     return dict(BUDGETS[key], what=what)
 
 
-def aspect_score(rng, aspect, hard):
-    """how well a picture of this shape sits in a box made for rng [lo, hi]: 1 inside, less the further out (None: it
-    cannot - a band is never given a picture that is not wide); an unknown shape (a picture still to be drawn) 0.7"""
+BUDGET_SAID = {"beside_picture": "beside a picture", "beside_3d": "beside a 3D scene", "beside_tall": "beside a tall picture",
+               "photo_column": "beside a photo column", "photo_framed": "beside a framed photograph",
+               "photo_full": "on a full-screen photograph", "under_top_photo": "under a photograph across the slide",
+               "under_top_row": "under the photographs on top", "over_photo_row": "over the photographs at the foot",
+               "under_band": "under a picture band", "over_band": "over a picture band", "part": "in a part",
+               "part_band": "in a part over or under a band", "stage": "under a picture that is the slide"}
+
+
+def holds(bp, family):
+    """{"words", "rows", "key", "what"} - the words (and a table's rows) blueprint bp holds with this kind of picture: its
+    measured budget (fits.budget -> layout-templates.json "budgets"), the one budget the layout plan, the script check and the
+    fault report count a slide's text against (its title apart: every budget was measured under a one-line title). None when
+    the blueprint has no budget for it"""
+    key = ((LIB.get(bp) or {}).get("fits") or {}).get("budget", {}).get(family)
+    most = budget(key) if key is not None else None
+    if most is None:
+        return None
+    if isinstance(most, dict):
+        return {"words": most["words"], "rows": most["rows"], "key": key, "what": "in a table"}
+    return {"words": most, "rows": None, "key": key, "what": BUDGET_SAID.get(key, "")}
+
+
+def picture_fit(bp, family, aspect):
+    """why the box of blueprint bp cannot hold this picture - None when it can. A hard rule for every blueprint that holds a
+    picture: it takes the picture's kind (fits.pictures) and the picture's real shape lies in its box's (fits.aspect) - a
+    wide photograph is never cut down to a tall box, a tall one never to a band. None too for a blueprint with no rule for
+    pictures, and while the picture's shape is not known (still to be drawn)"""
+    f = (LIB.get(bp) or {}).get("fits") or {}
+    if not f or not family:
+        return None
+    if family not in (f.get("pictures") or []):
+        return "takes no %s" % family
+    rng = (f.get("aspect") or {}).get(family)
+    if rng and aspect and not rng[0] <= aspect <= rng[1]:
+        return "the picture is %.1f:1, its box is for %s:1" % (aspect, "-".join("%g" % x for x in rng))
+    return None
+
+
+def fitting(family, aspect, group=None):
+    """the blueprints whose box takes this picture (picture_fit), of the group when one is given"""
+    return [bid for bid, b in LIB.items() if (b.get("fits") or {}).get("group") and (group is None or b["fits"]["group"] == group)
+            and family in (b["fits"].get("pictures") or []) and picture_fit(bid, family, aspect) is None]
+
+
+def aspect_score(rng, aspect):
+    """1 when a picture of this shape sits in a box made for rng [lo, hi], None when it does not (never in another box: a
+    hard rule); an unknown shape (a picture still to be drawn) 0.7"""
     if aspect is None:
         return 0.7
-    lo, hi = rng
-    if lo <= aspect <= hi:
-        return 1.0
-    if hard or aspect <= 0:
-        return None
-    return max(0.1, 1 - 1.2 * abs(math.log(aspect / (lo if aspect < lo else hi))))
+    return 1.0 if rng[0] <= aspect <= rng[1] else None
 
 
 def jitter(seed, *keys):
@@ -267,19 +312,26 @@ def jitter(seed, *keys):
 def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None, fixed=None, seed="", sid="", rows=0):
     """([{"bp", "shape", "cost"}], {shape: why not}) - the blueprints a teaching slide built as own_bp fits, cheapest first:
     every blueprint of its group (blueprints/*.json "fits") that takes its picture (family: photo, tiles, drawing, 3d) and
-    its words (part_words: its largest part, when they are in parts), whose box suits the picture's shape (aspect, None
-    while it is not drawn yet) and that shows its names. The cost: 0 a perfect fit, up to 10, and a seeded fraction that
-    settles near-equal fits. fixed: why the slide keeps its own blueprint. rows: the rows of a table slide - a table's budget
-    (budgets "table_...") is rows and words, and it must fit both"""
+    whose box suits the picture's shape (aspect, None while it is not drawn yet) - a hard rule, its own blueprint too -,
+    that holds its words (part_words: its largest part, when they are in parts) and shows its names. When no blueprint the
+    picture fits holds its words, the ones that hold the most, each marked "over" ((words, names, rows) over): the script
+    check asks to split such a slide, and the fit gate measures it. [] when no blueprint of its group takes the picture. The
+    cost: 0 a fit, 3 a picture still to be drawn, and a seeded fraction that settles near-equal fits. fixed: why the slide
+    keeps its own blueprint - while its picture fits it. rows: the rows of a table slide - a table's budget (budgets
+    "table_...") is rows and words, and it must fit both"""
     own = LIB.get(own_bp) or {}
     own_shape = own.get("shape") or "beside"
     group = (own.get("fits") or {}).get("group")
     why = {}
     if fixed or not group or not family:
+        no = picture_fit(own_bp, family, aspect)
         why.update({s: fixed or ("no picture" if not family else "its template, %s, has a layout of its own" % own_bp.split(".")[0])
                     for s in ORDER if s != own_shape})
+        if no:
+            why[own_shape] = "%s - %s" % (own_bp, no)
+            return [], why
         return [{"bp": own_bp, "shape": own_shape, "cost": 0.0}], why
-    out = []
+    out, spare = [], []
     for bid, b in LIB.items():
         f = b.get("fits") or {}
         if f.get("group") != group:
@@ -288,31 +340,36 @@ def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None,
         w = part_words if part_words is not None and group == "parts" else words
         most = budget((f.get("budget") or {}).get(family))
         lo, hi = f.get("words") or [0, 999]
+        pic = picture_fit(bid, family, aspect)
+        table = isinstance(most, dict)
+        over = (max(0, w - (most["words"] if table else most)) if most is not None else 0,       # words, names, rows over
+                max(0, names - f["names"]) if f.get("names") else 0, max(0, rows - most["rows"]) if table else 0)
         if family not in (f.get("pictures") or []):
             no = "takes no %s" % family
         elif f.get("ground") == "dark" and bid != own_bp:
             no = "on the dark ground"
         elif not lo <= words <= hi:
             no = "for %d-%d words" % (lo, hi)
-        elif isinstance(most, dict) and (w > most["words"] or rows > most["rows"]):
+        elif table and (over[0] or over[2]):
             no, stage = "%d rows and %d words, it holds %d and %d" % (rows, w, most["rows"], most["words"]), 2
-        elif not isinstance(most, dict) and most is not None and w > most:
+        elif over[0]:
             no, stage = "%d words, it holds %d" % (w, most), 2
-        elif f.get("names") and names > f["names"]:
+        elif over[1]:
             no, stage = "%d names on the picture, it shows %d" % (names, f["names"]), 3
-        sc = None
-        if not no:
-            sc = aspect_score((f.get("aspect") or {}).get(family) or [0, 99], aspect, f.get("hard"))
-            if sc is None:
-                no, stage = "the picture is %.1f:1, its box is for %s:1" % (aspect, "-".join("%g" % x for x in f["aspect"][family])), 4
-        if no and bid != own_bp:
+        if not no and pic:
+            no, stage = pic, 4
+        if no:
+            if not pic and stage in (2, 3):                  # its picture fits, its words or names do not
+                spare.append(((over[2], over[0], over[1]), over, bid, shape))
             if stage >= why.get(shape, (-1, ""))[0]:          # the reason of the blueprint that came nearest to fitting
                 why[shape] = (stage, "%s - %s" % (bid, no))
             continue
-        cost = round((1 - (sc if sc is not None else 0.0)) * 10) + 0.9 * jitter(seed, sid, bid)
+        cost = round((1 - aspect_score([0, 99], aspect)) * 10) + 0.9 * jitter(seed, sid, bid)
         out.append({"bp": bid, "shape": shape, "cost": cost})
-    if not any(o["bp"] == own_bp for o in out):
-        out.append({"bp": own_bp, "shape": own_shape, "cost": 10.0})
+    if not out and spare:
+        least = min(x[0] for x in spare)
+        out = [{"bp": bid, "shape": shape, "cost": 10.0 + 0.9 * jitter(seed, sid, bid), "over": o}
+               for k, o, bid, shape in spare if k == least]
     out.sort(key=lambda o: o["cost"])
     why = {s: w[1] for s, w in why.items() if s not in {o["shape"] for o in out}}
     for s in ORDER:
@@ -447,6 +504,11 @@ def notes(items, choice, rules=None):
     if sc["missing"]:
         out.append("%d shape(s) in %d teaching slides (%s; at least %d) - no other slide fits another shape" % (
             len(sc["shapes"]), sc["teaching"], ", ".join(sc["shapes"]), len(sc["shapes"]) + sc["missing"]))
+    for i, o in sorted(choice.items()):
+        if o.get("over"):
+            out.append("%s is in %s, the blueprint its picture fits that holds the most - %s over its budget: the fit gate "
+                       "measures it; split the slide (the script check's t_no_shape)" % (items[i]["id"], o["bp"], " and ".join(
+                           "%d %s" % (n, what) for n, what in zip(o["over"], ("words", "names", "rows")) if n)))
     return out
 
 
@@ -520,6 +582,64 @@ def deck_shapes(page):
     """(items, {index: shape}) of a compiled deck as it is built"""
     items = deck_items(page)
     return items, {i: it["own"] for i, it in enumerate(items) if it["own"]}
+
+
+IMG = re.compile(r'<img\b[^>]*?\bsrc="([^"]+)"')
+SLIDE_BLOCK = re.compile(r'<section class="slide(?: [^"]*)?"[^>]*>.*?(?=<section class="slide[ "]|\Z)', re.S)
+NOT_MAIN = re.compile(r'<figure class="inset[^"]*".*?</figure>|<div class="aside">.*?</div>', re.S)
+
+
+def _file_aspect(p):
+    try:
+        from PIL import Image
+        with Image.open(p) as im:
+            w, h = im.size
+        return w / float(h) if h else None
+    except Exception:  # noqa: BLE001 - a picture that cannot be read has no shape to judge
+        return None
+
+
+def slide_picture(block, mdir):
+    """(family, aspect, how it is said) of a built slide's main picture as the plan reads one: a photograph or a row of
+    them (their files' own shape, the narrowest of a row), a 3D scene, a drawing - (None, None, "") for a slide with none.
+    mdir: the module folder its assets/img are in. A small photograph beside the picture (an inset, an aside) is not it"""
+    block = NOT_MAIN.sub("", block or "")
+    if " data-kit3d=" in block:
+        return "3d", figure_aspect(block), "a 3D scene"
+    files = [s for s in IMG.findall(block) if "assets/img/" in s.replace("\\", "/")]
+    if files:
+        names = [s.replace("\\", "/").split("assets/img/", 1)[1] for s in files]
+        asp = [_file_aspect(os.path.join(mdir, "assets", "img", n)) or _file_aspect(os.path.join(mdir, "assets", "img", "_unused", n))
+               for n in names]
+        asp = [a for a in asp if a]
+        if not asp:
+            return None, None, ""
+        return ("tiles" if len(files) > 1 else "photo"), min(asp), \
+            "a photograph" if len(files) == 1 else "%d photographs (the narrowest counts)" % len(files)
+    if " data-kit2d=" in block:
+        return "drawing", figure_aspect(block), "a drawing"
+    return None, None, ""
+
+
+def picture_misfits(page, mdir):
+    """[{"slide", "bp", "family", "aspect", "said", "why", "range", "fit"}] - each slide of a built deck whose picture its
+    blueprint's box does not take (picture_fit): the compiler's must-fix and the fault report's layout fault, one check.
+    range: the box's [lo, hi] (None: it takes no such picture); fit: the blueprints of its group that take the picture"""
+    out = []
+    for block in SLIDE_BLOCK.findall(page or ""):
+        t = re.search(r'\bdata-template="([\w-]+)', block)
+        v = re.search(r'\bdata-variant="([\w-]+)"', block)
+        bp = "%s.%s" % (t.group(1) if t else "", v.group(1) if v else "")
+        f = (LIB.get(bp) or {}).get("fits") or {}
+        if not f:
+            continue
+        family, aspect, said = slide_picture(block, mdir)
+        why = picture_fit(bp, family, aspect)
+        if why:
+            out.append({"slide": (re.search(r'\bid="([^"]+)"', block) or [None, ""])[1], "bp": bp, "family": family,
+                        "aspect": aspect, "said": said, "why": why, "range": (f.get("aspect") or {}).get(family)
+                        if family in (f.get("pictures") or []) else None, "fit": fitting(family, aspect, f.get("group"))})
+    return out
 
 
 def problems(page, rules=None):

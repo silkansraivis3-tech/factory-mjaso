@@ -71,9 +71,9 @@ S02_NOTES = ("- Draw the propane pressure-temperature line; mark the three ship 
              "- Ask which type suits a short coastal trade, and which an ocean voyage.\n"
              "- Point out the ethylene carrier.")
 S03_TEXT = ("The IGC Code names four containment systems.\n"
-            "Type A tanks are prismatic, built for under 0.7 bar, and need a full secondary barrier.\n"
-            "Independent type B tanks - spherical Moss or prismatic SPB - are designed in such detail that a partial secondary barrier is enough.\n"
-            "Type C tanks are pressure vessels, cylindrical or bilobe, and need no secondary barrier.\n"
+            "Type A tanks are prismatic, under 0.7 bar, with a full secondary barrier.\n"
+            "Type B tanks - spherical Moss or prismatic SPB - need a partial secondary barrier.\n"
+            "Type C tanks are cylindrical pressure vessels: no secondary barrier.\n"
             "Membrane tanks are thin metal barriers that rely on the hull, through the insulation, for their strength, and need a full secondary barrier.")
 S03_NOTES = ("- Let the room name each tank type on the model first.\n"
              "- Ask: why does a pressure vessel need no secondary barrier?\n"
@@ -96,7 +96,7 @@ SCRIPT = {
     "sources": ["IGC Code 2016: 1.2, 4.21-4.24 (containment systems)", "SIGTTO Liquefied Gas Handling Principles, 4th ed.: ch. 1-2"],
     "screens": [
         {"id": "s01", "sub_ilo": "1.1", "kind": "slide", "title": "Why gas tankers are different", "text": S01_TEXT, "visual_kind": "photo",
-         "visual": "Photograph of a membrane LNG carrier alongside", "picture": {"kind": "photo", "aspect": "4:3", "shows": "A membrane LNG carrier alongside"}, "notes": S01_NOTES, "minutes": 5},
+         "visual": "Photograph of a membrane LNG carrier alongside", "picture": {"kind": "photo", "aspect": "1:1", "shows": "A membrane LNG carrier alongside"}, "notes": S01_NOTES, "minutes": 5},
         {"id": "s02", "sub_ilo": "1.1", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "model_3d",
          "visual": "3D model of a semi-refrigerated tank - turn it and cut it open to see its insulation and its cooling coil",
          "picture": {"kind": "3d", "aspect": "4:3", "shows": "A semi-refrigerated tank, cut open"}, "notes": S02_NOTES, "minutes": 5,
@@ -297,6 +297,32 @@ def budget_part():
     check("5 rows of 10 words (50) are over: no shape holds 5 rows and 50 words", cs.table_over(screen(tb, "s01")) == (5, 50, 6, 48))
     screen(tb, "s01")["text"] = "\n".join("Row %d | %s" % (i, "word " * 10) for i in range(1, 7))
     check("6 rows of 12 words is over every shape", cs.table_over(screen(tb, "s01")) == (6, 72, 6, 48), cs.table_over(screen(tb, "s01")))
+
+    print("\n-- the picture's shape decides the shapes a slide can take, and so the words it holds (t_no_shape)")
+    B = cs.LAYOUT_RULES["budgets"]
+    ns = copy.deepcopy(SCRIPT)
+    screen(ns, "s01")["picture"]["aspect"] = "4:3"          # the 2.131.0 trial's M01 s08: 81 words, a landscape photograph
+    f = [x for x in cs.theory_findings(ns)[0] if x["rule"] == "t_no_shape"]
+    check("a landscape photograph (4:3) with %d words: no box beside the words takes it, a band across the slide holds %d - a "
+          "must-fix that names the shapes and the split, at the script, never a photograph in a tall box at the build"
+          % (cs.wc(S01_TEXT), B["under_top_row"]),
+          [(x["screen"], x["level"]) for x in f] == [("s01", cs.FAIL)] and "hold at most %d" % B["under_top_row"] in f[0]["detail"]
+          and "4:3" in f[0]["detail"] and "two slides" in f[0]["fix"], f)
+    check("... it blocks approval", "t_no_shape" in [x["rule"] for x in cs.blocking(cs.all_findings(ns))])
+    check("... the same words beside a photograph of 1:1 fit (photo-explain.column holds %d): no finding" % B["photo_column"],
+          cs.no_shape(screen(SCRIPT, "s01")) is None)
+    screen(ns, "s01")["text"] = "\n".join(S01_TEXT.split("\n")[:3])
+    check("... and a landscape photograph with words a band holds: no finding", cs.no_shape(screen(ns, "s01")) is None,
+          cs.no_shape(screen(ns, "s01")))
+    tiles = dict(screen(SCRIPT, "s01"), picture={"kind": "photo", "aspect": "16:9", "items": ["LPG carrier", "LNG carrier"]})
+    check("several photographs (items) are tiles, each its own shape: they sit beside the words", cs.no_shape(tiles) is None, cs.no_shape(tiles))
+    act = dict(screen(SCRIPT, "s01"), id="a01", kind="activity", picture={"kind": "photo", "aspect": "16:9"})
+    ns["screens"].insert(3, act)
+    check("a room activity with a picture is laid out like a slide and judged the same (the trial's M16 a01)",
+          [x["screen"] for x in cs.theory_findings(ns)[0] if x["rule"] == "t_no_shape"] == ["a01"], cs.theory_findings(ns)[0])
+    wide3d = dict(screen(SCRIPT, "s03"), text=S03_TEXT + "\n" + MORE)
+    check("a 3D scene over every 3D shape (%d words beside it, %d in a band) is the same must-fix" % (B["beside_3d"], B["under_band"]),
+          (cs.no_shape(wide3d) or (0, 0))[1] == B["under_band"], cs.no_shape(wide3d))
 
     row = copy.deepcopy(SCRIPT)
     screen(row, "s01").update(text=S01_TEXT + "\n" + MORE, in_parts="each risk on its own")

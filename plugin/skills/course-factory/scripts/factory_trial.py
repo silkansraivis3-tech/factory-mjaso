@@ -802,7 +802,8 @@ class DeckScan(HTMLParser):
     """each slide of a built deck: its template and variant, its pictures and the placeholders among them, and the words the
     room sees at once - its words outside its parts and its longest part (content-in-parts shows one part at a time). The
     header band, the source line, the controls, the words inside a drawing and the compiler's own words (a step's number, an
-    answer shown a second time over the figure: data-script-ignore) are not counted (check_script_match.py)"""
+    answer shown a second time over the figure: data-script-ignore) are not counted (check_script_match.py). The title's
+    words are kept apart too (title_words), as a layout's measured budget counts the text without them"""
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -810,7 +811,7 @@ class DeckScan(HTMLParser):
         import compile_module as cm
         self.exempt_tags, self.exempt_classes, self.void = csm.EXEMPT_TAGS, csm.EXEMPT_CLASSES, csm.VOID
         self.placeholder = cm.PLACEHOLDER_IMG
-        self.stack, self.slides = [], []      # stack: (tag, its words not counted, part, a slide)
+        self.stack, self.slides = [], []      # stack: (tag, its words not counted, part, a slide, the slide's title)
 
     def handle_starttag(self, tag, attrs):
         a = {k: (v or "") for k, v in attrs}
@@ -818,7 +819,7 @@ class DeckScan(HTMLParser):
         slide = tag == "section" and "slide" in cls
         if slide:
             self.slides.append({"id": a.get("id", ""), "template": a.get("data-template", ""), "variant": a.get("data-variant", ""),
-                                "pictures": 0, "placeholders": 0, "words": 0, "parts": {}})
+                                "pictures": 0, "placeholders": 0, "words": 0, "title_words": 0, "parts": {}})
         inside = any(x[3] for x in self.stack) or slide
         if inside and not any(x[0] == "button" for x in self.stack) and (tag in PICTURE_TAGS or any(k in a for k in PICTURE_ATTRS)):
             self.slides[-1]["pictures"] += 1
@@ -826,7 +827,7 @@ class DeckScan(HTMLParser):
                 self.slides[-1]["placeholders"] += 1
         if tag not in self.void:
             self.stack.append((tag, tag in self.exempt_tags or bool(cls & self.exempt_classes) or "data-script-ignore" in a,
-                               a.get("data-part") if "lt-part" in cls else None, slide))
+                               a.get("data-part") if "lt-part" in cls else None, slide, a.get("data-script-field") == "title"))
 
     def handle_endtag(self, tag):
         for i in range(len(self.stack) - 1, -1, -1):
@@ -841,6 +842,8 @@ class DeckScan(HTMLParser):
         part = next((x[2] for x in reversed(self.stack) if x[2] is not None), None)
         if part is None:
             s["words"] += cs.wc(data)
+            if any(x[4] for x in self.stack):
+                s["title_words"] += cs.wc(data)
         else:
             s["parts"][part] = s["parts"].get(part, 0) + cs.wc(data)
 
@@ -852,6 +855,9 @@ def scan_deck(deck):
     p.feed(io.open(deck, encoding="utf-8", errors="replace").read())
     for s in p.slides:
         s["seen_words"] = s["words"] + max(s["parts"].values(), default=0)
+        # the words a layout's measured budget counts: its text, the title apart (every budget was measured under a one-line
+        # title - measure_word_budgets.py), the longest part - the count of the script check and the layout plan
+        s["text_words"] = s["seen_words"] - s["title_words"]
     return p.slides
 
 
