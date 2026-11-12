@@ -1062,6 +1062,54 @@ OWNER_CLEARED), "printed_text": words or labels on it or "none" (never enlarged 
 author into assets/fig: its _figure_meta.json record beside it; a question's picture: its answers' boxes onto the real
 things), place the 3D parts, fix what the build printed, and build again until module clean. A placeholder never ships.` : ''
 }
+/* the 3D scenes Phase A left at their starter ("3D TO PLACE: s01 s03 ..." on its line) are placed by scene authors, at most
+   SCENE_AUTHORS at once and SCENES_EACH scenes each, none building, BEFORE the module's builder starts: one builder with
+   three builds found photographs and drew task pictures and left 19 scenes as starters (the 2.134.0 trial, M01) */
+const SCENE_AUTHORS = 3
+const SCENES_EACH = 4
+const scenesOf = (m) => { const x = /3D TO PLACE:\s*([\w ]+)/.exec(lineOf(m)); return x ? x[1].trim().split(/\s+/) : [] }
+const KIT3D_DOCS = A.factory ? `${A.factory}/course-visuals/kit3d` : '<the course-visuals skill folder>/kit3d'
+const placeScene = (m, ids) => `PLACE ${ids.length} 3D SCENE(S) of module ${m.id}: ${ids.join(', ')} - nothing else.
+
+  Course folder:  ${A.course}
+  The scenes:     ${ids.map((s) => `working_claude/figures/M${two(m)}/${s}.kit3d.json`).join(', ')}
+                  (each is --init-build's starter: the parts its words name, guessed, with a "_todo" key)
+  The words:      working_claude/script/M${two(m)}.json, the screen with that id - title, text (its lines), visual, notes.
+                  Read only: the approved words are never changed.
+  The kit:        ${KIT3D_DOCS}/SPEC.md (the format, "Steps", "Labels") and PARTS.md (every part, its sub-parts and the
+                  gas carrier hull sections); finished scenes in ${KIT3D_DOCS}/examples/ - start from the nearest one
+
+YOU MAY WRITE ONLY THOSE SPEC FILES - never the build sheet, a 2D figure, the script or a module file. NEVER run
+build_module.py: the module's builder starts after you and builds it with your scenes.
+
+For each scene: place the parts as they are on board, in true metres (a gas carrier's tank "in" its hull section, a deck
+part "on" the hull's deck, rooms and doors where they are - PARTS.md); what the slide teaches is drawn, not a stand-in box;
+each label on the part or sub-part its words name; one step per line of the slide ("line": 1 is the first), each step
+showing what its line names. Check it: python ${KIT3D_SCRIPTS}/check_kit3d.py spec <the spec> until it prints "clean",
+then delete the "_todo" key. AT MOST FIVE check runs a scene: a scene still not clean after its fifth keeps its "_todo"
+and is listed in your report. The workflow's 3D step photographs and judges the scenes after the build.
+
+${HANDS_ON}
+
+Report: each scene's id, clean or not (what check_kit3d.py still prints), and what you placed.${NOTES}`
+async function placeScenes(m) {
+  const ids = scenesOf(m)
+  const todo = []
+  for (let i = 0; i < ids.length; i += SCENES_EACH) todo.push(ids.slice(i, i + SCENES_EACH))
+  await parallel(Array.from({ length: Math.min(SCENE_AUTHORS, todo.length) }, () => async () => {
+    while (todo.length) {
+      const c = todo.shift()
+      await agent(placeScene(m, c), { label: `scenes:${m.id}:${c[0]}`, phase: 'Build', ...JUDGEMENT })
+    }
+  }))
+  return ids
+}
+const placedNote = (m, ids) => ids.length ? `
+
+THE 3D SCENES ${ids.join(', ')} WERE PLACED BEFORE YOU by scene authors (working_claude/figures/M${two(m)}/<id>.kit3d.json):
+keep them. Fix in a scene only what the build prints about it; a scene still marked "_todo" is one they could not finish -
+place it as the build asks.` : ''
+
 /* a finding's kind for the first-pass record: what the course office would call it */
 const kindOf = (text) => {
   const t = String(text || '')
@@ -1087,12 +1135,14 @@ async function oneModule(m) {
     return { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
   }
   /* 2.73.0 - Phase A finished it (PASS / MODULE CLEAN): no builder, straight to the judges; else the builder's brief is its needs file */
-  const built = cleanA(lineOf(m)) ? null : await place(() => buildUntilPass(m, phaseB(m)))
+  const placed = cleanA(lineOf(m)) ? [] : await placeScenes(m)
+  const built = cleanA(lineOf(m)) ? null : await place(() => buildUntilPass(m, phaseB(m) + placedNote(m, placed)))
   const time = built === null ? null : timeOf(built)     // 2.65.0 (Raivis) - the module clock, from the builder's report
   let reachedPass = built === null || passed(built)      // no PASS from build_module.py, not done - whatever the judges say
   /* who built it is what the walk judge signs against: a builder's own signature is refused, and so is a fixer's - the
      look after a fix round is told every agent that changed the module in it */
   const builtBy = [built === null ? 'phase-a:modules (workflow Phase A, no builder)' : `build:${m.id} (workflow builder)`]
+    .concat(placed.length ? [`scenes:${m.id} (workflow scene authors)`] : [])
   const walkIt = (tag, fixers = [], used = false) => agent(walk(walkOf(m), builtBy.concat(fixers), !!tag, used),
     { label: `walk:${m.id}${tag || ''}`, phase: 'Verify', schema: WALK_SCHEMA, ...JUDGEMENT })
   /* the 3D check and the figure check may rebuild the module: the walk looks at the module only after its last build of the

@@ -79,7 +79,27 @@ def one(course, n, auto):
     key = keys[-1] if keys else (out.strip().splitlines() or ["(no answer)"])[-1]
     if "MODULE CLEAN" in out:
         key = "MODULE CLEAN M%02d - only the course package is left (judged after assembly)" % n
+    todo = scenes_to_place(course, n)
+    if todo and not key.startswith("PASS"):
+        key += " | 3D TO PLACE: " + " ".join(todo)
     return n, code, key, time.time() - t0
+
+
+def scenes_to_place(course, n):
+    """the 3D scenes of module n still at --init-build's starter ("_todo"): the workflow places them before its builder
+    starts - one builder with three builds left 19 of them as starters while it found photographs (2.134.0 trial, M01)"""
+    import workspace
+    import content_script as cs
+    d = workspace.claude_path(course, "figures", cs.mid(n))
+    out = []
+    for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        if f.endswith(".kit3d.json"):
+            try:
+                if json.load(io.open(os.path.join(d, f), encoding="utf-8-sig")).get("_todo"):
+                    out.append(f[:-len(".kit3d.json")])
+            except (OSError, ValueError):
+                pass
+    return out
 
 
 def forget_streak(course, n):

@@ -2978,6 +2978,40 @@ def kit3d_part(tmp):
     none = cm.starter_kit3d({"module": 1}, {"id": "s07", "title": "Why it matters now", "text": "Be careful.", "visual": ""})
     check("... a slide that names nothing the kit has gets a tank, named by the slide's title",
           [p["type"] for p in none["parts"]] == ["tank_c"] and none["labels"][0]["text"] == "Why it matters now", none)
+    # the 2.134.0 trial (M01): every tank type came out one bare cylinder beside an empty box labelled "space"
+    four = cm.starter_kit3d({"module": 1}, {
+        "id": "s17", "title": "Cargo containment systems",
+        "visual": "Four turnable 3D hull cross-sections side by side: a prismatic Type A tank, a Moss Type B sphere, a Type C "
+                  "bi-lobe tank and a membrane tank - each tank's supports and the hull around it visible.",
+        "text": "The tank types are independent (Type A, B and C), membrane and integral.\nType A tanks rest on wooden chocks.\n"
+                "Membrane tanks pass their loads through the insulation to the hull."})
+    kinds = [(p["type"], p.get("kind"), p.get("lobes"), p.get("in")) for p in four["parts"]]
+    hulls = [p["id"] for p in four["parts"] if p["type"] == "hull"]
+    check("starter_kit3d: each tank type the picture names stands in its own hull section, seated \"in\" it - a Type A prism, "
+          "a Moss sphere, a bilobe Type C, a membrane tank - in a row, never a bare cylinder or a box",
+          kinds == [("hull", None, None, None), ("tank_prism", "type_a", None, hulls[0]), ("hull", None, None, None),
+                    ("tank_sphere", None, None, hulls[1]), ("hull", None, None, None), ("tank_c", None, 2, hulls[2]),
+                    ("hull", None, None, None), ("tank_prism", "membrane", None, hulls[3])]
+          and len(set(hulls)) == 4 and all(p.get("at") for p in four["parts"] if p["type"] == "hull")
+          and not any(p["type"] == "room" for p in four["parts"]) and four["_todo"], kinds)
+    st = four["steps"]
+    check("... a line naming several types shows the whole row; a line naming a sub-part lights it on its section; the chocks "
+          "are labelled on the Type A tank's own chocks",
+          "frame" not in st[0]["view"] and st[1].get("select") == "typea_chocks" and st[1]["view"]["frame"] == ["refr"]
+          and st[2].get("select") in ("membrane", "membrane_ins1") and st[2]["view"]["frame"] == ["memb"]
+          and {"part": "typea_chocks", "text": "Chocks"} in four["labels"], (st, four["labels"]))
+    house = cm.starter_kit3d({"module": 1}, {
+        "id": "s14", "title": "Compressor house",
+        "visual": "Cut-open deckhouse: the cargo compressor room and the electric motor room side by side, and the airlock entrance.",
+        "text": "The cargo compressor room on deck is a gas-dangerous space.\nThe motor room is safe.\n"
+                "The motor room is entered from the deck through an airlock."})
+    types = [p["type"] for p in house["parts"]]
+    check("... the compressor room and the motor room are ONE compressor house, labelled on its two rooms; the airlock stands "
+          "against it, turned to lead in from the deck; no bare room beside them",
+          types == ["compressor_house", "airlock"] and house["parts"][1].get("rot") == 180
+          and {"part": "compressor_house_compressor", "text": "Compressor room"} in house["labels"]
+          and {"part": "compressor_house_motor", "text": "Motor room"} in house["labels"]
+          and house["steps"][1].get("select") == "compressor_house_motor", (house["parts"], house["labels"], house["steps"]))
 
     # shipping: three.js, kit3d.js, kit3d.css in the page, in order, from the factory
     os.makedirs(os.path.join(tmp, "k3"))

@@ -179,10 +179,13 @@ def starter():
     sp = cm.starter_kit3d({"module": 1}, {"id": "s04", "title": "Semi-refrigerated ships", "visual": "A hull section.",
                                           "text": "Type C tank - insulated, about 7 bar.\nIt is cooled.\nVent mast - high above the deck."})
     st = sp["steps"]
-    check("starter_kit3d: three lines, three steps lighting lines 1, 2, 3; the opening step frames and selects line 1's tank; the "
-          "vent mast on line 3; no overview step before line 1's",
-          [x["line"] for x in st] == [1, 2, 3] and st[0].get("select") == sp["parts"][0]["id"]
-          and st[0]["view"].get("frame") == [sp["parts"][0]["id"]] and st[2].get("select") == sp["parts"][1]["id"]
+    tank = next(p["id"] for p in sp["parts"] if p["type"] == "tank_c")
+    hull = next(p["id"] for p in sp["parts"] if p["type"] == "hull")
+    mast = next(p["id"] for p in sp["parts"] if p["type"] == "vent_mast")
+    check("starter_kit3d: three lines, three steps lighting lines 1, 2, 3; the opening step frames line 1's tank in its hull "
+          "section and selects it; the vent mast on line 3; no overview step before line 1's",
+          [x["line"] for x in st] == [1, 2, 3] and st[0].get("select") == tank and st[0]["view"].get("frame") == [hull]
+          and st[2].get("select") == mast and st[2]["view"].get("frame") == [mast]
           and "frame" not in st[1]["view"], st)
 
 

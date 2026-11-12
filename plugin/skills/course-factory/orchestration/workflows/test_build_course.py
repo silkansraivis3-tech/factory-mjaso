@@ -694,6 +694,24 @@ def main():
         check("... the rest get a builder told Phase A's answer and sent to its needs file, --auto first, never --init-build",
               "build:2" in lb and "build:3" in lb and "PHASE A CLEAN M02" in b2 and "M02_VISUAL_NEEDS.md" in b2
               and "--auto" in b2 and "Do NOT start again from --init-build" in b2, b2[-1200:])
+        # the 2.134.0 trial: M01's builder spent its three builds on photographs and task pictures and left 19 3D scenes as
+        # --init-build's starters - Phase A's line now lists them and scene authors place them before the builder starts
+        nine = ["s%02d" % i for i in range(1, 10)]
+        sc_run = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": four[:2], "_approved": ["1", "2"],
+                           "_phase_a": [{"module": "1", "line": "FAIL M01 - compile (90 s) | 3D TO PLACE: " + " ".join(nine)},
+                                        {"module": "2", "line": "FAIL M02 - compile (60 s)"}]})
+        ls, ps = sc_run.get("labels", []), sc_run.get("prompts", {})
+        authors = [x for x in ls if x.startswith("scenes:1:")]
+        check("3D TO PLACE: the scenes go to scene authors - four each, three at most at once - BEFORE the module's builder, "
+              "none of them building; a module with none gets no author",
+              authors == ["scenes:1:s01", "scenes:1:s05", "scenes:1:s09"] and all(ls.index(a) < ls.index("build:1") for a in authors)
+              and not any(x.startswith("scenes:2") for x in ls)
+              and "s05, s06, s07, s08" in ps.get("scenes:1:s05", "") and "NEVER run\nbuild_module.py" in ps.get("scenes:1:s01", "")
+              and "check_kit3d.py spec" in ps.get("scenes:1:s01", "") and "YOU MAY WRITE ONLY THOSE SPEC FILES" in ps.get("scenes:1:s01", ""),
+              (ls, ps.get("scenes:1:s01", "")[:600]))
+        check("... and the builder is told they were placed and to keep them",
+              "WERE PLACED BEFORE YOU" in ps.get("build:1", "") and "s09" in ps.get("build:1", "")
+              and "WERE PLACED BEFORE YOU" not in ps.get("build:2", ""), ps.get("build:1", "")[-700:])
         # 2.66.0 (Raivis) - a builder reads its instructions by their path, never the whole skill (SKILL.md, 48 KB, the router
         # for every mode); (merge) what it reads is the builder card (2.65.0 / 2.72.x), the GUIDE named for reference
         b1 = pr.get("build:1", "")

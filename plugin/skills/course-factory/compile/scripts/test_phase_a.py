@@ -260,12 +260,20 @@ def main():
                 return 1, "FAIL M01 - audits 1280x800 (90 s)"
             return real_run(cmd, timeout)
         phase_a.run = counted_build
+        figs = os.path.join(c, "working_claude", "figures", "M01")
+        os.makedirs(figs, exist_ok=True)
+        io.open(os.path.join(figs, "s07.kit3d.json"), "w", encoding="utf-8").write(json.dumps({"parts": [], "_todo": "place"}))
+        io.open(os.path.join(figs, "s03.kit3d.json"), "w", encoding="utf-8").write(json.dumps({"parts": [], "_todo": "place"}))
+        io.open(os.path.join(figs, "s05.kit3d.json"), "w", encoding="utf-8").write(json.dumps({"parts": []}))
         try:
-            phase_a.one(c, 1, False)
+            ans = phase_a.one(c, 1, False)[2]
         finally:
             phase_a.run = real_run
         check("Phase A's build leaves no count for the stop rule: a builder's own builds are the ones counted (the factory "
               "trial: M01's builder stopped on SAME FINDING 3 BUILDS RUNNING after two builds of its own)", not os.path.isfile(streak_p))
+        check("... and its line names the 3D scenes still at their starter, for the workflow's scene authors (the 2.134.0 trial: "
+              "M01's builder left 19 of them) - never a placed one",
+              " | 3D TO PLACE: s03 " in ans and ans.endswith(" s07") and "s05" not in ans.split("3D TO PLACE")[1], ans)
         res_p, run_p = phase_a.status_paths(c)
         io.open(run_p, "w", encoding="utf-8").write(json.dumps({"pid": os.getpid(), "modules": [4], "jobs": 1}))
         buf = io.StringIO()

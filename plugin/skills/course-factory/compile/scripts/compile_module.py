@@ -4405,6 +4405,10 @@ def starter_kit3d(script, s):
         if kind not in named and not (kind == "pipe" and "pipe_dw" in named):
             named.add(kind)
             add(kind, word.lower())
+    rooms = house_rooms(items)
+    hulled = starter_hull3d(s, lines, visual, items)
+    if hulled:
+        return hulled
     if not items:
         add("tank_c", " ".join(re.sub(r"[.,;:!?]+$", "", s.get("title") or "").split()[:4]) or "Tank")
     width = sum(KIT3D_SIZE[k][0] for k, _, _ in items) + KIT3D_GAP * (len(items) - 1)
@@ -4432,11 +4436,20 @@ def starter_kit3d(script, s):
                 parts.append(dict({"id": pid, "type": k2, "at": at}, **(KIT3D_SIZE[k2][2] if k2 == "pipe" else {})))
                 labels.append({"part": pid, "text": lab})
         else:
+            if kind == "airlock" and parts and parts[-1]["type"] == "compressor_house":
+                cx = round(cx - KIT3D_GAP, 2)
             pid = ident(label, kind)
             parts.append(dict({"id": pid, "type": kind, "at": [cx, y, 0]}, **own))
             labels.append({"part": pid, "text": label})
+            if kind == "airlock" and len(parts) > 1 and parts[-2]["type"] == "compressor_house":
+                parts[-1]["rot"] = 180
         if ln:
             at_line[ln] = parts[-3 if kind == "station" else -1]["id"]
+        if kind == "compressor_house":
+            for sub, text, rln in rooms:
+                labels.append({"part": pid + "_" + sub, "text": text})
+                if rln:
+                    at_line[rln] = pid + "_" + sub
         x += w + KIT3D_GAP
     steps = [{"view": dict(home, frame=[at_line[i]]), "select": at_line[i], "line": i} if i in at_line else
              {"view": dict(home), "line": i} for i in range(1, len(lines) + 1)]
@@ -4448,6 +4461,221 @@ def starter_kit3d(script, s):
                     "the inside is the lesson. Keep one step per line: step N shows what line N+1 names (\"line\": 1 is the first "
                     "line, never 0) - point a step that shows the whole scene at its line's subject, never add an overview step before "
                     "line 1's; check_kit3d.py spec <file> says what is missing. Delete this key when it is done.")
+    return out
+
+
+# A gas carrier's cargo tank in the 3D starter stands in its hull section, as PARTS.md "Gas carrier hull sections" seats
+# it: the tank type the slide names picks the section (the hull's double bottom, sides, hopper and top wing tanks) and the
+# tank. Laid as loose parts, every tank type came out one bare cylinder beside an empty box (the 2.134.0 trial, M01: 19
+# scenes, 50 faults). The longer name wins where two overlap ("semi-membrane" is not "membrane").
+CONTAIN_WORDS = (
+    ("semi", r"semi[- ]?membrane"),
+    ("memb", r"membrane"),
+    ("moss", r"moss|spher(?:e|es|ical)|type[- ]b(?![- ]prismatic)"),
+    ("typeb", r"(?:prismatic )?spb|type[- ]b[- ]prismatic|prismatic type[- ]b"),
+    ("typea", r"type[- ]a|prismatic|fully[- ]refrigerated"),
+    ("bilobe", r"bi-?lobe"),
+    ("typec", r"type[- ]c|pressure (?:vessel|tank)s?|cylindrical (?:cargo )?tanks?|fully[- ]pressuri[sz]ed|"
+              r"semi[- ](?:pressuri[sz]ed|refrigerated)"))
+CONTAIN_RX = [(k, re.compile(r"\b(?:%s)\b" % rx, re.I)) for k, rx in CONTAIN_WORDS]
+# words that put a cargo tank in a hull even when no tank type is named: the section is then a fully pressurised one
+HULL_RX = re.compile(r"\b(?:hulls?|double[- ](?:bottom|hull|side)s?|hold(?: space)?s?|cofferdams?|gas carriers?|"
+                     r"main deck|cargo area|wing tanks?|ballast tanks?|tank domes?)\b", re.I)
+_PRES = {"x": [-5, 5], "half": 7, "bottom": 0, "floor": 1.2, "top": 10, "topwing": [2.2, 2.2]}
+_REFR = {"x": [-6, 6], "half": 8, "bottom": 0, "floor": 1.4, "top": 13, "hopper": [3, 3], "topwing": [3.5, 3]}
+_LNG = {"x": [-6, 6], "half": 9, "bottom": 0, "floor": 2, "top": 14, "double": 2, "hopper": [2.5, 2.5], "topwing": [2.5, 2.5]}
+# section -> (its hull, its tank, the tank's label) - the values of course-visuals\kit3d\examples\m01_gas_carriers.kit3d.json
+CONTAIN_SECTION = {
+    "typec": (_PRES, {"type": "tank_c", "r": 3, "cut": True, "fill": 0.6, "saddles": [-2.2, 2.2], "rings": 0}, "Type C tank"),
+    "bilobe": (_PRES, {"type": "tank_c", "r": 3, "lobes": 2, "cut": True, "fill": 0.6, "saddles": [-2.2, 2.2], "rings": 0},
+               "Bilobe Type C tank"),
+    "typea": (_REFR, {"type": "tank_prism", "kind": "type_a", "fill": 0.5}, "Type A prismatic tank"),
+    "typeb": (_REFR, {"type": "tank_prism", "kind": "type_b", "fill": 0.5}, "SPB prismatic Type B tank"),
+    "moss": ({"x": [-8, 8], "half": 10, "bottom": 0, "floor": 2, "top": 11, "double": 2.2},
+             {"type": "tank_sphere", "r": 7, "insulation": 0.3, "cut": True, "fill": 0.5, "drip": True, "cover": True}, "Moss sphere"),
+    "memb": (_LNG, {"type": "tank_prism", "kind": "membrane", "fill": 0.6}, "Membrane tank"),
+    "semi": (_LNG, {"type": "tank_prism", "kind": "semi_membrane", "fill": 0.6}, "Semi-membrane tank")}
+# a thing of the section the words name -> (the sub-part it is, the sections that have it, its label); "H" is the hull's
+# id, "T" the tank's - the label goes on the sub-part, never on a box standing in for it
+CONTAIN_SUB = (
+    (r"double[- ]bottom", "H_bottom", None, "Double bottom"),
+    (r"double[- ](?:hull|side)|inner hull", "H_inner", ("moss", "memb", "semi"), "Double hull"),
+    (r"top[- ]?(?:side|wing)(?: ballast)? tanks?", "H_topwing", ("typec", "bilobe", "typea", "typeb", "memb", "semi"), "Top wing tank"),
+    (r"hopper(?: tanks?)?", "H_hopper", ("typea", "typeb", "memb", "semi"), "Hopper tank"),
+    (r"(?:side|wing) (?:ballast )?tanks?", "H_wing", ("moss", "memb", "semi"), "Wing tank"),
+    (r"primary barrier", "T_barrier1", ("memb", "semi"), "Primary barrier"),
+    (r"secondary barrier", "T_barrier2", ("memb", "semi"), "Secondary barrier"),
+    (r"secondary barrier", "H_inner", ("typea",), "Hull steel: the secondary barrier"),
+    (r"drip trays?|partial secondary barrier|splash barrier", "T_drip", ("moss", "typeb"), "Drip tray"),
+    (r"skirt|equatorial ring", "T_skirt", ("moss",), "Skirt at the equator"),
+    (r"(?:weather|tank|protective) covers?", "T_cover", ("moss",), "Tank cover"),
+    (r"(?:tank )?domes?", "T_dome", ("typec", "bilobe", "moss"), "Tank dome"),
+    (r"saddles?|seats?", "T_saddles", ("typec", "bilobe"), "Saddles"),
+    (r"chocks?|keys?|seats?", "T_chocks", ("typea", "typeb"), "Chocks"),
+    (r"centre[- ]?line bulkhead|center[- ]?line bulkhead", "T_bulkhead", ("bilobe", "typea"), "Centreline bulkhead"),
+    (r"insulation", "T_insulation", ("typea", "typeb"), "Insulation"),
+    (r"insulation", "T_ins1", ("memb", "semi"), "Insulation"))
+CONTAIN_SUB_RX = [(re.compile(r"\b(?:%s)\b" % rx, re.I), sub, on, text) for rx, sub, on, text in CONTAIN_SUB]
+CONTAIN_ID = {"typec": ("pres", "typec"), "bilobe": ("lpg", "bilobe"), "typea": ("refr", "typea"), "typeb": ("spb_hull", "spb"),
+              "moss": ("moss", "sphere"), "memb": ("memb", "membrane"), "semi": ("semi", "semimem")}
+# the parts that stand on a hull's deck in a starter; a loose tank or room is the section itself, an engine is not on deck
+ON_DECK = ("airlock", "compressor_house", "vent_mast", "detector", "valve", "pipe", "pipe_dw", "drip_tray", "station")
+
+
+def house_rooms(items):
+    """the compressor room and the electric motor room are the two rooms of ONE compressor_house (its sub-parts compressor
+    and motor): two houses side by side were "two copies of the same two-room model" (2.134.0 trial, M01 s14). Folds the
+    house items in `items` into the first, labelled "Compressor house", drops a bare room beside it (the picture's "room"
+    is one of its rooms), puts an airlock straight after it - the airlock is the motor room's way in from the open deck -
+    and returns the rooms the lines named: [(sub-part, label, line)]"""
+    houses = [it for it in items if it[0] == "compressor_house"]
+    if not houses:
+        return []
+    rooms = []
+    for _k, label, ln in houses:
+        sub = "motor" if re.search(r"\bmotor", label, re.I) else "compressor" if re.search(r"\bcompressor room", label, re.I) else ""
+        if sub and sub not in [r[0] for r in rooms]:
+            rooms.append((sub, label[:1].upper() + label[1:], ln))
+    first = houses[0]
+    lock = [it for it in items if it[0] == "airlock"][:1]
+    keep = [it for it in items if it[0] not in ("compressor_house", "airlock") and not (it[0] == "room" and it[2] is None)]
+    at = next(i for i, it in enumerate(items) if it is first)
+    before = [it for it in keep if items.index(it) < at]
+    items[:] = before + [("compressor_house", "Compressor house", None if rooms else first[2])] + lock +         [it for it in keep if it not in before]
+    return rooms
+
+
+def contain_hits(text):
+    """the gas carrier sections `text` names, in the order it names them (the longer name where two overlap)"""
+    hits = sorted((m.start(), m.end(), k) for k, rx in CONTAIN_RX for m in rx.finditer(text or ""))
+    hits = [h for h in hits if not any(g[0] <= h[0] and g[1] >= h[1] and g[1] - g[0] > h[1] - h[0] for g in hits)]
+    out = []
+    for _a, _b, k in hits:
+        if k not in out:
+            out.append(k)
+    if "bilobe" in out and "typec" in out:                 # a bilobe IS a Type C tank: one section, not two
+        out.remove("typec")
+    return out
+
+
+def starter_hull3d(s, lines, visual, items):
+    """the starter 3D scene of a slide about a gas carrier's cargo tanks: one hull section per tank type its picture or lines
+    name (in a row square to the opening view, as examples/m01_gas_carriers.kit3d.json stands them), each tank seated "in"
+    its hull; the sub-parts the words name labelled on the sub-part; the deck parts the lines name "on" the first hull's
+    deck. One step per line: a line naming a tank type frames its section, a line naming a sub-part frames that sub-part's
+    section and lights it, a line naming none shows the whole scene. None when the words name no tank type and no hull."""
+    words = " ".join([visual or ""] + list(lines))
+    kinds = contain_hits(visual) + [k for k in contain_hits(" ".join(lines)) if k not in contain_hits(visual)]
+    if "bilobe" in kinds and "typec" in kinds:
+        kinds.remove("typec")
+    if not kinds:
+        if not (HULL_RX.search(words) and re.search(r"\btanks?\b", words, re.I)):
+            return None
+        kinds = ["typec"]
+    kinds = kinds[:4]
+    n = len(kinds)
+    parts, labels, ids = [], [], {}
+    deck = [it for it in items if it[0] in ON_DECK and not (it[0] == "drip_tray" and {"moss", "typeb"} & set(kinds))]
+    deck_w = sum(KIT3D_SIZE[k][0] for k, _, _ in deck) + KIT3D_GAP * max(0, len(deck) - 1)
+    for i, k in enumerate(kinds):
+        hull, tank, name = CONTAIN_SECTION[k]
+        hid, tid = CONTAIN_ID[k]
+        hull = json.loads(json.dumps(hull))
+        if i == 0 and deck_w + 4 > hull["x"][1] - hull["x"][0]:
+            hull["x"] = [-round(deck_w / 2.0 + 2, 1), round(deck_w / 2.0 + 2, 1)]
+        off = i - (n - 1) / 2.0
+        hp = dict({"id": hid, "type": "hull", "pick": False}, **hull)
+        if n > 1:
+            hp["at"] = [round(25.98 * off, 2), 0, round(-15.0 * off, 2)]
+        tp = dict({"id": tid, "type": tank["type"], "in": hid}, **{a: b for a, b in tank.items() if a != "type"})
+        if k in ("typec", "bilobe") and re.search(r"\bsemi[- ]refrigerated|\bethylene|\binsulated (?:type c|bi-?lobe|cylind)",
+                                                  words, re.I):
+            tp["insulation"] = 0.25
+        if k in ("typec", "bilobe") and re.search(r"\bdomes?\b", words, re.I):
+            tp["dome"] = True
+        parts += [hp, tp]
+        ids[k] = (hid, tid)
+        labels.append({"part": tid, "text": name})
+    subs = {}                                              # sub-part id -> its label, its section
+    at_line = {}
+
+    def sub_of(text, ks):
+        found = []
+        for rx, sub, on, label in CONTAIN_SUB_RX:
+            for k in ks:
+                if (on is None or k in on) and rx.search(text):
+                    hid, tid = ids[k]
+                    pid = sub.replace("H_", hid + "_", 1).replace("T_", tid + "_", 1)
+                    if pid not in subs:
+                        subs[pid] = (label, k)
+                    if pid not in found:
+                        found.append(pid)
+        return found
+
+    sub_of(visual or "", kinds)
+    last = kinds[0]
+    for ln, line in enumerate(lines, 1):
+        named = [("bilobe" if k == "typec" and "bilobe" in ids else k) for k in contain_hits(line)]
+        named = [k for i, k in enumerate(named) if k in ids and k not in named[:i]]
+        if len(named) > 1:                                 # a line about several tank types: the whole row
+            continue
+        if named:
+            last = named[0]
+        found = sub_of(line, [last])
+        if named and not found:
+            at_line[ln] = (ids[last][0], ids[last][1])
+            continue
+        if found:
+            at_line[ln] = (ids[subs[found[0]][1]][0], found[0])
+    if n == 1 and not subs:                                # one section: its double bottom says it is a hull section
+        subs[ids[kinds[0]][0] + "_bottom"] = ("Double bottom", kinds[0])
+    for pid, (label, _k) in subs.items():
+        labels.append({"part": pid, "text": label})
+    first = kinds[0]
+    hid0 = ids[first][0]
+    x = -deck_w / 2.0
+    z = -round(CONTAIN_SECTION[first][0]["half"] * 0.55, 2)
+    taken = {p["id"] for p in parts} | set(subs)
+    for kind, label, ln in deck:
+        w = KIT3D_SIZE[kind][0]
+        cx = round(x + w / 2.0, 2)
+        base = re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")[:30].strip("_") or kind
+        pid = base if base[0].isalpha() else "p_" + base
+        while pid in taken:
+            pid += "_2"
+        taken.add(pid)
+        if kind == "station":                              # a manifold: a pipe and its valve on the deck
+            top = CONTAIN_SECTION[first][0]["top"] + 0.8
+            parts.append({"id": pid, "type": "pipe", "at": [cx, top, z], "path": [[-2.5, 0, 0], [2.5, 0, 0]]})
+            parts.append({"id": pid + "_valve", "type": "valve", "at": [cx, top, z], "pick": False})
+        else:
+            if kind == "airlock" and parts[-1]["type"] == "compressor_house":
+                cx = round(cx - KIT3D_GAP, 2)
+            parts.append(dict({"id": pid, "type": kind, "at": [cx, 0, z], "on": hid0 + ".deck"}, **KIT3D_SIZE[kind][2]))
+            if kind == "airlock" and parts[-2]["type"] == "compressor_house":
+                parts[-1]["rot"] = 180
+        labels.append({"part": pid, "text": label})
+        if ln and ln not in at_line:
+            at_line[ln] = (pid, pid)
+        x += w + KIT3D_GAP
+    home = {"az": 30, "el": 22}
+    steps = []
+    for i in range(1, len(lines) + 1):
+        if i in at_line:
+            frame, sel = at_line[i]
+            steps.append({"view": {"az": 40, "el": 16, "frame": [frame]}, "select": sel, "line": i})
+        else:
+            steps.append({"view": dict(home), "line": i})
+    out = {"label": (re.split(r"(?<=[.!?])\s", visual, 1)[0] if visual else "") or s.get("title") or "", "units": "m",
+           "view": dict(home), "parts": parts, "labels": labels}
+    if steps:
+        out["steps"] = steps
+    out["_todo"] = ("Starter written by --init-build: each tank type the slide names stands in its own hull section, seated by "
+                    "\"in\" (course-visuals\\kit3d\\PARTS.md \"Gas carrier hull sections\"), the sub-parts its words name "
+                    "labelled, the deck parts \"on\" the deck. Check the sections against the slide (the tank type, its "
+                    "insulation, the hull's double bottom and sides), size them, place the deck parts where they are on board "
+                    "and give each line's step its subject; check_kit3d.py spec <file> says what is missing. Delete this key "
+                    "when it is done.")
     return out
 
 
