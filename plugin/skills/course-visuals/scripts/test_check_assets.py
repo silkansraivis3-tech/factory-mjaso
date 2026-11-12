@@ -131,6 +131,28 @@ def main():
         check("every brief that sends a helper to write a picture's record asks for visually_verified in the form the check "
               "accepts (\"yes - <what you saw> <date>\"), never true",
               all(v and all(re.search(r'"yes - <what you saw> <YYYY-MM-DD>"', x) for x in v) for v in said.values()), said)
+        code, out = run(folder(tmp, "marked", record(rights_state="OWNER_CLEARED", source="Novikontas old course",
+                                                     marks_seen="Shipfax (c) Mac Mackay")))
+        check("an old-course photo with a third party's watermark seen on it fails while its record calls it the course's own",
+              code == 1 and "third party's mark" in out and "Shipfax" in out, out[-400:])
+        code, out = run(folder(tmp, "marked_held", record(rights_state="RIGHTS_REVIEW_REQUIRED", marks_seen="Shipfax (c) Mac Mackay")))
+        check("... held for review with the mark recorded, it does not", "third party's mark" not in out, out[-400:])
+        code, out = run(folder(tmp, "unlooked", record(rights_state="OWNER_CLEARED", source="Novikontas old course")))
+        check("... and an OWNER_CLEARED photo nobody looked at for a mark is said", "nobody recorded looking for a watermark" in out,
+              out[-400:])
+        code, out = run(folder(tmp, "looked", record(rights_state="OWNER_CLEARED", marks_seen="none")))
+        check("... one looked at and found clean is not", "watermark" not in out and "third party" not in out, out[-400:])
+        enl = "Real-ESRGAN realesrgan-x4plus on this computer, from 398 x 500 to 1592 x 2000"
+        code, out = run(folder(tmp, "ai_labels", record(rights_state="OWNER_CLEARED", marks_seen="none", enlarged=enl,
+                                                        title="Fire-fighter's outfit with its parts labelled")))
+        check("a photo with printed labels enlarged by Real-ESRGAN fails - its letters come out wrong",
+              code == 1 and "Real-ESRGAN" in out and "labelled" in out, out[-400:])
+        code, out = run(folder(tmp, "ai_text", record(rights_state="OWNER_CLEARED", marks_seen="none", enlarged=enl,
+                                                      printed_text="HELMET, FIRE AXE, SAFETY LAMP")))
+        check("... and so does one whose look recorded the words printed on it", code == 1 and "FIRE AXE" in out, out[-400:])
+        code, out = run(folder(tmp, "ai_ship", record(rights_state="OWNER_CLEARED", marks_seen="none", enlarged=enl, printed_text="none",
+                                                      description="A gas carrier at sea, red hull")))
+        check("... a ship with no words on it may be", "Real-ESRGAN" not in out, out[-400:])
         code, out = run(folder(tmp, "free", record(rights_state="FREE_LICENCE_ATTRIBUTION")))
         check("a rights_state the pipeline does not define fails and lists the ones it does",
               code == 1 and '"FREE_LICENCE_ATTRIBUTION" is not valid' in out and "ATTRIBUTION_REQUIRED" in out, out[-400:])

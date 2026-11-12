@@ -166,8 +166,10 @@ def main() -> int:
         os.makedirs(img, exist_ok=True)
         io.open(os.path.join(img, "_photo_meta.json"), "w", encoding="utf-8").write(json.dumps(
             {"book_fig.jpg": {"source": "a textbook, p. 10", "rights_state": "RIGHTS_REVIEW_REQUIRED"},
-             "real.jpg": {"source": "Wikimedia Commons", "licence": "CC BY 4.0", "rights_state": "ATTRIBUTION_REQUIRED"}}))
-        for n in ("book_fig.jpg", "real.jpg"):
+             "real.jpg": {"source": "Wikimedia Commons", "licence": "CC BY 4.0", "rights_state": "ATTRIBUTION_REQUIRED"},
+             "old_ship.jpg": {"source": "Novikontas old course", "rights_state": "OWNER_CLEARED", "marks_seen": "Shipfax (c) Mac Mackay"},
+             "old_deck.jpg": {"source": "Novikontas old course", "rights_state": "OWNER_CLEARED", "marks_seen": "none"}}))
+        for n in ("book_fig.jpg", "real.jpg", "old_ship.jpg", "old_deck.jpg"):
             io.open(os.path.join(img, n), "wb").write(b"x")
         tt = os.path.dirname(os.path.dirname(img))
         io.open(os.path.join(tt, "tasks", "T2.html"), "w", encoding="utf-8").write(
@@ -177,6 +179,9 @@ def main() -> int:
               rc6 == 1 and "book_fig.jpg" in out6 and "rights not cleared" in out6, out6[-600:])
         check("... a cleared one beside it is not", "real.jpg" not in out6.split("rights not cleared")[0].splitlines()[-1]
               and out6.count("rights not cleared") == 1, out6[-600:])
+        check("... nor an old-course photo with a third party's watermark that its record calls the course's own; one looked "
+              "at and found with no mark goes", "old_ship.jpg" in out6 and "third party's mark" in out6 and "old_deck.jpg" not in out6,
+              out6[-900:])
 
         # the platform shell may reach the backend; a course may not
         shell = os.path.join(bad, "app", "src", "instructor", "assets",

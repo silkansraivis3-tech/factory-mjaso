@@ -672,6 +672,11 @@ def main():
         pc_ = ph_run.get("prompts", {}).get("photos:course", "")
         check("... the photo pass works down PHOTOS_TO_FIND.md into photos_found/ with found_for, never a module or a sheet",
               "PHOTOS_TO_FIND.md" in pc_ and "photos_found" in pc_ and '"found_for"' in pc_ and "never a module" in pc_, pc_[-500:])
+        check("... and, a trial too, opens every candidate PHOTOS_TO_LOOK.md lists and records what it shows, its marks, its "
+              "printed words and whether it fits the slide - before the trial stop (a cutaway of one tank went onto the slide "
+              "naming three shapes, a watermarked photo in as the course's own)",
+              "PHOTOS_TO_LOOK.md" in pc_ and "--marks" in pc_ and "--text" in pc_ and "--fits" in pc_
+              and pc_.index("PHOTOS_TO_LOOK.md") < pc_.index("factory trial, stop here"), pc_[:1500])
         check("... a script written in this run gets the ONE photo pass after all scripts are written - not one agent per script",
               "photos:drafts" in lb and lb.index("photos:drafts") > lb.index("script:2") and not any(x.startswith("photos:2") for x in lb), lb)
         check("... and the builder is told the photo catalogue's candidates are in its needs file",
@@ -859,6 +864,9 @@ def brief_part(tmp):
     out, now = step()
     check("... Phase A left work: the builder, on Sonnet", [x[0] for x in now] == ["build:1"] and now[0][1] == "sonnet"
           and "PHASE A HAS RUN" in read("build:1"), out)
+    b1 = read("build:1")
+    check("... and records a photo's marks, its printed words and its fit, and a task drawing's record",
+          '"marks_seen"' in b1 and '"printed_text"' in b1 and '"fits_slide"' in b1 and "_figure_meta.json" in b1, b1[-1500:])
     answer("build:1", "PASS M01 - figures, compile, audits (300 s)\nTIME M01: 33 min")
     out, now = step()
     check("... built: the 3D check (Sonnet), the figure shots and QA (Opus) at the same time - the walk judge waits for them",

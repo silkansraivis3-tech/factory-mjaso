@@ -2438,7 +2438,50 @@ def ilo_findings(course, script):
                 found.append({"where": T(script, "s_the_module"), "screen": "", "field": "sub_ilo", "level": NOTE,
                               "rule": "i_clause_not_checked", "detail": T(script, "i_clause_not_checked", s=sid, clause=c,
                                                                            n=len(tagged)), "fix": ""})
+        items = listed_items(r.get("sub_ilo", ""))
+        words = " ".join(str(x) for q in tagged for x in [q.get("question"), q.get("answer"), q.get("visual")]
+                         + list(q.get("options") or [])).lower()
+        for it in items:
+            if not item_named(it, words):
+                found.append({"where": T(script, "s_the_module"), "screen": "", "field": "sub_ilo", "level": NOTE,
+                              "rule": "i_item_not_checked", "detail": T(script, "i_item_not_checked", s=sid, item=it,
+                                                                         items=", ".join(items), n=len(tagged)), "fix": ""})
     return found
+
+
+# a list the Sub-ILO asks about item by item: "... - integral, membrane, semi-membrane and independent Type A, B and C
+# tanks - stating for each whether it carries its own loads"
+FOR_EACH = re.compile(r"\bfor (?:each|every)\b|\beach of\b", re.I)
+LETTERS = re.compile(r"\b(Type|Class|Group|Zone|Category)\s+([A-Z0-9]{1,3})((?:\s*,\s*[A-Z0-9]{1,3}\b)*)\s*(?:,\s*)?(and|or)\s+([A-Z0-9]{1,3})\b")
+
+
+def listed_items(text):
+    """the items of a list the Sub-ILO asks about for each one - [] when it asks about none item by item"""
+    t = str(text or "")
+    if not FOR_EACH.search(t):
+        return []
+    m = re.search(r"\s[-–—]\s(.+?)\s[-–—]\s", t) or re.search(r"\(([^)]*,[^)]*)\)", t) or \
+        re.search(r"\beach of\s+([^;.]+)", t, re.I)
+    if not m:
+        return []
+    part = LETTERS.sub(lambda x: ", ".join("%s %s" % (x.group(1), y) for y in [x.group(2)] + re.findall(r"[A-Z0-9]{1,3}", x.group(3)))
+                       + " %s %s %s" % (x.group(4), x.group(1), x.group(5)), m.group(1))
+    items = [x.strip(" .") for x in re.split(r",\s*|\s+(?:and|or)\s+", part) if x.strip(" .")]
+    return items if len(items) >= 3 else []
+
+
+def item_named(item, words):
+    """an item of a Sub-ILO's list named in these words: "Type C tanks" by "type c", "semi-membrane" by "semi-membrane" or
+    "semi membrane", any other by its last word"""
+    m = re.search(r"\b(type|class|group|zone|category)\s+([a-z0-9]{1,3})\b", item.lower())
+    if m:
+        return bool(re.search(r"\b%s[\s-]*%s\b" % (m.group(1), re.escape(m.group(2))), words))
+    last = re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", item.lower())
+    if not last:
+        return True
+    key = last[-1]
+    key = key[:-1] if len(key) > 4 and key.endswith("s") and not key.endswith("ss") else key
+    return bool(re.search(r"\b%s" % r"[\s-]*".join(re.escape(p) for p in key.split("-")), words))
 
 
 # 2.52.0 - the parts of a Sub-ILO, each something to be able to do. Conservative: split on ";", and on ", " / " and " only
@@ -2494,7 +2537,56 @@ def all_findings(script, course=None):
     th, _ = theory_findings(script)
     return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script) \
         + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script) \
-        + task_cover_findings(course, script)
+        + task_cover_findings(course, script) + tablet_findings(course, script)
+
+
+# the words that send the trainees to their own tablet: "on your tablet", "every trainee tablet", "vote on the tablet"
+TO_TABLET = re.compile(r"\b(?:on|onto|to|from|at|with|in)\s+(?:your|their|each|every)\s+(?:own\s+)?(?:trainee\s+)?tablets?\b"
+                       r"|\btrainee\s+tablets?\b|\b(?:vote|votes|sort|sorts|tap|taps|answer|answers|order|orders|put|puts|choose|"
+                       r"chooses|mark|marks|drag|drags|match|matches|label|labels|explore|explores|open|opens|rotate|rotates)\b"
+                       r"[^.\n]{0,60}?\bon\s+the\s+tablets?\b", re.I)
+
+
+def tablet_findings(course, script):
+    """MUST - the trainee tablet holds only the tasks a task slide opens (L35). A slide whose words send the room to their
+    tablet with no task slide right after it promises a page nobody built; and an activity approved at Stage 2 as done on
+    the tablet, that the screen naming it runs with no task, is delivered as something else"""
+    screens, found = script.get("screens", []), []
+    room = [s for s in screens if s.get("kind") in INSTRUCTOR]
+    # a slide that leads into a task slide may say the task is on the tablet; a slide with its own activity ("active": its
+    # ask and choices are on the slide) is answered in the room, whatever task follows it
+    opened = {s["id"] for i, s in enumerate(room) if s.get("kind") == "task-slide"
+              or (not s.get("active") and i + 1 < len(room) and room[i + 1].get("kind") == "task-slide")}
+
+    def add(sid, field, key, **kw):
+        found.append({"where": place(script, sid), "screen": sid, "field": field, "level": FAIL, "rule": key,
+                      "detail": T(script, key, **kw), "fix": ""})
+
+    for s in room:
+        if s["id"] in opened:
+            continue
+        for field in ("title", "text", "ask", "reveal", "notes"):
+            m = TO_TABLET.search(as_text(s.get(field)))
+            if m:
+                add(s["id"], field, "tb_no_task_page", quote=m.group(0))
+                break
+    if not course:
+        return found
+    try:
+        arch = load(workspace.claude_path(course, "architecture.json"))
+    except (OSError, ValueError):
+        return found
+    mod = next((m for m in arch.get("modules") or [] if str(m.get("module")) == str(script.get("module"))), {})
+    for a in mod.get("active_learning") or []:
+        aid, does = str(a.get("id") or ""), str(a.get("does") or "")
+        if a.get("status") != "approved" or not aid or not re.search(r"\btablets?\b", does, re.I):
+            continue
+        named = re.compile(r"(?<![\w.])%s(?![\w]|\.\d)" % re.escape(aid))
+        said = {f["screen"] for f in found}
+        for s in room:
+            if s["id"] not in opened | said and any(named.search(as_text(v)) for v in s.values() if isinstance(v, (str, list))):
+                add(s["id"], "", "tb_activity_off_tablet", a=aid, does=short(does, 140))
+    return found
 
 
 def blocking(findings):

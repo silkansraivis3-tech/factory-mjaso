@@ -83,6 +83,13 @@ def main():
         meta["still.png"].update(source="NOVIKONTAS - render of the module's own 3D model", url_or_origin="render of assets/m_3d.js")
         tc.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
         code, out = run(PRE, c, "--module", "1")
+        check("an old-course photograph nobody recorded opening stops the build - its catalogue words were its old slide's, "
+              "not what it shows (five auto picks went in with the script's wanted picture as their record)",
+              code == 1 and "old.png (on s01): nobody has recorded opening it" in out, out)
+        meta["old.png"].update(visually_verified="yes - a gas-fuelled ship alongside a bunker vessel, hose connected 2026-11-12",
+                               description="A gas-fuelled ship alongside a bunker vessel, the bunkering hose connected")
+        tc.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+        code, out = run(PRE, c, "--module", "1")
         check("2.73.2 (owner, 2026-10-28) a small picture from the old course is reused and enlarged - a note, never a stop",
               "old.png" not in out.split("PRE-CHECK notes")[0] and "reused and enlarged" in out and "old.png 400x300" in out, out)
         check("a still rendered from the module's own 3D model is a note - render it again larger - never a stop",
@@ -101,6 +108,73 @@ def main():
         code, out = run(PRE, c, "--module", "1")
         check("... and the pre-check still judges the photograph as it was found (1200 px), not its enlargement",
               code == 0 and "mid.png" not in out, out)
+
+        print("\n-- what a photograph shows, and what is printed on it")
+        import precheck
+        sc = tc.cs.load(os.path.join(c, "working_claude", "script", "M01.json"))
+        wants = tc.cs.picture_of(next(s for s in sc["screens"] if s["id"] == "s01"))["shows"]
+        own = {"source": "Novikontas old course", "url_or_origin": "1. Liquefied Gas tankers.pptx, slide 13", "catalogue_id": "p0025",
+               "rights_state": "OWNER_CLEARED", "description": "x", "visually_verified": "yes - a gas carrier at sea 2026-11-12",
+               "marks_seen": "none"}
+
+        def looked(**kw):
+            meta = tc.cs.load(os.path.join(md, "assets", "img", "_photo_meta.json"))
+            meta["mid.png"] = dict(own, **kw)
+            tc.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+            return precheck.check(c, 1)[0], precheck.check(c, 1, rebuild=True)
+        must, _ = looked(description=wants, shows=wants, visually_verified="yes - %s 2026-11-12" % wants)
+        check("a photograph whose record is the script's wanted picture word for word stops the build",
+              any("word for word" in x for x in must), must)
+        must, _ = looked(description="One cutaway of an SPB tank: dome, swash bulkhead, insulation, inner hull")
+        check("... and one whose record names little of what the slide's picture names (an SPB cutaway on the slide naming "
+              "a gas-fuelled ship bunkering)", any("has little of what the slide's picture names" in x for x in must), must)
+        must, _ = looked(description="One cutaway of an SPB tank", fits_slide="no - one tank, not the ship bunkering")
+        check("... and one its opener said does not fit", any("does not show what the slide names" in x for x in must), must)
+        must, _ = looked(description="A gas-fuelled ship bunkering LNG from a truck on the quay")
+        check("... one that shows what the slide names goes", must == [], must)
+        must, (_, notes) = looked(description="A gas-fuelled ship bunkering alongside", marks_seen="Shipfax (c) Mac Mackay")
+        check("a third party's watermark on a photograph its record calls the course's own stops the build - a rebuild too",
+              any("third party's mark" in x for x in must) and any("third party's mark" in x for x in _), (must, _))
+        must, _ = looked(description="A gas-fuelled ship bunkering alongside", marks_seen=None)
+        check("... and the course's own photograph with no watermark looked for stops a new build",
+              any("watermark or credit" in x for x in must), must)
+        must, _ = looked(description="A gas-fuelled ship bunkering alongside, its parts labelled", printed_text="HOSE, MANIFOLD",
+                         enlarged="Real-ESRGAN realesrgan-x4plus on this computer, from 398 x 500 to 1592 x 2000")
+        check("a photograph with printed labels enlarged by Real-ESRGAN stops the build - its letters come out wrong",
+              any("Real-ESRGAN, which makes them sharp and wrong" in x for x in must), must)
+        must, (_, notes) = looked(visually_verified="")
+        check("... a rebuild's photographs nobody opened are notes, never a stop",
+              any("nobody has recorded opening it" in x for x in must) and not any("nobody has recorded" in x for x in _)
+              and any("nobody has recorded" in x for x in notes), (_, notes))
+        meta = tc.cs.load(os.path.join(md, "assets", "img", "_photo_meta.json"))
+        meta["mid.png"] = dict(tc.PHOTO_META["ship.jpg"], description="mid.png", url_or_origin="https://example.org/mid.png")
+        tc.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+
+        print("\n-- the trainee task pages' pictures")
+        figs = os.path.join(md, "assets", "fig")
+        door = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400"><rect x="0" y="0" width="600" height="400" '
+                'fill="#eee"/><rect x="90" y="100" width="240" height="40" fill="#9ab"/><polygon points="1,2 3,4 5,6"/>'
+                '<g id="hs-a" data-name="%s"><rect x="392" y="250" width="50" height="110" fill="#678"/>'
+                '<rect class="hit" x="392" y="250" width="50" height="110" fill="#fff" fill-opacity="0.01"/></g>'
+                '<g id="hs-b" data-name="Fixed window on the%s front"><rect class="hit" x="90" y="100" width="240" height="40"/></g></svg>')
+        io.open(os.path.join(figs, "q_front.svg"), "w", encoding="utf-8").write(door % ("Air intake on the outboard side", " accommodation"))
+        io.open(os.path.join(figs, "m_front.svg"), "w", encoding="utf-8").write(door % ("Entrance on the outboard side, 5 m from the front", ""))
+        tc.build_of(c, lambda b: (b["screens"].setdefault("q01", {}).update(figure="assets/fig/q_front.svg"),
+                                  b["screens"].setdefault("m01", {}).update(figure="assets/fig/m_front.svg")))
+        code, out = run(PRE, c, "--module", "1")
+        check("a task page's drawing with no _figure_meta.json entry stops the build - not first found by the QA after it",
+              code == 1 and "assets/fig/q_front.svg (q01's picture) has no entry in assets/fig/_figure_meta.json" in out, out)
+        check("... and two task pages on one drawing that name the same part differently stop it (an air intake on one "
+              "question, an entrance on the next); a name said a little differently does not",
+              "are the same drawing, but the part at one place is" in out and "\"Air intake on the outboard side\" on q01" in out
+              and "\"Entrance on the outboard side, 5 m from the front\" on m01" in out and "Fixed window" not in out, out)
+        rec = {"origin": "authored diagram", "rights_state": "PROJECT_OWNED", "shows": "x", "teaching_purpose": "x", "used_in": "x",
+               "visually_verified": "yes - read 2026-11-12"}
+        tc.cs.save(os.path.join(figs, "_figure_meta.json"), {"q_front.svg": rec, "m_front.svg": rec})
+        io.open(os.path.join(figs, "m_front.svg"), "w", encoding="utf-8").write(door % ("Air intake on the outboard side", ""))
+        code, out = run(PRE, c, "--module", "1")
+        check("... with their records and one name for the part, nothing stops it", code == 0, out)
+        tc.build_of(c, lambda b: (b["screens"]["q01"].pop("figure"), b["screens"]["m01"].pop("figure")))
         c3, md3 = course(tmp, "mid1000", sheet={"s01": {"figure": "assets/img/mid.png"}}, photos={"mid.png": (1000, 700)})
         code, out = run(PRE, c3, "--module", "1")
         check("a 1000 px photograph is a note - under 1024 px a larger original would be sharper - never a stop",

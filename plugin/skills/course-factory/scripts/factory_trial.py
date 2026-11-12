@@ -107,7 +107,8 @@ Use the course-factory skill and build it by its "Auto build" rules (SKILL.md), 
   (NOVIKONTAS_COURSE_LIBRARIES=off) - nothing is read from or saved to them.
 - The build's helpers come from brief.mjs (SKILL.md Auto build); the "notes" of its args.json carry the picture and folder
   rules above, word for word. Run the photo pass it lists (photos:course, photos:drafts)
-  as it says, but in a trial it only catalogues the old course's own photographs (index, assign) and makes no picture.
+  as it says, but in a trial it only catalogues the old course's own photographs (index, assign, and opening each
+  candidate it lists: look) and makes no picture.
 - This folder and the factory are as said here and in SKILL.md: list no folders and read no factory script's source (its
   --help says how to run it).
 End with one line: TRIAL DONE, or TRIAL STOPPED: <why>."""

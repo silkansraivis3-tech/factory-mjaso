@@ -1360,6 +1360,49 @@ def main():
               and fc[0]["level"] == cs.NOTE and not cs.blocking(fc), cs.ilo_findings(cc, SCRIPT))
         check("... the parts its questions do ask about are not ('the secondary barrier' - m03)",
               not any("secondary barrier" in f["detail"] for f in fc), fc)
+        check("a Sub-ILO's list it asks about 'for each' is read item by item, 'Type A, B and C' as three",
+              cs.listed_items("Describe the containment systems - integral, membrane, semi-membrane and independent Type A, B and "
+                              "C tanks - stating for each whether it carries its own loads.")
+              == ["integral", "membrane", "semi-membrane", "independent Type A", "Type B", "Type C tanks"]
+              and cs.listed_items("Identify the hazards of LNG, CNG and methanol.") == [])
+        ci = new_course(tmp, "iloitems")
+        mp = ilo_map.path(ci)
+        imap = cs.load(mp)
+        for r in imap["rows"]:
+            if str(r.get("sub_ilo_id")) == "1.2":
+                r["sub_ilo"] = ("Describe the containment systems - membrane, semi-membrane and independent Type A, B and C tanks - "
+                                "stating for each whether a secondary barrier is required.")
+        cs.save(mp, imap)
+        fi = [f for f in cs.ilo_findings(ci, SCRIPT) if f["rule"] == "i_item_not_checked"]
+        check("an item of that list no question tagged to the Sub-ILO names is a NOTE on the review page (semi-membrane: on a "
+              "slide by its shape, never asked)", len(fi) == 1 and '"semi-membrane"' in fi[0]["detail"] and fi[0]["level"] == cs.NOTE,
+              fi)
+        tb = copy.deepcopy(SCRIPT)
+        screen(tb, "s02")["text"] += "\nSix gas carriers on your tablet: sort them."
+        screen(tb, "s03")["notes"] = "- Vote on the tablet at three steps."
+        found = cs.tablet_findings(None, tb)
+        check("a slide that sends the room to their tablet with no task slide after it is a must-fix - the tablet holds only "
+              "the sets a task slide opens (four activities promised a tablet page nobody built)",
+              [f["screen"] for f in found] == ["s03"] and all(f["level"] == cs.FAIL for f in found), found)
+        check("... a slide leading into a task slide may say the task is on the tablet; and task slides say so themselves",
+              not any(f["screen"] in ("s02", "t01", "t02") for f in found), found)
+        screen(tb, "s02")["active"] = "predict-then-reveal"
+        check("... but a slide with its own activity is answered in the room, whatever task follows it",
+              "s02" in [f["screen"] for f in cs.tablet_findings(None, tb)], cs.tablet_findings(None, tb))
+        ct = new_course(tmp, "tabletact")
+        ap = os.path.join(ct, "working_claude", "architecture.json")
+        arch = cs.load(ap)
+        arch["modules"][0]["active_learning"] = [{"id": "A1.1", "status": "approved", "does": "every trainee puts the steps in "
+                                                 "order on the tablet"}, {"id": "A1.2", "status": "approved", "does": "pairs write "
+                                                 "the reason down"}]
+        cs.save(ap, arch)
+        sa = copy.deepcopy(SCRIPT)
+        screen(sa, "s03")["notes"] ="- Each trainee puts the steps in order on paper (A1.1).\n- Pairs write the reason (A1.2)."
+        fa = cs.tablet_findings(ct, sa)
+        check("an activity approved at Stage 2 as done on the tablet, run by the screen naming it with no task, is a must-fix; "
+              "one done on paper is not", [(f["screen"], f["rule"]) for f in fa] == [("s03", "tb_activity_off_tablet")]
+              and "A1.1" in fa[0]["detail"], fa)
+        check("... and approval stops on it", any(f["rule"] == "tb_activity_off_tablet" for f in cs.blocking(cs.all_findings(sa, ct))))
         nomap = new_course(tmp, "nomapfind", gate=False)
         check("without an ILO map the check adds nothing (the gate stops the module instead)", cs.ilo_findings(nomap, bad) == [])
         cb2 = new_course(tmp, "ilobad", script=bad)

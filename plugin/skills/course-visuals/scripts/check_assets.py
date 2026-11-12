@@ -170,6 +170,34 @@ def normalise(argv) -> int:
     return 0
 
 
+NO_MARK = re.compile(r"^\s*(?:none|no|nothing|-)?\s*\.?\s*$", re.I)
+OWN_RIGHTS = ("OWNER_CLEARED", "PROJECT_OWNED")
+
+
+def photo_marks(where: str, fname: str, meta: dict, rs) -> None:
+    """what is printed ON a photograph: a third party's watermark or credit makes a claim that it is the course's own false,
+    and printed words or labels are what an enlarger that invents detail turns into wrong letters"""
+    marks = meta.get("marks_seen")
+    cleared = NAMED_CLEARANCE.match(str(meta.get("cleared_by") or "").strip())
+    if marks is not None and not NO_MARK.match(str(marks)) and rs in OWN_RIGHTS and not cleared:
+        fail(where, 'a third party\'s mark is printed on it ("%s"), yet rights_state is %s - it is not the course\'s own'
+             % (str(marks)[:80], rs), "rights_state RIGHTS_REVIEW_REQUIRED and the credit recorded; the owner clears it by "
+             "name (check_assets.py clear) or the picture is replaced")
+    elif marks is None and rs == "OWNER_CLEARED" and not cleared and not meta.get("generated"):
+        warn(where, "%s, and nobody recorded looking for a watermark or a credit printed on it" % rs,
+             '"marks_seen": the mark printed on it, word for word, or "none" - written by whoever opened it')
+    if str(meta.get("enlarged") or "").startswith("Real-ESRGAN"):
+        try:
+            from upscale_photos import holds_words
+        except ImportError:
+            return
+        words = holds_words(fname, meta)
+        if words:
+            fail(where, "enlarged by Real-ESRGAN, which invents detail, yet it holds printed words or labels (%s) - they come "
+                 "out sharp and wrong" % words, "put back the original kept in working_claude/photo_originals and record "
+                 '"ai_enlarge": false; the plain enlargement keeps its letters')
+
+
 def original_of(folder: str, fname: str) -> str:
     """the photograph as it was found: a module's compile enlarges one under 1600 px (L62) and keeps the original in
     <course>/working_claude/photo_originals/M01/ - the size that says whether a larger one is needed is that one's"""
@@ -269,6 +297,9 @@ def check_folder(folder: str) -> None:
                     and not NAMED_CLEARANCE.match(str(meta.get("cleared_by") or "").strip()):
                 fail(where, "OWNER_CLEARED source-book figure without a valid cleared_by - it stays blocked",
                      'cleared_by: "<name>, <YYYY-MM-DD> - <reason>"; set it with check_assets.py clear (a person\'s decision)')
+
+            if kind == "photo":
+                photo_marks(where, fname, meta, rs)
 
             if rs == "ATTRIBUTION_REQUIRED" and not (
                     meta.get("author") or meta.get("attribution_required")):

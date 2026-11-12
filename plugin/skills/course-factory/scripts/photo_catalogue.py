@@ -21,6 +21,17 @@ A pick is only a proposal: the build sheet takes it in Phase B (the builder, or 
 --auto for a slide whose top candidate scores at least AUTO and is 800 px or more), marked "auto_picked", and the visual
 review looks at it like any other picture.
 
+    photo_catalogue.py look <course>              the slide slots' best candidates nobody has opened yet:
+                                                  working_claude\\visuals\\PHOTOS_TO_LOOK.md
+    photo_catalogue.py look <course> --id p0030 --shows "<what you see>" --marks none --text none --slot "M01 s10" --fits "yes - ..."
+
+The words a picture is matched by are its old slide's or page's, not what the picture shows: an SPB tank cutaway matched
+the slide naming the Type A, B and C shapes, and a ship photo with a third party's watermark went in as the course's own.
+So a candidate is taken with no agent only once someone OPENED it and recorded, in photo_looks.json: what it shows, any
+watermark or credit printed on it (a third party's mark: its rights are not the course's), any words printed on it (an
+enlarger must not invent them), and whether it shows what the slot's slide names. A candidate looked at and found not to
+fit, or carrying a third party's mark, is never picked.
+
 Standard library (+ course-visuals image_size for the sizes). Reads only the course's own files.
 """
 from __future__ import annotations
@@ -47,6 +58,8 @@ import workspace  # noqa: E402
 from image_size import PHOTO_FLOOR, pixel_size  # noqa: E402
 
 CATALOGUE, PLAN, TO_FIND = "photo_catalogue.json", "photo_plan.json", "PHOTOS_TO_FIND.md"
+LOOKS, TO_LOOK = "photo_looks.json", "PHOTOS_TO_LOOK.md"
+LOOK_FIRST = 3           # a slide slot's best candidates (AUTO or more) opened before one is taken with no agent
 MIN_INDEX = 300          # px on the long side: smaller is a logo, an icon or a bullet - not indexed
 AUTO = 0.6               # a slide's top candidate at or above this may be filled with no agent (2.73.2: any size - the build
                          # enlarges the course's small pictures, owner 2026-10-28)
@@ -351,10 +364,119 @@ def used_in_modules(course):
     return out
 
 
+# ------------------------------------------------------------------ what someone saw on a picture
+NONE_SAID = re.compile(r"^\s*(?:none|no|nothing|-)?\s*\.?\s*$", re.I)
+VERIFIED = re.compile(r"^\s*yes\b.*\d{4}-\d{2}-\d{2}", re.I | re.S)
+
+
+def said_none(x):
+    """a look's marks or printed words that say there are none"""
+    return bool(NONE_SAID.match(as_words(x or "")))
+
+
+def copied(said, wants):
+    """the words written for what a picture shows are the slot's wanted picture, near word for word"""
+    a, b = set(tokens(as_words(said or ""))), set(tokens(wants))
+    return bool(a and b) and len(a & b) >= 0.8 * len(a | b)
+
+
+def looks(course):
+    """{the picture's sha256: its look} - photo_looks.json"""
+    return load(course, LOOKS) or {}
+
+
+def look_in(seen, ph, slot=""):
+    """(the look of a catalogue picture or None, its verdict for the slot - "yes ..." / "no ..." / "")"""
+    lk = seen.get(ph.get("sha256") or ph.get("path") or "")
+    if not isinstance(lk, dict):
+        return None, ""
+    return lk, str((lk.get("fits") or {}).get(slot) or "").strip()
+
+
+def refused(lk, verdict):
+    """a look that keeps the picture out of its slot: it does not show what the slide names, or a third party's mark is on it"""
+    return bool(lk) and (verdict.lower().startswith("no") or not said_none(lk.get("marks")))
+
+
+def ready(course, pick, slot):
+    """(may the pick go into its slot with no agent, the look it goes in with or None). A picture the sourcing pass found for
+    this very slot was opened by that pass (its record says so); any other needs a look that says it fits, with no mark"""
+    rec = pick.get("record") or {}
+    if pick.get("source") == "found" and pick.get("found_for") == slot and VERIFIED.match(str(rec.get("visually_verified") or "")):
+        return said_none(rec.get("marks_seen") or "none"), None
+    lk, verdict = look_in(looks(course), pick, slot)
+    return bool(lk) and verdict.lower().startswith("yes") and not refused(lk, verdict), lk
+
+
+def to_look(course):
+    """[(slot key, catalogue picture, its score, the slot's row)] - each slide slot's best candidates at AUTO or more that
+    nobody has opened for it; written to visuals\\PHOTOS_TO_LOOK.md"""
+    plan = load(course, PLAN) or {}
+    by_id = {p["id"]: p for p in (load(course, CATALOGUE) or {}).get("photos") or []}
+    seen, out = looks(course), []
+    for key, r in (plan.get("slots") or {}).items():
+        if r.get("question"):
+            continue
+        for c in [c for c in r.get("candidates") or [] if c["score"] >= AUTO][:LOOK_FIRST]:
+            ph = by_id.get(c["id"])
+            if not ph or (ph.get("source") == "found" and ph.get("found_for") == key):
+                continue
+            lk, verdict = look_in(seen, ph, key)
+            if not verdict:
+                out.append((key, ph, c["score"], r))
+    vdir = workspace.claude_path(workspace.work_folder(course, create=False), "visuals")
+    os.makedirs(vdir, exist_ok=True)
+    lines = ["# Pictures to open before they are used", "",
+             "*Written by `photo_catalogue.py look`. Each row is a slide slot's candidate, matched only by the words of the old "
+             "slide or page it sat on. Open the picture and record what you SEE - never the slot's wanted words: "
+             "`photo_catalogue.py look <course> --id <id> --shows \"<what is in the picture>\" --marks \"<a watermark or credit "
+             "printed on it, word for word, or none>\" --text \"<words or labels printed on it, or none>\" --slot \"<slot>\" "
+             "--fits \"yes - <what of the slide's picture it shows>\"` (or `\"no - <what it shows instead>\"`). Internal - "
+             "never shipped.*", "",
+             "| Slot | Picture | Score | The slide's picture must show | The slide's title |", "|---|---|---|---|---|"]
+    for key, ph, score, r in out:
+        lines.append("| %s | %s `%s` | %.2f | %s | %s |" % (key, ph["id"], ph["path"], score, (r.get("shows") or "").replace("|", "/"),
+                                                         (r.get("title") or "").replace("|", "/")))
+    io.open(os.path.join(vdir, TO_LOOK), "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
+    return out
+
+
+def record_look(course, pid, shows, marks, text, slot="", fits=""):
+    """one look at a catalogue picture, kept by its bytes - '' when kept, else why it was refused"""
+    ph = next((p for p in (load(course, CATALOGUE) or {}).get("photos") or [] if p["id"] == pid), None)
+    if not ph:
+        return "%s is not in the catalogue (photo_catalogue.py index)" % pid
+    shows = " ".join(str(shows or "").split())
+    if len(shows.split()) < 4:
+        return "--shows is what you see in the picture, in a sentence"
+    if bool(slot) != bool(fits):
+        return "--slot and --fits go together: the slot, and whether the picture shows what its slide names"
+    if fits and not re.match(r"(?i)\s*(yes|no)\b", fits):
+        return "--fits starts with yes or no"
+    if slot:
+        row = ((load(course, PLAN) or {}).get("slots") or {}).get(slot)
+        if not row:
+            return "%s is not a photo slot of the plan (photo_catalogue.py assign)" % slot
+        if copied(shows, row.get("shows")):
+            return "--shows is the slot's wanted picture, word for word - write what the picture itself shows"
+    seen = looks(course)
+    key = ph.get("sha256") or ph["path"]
+    lk = seen.get(key) if isinstance(seen.get(key), dict) else {}
+    lk.update({"id": pid, "path": ph["path"], "shows": shows, "marks": " ".join(str(marks).split()) or "none",
+               "text": " ".join(str(text).split()) or "none", "looked": date.today().isoformat()})
+    if slot:
+        lk.setdefault("fits", {})[slot] = " ".join(fits.split())
+    seen[key] = lk
+    p = workspace.claude_path(workspace.work_folder(course, create=False), LOOKS)
+    io.open(p, "w", encoding="utf-8", newline="\n").write(json.dumps(seen, ensure_ascii=False, indent=1))
+    return ""
+
+
 def assign(course):
     """working_claude\\photo_plan.json: each photo slot's five best candidates and - course-wide, the best match first - one
     pick a slot may take with no agent (score AUTO or more, never given twice - a small one is enlarged by the build); and
-    visuals\\PHOTOS_TO_FIND.md: the slots nothing in the course's own pictures shows"""
+    visuals\\PHOTOS_TO_FIND.md: the slots nothing in the course's own pictures shows. A candidate someone opened and found
+    not to fit the slot, or carrying a third party's mark, is left out"""
     work = workspace.work_folder(course, create=False)
     cat = load(course, CATALOGUE)
     if cat is None:
@@ -363,19 +485,22 @@ def assign(course):
     by_id = {p["id"]: p for p in photos}
     sc = Scorer(photos)
     taken = used_in_modules(course)
+    seen = looks(course)
     rows, offers = {}, []
     for key, module, s, pic in slots(course):
         q = query_of(s, pic)
         topic = int(module) if str(module).isdigit() else None
-        top = sc.top(q, 5, topic, refs=from_old_refs(s), slot=key)
-        rows[key] = {"module": module, "screen": s["id"], "shows": pic["shows"], "aspect": pic["aspect"],
+        top = [(v, k) for v, k in sc.top(q, 5 + LOOK_FIRST, topic, refs=from_old_refs(s), slot=key)
+               if not refused(*look_in(seen, photos[k], key))][:5]
+        rows[key] = {"module": module, "screen": s["id"], "shows": pic["shows"], "aspect": pic["aspect"], "title": s.get("title") or "",
                      "question": s.get("kind") in cs.TASKS, "pick": None,
                      "candidates": [{"id": photos[k]["id"], "score": v} for v, k in top]}
         for v, k in top:
             p = photos[k]
             if v >= AUTO and s.get("kind") == "slide":
-                offers.append((v, key, p["id"]))
-    for v, key, pid in sorted(offers, key=lambda x: -x[0]):           # the best match first, each picture once (L58)
+                offers.append((v, key, p["id"], look_in(seen, p, key)[1].lower().startswith("yes")))
+    # one opened and found to fit first, then the best match; each picture once (L58)
+    for v, key, pid, fits in sorted(offers, key=lambda x: (not x[3], -x[0])):
         if rows[key]["pick"] is None and pid not in taken:
             rows[key]["pick"] = {"id": pid, "score": v}
             taken.add(pid)
@@ -399,6 +524,7 @@ def assign(course):
                                                   "%s (%.2f, %sx%s)" % (os.path.basename(bp["path"]), best["score"], bp.get("w"), bp.get("h"))
                                                   if bp else "-"))
     io.open(os.path.join(vdir, TO_FIND), "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
+    to_look(course)
     return p, plan, len(find)
 
 
@@ -410,22 +536,49 @@ def candidates_for(course, module, sid):
     r = (plan.get("slots") or {}).get("%s %s" % (cs.mid(module), sid))
     if not r:
         return None
-    out = dict(r)
-    out["candidates"] = [dict(by_id[c["id"]], score=c["score"]) for c in r["candidates"] if c["id"] in by_id]
+    out, seen, key = dict(r), looks(course), "%s %s" % (cs.mid(module), sid)
+
+    def with_look(ph, score):
+        lk, verdict = look_in(seen, ph, key)
+        return dict(ph, score=score, look=lk, fits=verdict)
+    out["candidates"] = [with_look(by_id[c["id"]], c["score"]) for c in r["candidates"] if c["id"] in by_id]
     if r.get("pick") and r["pick"]["id"] in by_id:
-        out["pick"] = dict(by_id[r["pick"]["id"]], score=r["pick"]["score"])
+        out["pick"] = with_look(by_id[r["pick"]["id"]], r["pick"]["score"])
     return out
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("index", "assign", "show"):
+    for name in ("index", "assign", "show", "look"):
         x = sub.add_parser(name)
         x.add_argument("course")
         if name == "show":
             x.add_argument("--module", required=True)
+        if name == "look":
+            x.add_argument("--id", default="", help="the catalogue picture you opened, e.g. p0030")
+            x.add_argument("--shows", default="", help="what you see in it, in a sentence - never the slot's wanted words")
+            x.add_argument("--marks", default=None, help="a watermark, copyright or credit printed on it, word for word, or none")
+            x.add_argument("--text", default=None, help="words, labels or numbers printed on it, or none")
+            x.add_argument("--slot", default="", help="the slot you judged it for, e.g. \"M01 s10\"")
+            x.add_argument("--fits", default="", help="\"yes - <what of the slide's picture it shows>\" or \"no - <why not>\"")
     a = ap.parse_args(argv)
+    if a.cmd == "look":
+        if not a.id:
+            rows = to_look(a.course)
+            print("%d candidate(s) to open before a slot takes one with no agent: visuals\\%s" % (len(rows), TO_LOOK))
+            return 0
+        if a.marks is None or a.text is None:
+            print("Stopped - a look says --marks (a watermark or credit printed on it, or none) and --text (words printed on "
+                  "it, or none)")
+            return 2
+        why = record_look(a.course, a.id, a.shows, a.marks, a.text, a.slot, a.fits)
+        if why:
+            print("Stopped - " + why)
+            return 2
+        print("Recorded what %s shows%s - photo_catalogue.py assign takes it into account"
+              % (a.id, " and its verdict for " + a.slot if a.slot else ""))
+        return 0
     if a.cmd == "index":
         p, cat = index(a.course)
         by = {}
@@ -438,9 +591,10 @@ def main(argv=None):
     if a.cmd == "assign":
         p, plan, n_find = assign(a.course)
         rows = plan["slots"]
-        print("%d photo slot(s) in the approved scripts: %d with a pick that can be filled with no agent (score %.2f+, each "
-              "picture once, a small one enlarged), %d with candidates for the builder, %d to generate (visuals\\%s). Written: %s"
-              % (len(rows), sum(1 for r in rows.values() if r["pick"]), AUTO,
+        print("%d photo slot(s) in the approved scripts: %d with a pick that can be filled with no agent once someone opened "
+              "it (score %.2f+, each picture once, a small one enlarged; %d candidate(s) to open: visuals\\%s), %d with "
+              "candidates for the builder, %d to generate (visuals\\%s). Written: %s"
+              % (len(rows), sum(1 for r in rows.values() if r["pick"]), AUTO, len(to_look(a.course)), TO_LOOK,
                  sum(1 for r in rows.values() if not r["pick"] and r["candidates"]), n_find, TO_FIND, p))
         return 0
     plan = load(a.course, PLAN)

@@ -14,7 +14,8 @@ to every build: run it once on a course (an old one in the background), or let t
 
 IT INVENTS DETAIL. A ship, a pump room, a tank are made sharper and look right; letters and numbers it would make sharp
 and WRONG - so a picture whose record or name says it holds words (a page, a sheet, a label, a sign, a gauge, a screen,
-a table, a chart, a plan ...) keeps the plain enlargement, and so does one whose record says "ai_enlarge": false.
+a table, a chart, a plan, labelled ...) or whose "printed_text" names the words seen on it keeps the plain enlargement, and
+so does one whose record says "ai_enlarge": false.
 Each enlarged photograph's record says so: "enlarged": "Real-ESRGAN realesrgan-x4plus on this computer, from W x H".
 
 Where the enlarger is: NOVIKONTAS_UPSCALER (its .exe), else %USERPROFILE%/.novikontas/tools/realesrgan/ - the Windows
@@ -47,8 +48,23 @@ RELEASE = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/rea
 WORDY = re.compile(r"(?i)\b(page|pages|sheet|sds|msds|table|label|labels|sign|signs|placard|screen|display|panel|gauge|"
                    r"gauges|reading|readout|chart|graph|diagram|drawing|plan|matrix|document|form|certificate|text|card|"
                    r"notice|code|manual|list|checklist|poster|plate|nameplate|marking|markings|number|numbers|letters|"
-                   r"words|scale|dial|meter)\b")
+                   r"words|scale|dial|meter|labelled|labeled|named|lettering|caption|captions|watermark|copyright|credit|"
+                   r"logo|titled|headed|legend|annotated)\b")
 IMAGES = (".jpg", ".jpeg", ".png", ".webp")
+NO_WORDS = re.compile(r"^\s*(?:none|no|nothing|-)?\s*\.?\s*$", re.I)
+
+
+def holds_words(name, rec):
+    """the word in a photograph's record or file name that says it holds printed words, labels or numbers - or ''. The look
+    that opened it says so in "printed_text"; a record without one is read for such words (its title, what it shows)"""
+    printed = rec.get("printed_text")
+    if printed is not None and not NO_WORDS.match(str(printed)):
+        return "printed_text: %s" % str(printed)[:60]
+    shows = rec.get("shows")
+    said = " ".join([name.replace("_", " ").replace("-", " "), str(rec.get("title") or ""), str(rec.get("description") or ""),
+                     " ".join(shows) if isinstance(shows, list) else str(shows or "")])
+    m = WORDY.search(said)
+    return m.group(0) if m else ""
 
 
 def engine():
@@ -98,7 +114,7 @@ def plan(course, mdir, m):
         size = found_size(p, keep if os.path.isfile(keep) else None)
         if not size or max(size) >= PHOTO_MIN_LONG:
             continue
-        said = " ".join([name.replace("_", " ").replace("-", " "), str(rec.get("description") or ""), " ".join(rec.get("shows") or [])])
+        words = holds_words(name, rec)
         why = ""
         if max(size) >= AI_BELOW:
             why = "%d px already - the plain enlargement does well there, and the enlarger would take minutes" % max(size)
@@ -106,8 +122,8 @@ def plan(course, mdir, m):
             why = "done already"
         elif rec.get("ai_enlarge") is False:
             why = "its record says \"ai_enlarge\": false"
-        elif WORDY.search(said):
-            why = "it holds words or numbers (\"%s\") - an enlarger would make them sharp and wrong" % WORDY.search(said).group(0)
+        elif words:
+            why = "it holds words or numbers (\"%s\") - an enlarger would make them sharp and wrong" % words
         src = keep if os.path.isfile(keep) else p
         out.append((name, p, src, size, why))
     return out
