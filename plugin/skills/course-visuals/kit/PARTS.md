@@ -209,6 +209,15 @@ runs into, whatever its name: a line ends at a machine. When a figure needs a th
 device, a structure - make the part by the flow above; never a rectangle with a name. Pipes are drawn behind equipment
 whatever order the spec lists them in.
 
+## What the kit gained for portable foam - never a pipe for an inductor
+`foam_inductor` (the in-line inductor: couplings, the metering valve and its hose tail, `cut: true` the jet nozzle, the
+suction chamber, the port and the throat inside), `foam_branch_pipe` (medium expansion with its air inlets, wide head and
+mesh, or `kind: "low"`), `foam_container` (the 20-25 litre jerrycan or drum, never a pressure vessel), and `hose` `w` (a
+fire hose 12, a pick-up tube 6). Join them by their ports - a hose `"from": "I.pickup", "to": "C.mouth"`, `"to": "B.in"`.
+A build had drawn the inductor as a plain pipe with a tap, the branch pipe as a pipe to a blank flange and the container
+as a riveted vessel: figure-truths.json now names them, and NAMED fails a part labelled for one that is something else.
+The 2D kit's `inductor` (kit2d) is the same inductor cut open, its water and concentrate in motion.
+
 ## After the merge
 Promotion copies the block into the factory's `kit.js` with `status: 'kit'`. When colleagues update the
 plugin, their modules get the part from `kit.js`. A module that still carries its own copy in

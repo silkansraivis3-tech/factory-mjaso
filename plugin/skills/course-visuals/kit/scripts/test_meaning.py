@@ -436,6 +436,39 @@ def starter_part():
     check("a slide no pattern fits gets none (the grid starter)", cm.pattern_for(other) is None)
 
 
+
+def foam_part():
+    print("\n-- portable foam: the kit's own parts, joined by their ports")
+    spec = {"size": [330, 250], "label": "t", "why": "real-thing-recognition", "why_text": "t", "parts": [
+        {"id": "C", "type": "foam_container", "x": 255, "y": 20, "w": 50, "h": 66, "label": "Foam container"},
+        {"id": "I", "type": "foam_inductor", "x": 105, "y": 190, "w": 120, "label": "Inductor"},
+        {"id": "B", "type": "foam_branch_pipe", "x": 165, "y": 190, "w": 120, "reach": 40, "label": "Branch pipe"},
+        {"id": "F", "type": "hose", "w": 12, "from": [12, 40], "via": [[12, 190]], "to": "I.in", "label": "Fire hose"},
+        {"id": "S", "type": "hose", "w": 6, "from": "I.pickup", "to": "C.mouth", "label": "Pick-up tube"}],
+        "steps": [{"title": "Water on: foam out", "play": [["I", 1, 800], ["B", 1, 1400]]}]}
+    got = kr.run([spec])[0]
+    geo = {g["id"]: g for g in got["geometry"] if g and g.get("id")}
+    s_pts, f_pts = geo["S"]["pts"], geo["F"]["pts"]
+    check("the pick-up tube runs from the inductor's hose tail to the container's mouth",
+          km.pt_box(s_pts[0], [geo["I"]["ports"]["pickup"][0] - 0.5, geo["I"]["ports"]["pickup"][1] - 0.5,
+                               geo["I"]["ports"]["pickup"][0] + 0.5, geo["I"]["ports"]["pickup"][1] + 0.5]) == 0
+          and abs(s_pts[-1][0] - geo["C"]["ports"]["mouth"][0]) < 0.6 and abs(s_pts[-1][1] - geo["C"]["ports"]["mouth"][1]) < 0.6, s_pts)
+    check("the fire hose ends on the inductor's inlet coupling", abs(f_pts[-1][0] - geo["I"]["ports"]["in"][0]) < 0.6
+          and abs(f_pts[-1][1] - geo["I"]["ports"]["in"][1]) < 0.6, f_pts)
+    check("the branch pipe set at the inductor's outlet: its inlet is the outlet", geo["B"]["ports"]["in"][:2] == geo["I"]["ports"]["out"][:2],
+          (geo["B"]["ports"]["in"], geo["I"]["ports"]["out"]))
+    check("the container's foot is its box's bottom - inside the panel it is given", geo["C"]["foot"][1] == 20 + 66, geo["C"]["foot"])
+    check("the foam station drawn with the kit's foam parts means what it says: no BLOCK", blocks(spec) == [], blocks(spec))
+    old = {"size": [330, 300], "label": "t", "why": "real-thing-recognition", "why_text": "t", "parts": [
+        {"id": "E", "type": "pipe", "from": [180, 150], "to": [270, 150], "fluid": "liquid", "label": "Inductor"},
+        {"id": "C", "type": "vessel", "kind": "plain", "x": 290, "y": 222, "w": 48, "h": 62, "label": "Foam container"},
+        {"id": "N", "type": "pipe", "from": [20, 60], "to": [150, 60], "label": "Branch pipe"}],
+        "steps": [{"title": "t", "play": [["E", 1, 300]]}]}
+    b = blocks(old)
+    check("a vessel labelled \"Foam container\" is refused (NAMED): the kit draws the foam container",
+          any("foam container" in x.lower() and "foam_container" in x for x in b), b)
+
+
 def main():
     if not kr.available():
         print("SKIP - node is not installed: the kit's resolver cannot run")
@@ -448,6 +481,7 @@ def main():
     levels_part()
     patterns_part()
     starter_part()
+    foam_part()
     print("\n%d failed" % len(FAILS) if FAILS else "\nall passed")
     return 1 if FAILS else 0
 

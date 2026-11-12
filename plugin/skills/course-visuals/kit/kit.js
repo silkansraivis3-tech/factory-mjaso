@@ -523,6 +523,23 @@
         if (p.orient === 'h') { var L = n(p.len, 400); return { box: [-10, -rise - 34, L + 10, bw + 34], ports: edges(0, 0, L, bw) }; }
         var H = n(p.h, 300); return { box: [-40, -10, n(p.reach, bw + 300), H + 10], ports: edges(0, 0, bw, H) };
       },
+      foam_container: function (p) {                     // x, y the top left of its box; the neck's mouth on top
+        var drum = p.kind === 'drum', w = n(p.w, drum ? 44 : 46), h = n(p.h, 60), top = Math.round(h * 0.16);
+        return { box: [0, 0, w, h], foot: [w / 2, h], ports: edges(0, 0, w, h, { mouth: [drum ? w * 0.72 : w * 0.76, top * 0.35, 'up'] }) };
+      },
+      foam_inductor: function (p) {                      // x, y the middle of its axis; the hose tail of its metering valve on top
+        var w = n(p.w, 110), rc = w * 0.12, yt = -w * 0.12 - 28, xt = -w / 2 + w * 0.392 + 4.5;
+        return { box: [-w / 2, yt, w / 2, rc + 1.5], foot: [0, rc + 1.5],
+                 ports: { 'in': [-w / 2, 0, 'left'], out: [w / 2, 0, 'right'], inlet: [-w / 2, 0, 'left'], outlet: [w / 2, 0, 'right'], left: [-w / 2, 0, 'left'],
+                          right: [w / 2, 0, 'right'], pickup: [xt, yt, 'up'], top: [xt, yt, 'up'], bottom: [0, rc + 1.5, 'down'], center: [0, 0, null] } };
+      },
+      foam_branch_pipe: function (p) {                   // x, y the inlet face on its axis; the foam out to "reach" beyond its mouth
+        var low = p.kind === 'low', w = n(p.w, 150), reach = p.reach != null ? n(p.reach, 0) : w * 0.45, R = low ? w * 0.065 : w * 0.2;
+        var box = low ? [0, -(w * 0.085 + 1.5), w + reach, w * 0.16 + 11] : [0, -Math.max(R + 9, R * 1.25), w + reach, R * 1.7];
+        return { box: box, foot: [w / 2, low ? w * 0.085 + 1.5 : R + 2],
+                 ports: { 'in': [0, 0, 'left'], out: [w, 0, 'right'], inlet: [0, 0, 'left'], outlet: [w, 0, 'right'], left: [0, 0, 'left'], right: [w, 0, 'right'],
+                          top: [w * 0.7, -R, 'up'], bottom: [w * 0.5, R, 'down'], center: [w / 2, 0, null] } };
+      },
       zone: function (p) { var w = p.r != null ? 2 * p.r : n(p.w, 80), h = p.r != null ? 2 * p.r : n(p.h, 60); return { box: [0, 0, w, h], ports: edges(0, 0, w, h) }; },
       gas_cloud: function (p) { var w = n(p.w, 200), h = n(p.h, 120); return { box: [0, 0, w, h], ports: edges(0, 0, w, h) }; }
     };
@@ -5469,6 +5486,12 @@ KIT.define('hose', function (fig, part, g, p) {
   var inside = h.el('g', {}, g);                         // masked only while the front stands part-way (h.front, L65)
   h.el('path', { d: p.d, 'class': 'kit-hose-fluid', 'data-low-contrast': '' }, inside);      // translucent liquid, as the kit's own pipe content
   var flow = h.el('path', { d: p.d, 'class': 'kit-flow' }, inside);
+  /* w: the hose's width (24, a bunker hose; a fire hose 12, a pick-up tube 6) - its body, bore, fluid and end fittings with it */
+  var hw = p.w > 0 ? +p.w : 24, hf = hw / 24;
+  if (hw !== 24) {
+    [[line, 24], [g.querySelector('.kit-hose-rib'), 24], [g.querySelector('.kit-hose-bore'), 11], [reach, 24],
+     [inside.querySelector('.kit-hose-fluid'), 8], [flow, 2.5]].forEach(function (q) { if (q[0]) q[0].style.strokeWidth = (q[1] * hf).toFixed(2) + 'px'; });
+  }
   var L = 0, m0 = null;
   try { L = reach.getTotalLength(); } catch (e) { L = 0; }
   if (L) {
@@ -5477,7 +5500,7 @@ KIT.define('hose', function (fig, part, g, p) {
        stepped bend restrictor onto the hose; and a pale marker band at a quarter and three quarters of its length */
     [[a0, a1], [b0, b1]].forEach(function (c) {
       var ang = Math.atan2(c[1].y - c[0].y, c[1].x - c[0].x) * 180 / Math.PI;
-      var col = h.equip(g), fg = h.el('g', { 'data-may-cross': '', transform: 'translate(' + c[0].x.toFixed(1) + ' ' + c[0].y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')' }, col);
+      var col = h.equip(g), fg = h.el('g', { 'data-may-cross': '', transform: 'translate(' + c[0].x.toFixed(1) + ' ' + c[0].y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')' + (hf !== 1 ? ' scale(' + hf.toFixed(3) + ')' : '') }, col);
       h.body('rect', { x: 14, y: -12.5, width: 6, height: 25, rx: 2 }, fg, { mat: 'steel', shade: 'cyl' });
       h.body('rect', { x: 3, y: -14.5, width: 12, height: 29, rx: 2 }, fg, { mat: 'steel', shade: 'cyl' });
       h.flange(fg, 0, 0, 0, 36, 6);
@@ -5487,7 +5510,7 @@ KIT.define('hose', function (fig, part, g, p) {
       var q0 = reach.getPointAtLength(L * f), q1 = reach.getPointAtLength(Math.min(L, L * f + 4));
       var ang = Math.atan2(q1.y - q0.y, q1.x - q0.x) * 180 / Math.PI;
       h.el('rect', { x: -2, y: -12, width: 4, height: 24, 'class': 'kit-m-reflect', 'data-may-cross': '',
-                     transform: 'translate(' + q0.x.toFixed(1) + ' ' + q0.y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')' }, g);
+                     transform: 'translate(' + q0.x.toFixed(1) + ' ' + q0.y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')' + (hf !== 1 ? ' scale(' + hf.toFixed(3) + ')' : '') }, g);
     });
     m0 = reach.getPointAtLength(L / 2);
   }
@@ -5514,7 +5537,7 @@ KIT.define('hose', function (fig, part, g, p) {
   course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
   look: 'equipment',
   why: 'M13 the hand hoses used for bunkering and sampling, M14 the bunkering hose in the ESD chain between shore and ship (plan: media plans of modules 13 and 14)',
-  value: 'flow 0 still .. 1 fast, as a pipe; the second value "<id>.fill" is 0..1 the fluid front advancing along d, 1..2 the hose emptying (set "empty": true to start dry). The spec checker only knows pipe.fill - hose.fill is new',
+  value: 'flow 0 still .. 1 fast, as a pipe; the second value "<id>.fill" is 0..1 the fluid front advancing along d, 1..2 the hose emptying (set "empty": true to start dry); w its width (24; a fire hose 12, a pick-up tube 6). The spec checker only knows pipe.fill - hose.fill is new',
   css: '.kit-hose-body{fill:none;stroke-width:24}' +
     '.kit-hose-rib{fill:none;stroke:var(--mat-edge);stroke-width:24;stroke-dasharray:2 9;opacity:.45}' +
     '.kit-hose-bore{fill:none;stroke:var(--deep);stroke-width:11}' +
@@ -8001,6 +8024,207 @@ KIT.define('timeline', function (fig, part, g, p) {
   example: { size: [320, 170], parts: [
     { id: 'L', type: 'timeline', x: 30, y: 60, w: 240, title: 'dry dock', end: 'end', name: 'Project' } ],
     steps: [ { title: 'It starts, runs and ends', play: [['L', 1, 1400]] } ] }
+});
+/* end kit-part */
+/* kit-part: foam_container */
+KIT.define('foam_container', function (fig, part, g, p) {
+  var h = KIT.h, drum = p.kind === 'drum', w = p.w || (drum ? 44 : 46), ht = p.h || 60, id = p.id || 'fc';
+  /* a 20-25 litre foam concentrate container as it stands at the foam station: a plastic jerrycan with its top handle, the
+     screw neck and the label on its front - or a plastic drum with its rolling rings. Drawn inside x..x+w, y..y+h: the
+     handle and the neck on top, the body down to its foot on y+h. Plastic, so the concentrate's level shows through it */
+  var top = Math.round(ht * 0.16), bh = ht - top, nx = drum ? w * 0.72 : w * 0.76, eq = h.equip(g);
+  var open = p.open === true || (fig.spec.parts || []).some(function (q) { return q && (q.from === id + '.mouth' || q.to === id + '.mouth'); });
+  var cid = fig.uid + '-' + id + '-fc', shape = drum ? { x: 0, y: top, width: w, height: bh, rx: 3 } : { x: 0, y: top, width: w, height: bh, rx: Math.min(6, w * 0.14) };
+  var clip = h.el('rect', shape, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
+  h.body('rect', shape, eq, { mat: 'white', shade: drum ? 'cylv' : 'box' });
+  /* the concentrate seen through the plastic: darker below its level (quiet on purpose, the body's outline carries it) */
+  var liq = h.el('rect', { x: 0, width: w, 'class': 'kit-foam-container-liq', 'clip-path': 'url(#' + cid + ')', 'data-low-contrast': '' }, eq);
+  var surf = h.el('line', { x1: 2, x2: w - 2, 'class': 'kit-foam-container-surf', 'data-low-contrast': '' }, eq);
+  if (drum) {
+    [0.3, 0.68].forEach(function (f) { h.el('rect', { x: -1, y: top + bh * f, width: w + 2, height: 3, rx: 1.5, 'class': 'kit-m-white' }, eq); });
+    h.body('rect', { x: -1, y: top - 2, width: w + 2, height: 4, rx: 2 }, eq, { mat: 'white', shade: 'box' });
+  } else {
+    /* the moulded handle over the back half: a bar on two posts, the hand's opening under it */
+    var hx0 = w * 0.08, hx1 = w * 0.52;
+    h.body('path', { d: 'M' + hx0 + ' ' + (top + 1) + ' V' + (top * 0.25) + ' Q' + hx0 + ' 0 ' + (hx0 + 4) + ' 0 H' + (hx1 - 4) + ' Q' + hx1 + ' 0 ' + hx1 + ' ' + (top * 0.25) +
+                     ' V' + (top + 1) + ' H' + (hx1 - 4) + ' V' + (top * 0.45) + ' H' + (hx0 + 4) + ' V' + (top + 1) + ' Z' }, eq, { mat: 'white', shade: 'box' });
+  }
+  /* the label on its front: a light plate, a stripe and two lines of print */
+  var lx = w * 0.14, lw = w * 0.72, ly = top + bh * 0.3, lh = bh * 0.4;
+  h.el('rect', { x: lx, y: ly, width: lw, height: lh, rx: 1.5, 'class': 'kit-m-plate' }, eq);
+  h.el('rect', { x: lx, y: ly + lh * 0.18, width: lw, height: Math.max(2, lh * 0.16), 'class': 'kit-foam-container-band' }, eq);
+  h.el('path', { d: 'M' + (lx + 4) + ' ' + (ly + lh * 0.58) + ' H' + (lx + lw - 4) + ' M' + (lx + 4) + ' ' + (ly + lh * 0.8) + ' H' + (lx + lw * 0.6),
+                 'class': 'kit-foam-container-print', 'data-low-contrast': '' }, eq);
+  /* the screw neck, and its cap unless the pick-up wand is in it */
+  h.body('rect', { x: nx - 4.5, y: top * 0.35, width: 9, height: top * 0.65 + 1 }, eq, { mat: 'white', shade: 'cylv' });
+  if (!open) h.body('rect', { x: nx - 5.5, y: 0, width: 11, height: top * 0.45, rx: 1.5 }, eq, { mat: 'rubber', shade: 'cylv' });
+  else h.el('rect', { x: nx - 3, y: top * 0.35, width: 6, height: 2, 'class': 'kit-m-hole' }, eq);
+  if (p.label) h.label(fig, g, { x: w / 2, y: ht + 16, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    var f = h.clamp(v, 0, 1), y = top + bh - f * (bh - 3);
+    liq.setAttribute('y', y.toFixed(1)); liq.setAttribute('height', Math.max(0, top + bh - y).toFixed(1));
+    surf.setAttribute('y1', y.toFixed(1)); surf.setAttribute('y2', y.toFixed(1));
+    surf.style.opacity = f > 0.02 && f < 0.98 ? '1' : '0';
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit',
+  look: 'equipment',
+  why: 'portable foam: the 20-25 litre container the inductor draws its concentrate from - a builder drew it as a large riveted pressure vessel',
+  value: '0..1 how full of concentrate (seen through the plastic); kind "jerrycan" (default) or "drum"; x, y the top left of its box w x h; port "mouth" (the pick-up tube goes in, the cap comes off)',
+  css: '.kit-foam-container-liq{fill:var(--mat-copper);opacity:.35}.kit-foam-container-surf{stroke:var(--mat-copper);stroke-width:1.4}' +
+    '.kit-foam-container-band{fill:var(--mat-paint)}.kit-foam-container-print{fill:none;stroke:var(--mat-ink);stroke-width:1.6}',
+  example: { size: [200, 110], parts: [
+    { id: 'C', type: 'foam_container', x: 30, y: 14, w: 46, h: 60, value: 0.9, label: 'foam' },
+    { id: 'D', type: 'foam_container', kind: 'drum', x: 120, y: 14, w: 44, h: 60, value: 0.9, label: 'drum' } ],
+    steps: [ { title: 'The concentrate is drawn off', play: [['C', 0.35, 1600], ['D', 0.5, 1600]] } ] }
+});
+/* end kit-part */
+/* kit-part: foam_inductor */
+KIT.define('foam_inductor', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 110, cut = !!p.cut;
+  /* an in-line foam inductor (eductor) seen from the side, water flowing left to right: the hose couplings at both ends,
+     the light-alloy body swelling round its suction chamber, the metering valve on top with its knob, and the hose tail
+     the pick-up tube joins ("<id>.pickup"). cut: true - the near half cut away: the jet nozzle narrowing the water into a
+     jet, the suction chamber round it, the concentrate port under the valve, the throat and the diffuser. x, y the middle
+     of its axis; w its length */
+  var rc = w * 0.12, cw = w * 0.11, R1 = w * 0.085, R2 = w * 0.12, x0 = -w / 2, x1 = w / 2, xa = x0 + cw, xb = x1 - cw;
+  var xs = x0 + w * 0.32, xe = x0 + w * 0.56, xn0 = x0 + w * 0.22, xn = x0 + w * 0.47, xt = x0 + w * 0.68, xd = x0 + w * 0.86;
+  var xp = xs + (xe - xs) * 0.3, b = R1 * 0.62, rn = b * 0.42, rt = b * 0.6, rcI = R2 * 0.72, t = b * 0.25, vy = -R2 - 5;
+  var eq = h.equip(g), knob;
+  function prof(s) {                                    // the outline of the body, top (s -1) or bottom (s 1)
+    return [[xa, s * R1], [xs - 3, s * R1], [xs, s * R2], [xe, s * R2], [xe + 3, s * R1], [xb, s * R1 * 1.06]];
+  }
+  function d(pts) { return 'M' + pts.map(function (q) { return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join(' L') + ' Z'; }
+  var outline = prof(-1).concat(prof(1).reverse());
+  /* the metering valve: the boss on the chamber, the valve body, the knob on top and the hose tail beside it */
+  h.body('rect', { x: xp - 3.5, y: vy, width: 7, height: 6 }, eq, { mat: 'steel', shade: 'cylv' });
+  h.body('rect', { x: xp - 9, y: vy - 12, width: 18, height: 12, rx: 2 }, eq, { mat: 'steel', shade: 'box' });
+  h.body('rect', { x: xp + 2, y: vy - 23, width: 5, height: 11 }, eq, { mat: 'steel', shade: 'cylv' });
+  h.el('path', { d: 'M' + (xp + 1.5) + ' ' + (vy - 18) + ' h6 M' + (xp + 1.5) + ' ' + (vy - 21) + ' h6', 'class': 'kit-m-stem' }, eq);
+  knob = h.el('g', { transform: 'translate(' + (xp - 4) + ' ' + (vy - 12) + ')' }, eq);
+  h.body('rect', { x: -2, y: -4, width: 4, height: 4 }, knob, { mat: 'steel', shade: 'cylv' });
+  h.body('rect', { x: -1.5, y: -12, width: 3, height: 9, rx: 1.5 }, knob, { mat: 'rubber', shade: 'cylv' });
+  h.el('path', { d: h.arc(9, 210, 330), transform: 'translate(' + (xp - 4) + ' ' + (vy - 12) + ')', 'class': 'kit-foam-inductor-scale', 'data-low-contrast': '' }, eq);
+  /* the couplings: a claw coupling at each end, its lugs above and below */
+  [[x0, 1], [x1, -1]].forEach(function (c) {
+    var xx = c[1] > 0 ? c[0] : c[0] - cw;
+    h.body('rect', { x: xx, y: -rc, width: cw, height: 2 * rc, rx: 2 }, eq, { mat: 'steel', shade: 'cyl' });
+    h.body('rect', { x: c[1] > 0 ? xx : xx + cw - 3.5, y: -rc - 1.5, width: 3.5, height: 2 * rc + 3, rx: 1 }, eq, { mat: 'steel', shade: 'box' });
+    [-1, 1].forEach(function (s) { h.el('circle', { cx: xx + cw / 2, cy: s * (rc + 1.2), r: 2.2, 'class': 'kit-m-bolt' }, eq); });
+  });
+  var water = null, conc = null, flows = [];
+  if (!cut) {
+    h.body('path', { d: d(outline) }, eq, { mat: 'steel', shade: 'cyl' });
+  } else {
+    /* the inside, the near half cut away: the bore dark, the wall's cut face hatched, then what flows in it */
+    function rNz(x) { return b + (rn - b) * (x - xn0) / (xn - xn0); }
+    var inner = [[x0, b], [xn0, b], [xn, rn], [xn, rn + t], [xs, rNz(xs) + t], [xs, rcI], [xe, rcI], [xe, rt], [xt, rt], [xd, b], [x1, b]];
+    var bore = inner.map(function (q) { return [q[0], -q[1]]; }).concat(inner.slice().reverse());
+    h.el('path', { d: d(bore), 'class': 'kit-m-hole' }, eq);
+    var waterPts = [[x0, b], [xn0, b], [xn, rn], [xe, rn * 1.05], [xt, rt], [xd, b], [x1, b]];
+    water = h.el('path', { d: d(waterPts.map(function (q) { return [q[0], -q[1]]; }).concat(waterPts.slice().reverse())), 'class': 'kit-foam-inductor-water', 'data-low-contrast': '' }, eq);
+    var ch = [[xn, rn + t], [xs, rNz(xs) + t], [xs, rcI], [xe, rcI], [xe, rt], [xt, rt], [xe, rn * 1.05]];
+    conc = h.el('path', { d: d(ch.map(function (q) { return [q[0], -q[1]]; })) + ' ' + d(ch) + ' M' + (xp - 2) + ' ' + (-R2) + ' h4 V' + (-rcI) + ' h-4 Z', 'class': 'kit-foam-inductor-conc', 'data-low-contrast': '' }, eq);
+    [-1, 1].forEach(function (s) {
+      var wall = prof(s).concat([[xb, s * rc], [x1, s * rc], [x1, s * b]]).concat(inner.slice().reverse().map(function (q) { return [q[0], s * q[1]]; })).concat([[x0, s * rc], [xa, s * rc]]);
+      h.body('path', { d: d(wall), 'data-may-overlap': '' }, eq, { mat: 'steel', hatch: true });
+    });
+    h.el('rect', { x: xp - 2, y: -R2 - 0.5, width: 4, height: R2 - rcI + 1, 'class': 'kit-foam-inductor-conc', 'data-low-contrast': '' }, eq);
+    flows.push(h.el('path', { d: 'M' + (x0 + 3) + ' 0 H' + (x1 - 3), 'class': 'kit-flow kit-foam-inductor-flow', 'data-may-cross': '' }, eq));
+    flows.push(h.el('path', { d: 'M' + xp + ' ' + (-R2) + ' V' + (-rcI * 0.85) + ' L' + xe + ' ' + (-rt * 0.7) + ' L' + xd + ' ' + (-b * 0.45), 'class': 'kit-flow kit-foam-inductor-cflow', 'data-may-cross': '' }, eq));
+  }
+  if (p.label) h.label(fig, g, { x: (xt + xb) / 2, y: rc + 18, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1);
+    knob.setAttribute('transform', 'translate(' + (xp - 4) + ' ' + (vy - 12) + ') rotate(' + (-50 + 100 * k).toFixed(1) + ')');
+    if (water) water.style.opacity = k > 0.02 ? '1' : '0.25';
+    if (conc) conc.style.opacity = k > 0.02 ? '1' : '0';
+    flows.forEach(function (f) { f.style.opacity = k > 0.02 ? '1' : '0'; f.style.animationPlayState = k > 0.02 ? '' : 'paused'; });
+    g.classList.toggle('kit-foam-inductor-on', k > 0.02);
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit',
+  look: 'equipment',
+  why: 'portable foam: the in-line inductor that draws the concentrate into the water - a builder drew it as a plain pipe with a tap',
+  value: '0..1 running: the metering knob turns to its setting; cut: true shows the inside - the water through the jet nozzle and the concentrate drawn in at the port and carried through the throat; x, y the middle of its axis, w its length; ports "in", "out", "pickup" (the pick-up tube\'s hose "from")',
+  css: '.kit-foam-inductor-water{fill:var(--cold);opacity:.25}.kit-foam-inductor-conc{fill:var(--mat-copper);opacity:0}' +
+    '.kit-foam-inductor-scale{fill:none;stroke:var(--mat-ink);stroke-width:1.2;stroke-dasharray:1.5 3}' +
+    '.kit-foam-inductor-flow{stroke:var(--deep);stroke-width:2}.kit-foam-inductor-cflow{stroke:var(--mat-copper);stroke-width:1.8}',
+  example: { size: [300, 150], parts: [
+    { id: 'I', type: 'foam_inductor', x: 80, y: 80, w: 120, label: 'inductor' },
+    { id: 'J', type: 'foam_inductor', x: 225, y: 80, w: 120, cut: true, label: 'inside' } ],
+    steps: [ { title: 'Water through the jet draws the concentrate in', play: [['I', 1, 900], ['J', 1, 900]] } ] }
+});
+/* end kit-part */
+/* kit-part: foam_branch_pipe */
+KIT.define('foam_branch_pipe', function (fig, part, g, p) {
+  var h = KIT.h, low = p.kind === 'low', w = p.w || 150, reach = p.reach != null ? +p.reach : w * 0.45;
+  /* a foam branch pipe seen from the side, the foam solution coming in at its coupling on the left. Medium expansion (the
+     default): the nozzle with its grip, the air inlets - open windows between the struts that carry the head - and the
+     wide head with the fine mesh across its mouth, a carrying handle on top. kind "low": a long narrow barrel with air
+     holes behind the nozzle. x, y the inlet coupling's face on the axis; w its length; reach how far its foam goes */
+  var rc = w * 0.085, cw = w * 0.09, eq = h.equip(g), i, foam = h.el('g', { 'data-may-cross': '', 'data-no-contain': '' }, g), blobs = [];
+  h.body('rect', { x: 0, y: -rc, width: cw, height: 2 * rc, rx: 2 }, eq, { mat: 'steel', shade: 'cyl' });
+  h.body('rect', { x: 0, y: -rc - 1.5, width: 3.5, height: 2 * rc + 3, rx: 1 }, eq, { mat: 'steel', shade: 'box' });
+  [-1, 1].forEach(function (s) { h.el('circle', { cx: cw / 2, cy: s * (rc + 1.2), r: 2.2, 'class': 'kit-m-bolt' }, eq); });
+  var R, x1 = w, mouth;
+  if (low) {
+    R = w * 0.045;
+    h.body('rect', { x: cw * 0.6 + w * 0.12, y: R * 0.5, width: 7, height: rc * 1.6 + 10, rx: 2, transform: 'rotate(14 ' + (cw + w * 0.12) + ' ' + R + ')' }, eq, { mat: 'rubber', shade: 'box' });
+    h.body('path', { d: 'M' + cw + ' ' + (-R * 1.15) + ' L' + (w - 8) + ' ' + (-R) + ' L' + w + ' ' + (-R * 1.45) + ' V' + (R * 1.45) + ' L' + (w - 8) + ' ' + R + ' L' + cw + ' ' + (R * 1.15) + ' Z' }, eq, { mat: 'steel', shade: 'cyl' });
+    for (i = 0; i < 3; i++) h.el('rect', { x: w * 0.26 + i * 7, y: -R * 0.55, width: 4, height: R * 1.1, rx: 1, 'class': 'kit-m-hole' }, eq);
+    h.el('rect', { x: w - 2.5, y: -R * 1.3, width: 2.5, height: R * 2.6, 'class': 'kit-m-hole' }, eq);
+    mouth = R * 1.3;
+  } else {
+    R = w * 0.2;
+    var xn = w * 0.3, xh0 = w * 0.4, rnz = w * 0.05;
+    h.body('rect', { x: w * 0.13, y: rnz * 0.6, width: 8, height: rnz + 16, rx: 2, transform: 'rotate(14 ' + (w * 0.13 + 4) + ' ' + rnz + ')' }, eq, { mat: 'rubber', shade: 'box' });
+    h.body('path', { d: 'M' + cw + ' ' + (-rnz * 1.1) + ' L' + xn + ' ' + (-rnz * 0.75) + ' V' + (rnz * 0.75) + ' L' + cw + ' ' + (rnz * 1.1) + ' Z' }, eq, { mat: 'steel', shade: 'cyl' });
+    /* the air inlets: the struts from the nozzle to the head, open between them */
+    var st = '';
+    [-1, -0.45, 0.45, 1].forEach(function (f) { st += 'M' + (xn - w * 0.06) + ' ' + (f * rnz * 0.8).toFixed(1) + ' L' + xh0 + ' ' + (f * R * 0.98).toFixed(1) + ' '; });
+    h.el('path', { d: st, 'class': 'kit-foam-branch-pipe-strut' }, eq);
+    h.body('rect', { x: xh0, y: -R, width: w - xh0, height: 2 * R, rx: 3 }, eq, { mat: 'steel', shade: 'cyl' });
+    h.body('rect', { x: xh0 - 2, y: -R - 2, width: 5, height: 2 * R + 4, rx: 2 }, eq, { mat: 'steel', shade: 'box' });
+    /* the mesh across the mouth, a rim round it */
+    h.el('rect', { x: w - 6, y: -R + 1, width: 6, height: 2 * R - 2, 'class': 'kit-foam-branch-pipe-mesh', 'data-low-contrast': '' }, eq);
+    h.body('rect', { x: w - 3, y: -R - 2, width: 4, height: 2 * R + 4, rx: 2 }, eq, { mat: 'steel', shade: 'box' });
+    var hx0 = xh0 + (w - xh0) * 0.25, hx1 = xh0 + (w - xh0) * 0.75;
+    h.el('path', { d: 'M' + hx0 + ' ' + (-R) + ' V' + (-R - 8) + ' H' + hx1 + ' V' + (-R), 'class': 'kit-foam-branch-pipe-handle' }, eq);
+    mouth = R * 0.9;
+  }
+  /* the foam out of the mouth: bubbles that swell and drop as they leave, out to "reach" */
+  var rnd = 7;
+  for (i = 0; i < 26; i++) {
+    rnd = (rnd * 9301 + 49297) % 233280;
+    var u = (i + 0.5) / 26, a = (rnd / 233280 - 0.5) * 2, ry = mouth * (0.7 + u * 0.5), r0 = Math.max(2.5, mouth * (0.22 + u * 0.25));
+    blobs.push({ u: u, y: a * ry + u * u * mouth * 0.9, r: r0, n: h.el('circle', { cx: x1, cy: 0, r: 0, 'class': 'kit-foam-branch-pipe-foam' }, foam) });
+  }
+  if (p.label) h.label(fig, g, { x: low ? w * 0.6 : w * 0.7, y: (low ? R * 1.5 : R) + 18, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1);
+    blobs.forEach(function (bl) {
+      var on = bl.u <= k, x = x1 + 3 + bl.u * reach * k;
+      bl.n.setAttribute('cx', x.toFixed(1)); bl.n.setAttribute('cy', bl.y.toFixed(1));
+      bl.n.setAttribute('r', on ? bl.r.toFixed(1) : '0');
+    });
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit',
+  look: 'equipment',
+  why: 'portable foam: the foam branch pipe after the inductor - a builder drew it as a plain pipe ending in a blank flange',
+  value: '0..1 foam out of the mouth, out to "reach"; kind "medium" (default: wide head, mesh, air inlets) or "low"; x, y the inlet face on the axis, w its length; ports "in" (a hose "to"), "out"',
+  css: '.kit-foam-branch-pipe-strut{fill:none;stroke:var(--mat-stem);stroke-width:2.2;stroke-linecap:round}' +
+    '.kit-foam-branch-pipe-mesh{fill:var(--mat-hole);stroke:var(--mat-yoke);stroke-width:1;stroke-dasharray:1.5 1.5}' +
+    '.kit-foam-branch-pipe-handle{fill:none;stroke:var(--mat-rubber);stroke-width:4;stroke-linejoin:round}' +
+    '.kit-foam-branch-pipe-foam{fill:var(--mat-vapour);stroke:var(--mat-edge-clad);stroke-width:.8}',
+  example: { size: [320, 170], parts: [
+    { id: 'B', type: 'foam_branch_pipe', x: 20, y: 70, w: 160, reach: 90, label: 'branch pipe' },
+    { id: 'L', type: 'foam_branch_pipe', kind: 'low', x: 20, y: 140, w: 160, reach: 60, label: 'low-expansion branch' } ],
+    steps: [ { title: 'Foam out of the mouth', play: [['B', 1, 1400], ['L', 1, 1400]] } ] }
 });
 /* end kit-part */
 /* kit-parts: end */

@@ -1715,6 +1715,108 @@
     };
   });
 
+  /* inductor - an in-line foam inductor (eductor) cut through on a horizontal line, water left to right: the body and its
+     hose couplings hatched as cut faces, the jet nozzle narrowing the water into a fast jet across the suction chamber, the
+     throat and the diffuser; over the chamber the metering valve and the pick-up tube from the container. While the water
+     runs, the jet draws the concentrate down through the port and carries it off through the throat. Publishes flow and
+     suction (0..1).
+     {x, y (the inlet face, on the axis), w (its length), r (the bore), flow: "@on", label, sub, names: {nozzle, port,
+      throat} (words for those places)} */
+  define('inductor', function (f, p) {
+    var x0 = p.x, y = p.y, w = p.w || 520, r = p.r || w * 0.07, x1 = x0 + w, i;
+    function X(u) { return x0 + u * w; }
+    var xn0 = X(0.22), xs = X(0.32), xn = X(0.47), xe = X(0.56), xt = X(0.68), xd = X(0.86), xp = xs + (xe - xs) * 0.3;
+    var rn = r * 0.42, rt = r * 0.58, rcI = r * 1.3, t = r * 0.22, R1 = r * 1.5, R2 = r * 1.95, rc = r * 1.75, cw = w * 0.09;
+    var xa = x0 + cw, xb = x1 - cw, pw = r * 0.45, vt = y - R2 - r * 1.1, top = vt - r * 1.6;
+    function rNz(x) { return r + (rn - r) * (x - xn0) / (xn - xn0); }
+    function at(q, s) { return [q[0], y + s * q[1]]; }
+    var outer = [[x0, rc], [xa, rc], [xa, R1], [xs - r * 0.3, R1], [xs, R2], [xe, R2], [xe + r * 0.3, R1], [xb, R1], [xb, rc], [x1, rc]];
+    var inner = [[x0, r], [xn0, r], [xn, rn], [xn, rn + t], [xs, rNz(xs) + t], [xs, rcI], [xe, rcI], [xe, rt], [xt, rt], [xd, r], [x1, r]];
+    var bore = inner.map(function (q) { return at(q, -1); }).concat(inner.slice().reverse().map(function (q) { return at(q, 1); }));
+    var chamber = [[xn, rn + t], [xs, rNz(xs) + t], [xs, rcI], [xe, rcI], [xe, rt * 1.02], [xn, rn * 1.04]];
+    f.shadow((x0 + x1) / 2, y + rc + 16, w * 0.52, 12);
+    /* the pick-up tube from the container comes down into the metering valve over the chamber */
+    var tube = 'M' + pt([xp + r * 0.9, top - r * 2]) + ' V' + (vt - r * 0.2).toFixed(1);
+    el('path', { d: tube, 'class': 'k2-outline-s', 'stroke-width': r * 0.62 + 5, 'stroke-linecap': 'round' }, f.L.back);
+    el('path', { d: tube, fill: 'none', 'class': 'k2-in-tube', 'stroke-width': r * 0.62 }, f.L.back);
+    var tubeFill = el('path', { d: tube, fill: 'none', 'class': 'k2-in-cflow', 'stroke-width': r * 0.3 }, f.L.contents);
+    /* the body cut through: the bore and what flows in it, then the walls hatched over it */
+    el('path', { d: poly(bore, true), 'class': 'k2-in-cavity' }, f.L.hero);
+    var water = el('path', { d: poly(bore, true), fill: f.url('liquid') }, f.L.hero);
+    var conc = el('g', {}, f.L.hero);
+    [-1, 1].forEach(function (s) { el('path', { d: poly(chamber.map(function (q) { return at(q, s); }), true), 'class': 'k2-in-conc' }, conc); });
+    [-1, 1].forEach(function (s) {
+      var wall = outer.map(function (q) { return at(q, s); }).concat(inner.slice().reverse().map(function (q) { return at(q, s); }));
+      el('path', { d: poly(wall, true), 'class': 'k2-outline-s', 'stroke-width': 4, 'stroke-linejoin': 'round' }, f.L.hero);
+      el('path', { d: poly(wall, true), fill: f.band('metal', y - rc, y + rc) }, f.L.hero);
+      el('path', { d: poly(wall, true), fill: f.url('hatch') }, f.L.hero);
+      el('path', { d: poly(wall, true), 'class': 'k2-edge' }, f.L.hero);
+    });
+    /* the port through the top wall, the concentrate in it */
+    el('rect', { x: xp - pw / 2, y: y - R2 - 1, width: pw, height: R2 - rcI + 2, 'class': 'k2-in-cavity' }, f.L.hero);
+    el('rect', { x: xp - pw / 2, y: y - R2 - 1, width: pw, height: R2 - rcI + 2, 'class': 'k2-in-conc' }, conc);
+    f.L.hero.appendChild(conc);
+    /* the metering valve: its body over the port and the knob */
+    var vb = 'M' + pt([xp - r * 1.1, y - R2]) + ' V' + vt.toFixed(1) + ' H' + (xp + r * 1.4).toFixed(1) + ' V' + (y - R2).toFixed(1) + ' Z';
+    el('path', { d: vb, 'class': 'k2-outline-s', 'stroke-width': 5, 'stroke-linejoin': 'round' }, f.L.front);
+    el('path', { d: vb, fill: f.url('metalv') }, f.L.front);
+    el('path', { d: vb, 'class': 'k2-edge' }, f.L.front);
+    el('rect', { x: xp - r * 0.6, y: vt - r * 0.9, width: r * 0.7, height: r * 0.9, rx: 3, 'class': 'k2-outline' }, f.L.front);
+    /* the streams: water streaks fast through the jet, the concentrate down the port and away with the jet */
+    function half(x) {
+      if (x < xn0) { return r; }
+      if (x < xn) { return rNz(x); }
+      if (x < xe) { return lerp(rn, rn * 1.05, (x - xn) / (xe - xn)); }
+      if (x < xt) { return lerp(rn * 1.05, rt, (x - xe) / (xt - xe)); }
+      if (x < xd) { return lerp(rt, r, (x - xt) / (xd - xt)); }
+      return r;
+    }
+    var g = el('g', {}, f.L.fx), seed = 11, ws = [], cs = [];
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    for (i = 0; i < 34; i++) { ws.push({ x: x0 + rnd() * w, o: (rnd() * 2 - 1) * 0.8, c: el('line', { 'stroke-width': (r * 0.12 + rnd() * r * 0.06).toFixed(1), 'class': 'k2-particle-s' }, g) }); }
+    var cpath = [[xp, y - R2], [xp, y - rcI * 0.8], [xe, y - rt * 0.7], [xd, y - r * 0.4], [x1, y - r * 0.3]], clen = [0], L0 = 0;
+    for (i = 1; i < cpath.length; i++) { L0 += Math.hypot(cpath[i][0] - cpath[i - 1][0], cpath[i][1] - cpath[i - 1][1]); clen.push(L0); }
+    function along(s) {
+      for (var j = 1; j < cpath.length; j++) {
+        if (s <= clen[j] || j === cpath.length - 1) { var u = (s - clen[j - 1]) / (clen[j] - clen[j - 1]); return [lerp(cpath[j - 1][0], cpath[j][0], u), lerp(cpath[j - 1][1], cpath[j][1], u)]; }
+      }
+      return cpath[0];
+    }
+    for (i = 0; i < 14; i++) { cs.push({ s: rnd() * L0, c: el('circle', { r: (r * 0.14).toFixed(1), 'class': 'k2-in-cp' }, g) }); }
+    if (p.label) { f.label({ text: p.label, sub: p.sub, at: function () { return [(xt + xb) / 2, y - R1]; }, side: 'upright', dist: 16 }); }
+    var nm = p.names || {};
+    if (nm.nozzle) { f.label({ text: nm.nozzle, at: function () { return [xn - r * 0.3, y + rNz(xn - r * 0.3) + t]; }, side: 'down', dist: 16 }); }
+    if (nm.throat) { f.label({ text: nm.throat, at: function () { return [(xe + xt) / 2, y + rt]; }, side: 'downright', dist: 16 }); }
+    if (nm.port) { f.label({ text: nm.port, at: function () { return [xp - pw / 2, y - R2]; }, side: 'upleft', dist: 16 }); }
+    f.solid(function () { return { x: x0, y: top - r * 2, x2: x1, y2: y + rc + 4 }; });
+    var flow = 0;
+    return {
+      port: { x: x1, y: y, r: r, wall: rc - r, fl: r * 0.3, fw: cw * 0.6 },
+      calc: function () { flow = clamp(f.get(p.flow, 0), 0, 1); f.publish(p.id, 'flow', flow); f.publish(p.id, 'suction', flow); },
+      draw: function (dt) {
+        var v = (p.speed || 160) * flow;
+        water.style.opacity = (0.35 + 0.65 * flow).toFixed(2);
+        conc.style.opacity = flow.toFixed(2); tubeFill.style.opacity = flow.toFixed(2);
+        ws.forEach(function (q) {
+          var k = Math.pow(r / half(q.x), 2), X1 = q.x, Y1 = y + q.o * half(q.x);
+          q.x += v * Math.min(k, 6) * (dt || 0);
+          if (q.x > x1) { q.x -= w; }
+          var tail = Math.min(r * 1.6, v * Math.min(k, 6) * 0.05);
+          q.c.setAttribute('x1', (X1 - tail).toFixed(1)); q.c.setAttribute('y1', Y1.toFixed(1));
+          q.c.setAttribute('x2', X1.toFixed(1)); q.c.setAttribute('y2', Y1.toFixed(1));
+          q.c.style.opacity = flow > 0.01 ? '1' : '0';
+        });
+        cs.forEach(function (q) {
+          q.s = (q.s + v * 0.55 * (dt || 0)) % L0;
+          var c = along(q.s);
+          q.c.setAttribute('cx', c[0].toFixed(1)); q.c.setAttribute('cy', c[1].toFixed(1));
+          q.c.style.opacity = flow > 0.01 ? '1' : '0';
+        });
+      },
+      live: function () { return flow > 0.001 && !f.hidden; }
+    };
+  });
+
   /* tanker_section - a double-hull oil tanker cut through midships: the shell with its bilges and cambered deck, the
      inner hull, the wing and double-bottom ballast tanks with their web frames, girders, stringers and longitudinals cut
      as steel, two cargo tanks either side of the centreline bulkhead with their heating coils, and on deck the cargo

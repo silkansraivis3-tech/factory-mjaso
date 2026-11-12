@@ -358,6 +358,25 @@
     v.applyMatrix4(this.g.matrixWorld);
     this.cur.anchors[name] = [v.x, v.y, v.z];
   };
+  /* a port: where a hose or another part joins this one (its anchor too), dir the way a hose leaves it - in the part's
+     own coordinates; another part's "connect", a hose's "from" / "to" read it as "<id>.<name>" */
+  B.port = function (name, at, dir) {
+    if (!this.cur) { return; }
+    this.anchor(name, at);
+    var dv = new T.Vector3(dir[0], dir[1], dir[2]).transformDirection(this.g.matrixWorld);
+    (this.cur.ports = this.cur.ports || {})[name] = { at: this.cur.anchors[name], dir: [dv.x, dv.y, dv.z] };
+  };
+  /* a point and a direction in the world, in the part's own coordinates (a hose's end on another part's port) */
+  B.local = function (at) {
+    this.g.updateMatrixWorld(true);
+    var v = this.g.worldToLocal(new T.Vector3(at[0], at[1], at[2]));
+    return [v.x, v.y, v.z];
+  };
+  B.localDir = function (dir) {
+    this.g.updateMatrixWorld(true);
+    var m = new T.Matrix4().copy(this.g.matrixWorld).invert(), v = new T.Vector3(dir[0], dir[1], dir[2]).transformDirection(m);
+    return [v.x, v.y, v.z];
+  };
   /* a label the part makes itself (a dimension's value, the names of a hull's spaces); at in the part's coordinates */
   B.label = function (lb) {
     var v = new T.Vector3(lb.at[0], lb.at[1], lb.at[2]), x = {};
@@ -525,10 +544,11 @@
     S.sun.shadow.normalBias = 0.03;
     S.scene.add(S.sun); S.scene.add(S.sun.target);
 
-    var k = new Builder(S), list = spec.parts || [], p, fn, ok = true;
+    var k = new Builder(S), list = spec.parts || [], p, fn, ok = true, order = joinOrder(list, S), oi;
     S.k = k;
-    for (i = 0; i < list.length; i++) {
-      p = deckRelation(list, list[i], S);
+    for (oi = 0; oi < order.length; oi++) {
+      i = order[oi];
+      p = joinRelation(deckRelation(list, list[i], S), S);
       fn = PART[p.type];
       if (!fn) { S.warn('part "' + (p.id || i) + '": the kit has no part type "' + p.type + '"'); continue; }
       k.g = S.root; k.stack = [];
@@ -1265,14 +1285,16 @@
         x0 = Math.min(x0, (pv.x * 0.5 + 0.5) * W); x1 = Math.max(x1, (pv.x * 0.5 + 0.5) * W);
         y0 = Math.min(y0, (-pv.y * 0.5 + 0.5) * H); y1 = Math.max(y1, (-pv.y * 0.5 + 0.5) * H);
       }
-      if ((x1 - x0) * (y1 - y0) < 0.2 * W * H) { obst.push({ x1: x0, y1: y0, x2: x1, y2: y1 }); }
+      if ((x1 - x0) * (y1 - y0) < 0.2 * W * H) { obst.push({ x1: x0, y1: y0, x2: x1, y2: y1, key: p.id, up: p.parent }); }
     });
-    function cover(l) {                                 /* how many parts' pictures the pill sits a third or more on */
-      var p = pillR(l), n = 0, j, o, ix, iy, area = l.pw * l.ph || 1;
+    /* how many parts' pictures the pill sits a third or more on - another part's twice its own: a name on the tap's
+       handwheel reads as the tap's name, wherever its stem goes */
+    function cover(l) {
+      var p = pillR(l), n = 0, j, o, ix, iy, area = l.pw * l.ph || 1, me = S.parts[l.key], up = me && me.parent;
       for (j = 0; j < obst.length; j++) {
         o = obst[j];
         ix = Math.min(p.x2, o.x2) - Math.max(p.x1, o.x1); iy = Math.min(p.y2, o.y2) - Math.max(p.y1, o.y1);
-        if (ix > 0 && iy > 0 && ix * iy > area / 3) { n++; }
+        if (ix > 0 && iy > 0 && ix * iy > area / 3) { n += o.key === l.key || o.key === up || o.up === l.key ? 1 : 2; }
       }
       return n;
     }
@@ -1290,6 +1312,10 @@
         if (hit(stemR(b), p, 2)) { n++; }
         if (hit(dotR(l), bp, 0)) { n++; }
         if (hit(dotR(b), p, 0)) { n++; }
+        /* two stems in one column, or a stem through another label's dot: the lines cross and each name points at the
+           other's part */
+        if (hit(s, stemR(b), 0)) { n++; }
+        if (hit(s, dotR(b), -3) || hit(stemR(b), dotR(l), -3)) { n++; }
       }
       return n;
     }
@@ -2034,7 +2060,8 @@
   /* ======================================================================== PARTS */
   /* The catalogue - strict JSON between the two markers: check_kit3d.py reads it (types, sub-parts, states, where
      "at" is). "subs": the sub-parts a part makes, id "<id>_<sub>" unless the spec names it ("subs": {"inner": "x"});
-     "subs_from": a list in the spec whose items' "id" are sub-parts; "states": "<id>.<state>" numbers 0..1. */
+     "subs_from": a list in the spec whose items' "id" are sub-parts; "states": "<id>.<state>" numbers 0..1;
+     "ports": the "<id>.<port>" another part "connect"s to or a hose runs "from" / "to". */
   var CATALOG = /* @@CATALOG@@ */ {
     "box": {"family": "primitives", "at": "centre", "about": "a box: size [w,h,d]"},
     "cylinder": {"family": "primitives", "at": "centre", "about": "a cylinder: r, len, axis x|y|z"},
@@ -2059,7 +2086,8 @@
     "arrow": {"family": "measures", "at": "origin of a and b", "states": ["on"], "about": "one arrow a -> b, shaft and head (the wind's way)"},
     "flange": {"family": "piping", "at": "on the pipe axis", "about": "a flange pair with a gasket and bolts"},
     "coupling": {"family": "piping", "at": "on the pipe axis", "about": "a dry-disconnect or breakaway coupling"},
-    "hose": {"family": "piping", "at": "the path's origin", "about": "a hose through points"},
+    "hose": {"family": "piping", "at": "the path's origin", "states": ["on"], "ports": ["start", "end"],
+             "about": "a hose through points, or from a port to a port with its couplings; water arrows along it"},
     "vent_mast": {"family": "piping", "at": "base", "about": "a vent mast with hood, flanges, bands and stays"},
     "vessel": {"family": "equipment", "at": "axis centre", "about": "a horizontal vessel on legs (vaporiser, heater)"},
     "cabinet": {"family": "equipment", "at": "base centre", "about": "a cabinet (gas valve unit, panel)"},
@@ -2068,8 +2096,14 @@
     "drip_tray": {"family": "equipment", "at": "base centre", "about": "a stainless drip tray on insulating pads"},
     "esd_button": {"family": "equipment", "at": "base", "about": "an emergency shutdown push button on a yellow post"},
     "foam_extinguisher": {"family": "equipment", "at": "base", "about": "a portable foam extinguisher with hose and nozzle"},
-    "foam_inductor": {"family": "equipment", "at": "centre", "about": "an in-line foam inductor (eductor) with pick-up tube"},
-    "foam_branch_pipe": {"family": "equipment", "at": "handle foot", "about": "a foam branch pipe with handle, air slots and outlet"},
+    "foam_inductor": {"family": "equipment", "at": "the body's middle, on its axis (water along +x)", "subs": ["valve", "pickup", "venturi"],
+                      "states": ["cut", "on"], "ports": ["in", "out", "pickup"],
+                      "about": "an in-line foam inductor (eductor): couplings, metering valve, clear pick-up tube and wand; cut open, the venturi inside"},
+    "foam_branch_pipe": {"family": "equipment", "at": "the inlet coupling's face (barrel along +x)", "subs": ["air", "mesh"], "states": ["on"],
+                         "ports": ["in", "out"], "about": "a foam branch pipe: medium expansion (wide head, mesh) or low expansion; air in, foam out"},
+    "foam_container": {"family": "equipment", "at": "base centre", "ports": ["mouth"],
+                       "about": "a 20-25 litre foam concentrate container: jerrycan or drum, the pick-up wand in its mouth"},
+    "fire_hydrant": {"family": "equipment", "at": "base", "ports": ["out"], "about": "a fire main hydrant: riser, valve with handwheel, outlet with a hose coupling"},
     "detector": {"family": "equipment", "at": "where it is fixed", "states": ["alarm"], "about": "a gas detector head; its lamp lights in alarm"},
     "person": {"family": "equipment", "at": "between the feet", "about": "a person for scale"},
     "air_intake": {"family": "equipment", "at": "centre", "about": "an air intake with louvres"},
@@ -2137,6 +2171,70 @@
     for (var key in p) q[key] = p[key];
     a[1] = deckLevel(h, m[2]) + num(p.gap, 0);
     q.at = a;
+    return q;
+  }
+  /* Parts that join end to end: "<id>.<port>" names another part's port (PORTS, below; a hose's "start" / "end").
+     "connect": "I.out" (or {"to": "I.out", "port": "in"}) puts this part's own port - "in" unless named - on that port,
+     turned round the vertical to face it: a branch pipe on the inductor's outlet, never a gap guessed in metres.
+     A hose's "from" / "to" (and any point of its "path") may name a port: it starts and ends there, leaving straight.
+     The parts named are built first. */
+  var REF = /^([\w-]+)\.(\w+)$/;
+  function joinRefs(p) {
+    var out = [], c = p.connect && typeof p.connect === 'object' ? p.connect.to : p.connect;
+    [c, p.from, p.to, p.pickup].concat(Array.isArray(p.path) ? p.path : []).forEach(function (r) {
+      var m = typeof r === 'string' && REF.exec(r);
+      if (m && m[1] !== p.id) { out.push(m[1]); }
+    });
+    return out;
+  }
+  function joinOrder(list, S) {
+    var ids = {}, done = {}, order = [], left = [], i, pass, moved;
+    list.forEach(function (p, j) { if (p && p.id) { (ids[p.id] = ids[p.id] || []).push(j); } left.push(j); });
+    for (pass = 0; pass < list.length + 1 && left.length; pass++) {
+      moved = false;
+      left = left.filter(function (j) {
+        var ready = joinRefs(list[j] || {}).every(function (id) { return (ids[id] || []).every(function (x) { return done[x]; }); });
+        if (ready) { done[j] = true; order.push(j); moved = true; }
+        return !ready;
+      });
+      if (!moved) { break; }
+    }
+    for (i = 0; i < left.length; i++) {                 /* joined in a ring: built as listed */
+      S.warn('part "' + (list[left[i]].id || left[i]) + '" joins a part that joins it back - built as listed');
+      order.push(left[i]);
+    }
+    return order;
+  }
+  function portOf(S, ref, who) {
+    var m = typeof ref === 'string' && REF.exec(ref), p = m && S.parts[m[1]];
+    if (!m) { return null; }
+    var pt = p && p.ports && p.ports[m[2]];
+    if (!pt) {
+      S.warn('part "' + who + '" joins ' + ref + ' - ' + (p ? 'a ' + p.type + ' has no port "' + m[2] + '" (it has ' +
+        Object.keys(p.ports || {}).join(', ') + ')' : 'there is no part ' + m[1]));
+      return null;
+    }
+    return pt;
+  }
+  function joinRelation(p, S) {
+    var refs = joinRefs(p);
+    if (!refs.length) { return p; }
+    var q = {}, key, who = p.id || p.type;
+    for (key in p) { q[key] = p[key]; }
+    ['from', 'to', 'pickup'].forEach(function (n) { if (typeof p[n] === 'string') { q['_' + n] = portOf(S, p[n], who); } });
+    if (Array.isArray(p.path)) { q._path = p.path.map(function (x) { return typeof x === 'string' ? portOf(S, x, who) : x; }); }
+    var c = p.connect && typeof p.connect === 'object' ? p.connect : { to: p.connect };
+    if (typeof c.to === 'string') {
+      var tp = portOf(S, c.to, who), own = PORTS[p.type] && PORTS[p.type](p)[c.port || 'in'];
+      if (tp && !own) { S.warn('part "' + who + '" connects ' + c.to + ' - a ' + p.type + ' has no port "' + (c.port || 'in') + '"'); }
+      if (tp && own) {
+        /* turn round the vertical so the own port faces the other one, then put it on that port */
+        var want = Math.atan2(tp.dir[2], -tp.dir[0]), have = Math.atan2(-own[1][2], own[1][0]), rot = want - have, s = num(p.scale, 1);
+        var cs = Math.cos(rot), sn = Math.sin(rot), lx = own[0][0] * s, lz = own[0][2] * s;
+        q.rot = rot / DEG;
+        q.at = [tp.at[0] - (lx * cs + lz * sn), tp.at[1] - own[0][1] * s, tp.at[2] - (-lx * sn + lz * cs)];
+      }
+    }
     return q;
   }
   define('hull', function (k, p) {
@@ -2708,16 +2806,68 @@
     k.pop();
   });
 
-  /* a hose through points (a bunker hose over the side): r (0.13); an end flange */
+  /* a hose through points (a bunker hose over the side, a fire hose): r (0.13); path in the part's coordinates.
+     "from" / "to" (or a point of "path"): "<id>.<port>" - the hose starts / ends on that port, leaving it straight, with a
+     hose coupling there (ends "coupling"; a free end has a flange, or "ends": "coupling"); path is then only the bends.
+     Ports "start" and "end". State "<id>.on" (when the spec names it): arrows run along its top, the way it flows (color,
+     water blue) - outside the hose, where the class sees them */
   define('hose', function (k, p) {
-    var pts = p.path || [[0, 0, 0], [0, 0, 1], [0, -1, 1.3]], r = num(p.r, 0.13);
-    k.tube(pts, r, M(k, p, 'rubber'), { seg: 14 });
-    var a = pts[pts.length - 1], b = pts[pts.length - 2], dv = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-    var L0 = Math.sqrt(dv[0] * dv[0] + dv[1] * dv[1] + dv[2] * dv[2]) || 1, e = 0.03 / L0;
-    k.seg([a[0] - dv[0] * e, a[1] - dv[1] * e, a[2] - dv[2] * e], [a[0] + dv[0] * e, a[1] + dv[1] * e, a[2] + dv[2] * e], r * 1.55, k.mat('flange'), { seg: 28 });
-    var m = pts[Math.floor(pts.length / 2)];
-    k.anchor('label', [m[0], m[1] + r, m[2]]);
+    var r = num(p.r, 0.13), lead = Math.max(r * 3, 0.08), pts = [], i, joined = false;
+    function add(x) {
+      if (x && !Array.isArray(x) && x.at) { joined = true; return { at: k.local(x.at), dir: k.localDir(x.dir) }; }
+      return Array.isArray(x) && x.length === 3 ? { at: x } : null;
+    }
+    var mid = (p._path || p.path || (p.from || p.to ? [] : [[0, 0, 0], [0, 0, 1], [0, -1, 1.3]])).map(add).filter(Boolean);
+    if (p._from) { mid.unshift(add(p._from)); }
+    if (p._to) { mid.push(add(p._to)); }
+    mid.forEach(function (e, j) {
+      var a = e.at, d = e.dir, off = d ? [a[0] + d[0] * lead, a[1] + d[1] * lead, a[2] + d[2] * lead] : null;
+      if (d && j === mid.length - 1 && j > 0) { pts.push(off); }
+      pts.push(a);
+      if (d && j === 0) { pts.push(off); }
+    });
+    if (pts.length < 2) { pts = [[0, 0, 0], [0, 0, 1]]; }
+    var curve = k.tube(pts, r, M(k, p, 'rubber'), { seg: 14 }).geometry.parameters.path;
+    var a = pts[pts.length - 1], b = pts[pts.length - 2], dv = [a[0] - b[0], a[1] - b[1], a[2] - b[2]], s0 = [pts[0][0] - pts[1][0], pts[0][1] - pts[1][1], pts[0][2] - pts[1][2]];
+    if (joined || p.ends === 'coupling') {
+      couplingAt(k, pts[0], s0, r * 1.45, alloy(k));
+      couplingAt(k, a, dv, r * 1.45, alloy(k));
+    } else {
+      var L0 = Math.sqrt(dv[0] * dv[0] + dv[1] * dv[1] + dv[2] * dv[2]) || 1, e = 0.03 / L0;
+      k.seg([a[0] - dv[0] * e, a[1] - dv[1] * e, a[2] - dv[2] * e], [a[0] + dv[0] * e, a[1] + dv[1] * e, a[2] + dv[2] * e], r * 1.55, k.mat('flange'), { seg: 28 });
+    }
+    k.port('start', pts[0], unit(s0));
+    k.port('end', a, unit(dv));
+    var m = curve.getPointAt(0.5);
+    k.anchor('label', [m.x, m.y + r, m.z]);
+    if (JSON.stringify(k.S.spec.steps || []).concat(JSON.stringify(k.S.spec.controls || []), JSON.stringify(k.S.spec.states || {}))
+        .indexOf('"' + k.cur.id + '.on"') >= 0) {
+      /* the arrows ride on the hose's top: each point lifted by the hose's radius, square to its run */
+      var n = Math.max(12, Math.round(curve.getLength() / (r * 2))), top = [], up = new T.Vector3(0, 1, 0);
+      for (i = 0; i <= n; i++) {
+        var u = i / n, P0 = curve.getPointAt(u), tg = curve.getTangentAt(u), nv = up.clone().addScaledVector(tg, -tg.dot(up));
+        if (nv.lengthSq() < 1e-6) { nv.set(0, 0, 1); }
+        nv.normalize().multiplyScalar(r * 1.25);
+        top.push([P0.x + nv.x, P0.y + nv.y, P0.z + nv.z]);
+      }
+      flowArrows(k, top, k.cur.id, { color: p.color || WATER, r: r * 0.6, spacing: Math.max(r * 6, 0.12), speed: num(p.speed, 0.5) });
+    }
   });
+
+  function unit(v) { var L = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) || 1; return [v[0] / L, v[1] / L, v[2] / L]; }
+  /* light alloy: hose couplings, an inductor's body */
+  function alloy(k) { return k.mat({ color: '#c2cad1', rough: 0.32, metal: 0.75 }); }
+  /* a hose coupling (instantaneous, Storz-like) on a joint at e, its face square to dir (pointing away from the hose); rc its
+     radius: the body, a collar at the face and two lugs */
+  function couplingAt(k, e, dir, rc, m) {
+    var d = unit(dir), len = rc * 1.15, b = [e[0] - d[0] * len, e[1] - d[1] * len, e[2] - d[2] * len];
+    var f = [e[0] - d[0] * len * 0.3, e[1] - d[1] * len * 0.3, e[2] - d[2] * len * 0.3];
+    k.seg(b, e, rc, m, { seg: 24 });
+    k.seg(f, e, rc * 1.12, m, { seg: 24 });
+    var u = Math.abs(d[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0], s = [d[1] * u[2] - d[2] * u[1], d[2] * u[0] - d[0] * u[2], d[0] * u[1] - d[1] * u[0]];
+    s = unit(s);
+    [-1, 1].forEach(function (sg) { k.ball(rc * 0.3, k.mat('steel_dark'), f[0] + s[0] * rc * 1.1 * sg, f[1] + s[1] * rc * 1.1 * sg, f[2] + s[2] * rc * 1.1 * sg, { seg: 10 }); });
+  }
 
   /* a vent mast (IGF M07, M15): the mast, a hood at the outlet, flanges, yellow bands, stays. at = its foot; h (height
      above the foot), r (0.2) */
@@ -2839,32 +2989,310 @@
     k.anchor('label', [0, h + r * 1.4, 0]);
   });
 
-  /* an in-line foam inductor (eductor): the water passes through its body, the foam concentrate is drawn in by the pick-up
-     tube and the metering knob; at = the middle of the body, along x */
+  /* -------------------------------------------------------------------- portable foam equipment
+     The parts join end to end by their ports (PORTS below): a fire hose from the hydrant's "out" to the inductor's "in",
+     the branch pipe "connect"ed to the inductor's "out", the inductor's pick-up tube in the container's "mouth" ("pickup").
+     Water runs along +x through the inductor and the branch pipe. */
+  var PORTS = {};
+  function lathe(k, prof, m, o) {
+    var g = new T.LatheGeometry(prof.map(function (q) { return new T.Vector2(q[1], q[0]); }), 36);
+    g.rotateZ(-Math.PI / 2);
+    return k.add(g, m, 0, 0, 0, o);
+  }
+  function shapeXY(pts) { var s = new T.Shape(); s.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(function (q) { s.lineTo(q[0], q[1]); }); return s; }
+  function outline(pts, y) {
+    var out = [], i, a, b;
+    for (i = 0; i < pts.length; i++) { a = pts[i]; b = pts[(i + 1) % pts.length]; out.push(a[0], a[1] * y, 0.002, b[0], b[1] * y, 0.002); }
+    return out;
+  }
+
+  /* the inductor's shape along x (len 0.42, r the bore 0.032): couplings, the inlet bore, the jet nozzle converging in the
+     suction chamber, the throat, the diffuser; xp the concentrate port on top of the chamber, the metering valve over it
+     (yv) and its hose tail pointing back (-z, zTail) */
+  function inductorGeo(p) {
+    var L = num(p.len, 0.42), r = num(p.r, 0.032), x0 = -L / 2;
+    function X(u) { return x0 + u * L; }
+    var g = { L: L, r: r, x0: x0, x1: L / 2, rc: r * 1.6, R1: r * 1.38, R2: r * 1.8, rn: r * 0.42, rt: r * 0.58, rcI: r * 1.25,
+              t: r * 0.22, xn0: X(0.22), xs: X(0.32), xn: X(0.47), xe: X(0.56), xt: X(0.68), xd: X(0.86) };
+    g.xa = x0 + g.rc * 1.15; g.xb = g.x1 - g.rc * 1.15; g.xp = g.xs + (g.xe - g.xs) * 0.3;
+    g.yv = g.R2 + r * 1.1; g.zTail = -r * 0.9 - r * 1.6;
+    return g;
+  }
+  PORTS.foam_inductor = function (p) {
+    var g = inductorGeo(p);
+    return { 'in': [[g.x0, 0, 0], [-1, 0, 0]], out: [[g.x1, 0, 0], [1, 0, 0]], pickup: [[g.xp, g.yv, g.zTail], [0, 0, -1]] };
+  };
+  /* an in-line foam inductor (eductor): light-alloy body with hose couplings at both ends (water in at -x, out at +x), the
+     metering valve on top (its dial faces up, the hose tail back to -z) and the pick-up tube - clear, the concentrate seen rising in it - with its
+     rigid pick-up wand. at = the middle of the body, on its axis. len (0.42), r (bore, 0.032); pickup: "<id>.mouth" (a
+     foam_container's) or [x, y, z] - where the wand goes in. Sub-parts "valve" (metering valve), "pickup" (tube and wand),
+     "venturi" (the inside - jet nozzle, throat, diffuser and the concentrate port; anchors "nozzle", "throat", "port").
+     States: "<id>.cut" opens the near half (the venturi seen in section); "<id>.on" - water through the jet, the
+     concentrate drawn up the tube and in at the throat. Ports "in", "out", "pickup". */
   define('foam_inductor', function (k, p) {
-    var len = num(p.len, 0.4), r = num(p.r, 0.04), brass = k.mat({ color: '#b8923a', rough: 0.4, metal: 0.8 }), steel = k.mat('steel');
-    k.cyl('x', r, len * 0.5, brass, 0, 0, 0, { seg: 20 });
-    k.cyl('x', r * 1.5, len * 0.2, brass, -len * 0.35, 0, 0, { seg: 20 });
-    k.cyl('x', r * 1.25, len * 0.18, brass, len * 0.34, 0, 0, { seg: 20 });
-    k.cyl('x', r * 1.7, 0.02, steel, -len * 0.5, 0, 0, { seg: 20 });
-    k.cyl('x', r * 1.7, 0.02, steel, len * 0.5, 0, 0, { seg: 20 });
-    k.cyl('y', r * 0.5, r * 2.2, brass, 0, -r * 1.6, 0, { seg: 12 });
-    k.cyl('y', r * 1.1, 0.03, k.mat('steel_dark'), 0, r * 2.2, 0, { seg: 16 });
-    k.run([[0, -r * 2.6, 0], [0, -r * 4.5, r * 1.5], [0, -r * 8, r * 3]], 0.016, k.mat('rubber'));
-    k.anchor('label', [0, r * 3.2, 0]);
+    var g = inductorGeo(p), self = k.cur, id = self.id, r = g.r, i;
+    var pl = k.clip([0, 0, -1], g.R2 + 0.2), clip = [pl];
+    var body = M(k, p, null, { clip: clip }) || k.mat({ color: '#c2cad1', rough: 0.32, metal: 0.75 }, { clip: clip });
+    var bore = k.mat({ color: '#6c7782', rough: 0.55, metal: 0.4 }, { clip: clip });
+    function rNz(x) { return r + (g.rn - r) * (x - g.xn0) / (g.xn - g.xn0); }
+    var outer = [[g.xa, g.R1], [g.xs - r * 0.4, g.R1], [g.xs, g.R2], [g.xe, g.R2], [g.xe + r * 0.4, g.R1], [g.xb, g.R1 * 1.06]];
+    var inner = [[g.x0, r], [g.xn0, r], [g.xn, g.rn], [g.xn, g.rn + g.t], [g.xs, rNz(g.xs) + g.t], [g.xs, g.rcI], [g.xe, g.rcI],
+                 [g.xe, g.rt], [g.xt, g.rt], [g.xd, r], [g.x1, r]];
+    lathe(k, outer, body);
+    lathe(k, inner, bore);
+    k.add(new T.RingGeometry(r, g.R1, 36), body, g.xa, 0, 0, { ry: Math.PI / 2 });
+    k.add(new T.RingGeometry(r, g.R1 * 1.06, 36), body, g.xb, 0, 0, { ry: Math.PI / 2 });
+    couplingAt(k, [g.x0, 0, 0], [-1, 0, 0], g.rc, body);
+    couplingAt(k, [g.x1, 0, 0], [1, 0, 0], g.rc, body);
+    var ports = PORTS.foam_inductor(p);
+    each(ports, function (q, n) { k.port(n, q[0], q[1]); });
+    k.anchor('label', [(g.xt + g.xb) / 2, g.R1, 0]);
+
+    /* the metering valve: a boss on the chamber, the valve body, its dial on top with the knob, the hose tail to the back */
+    k.sub(subId(k, p, 'valve'), { pick: true });
+    var vm = k.mat({ color: '#aeb7bf', rough: 0.35, metal: 0.7 }), dark = k.mat('steel_black'), y0 = g.R2 * 0.7, y1 = g.yv - r * 0.6;
+    k.cyl('y', r * 0.5, y1 - y0, vm, g.xp, (y0 + y1) / 2, 0, { seg: 16 });
+    k.cyl('y', r * 0.9, r * 1.2, vm, g.xp, g.yv, 0, { seg: 24 });
+    k.cyl('y', r * 0.82, r * 0.12, k.mat({ color: '#eef1f3', rough: 0.5, metal: 0 }), g.xp, g.yv + r * 0.62, 0, { seg: 24 });
+    k.box(r * 1.35, r * 0.3, r * 0.3, dark, g.xp, g.yv + r * 0.8, 0, { ry: 0.5 });
+    for (i = 0; i < 5; i++) { k.box(r * 0.05, r * 0.05, r * 0.22, dark, g.xp + Math.sin(-1 + i * 0.5) * r * 0.62, g.yv + r * 0.69, Math.cos(-1 + i * 0.5) * r * 0.62, { ry: -1 + i * 0.5 }); }
+    k.cyl('z', r * 0.3, -g.zTail - r * 0.6, vm, g.xp, g.yv, (g.zTail - r * 0.6) / 2, { seg: 12 });
+    k.cyl('z', r * 0.38, r * 0.18, vm, g.xp, g.yv, g.zTail + r * 0.4, { seg: 12 });
+    k.anchor('label', [g.xp, g.yv + r * 0.7, 0]);
+    k.cur = self;
+
+    /* the pick-up tube: clear, from the hose tail to the top of the rigid wand that stands in the container's mouth */
+    k.sub(subId(k, p, 'pickup'), { pick: true });
+    var tgt = p._pickup ? { at: k.local(p._pickup.at), dir: k.localDir(p._pickup.dir) } :
+      (Array.isArray(p.pickup) && p.pickup.length === 3 ? { at: k.local(p.pickup), dir: [0, 1, 0] } : { at: [g.xp + 0.2, g.yTail - 0.45, 0.45], dir: [0, 1, 0] });
+    var up = unit(tgt.dir), T0 = tgt.at, W = [T0[0] + up[0] * 0.16, T0[1] + up[1] * 0.16, T0[2] + up[2] * 0.16];
+    var P0 = ports.pickup[0], P1 = [P0[0], P0[1], P0[2] - 0.08], Pn = [W[0] + up[0] * 0.08, W[1] + up[1] * 0.08, W[2] + up[2] * 0.08];
+    var dist = Math.sqrt(Math.pow(Pn[0] - P1[0], 2) + Math.pow(Pn[1] - P1[1], 2) + Math.pow(Pn[2] - P1[2], 2));
+    var Pm = [(P1[0] + Pn[0]) / 2, Math.min(P1[1], Pn[1]) - 0.12 * dist, (P1[2] + Pn[2]) / 2];
+    var tr = r * 0.34, path = [P0, P1, Pm, Pn, W];
+    var clear = k.mat({ color: '#dfeaf0', rough: 0.15, metal: 0 }, { opacity: 0.45 });
+    var tube = k.tube(path, tr, clear, { seg: 12 }), curve = tube.geometry.parameters.path;
+    var core = k.add(new T.TubeGeometry(curve, Math.max(24, path.length * 12), tr * 0.62, 8, false),
+      k.mat({ color: CONCENTRATE, rough: 0.3, metal: 0 }), 0, 0, 0, { keep: true, cast: false });
+    var coreN = core.geometry.index.count, coreSeg = core.geometry.parameters.tubularSegments;
+    var al = alloy(k);
+    k.seg([T0[0] - up[0] * 0.3, T0[1] - up[1] * 0.3, T0[2] - up[2] * 0.3], W, r * 0.36, al, { seg: 12 });
+    k.seg([W[0] - up[0] * 0.03, W[1] - up[1] * 0.03, W[2] - up[2] * 0.03], [W[0] + up[0] * 0.03, W[1] + up[1] * 0.03, W[2] + up[2] * 0.03], r * 0.46, al, { seg: 12 });
+    var mt = curve.getPointAt(0.3);
+    k.anchor('label', [mt.x, mt.y + tr, mt.z]);
+    function fill(f) {
+      var s = Math.round((1 - clamp(f, 0, 1)) * coreSeg) * (coreN / coreSeg);
+      core.geometry.setDrawRange(s, coreN - s);
+      core.visible = f > 0.01;
+    }
+    fill(0);
+    k.cur = self;
+
+    /* the inside: the wall seen in section where the near half is cut away, the water and the concentrate in it */
+    k.sub(subId(k, p, 'venturi'), { pick: true, need: id + '.cut > 0.5' });
+    var face = k.mat({ color: '#e6eaed', rough: 0.6, metal: 0.1 }, { double: true });
+    var sec = outer.slice();
+    sec.unshift([g.x0, g.rc], [g.xa, g.rc]); sec.push([g.xb, g.rc], [g.x1, g.rc]);
+    var wall = sec.concat(inner.slice().reverse()), cut = [];
+    [1, -1].forEach(function (s) {
+      var sg = new T.ShapeGeometry(shapeXY(wall.map(function (q) { return [q[0], q[1] * s]; })));
+      cut.push(k.add(sg, face, 0, 0, 0.001, { keep: true, cast: false }));
+      cut.push(k.lines(outline(wall, s), '#3f4a54'));
+    });
+    var pw = r * 0.42, cm = k.mat({ color: CONCENTRATE, rough: 0.4, metal: 0 }, { double: true });
+    cut.push(k.box(pw, g.R2 - g.rcI, 0.002, cm, g.xp, (g.R2 + g.rcI) / 2, 0.003, { keep: true, cast: false }));
+    /* while it runs: the water in the bore and the jet, the concentrate round the jet in the chamber (flat, at the cut) */
+    var wm = k.mat({ color: '#a9c8f2', rough: 0.4, metal: 0 }, { double: true });
+    var jet = [[g.x0, r], [g.xn0, r], [g.xn, g.rn], [g.xe, g.rn * 1.05], [g.xt, g.rt], [g.xd, r], [g.x1, r]];
+    var water = jet.concat(jet.slice().reverse().map(function (q) { return [q[0], -q[1]]; }));
+    var chamber = [[g.xn, g.rn + g.t], [g.xs, rNz(g.xs) + g.t], [g.xs, g.rcI], [g.xe, g.rcI], [g.xe, g.rt], [g.xt, g.rt], [g.xe, g.rn * 1.05]];
+    var run = [k.add(new T.ShapeGeometry(shapeXY(water)), wm, 0, 0, 0.0005, { keep: true, cast: false })];
+    [1, -1].forEach(function (s) {
+      run.push(k.add(new T.ShapeGeometry(shapeXY(chamber.map(function (q) { return [q[0], q[1] * s]; }))), cm, 0, 0, 0.0007, { keep: true, cast: false }));
+    });
+    k.anchor('nozzle', [g.xn - r * 0.5, -(rNz(g.xn - r * 0.5) + g.t), 0]);
+    k.anchor('throat', [(g.xe + g.xt) / 2, g.rt, 0]);
+    k.anchor('port', [g.xp, g.rcI, 0]);
+    k.anchor('label', [(g.xe + g.xt) / 2, g.rt, 0]);
+    k.cur = self;
+    flowArrows(k, [[g.x0 + 0.01, 0, 0.004], [g.x1 - 0.01, 0, 0.004]], id, { color: WATER, r: r * 0.22, spacing: r * 2.2, speed: 0.35 });
+    flowArrows(k, [[g.xp, g.R2, 0.004], [g.xp, g.rcI * 0.9, 0.004], [g.xe, g.rt * 0.75, 0.004], [g.xd, r * 0.5, 0.004]], id,
+      { color: CONCENTRATE, r: r * 0.2, spacing: r * 1.6, speed: 0.2 });
+    flowArrows(k, [[g.xp, g.rcI * 0.9, 0.004], [g.xs + r * 0.1, (g.rcI + rNz(g.xs) + g.t) / 2, 0.004]], id,
+      { color: CONCENTRATE, r: r * 0.16, spacing: r * 1.4, speed: 0.12 });
+    k.state(id + '.cut', p.cut ? 1 : 0, function (v) {
+      pl.set((g.R2 + 0.2) * (1 - v));
+      cut.forEach(function (m) { m.visible = v > 0.95; });
+    });
+    k.state(id + '.on', 0, function (v) { run.forEach(function (m) { m.visible = v > 0.5; }); });
+    k.anim(id, function (t, on) { fill(on ? (reduce ? 1 : t / 1.4) : 0); return on && !reduce && t < 1.5; });
   });
 
-  /* a foam branch pipe (foam-making nozzle): a handle, the barrel with air-intake slots and the open outlet; at = the
-     handle's foot; the barrel points to +z */
+  /* the branch pipe's shape along x: the coupling at x = 0, the nozzle, the wide head with the mesh at its mouth */
+  function branchGeo(p) {
+    var low = p.kind === 'low', rc = 0.051;
+    if (low) { var L0 = num(p.len, 0.85), r0 = num(p.r, 0.032); return { low: true, rc: rc, L: L0, r: r0, x1: L0 }; }
+    var R = num(p.r, 0.13), Lh = num(p.len, 0.75) - 0.3;
+    return { low: false, rc: rc, R: R, xn: 0.2, xh0: 0.3, x1: 0.3 + Lh };
+  }
+  PORTS.foam_branch_pipe = function (p) {
+    var g = branchGeo(p);
+    return { 'in': [[0, 0, 0], [-1, 0, 0]], out: [[g.x1, 0, 0], [1, 0, 0]] };
+  };
+  /* a foam branch pipe. kind "medium" (default): medium-expansion - the inlet coupling, the nozzle with its grip, the air
+     inlets round the nozzle (open windows between the struts), the wide head (r 0.13, len 0.75 in all) and the fine
+     stainless mesh across its mouth, a carrying handle on top. kind "low": the low-expansion branch - a long barrel (r
+     0.032, len 0.85) with air holes behind the nozzle. at = the inlet coupling's face, the barrel to +x; "connect":
+     "<inductor>.out" puts it on the inductor's outlet. Sub-parts "air" (the air inlets) and "mesh" (medium). State
+     "<id>.on": air drawn in, foam out of the mouth. Ports "in", "out". */
   define('foam_branch_pipe', function (k, p) {
-    var len = num(p.len, 0.9), r = num(p.r, 0.045), m = M(k, p, 'red'), dark = k.mat('steel_dark'), steel = k.mat('steel'), i;
-    k.cyl('z', r, len, m, 0, 0.25, len / 2, { seg: 20 });
-    k.cyl('z', r * 1.7, len * 0.22, steel, 0, 0.25, len * 0.89, { seg: 20 });
-    k.cyl('z', r * 1.15, 0.08, dark, 0, 0.25, 0.04, { seg: 16 });
-    k.cyl('y', 0.018, 0.25, dark, 0, 0.125, len * 0.35, { seg: 10 });
-    for (i = 0; i < 3; i++) { k.box(r * 2.1, r * 0.5, 0.06, dark, 0, 0.25 + r * 0.9, len * (0.45 + i * 0.1)); }
-    k.cyl('z', r * 0.7, 0.08, dark, 0, 0.25, -0.02, { seg: 12 });
-    k.anchor('label', [0, 0.25 + r * 2.5, len * 0.5]);
+    var g = branchGeo(p), self = k.cur, id = self.id, al = alloy(k), m = M(k, p, 'red', { double: true }), dark = k.mat('steel_dark');
+    var grip = k.mat('rubber'), i, a;
+    couplingAt(k, [0, 0, 0], [-1, 0, 0], g.rc, al);
+    var cl = g.rc * 1.15;
+    if (g.low) {
+      lathe(k, [[cl, g.r * 1.15], [0.2, g.r * 1.1], [0.24, g.r], [g.L - 0.12, g.r], [g.L, g.r * 1.35]], m);
+      k.add(new T.RingGeometry(g.r * 0.8, g.r * 1.35, 32), dark, g.L, 0, 0, { ry: Math.PI / 2 });
+      k.add(new T.CircleGeometry(g.r * 0.8, 24), k.mat('steel_black', { double: true }), g.L - 0.01, 0, 0, { ry: Math.PI / 2 });
+      k.box(0.03, 0.11, 0.032, grip, 0.12, -0.08, 0, { rz: 0.25 });
+      k.anchor('label', [g.L * 0.6, g.r, 0]);
+      k.sub(subId(k, p, 'air'), { pick: true });
+      var holes = [];
+      for (i = 0; i < 6; i++) { a = i * Math.PI / 3; holes.push({ at: [0.28, Math.cos(a) * g.r, Math.sin(a) * g.r], rx: a }); }
+      k.many(new T.BoxGeometry(0.05, 0.004, g.r * 0.7), k.mat('steel_black'), holes);
+      k.anchor('label', [0.28, g.r, 0]);
+      k.cur = self;
+      foamOut(k, id, g.L, g.r * 1.2, 0.5);
+      flowArrows(k, [[0.24, g.r * 3.2, 0], [0.28, g.r * 1.15, 0]], id, { color: AIR, r: 0.012, spacing: 0.04, speed: 0.08 });
+    } else {
+      var R = g.R;
+      lathe(k, [[cl, 0.036], [0.15, 0.034], [g.xn, 0.026]], al);
+      k.box(0.03, 0.12, 0.034, grip, 0.11, -0.085, 0, { rz: 0.28 });
+      k.seg([0.07, -0.035, 0], [0.16, -0.035, 0], 0.008, al, { seg: 8 });
+      k.cyl('x', R, g.x1 - g.xh0, m, (g.xh0 + g.x1) / 2, 0, 0, { open: true, seg: 40 });
+      k.ring('x', R, 0.008, al, g.xh0, 0, 0, { seg: 40 });
+      k.ring('x', R, 0.01, al, g.x1, 0, 0, { seg: 40 });
+      k.seg([0.42, R, 0], [0.42, R + 0.06, 0], 0.008, dark, { seg: 8 });
+      k.seg([0.62, R, 0], [0.62, R + 0.06, 0], 0.008, dark, { seg: 8 });
+      k.seg([0.4, R + 0.06, 0], [0.64, R + 0.06, 0], 0.012, grip, { seg: 10 });
+      k.anchor('label', [(g.xh0 + g.x1) / 2, R, 0]);
+      /* the air inlets: six struts carry the head on the nozzle; the windows between them are open */
+      k.sub(subId(k, p, 'air'), { pick: true });
+      for (i = 0; i < 6; i++) {
+        a = i * Math.PI / 3 + Math.PI / 6;
+        k.seg([g.xn - 0.04, Math.cos(a) * 0.034, Math.sin(a) * 0.034], [g.xh0, Math.cos(a) * R, Math.sin(a) * R], 0.006, al, { seg: 6 });
+      }
+      k.ring('x', 0.036, 0.006, al, g.xn - 0.04, 0, 0, { seg: 20 });
+      k.anchor('label', [(g.xn + g.xh0) / 2 - 0.02, R * 0.55, R * 0.25]);
+      k.cur = self;
+      /* the mesh: a fine stainless screen across the mouth - a see-through disc and its wires */
+      k.sub(subId(k, p, 'mesh'), { pick: true });
+      k.add(new T.CircleGeometry(R, 40), k.mat({ color: '#9aa4ad', rough: 0.5, metal: 0.6 }, { opacity: 0.45 }), g.x1 - 0.006, 0, 0, { ry: Math.PI / 2 });
+      var wires = [], st = R / 9, c;
+      for (c = -R + st; c < R - 1e-6; c += st) {
+        var h = Math.sqrt(R * R - c * c);
+        wires.push(g.x1 - 0.005, c, -h, g.x1 - 0.005, c, h, g.x1 - 0.005, -h, c, g.x1 - 0.005, h, c);
+      }
+      k.lines(wires, '#59646e', { opacity: 0.85 });
+      k.anchor('label', [g.x1, R * 0.55, R * 0.3]);
+      k.cur = self;
+      foamOut(k, id, g.x1, R, 1);
+      [0, 1].forEach(function (j) {
+        var s = j ? 1 : -1;
+        flowArrows(k, [[g.xn - 0.07, 0, s * R * 1.25], [(g.xn + g.xh0) / 2, 0, s * R * 0.4]], id, { color: AIR, r: 0.014, spacing: 0.045, speed: 0.09 });
+      });
+      flowArrows(k, [[g.xn - 0.07, R * 1.25, 0], [(g.xn + g.xh0) / 2, R * 0.4, 0]], id, { color: AIR, r: 0.014, spacing: 0.045, speed: 0.09 });
+    }
+    each(PORTS.foam_branch_pipe(p), function (q, n) { k.port(n, q[0], q[1]); });
+  });
+  /* foam out of a mouth at x (radius R) while "<id>.on": a white mass of bubbles that leaves the mesh, swells and droops */
+  function foamOut(k, id, x, R, scale) {
+    var n = 90, rnd = seeded(hashId(id) + 5), seeds = [], i;
+    for (i = 0; i < n; i++) { var a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * R * 0.85; seeds.push([Math.cos(a) * d, Math.sin(a) * d, i / n, 0.8 + rnd() * 0.5]); }
+    var g = new T.SphereGeometry(R * 0.2, 10, 7), fm = k.mat({ color: '#f4f7fa', rough: 0.9, metal: 0 });
+    var im = new T.InstancedMesh(k.track(g), fm, n), dm = new T.Object3D(), reach = 0.6 * scale;
+    im.userData.noPick = true; im.visible = false; im.castShadow = true;
+    k.g.add(im); k.S.disposeLater.push(im);
+    function place(t) {
+      for (var j = 0; j < n; j++) {
+        var u = (seeds[j][2] + t * 0.3) % 1, sp = 1 + u * 0.7, s = (0.9 + u * 1.4) * seeds[j][3];
+        dm.position.set(x + R * 0.12 + u * reach, seeds[j][0] * sp - u * u * 0.3 * scale, seeds[j][1] * sp);
+        dm.scale.set(s, s * 0.85, s);
+        dm.updateMatrix();
+        im.setMatrixAt(j, dm.matrix);
+      }
+      im.instanceMatrix.needsUpdate = true;
+    }
+    place(0);
+    k.state(id + '.on', 0, function (v) { im.visible = v > 0.5; });
+    k.anim(id, function (t, on) { im.visible = on; if (on) { place(reduce ? 0 : t); } return on && !reduce; });
+  }
+
+  /* the foam concentrate container's size: jerrycan [w 0.3, h 0.4, d 0.2]; drum r 0.15, h 0.42 */
+  function containerGeo(p) {
+    var s = p.size || [], drum = p.kind === 'drum';
+    var W = num(s[0], drum ? 0.3 : 0.3), H = num(s[1], drum ? 0.42 : 0.4), D = num(s[2], drum ? 0.3 : 0.2);
+    return { drum: drum, W: W, H: H, D: D, mouth: [drum ? W * 0.28 : W * 0.27, H + 0.035, 0] };
+  }
+  PORTS.foam_container = function (p) { return { mouth: [containerGeo(p).mouth, [0, 1, 0]] }; };
+  /* a foam concentrate container (20-25 litres): kind "jerrycan" (default) - a plastic can with its top handle and
+     screw neck, a label on its front (+z); kind "drum" - a plastic drum with rolling rings. size [w, h, d]; at = its base
+     centre on the deck; open: true (or an inductor's "pickup" in its mouth) - the cap off. Port "mouth". */
+  define('foam_container', function (k, p) {
+    var g = containerGeo(p), m = M(k, p, null) || k.mat({ color: '#e7e1cf', rough: 0.62, metal: 0 }), W = g.W, H = g.H, D = g.D;
+    var me = (k.cur && k.cur.id) || '', open = p.open === true || (k.S.spec.parts || []).some(function (q) { return q && q.pickup === me + '.mouth'; });
+    var paper = k.mat({ color: '#f6f5f0', rough: 0.7, metal: 0 }), band = k.mat('red'), ink = k.mat('steel_black'), cap = k.mat({ color: '#3a4652', rough: 0.5, metal: 0.1 });
+    if (g.drum) {
+      var R = W / 2;
+      k.cyl('y', R, H, m, 0, H / 2, 0, { seg: 40 });
+      k.ring('y', R + 0.002, 0.008, m, 0, H * 0.33, 0, { seg: 40 }); k.ring('y', R + 0.002, 0.008, m, 0, H * 0.66, 0, { seg: 40 });
+      k.ring('y', R - 0.01, 0.01, m, 0, H, 0, { seg: 40 });
+      k.cyl('y', R + 0.003, H * 0.22, paper, 0, H * 0.5, 0, { open: true, seg: 24, t0: -0.85, tl: 1.7 });
+      k.cyl('y', R + 0.004, H * 0.05, band, 0, H * 0.57, 0, { open: true, seg: 24, t0: -0.85, tl: 1.7 });
+      k.cyl('y', 0.02, 0.012, cap, -R * 0.55, H + 0.006, 0, { seg: 16 });
+      k.anchor('label', [-R * 0.3, H, R * 0.3]);
+    } else {
+      var b = 0.014, rr = 0.03, w = W / 2 - b, sh = new T.Shape();
+      sh.moveTo(-w + rr, b); sh.lineTo(w - rr, b); sh.quadraticCurveTo(w, b, w, b + rr); sh.lineTo(w, H - b - rr);
+      sh.quadraticCurveTo(w, H - b, w - rr, H - b); sh.lineTo(-w + rr, H - b); sh.quadraticCurveTo(-w, H - b, -w, H - b - rr);
+      sh.lineTo(-w, b + rr); sh.quadraticCurveTo(-w, b, -w + rr, b);
+      var eg = new T.ExtrudeGeometry(sh, { depth: D - 2 * b, bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 2, curveSegments: 6 });
+      eg.translate(0, 0, -(D - 2 * b) / 2);
+      k.add(eg, m, 0, 0, 0);
+      k.box(W * 0.7, H * 0.42, 0.003, paper, 0, H * 0.45, D / 2 + 0.0015);
+      k.box(W * 0.7, H * 0.08, 0.004, band, 0, H * 0.58, D / 2 + 0.002);
+      k.box(W * 0.46, 0.012, 0.004, ink, 0, H * 0.42, D / 2 + 0.002);
+      k.box(W * 0.32, 0.01, 0.004, ink, 0, H * 0.36, D / 2 + 0.002);
+      k.seg([-W * 0.38, H - 0.01, 0], [-W * 0.38, H + 0.05, 0], 0.012, m, { seg: 10 });
+      k.seg([-W * 0.02, H - 0.01, 0], [-W * 0.02, H + 0.05, 0], 0.012, m, { seg: 10 });
+      k.seg([-W * 0.4, H + 0.052, 0], [0, H + 0.052, 0], 0.014, m, { seg: 12 });
+      k.anchor('label', [-W * 0.2, H + 0.065, 0]);
+    }
+    var mo = g.mouth;
+    k.cyl('y', 0.022, 0.035, m, mo[0], H + 0.0175, 0, { seg: 20 });
+    if (!open) { k.cyl('y', 0.027, 0.026, cap, mo[0], H + 0.035 + 0.013, 0, { seg: 20 }); }
+    else { k.ring('y', 0.022, 0.004, cap, mo[0], H + 0.035, 0, { seg: 20 }); }
+    k.port('mouth', mo, [0, 1, 0]);
+  });
+
+  PORTS.fire_hydrant = function (p) { var h = num(p.h, 0.75); return { out: [[0.19, h - 0.07, 0], unit([1, -0.45, 0])] }; };
+  /* a fire main hydrant: the riser from the deck, the valve with its red handwheel, the outlet turned down to +x with its
+     hose coupling. at = its foot; h (the outlet's height, 0.75). Port "out" - a fire hose's "from". */
+  define('fire_hydrant', function (k, p) {
+    var h = num(p.h, 0.75), red = M(k, p, 'red'), dark = k.mat('steel_dark'), o = PORTS.fire_hydrant(p).out, d = o[1];
+    k.cyl('y', 0.09, 0.025, dark, 0, 0.0125, 0, { seg: 24 });
+    k.cyl('y', 0.048, h - 0.05, red, 0, (h - 0.05) / 2, 0, { seg: 20 });
+    k.cyl('y', 0.075, 0.018, dark, 0, h * 0.55, 0, { seg: 24 });
+    k.ball(0.075, red, 0, h, 0, { seg: 24 });
+    k.cyl('y', 0.034, 0.13, red, 0, h + 0.09, 0, { seg: 16 });
+    k.cyl('y', 0.008, 0.07, dark, 0, h + 0.18, 0, { seg: 8 });
+    k.ring('y', 0.085, 0.009, red, 0, h + 0.2, 0, { seg: 28 });
+    k.box(0.17, 0.012, 0.012, red, 0, h + 0.2, 0); k.box(0.012, 0.012, 0.17, red, 0, h + 0.2, 0);
+    var len = 0.051 * 1.15, e = [o[0][0] - d[0] * len, o[0][1] - d[1] * len, o[0][2] - d[2] * len];
+    k.seg([0.02, h, 0], e, 0.038, red, { seg: 16 });
+    couplingAt(k, o[0], d, 0.051, alloy(k));
+    k.port('out', o[0], d);
+    k.anchor('label', [0, h + 0.2, 0]);
   });
 
   /* a gas detector head (IGF M09): base plate, yellow body, cap and a lamp that lights in alarm ("<id>.alarm" 0..1,
@@ -3119,15 +3547,23 @@
 
   /* arrows that run along a path while "<id>.on" (gas, LNG, air): path; color; spacing (1.2 m); speed (m/s, 0.8); r */
   define('flow', function (k, p) {
-    var pts = p.path || [[0, 0, 0], [3, 0, 0]], sp = num(p.spacing, 1.2), v = num(p.speed, 0.8), r = num(p.r, 0.12), self = k.cur, i;
+    var pts = p.path || [[0, 0, 0], [3, 0, 0]], self = k.cur;
     self.pick = !!p.id && p.pick === true;
+    flowArrows(k, pts, self.id, { color: p.color, r: p.r, spacing: p.spacing, speed: p.speed });
+    k.anchor('label', pts[Math.floor(pts.length / 2)]);
+  });
+  /* arrows along a polyline, shown while "<name>.on" holds - a flow part's, a hose's, the water and the concentrate in an
+     inductor: color (#ffd23f), r (0.12), spacing (1.2 m), speed (m/s, 0.8) */
+  var WATER = '#3b82f6', CONCENTRATE = '#c46a1c', AIR = '#5ec4b6';
+  function flowArrows(k, pts, name, o) {
+    var sp = num(o.spacing, 1.2), v = num(o.speed, 0.8), r = num(o.r, 0.12), i;
     var segs = [], total = 0;
     for (i = 0; i < pts.length - 1; i++) {
       var a = pts[i], b = pts[i + 1], dv = new T.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]), L = dv.length();
       segs.push({ a: a, d: dv.clone().normalize(), L: L, s: total }); total += L;
     }
     var n = Math.max(1, Math.floor(total / sp)), g = new T.ConeGeometry(r, r * 2.6, 14);
-    var m = k.basic(p.color || '#ffd23f', 1, { toneMapped: false });
+    var m = k.basic(o.color || '#ffd23f', 1, { toneMapped: false });
     var im = new T.InstancedMesh(k.track(g), m, n), dm = new T.Object3D(), up = new T.Vector3(0, 1, 0);
     im.userData.noPick = true; im.visible = false; im.renderOrder = 9;
     k.g.add(im); k.S.disposeLater.push(im);
@@ -3146,14 +3582,14 @@
       im.instanceMatrix.needsUpdate = true;
     }
     place(0);
-    k.state(self.id + '.on', 0, function (x) { im.visible = x > 0.5; });
-    k.anim(self.id, function (t, on) {
+    k.state(name + '.on', 0, function (x) { im.visible = x > 0.5; });
+    k.anim(name, function (t, on) {
       if (!on) { im.visible = false; return false; }
       im.visible = true; place(reduce ? 0 : t);
       return !reduce;
     });
-    k.anchor('label', pts[Math.floor(pts.length / 2)]);
-  });
+    return im;
+  }
 
   /* at once - kit3d.js is loaded at the end of the deck, before GBDeck.init reads GB_HOOKS - and again when the
      page is complete, for a figure written after this script */

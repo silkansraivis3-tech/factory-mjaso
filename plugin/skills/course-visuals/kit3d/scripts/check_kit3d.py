@@ -326,6 +326,8 @@ def check_spec(spec, types):
     if not spec.get("units"):
         N.append("\"units\" missing - say \"m\": one unit is a metre")
     P.extend(deck_problems(spec))
+    P.extend(join_problems(spec, types))
+    P.extend(stand_in_problems(spec))
     return P, N
 
 
@@ -367,6 +369,102 @@ def deck_problems(spec):
             if ox + hx[0] <= x <= ox + hx[1] and abs(z - oz) <= half and y < deck_level(h) - 0.05:
                 out.append("the %s %s stands at y %g, below the deck of %s (y %g) - inside the hull: it stands ON the open deck - "
                            "\"on\": \"%s.deck\"" % (p["type"], p.get("id") or "", y, h.get("id"), deck_level(h), h.get("id")))
+    return out
+
+
+# parts that join end to end by their ports ("<id>.<port>"): a branch pipe on the inductor's outlet, a hose from the
+# hydrant to the inductor, the pick-up wand in the container's mouth - never two pieces set side by side by hand with a
+# gap between them
+REF = re.compile(r"^([\w-]+)\.(\w+)$")
+JOIN_KEYS = ("connect", "from", "to", "pickup")
+
+
+def join_refs(p):
+    """[(key, "<id>.<port>")] a part names: its "connect" (a string or {"to"}), a hose's "from" / "to" / path points, an
+    inductor's "pickup" """
+    out = []
+    for key in JOIN_KEYS:
+        v = p.get(key)
+        if key == "connect" and isinstance(v, dict):
+            v = v.get("to")
+        if isinstance(v, str):
+            out.append((key, v))
+    for v in p.get("path") if isinstance(p.get("path"), list) else []:
+        if isinstance(v, str):
+            out.append(("path", v))
+    return out
+
+
+def join_problems(spec, types):
+    parts = [p for p in spec.get("parts") or [] if isinstance(p, dict)]
+    by_id = {p["id"]: p for p in parts if isinstance(p.get("id"), str)}
+    out, joined = [], set()
+    for p in parts:
+        who = p.get("id") or p.get("type")
+        for key, ref in join_refs(p):
+            m = REF.match(ref)
+            q = by_id.get(m.group(1)) if m else None
+            if not m or q is None:
+                out.append("part %s: %s %r names no part's port - \"<id>.<port>\"" % (who, key, ref))
+                continue
+            ports = types.get(q.get("type"), {}).get("ports") or []
+            if m.group(2) not in ports:
+                out.append("part %s: %s %r - a %s has no port %r (it has %s)" % (who, key, ref, q.get("type"), m.group(2),
+                                                                             ", ".join(ports) or "none"))
+                continue
+            joined.add(ref)
+            if key == "connect":
+                c = p.get("connect")
+                own = c.get("port", "in") if isinstance(c, dict) else "in"
+                if own not in (types.get(p.get("type"), {}).get("ports") or []):
+                    out.append("part %s: \"connect\" joins its port %r - a %s has none (PARTS.md)" % (who, own, p.get("type")))
+                elif isinstance(p.get("id"), str):
+                    joined.add("%s.%s" % (p["id"], own))
+            elif key == "from" and isinstance(p.get("id"), str):
+                joined.add(p["id"] + ".start")
+    containers = [i for i, q in by_id.items() if q.get("type") == "foam_container"]
+    for i, q in by_id.items():
+        t = q.get("type")
+        if t == "foam_branch_pipe" and i + ".in" not in joined:
+            out.append("the foam branch pipe %s is joined to nothing: \"connect\": \"<inductor>.out\" (or a hose \"to\": \"%s.in\") - "
+                       "parts set side by side by hand leave a gap between them" % (i, i))
+        if t == "foam_inductor":
+            for port, how in (("in", "a fire hose \"to\": \"%s.in\"" % i), ("out", "the branch pipe's \"connect\": \"%s.out\" "
+                                                                                     "(or a hose \"from\": \"%s.out\")" % (i, i))):
+                if "%s.%s" % (i, port) not in joined:
+                    out.append("the inductor %s: its %s is joined to nothing - %s" % (i, "inlet" if port == "in" else "outlet", how))
+            if containers and not isinstance(q.get("pickup"), str):
+                out.append("the inductor %s: its pick-up tube goes nowhere - \"pickup\": \"%s.mouth\"" % (i, containers[0]))
+    return out
+
+
+# equipment the kit draws, built instead from boxes and cylinders: a red cylinder named "Fire hydrant", a grey one named
+# "Inductor" - the stand-in shows nothing of the real thing (no jet, no couplings, no mesh) and joins nothing
+STAND_IN = ((re.compile(r"\b(inductor|eductor|ejector|proportioner)\b", re.I), "foam_inductor"),
+            (re.compile(r"\b(branch\s*pipe|foam\s*(nozzle|branch|applicator|maker))\b", re.I), "foam_branch_pipe"),
+            (re.compile(r"\b(foam|concentrate)\b.*\b(container|can|drum|jerrycan|tank)\b|\bjerry\s*can\b", re.I), "foam_container"),
+            (re.compile(r"\bhydrant\b", re.I), "fire_hydrant"))
+PRIMITIVE = ("box", "cylinder", "sphere")
+
+
+def stand_in_problems(spec):
+    parts = [p for p in spec.get("parts") or [] if isinstance(p, dict)]
+    kinds = {}
+    for p in parts:
+        if isinstance(p.get("id"), str):
+            kinds.setdefault(p["id"], set()).add(p.get("type"))
+    out = []
+    for lb in spec.get("labels") or []:
+        if not isinstance(lb, dict) or not isinstance(lb.get("text"), str):
+            continue
+        k = kinds.get(lb.get("part"))
+        if not k or not k <= set(PRIMITIVE):
+            continue
+        for rx, kit in STAND_IN:
+            if rx.search(lb["text"]):
+                out.append("part %s (%s) is named %r - the kit draws that: \"type\": \"%s\" (PARTS.md), not a stand-in"
+                           % (lb["part"], "/".join(sorted(k)), lb["text"], kit))
+                break
     return out
 
 

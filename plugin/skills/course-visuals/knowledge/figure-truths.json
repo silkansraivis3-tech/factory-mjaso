@@ -4,6 +4,9 @@
   "names": [
     {"words": ["bunkering station", "bunker station", "bunker manifold", "bunkering manifold", "manifold"], "parts": ["manifold", "coupling", "hose"], "strict": true, "kin": ["space", "pipe", "valve"]},
     {"words": ["vent mast", "vent outlet", "vent riser", "mast outlet"], "parts": ["vent"], "strict": true},
+    {"words": ["foam inductor", "in-line inductor", "inline inductor", "foam eductor", "foam ejector", "foam proportioner"], "parts": ["foam_inductor"], "strict": true, "equipment": true},
+    {"words": ["foam branch pipe", "branch pipe", "foam branch", "foam nozzle unit", "foam nozzle", "foam applicator"], "parts": ["foam_branch_pipe"], "strict": true, "equipment": true},
+    {"words": ["foam container", "foam concentrate container", "foam liquid container", "concentrate container", "foam jerrycan"], "parts": ["foam_container"], "strict": true, "equipment": true},
     {"words": ["tank connection space", "tcs"], "parts": ["space", "zone"]},
     {"words": ["fuel preparation room", "fuel preparation space"], "parts": ["space", "zone"]},
     {"words": ["engine room", "machinery space"], "parts": ["space", "zone"]},
