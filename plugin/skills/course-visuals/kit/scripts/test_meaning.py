@@ -469,6 +469,33 @@ def foam_part():
           any("foam container" in x.lower() and "foam_container" in x for x in b), b)
 
 
+def promised_part():
+    """a slide's figure against what its visual promises (the trial of 2.133.0, gas M01 s02, s05b, s28)"""
+    s02 = "Three tank cross-sections side by side, drawn to the same scale - thick uninsulated pressure vessel, thinner bi-lobe."
+    one = {"size": [416, 254], "parts": [{"id": "P1", "type": "tank", "x": 14, "y": 14, "w": 180, "h": 80},
+                                         {"id": "P2", "type": "text", "x": 208, "y": 223, "text": "Atmospheric"}],
+           "_starter": [["P1", "tank", 14, 14], ["P2", "text", 208, 223]]}
+    got = km.promised(one, s02)
+    check("STARTER: the starter's stand-ins still where --init-build put them are refused, each named",
+          any(x.startswith("STARTER: P1, P2") for x in got), got)
+    check("FEWER: three tank cross-sections promised, one tank drawn", any(x.startswith("FEWER") and "draws 1" in x for x in got), got)
+    three = {"size": [416, 254], "parts": [{"id": "A", "type": "tank_type", "kind": "c", "x": 14, "y": 14},
+                                           {"id": "B", "type": "tank_type", "kind": "a", "x": 150, "y": 14},
+                                           {"id": "C", "type": "tank_type", "kind": "b", "x": 280, "y": 14}],
+             "_starter": [["P1", "tank", 14, 14]]}
+    check("... three containment symbols drawn, the stand-in replaced: nothing to say", km.promised(three, s02) == [],
+          km.promised(three, s02))
+    moved = dict(one, parts=[dict(one["parts"][0], x=40)] + one["parts"][1:])
+    check("... a stand-in moved off its place is the builder's drawing now", not any(
+        x.startswith("STARTER: P1") for x in km.promised(moved, "")), km.promised(moved, ""))
+    for visual in ("A comparison table drawn with a small section icon for each containment system.",
+                   "Two columns, fully pressurised and semi-pressurised, each with a tick list of advantages and a cross list."):
+        got = km.promised(three, visual)
+        check("TABLE: a visual promising %r is words, never a drawing" % visual[:30], any(x.startswith("TABLE") for x in got), got)
+    check("... no table in a level's liquid column, and no count in \"7 bar\"", km.promised(three, "A tank at 7 bar with its "
+          "liquid column rising.") == [], km.promised(three, "A tank at 7 bar with its liquid column rising."))
+
+
 def main():
     if not kr.available():
         print("SKIP - node is not installed: the kit's resolver cannot run")
@@ -482,6 +509,7 @@ def main():
     patterns_part()
     starter_part()
     foam_part()
+    promised_part()
     print("\n%d failed" % len(FAILS) if FAILS else "\nall passed")
     return 1 if FAILS else 0
 

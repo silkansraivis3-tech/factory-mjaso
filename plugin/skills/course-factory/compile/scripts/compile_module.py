@@ -707,6 +707,14 @@ def kit_light(spec):
     return bool(types) and all(kit_family(t) == "concepts" for t in types)
 
 
+def promised(spec, s, where, what):
+    """a slide's figure against what its planned visual promises (kit_meaning.promised): still the starter's stand-ins, a
+    table drawn, fewer things than the visual names - each a must-fix"""
+    sys.path.insert(0, os.path.join(SKILLS, "course-visuals", "kit", "scripts"))
+    import kit_meaning
+    return ["%s: its %s - %s" % (where, what, x) for x in kit_meaning.promised(spec, s.get("visual"))]
+
+
 def kit_figure(text, s, probs, where):
     """a figure made from the figure kit (course-visuals/kit): its spec goes into the page as it is, and
     kit.js draws it there. It has no buttons of its own: the deck's Next walks its steps with the slide's lines
@@ -720,6 +728,7 @@ def kit_figure(text, s, probs, where):
     if not isinstance(spec, dict) or not spec.get("parts"):
         probs.append("%s: its kit figure has no parts" % where)
         return ""
+    probs += promised(spec, s, where, "kit figure")
     if not spec.get("label"):
         spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
     sid = "kit-" + s["id"]
@@ -777,6 +786,7 @@ def kit2d_figure(text, s, probs, where):
     import kit_meaning
     probs += ["%s: its 2D kit figure - %s" % (where, x)
               for x in kit_meaning.kit2d_boxes(spec, cs.parse_kind(s.get("visual_kind", "")) == "comparison")]
+    probs += promised(spec, s, where, "2D kit figure")
     if not spec.get("label"):
         spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
     sid = "k2-" + s["id"]
@@ -4906,18 +4916,13 @@ def starter_figure(script, s, pool=None, taken=None):
         steps.append((i, index[key], flipped))
     if not steps:
         return None
-    have = {it["kind"] for it in items}
     visual = (s.get("visual") or "").strip()
     first = re.split(r"(?<=[.!?])\s", visual, 1)[0] if visual else ""
     # a slide whose lines name nothing the kit draws is a list: the step track, never captions beside parts guessed from the
-    # description that no step moves (IGF Advanced M03 s08: an engine, a gauge and a scale under six words, all standing still)
+    # description that no step moves (IGF Advanced M03 s08: an engine, a gauge and a scale under six words, all standing still).
+    # No part is taken from the description's words either: no line names it and no step moves it ("drawn to the same
+    # scale", "a pressure vessel" drew a 0-100 scale, a dial and a ship on gas M01 s02)
     words_only = sum(1 for it in items if it["kind"] == "text") >= 2 and all(it["kind"] == "text" or it.get("weak") for it in items)
-    for m in KIT_WORD.finditer(first):                 # the things the picture is described as holding
-        kind = KIT_WORDS[m.group(1).lower()]
-        if words_only or kind in have or len(items) >= STARTER_MAX_PARTS:
-            continue
-        have.add(kind)
-        items.append({"kind": kind, "label": m.group(0).lower(), "start": STARTER_PART[kind][3], "to": STARTER_PART[kind][4]})
     lib = starter_from_library(script, s, lines, items, steps, first)   # 2.67.0 - a drawing that passed before
     if lib:
         return lib
@@ -4926,12 +4931,15 @@ def starter_figure(script, s, pool=None, taken=None):
         if track:
             return track
     size = starter_size(lines, items, pool, taken)
-    parts, ids, now = [], [], []
+    parts, ids, now, stand_in = [], [], [], []
     for k, (it, cell) in enumerate(zip(items, starter_cells(items, size))):
         pid = "P%d" % (k + 1)
         ids.append(pid)
         now.append(it["start"])
-        parts += starter_part(pid, it, cell)
+        drawn = starter_part(pid, it, cell)
+        parts += drawn
+        if it["kind"] == "text" or it.get("weak"):      # a line's words in a box, or a kit word inside a sentence: a stand-in
+            stand_in += [[p["id"], p.get("type"), p.get("x"), p.get("y")] for p in drawn if p.get("id") == pid]
     plan = []
     for i, k, flipped in steps:
         it = items[k]
@@ -4951,7 +4959,10 @@ def starter_figure(script, s, pool=None, taken=None):
             if p.get("type") == "scale":
                 for mk in p.get("markers") or []:
                     mk["drag"] = True
-    return {"size": list(size), "label": label, "idle": "Press Next step", "parts": parts, "steps": plan}
+    out = {"size": list(size), "label": label, "idle": "Press Next step", "parts": parts, "steps": plan}
+    if stand_in:                                       # the build refuses these while they stand where the starter put them
+        out["_starter"] = stand_in
+    return out
 
 
 TRACK_CHARS = 46

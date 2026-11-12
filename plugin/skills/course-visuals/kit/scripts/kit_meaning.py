@@ -1155,6 +1155,53 @@ def kit2d_boxes(spec, parallel=False):
     return out
 
 
+# what a slide's planned visual promises that a drawing cannot be, or must hold: a table, columns, tick and cross lists are
+# words (a words blueprint, or two slides); "three tank cross-sections" are three things drawn, not one
+TABLE_SAYS = re.compile(r"\btables?\b|\b(?:two|three|four|five|\d) columns\b|\bin columns\b|\b(?:tick|cross)(?:ed)?[- ]lists?\b|"
+                        r"\bticks? and cross(?:es)?\b", re.I)
+COUNTS = {"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8}
+COUNT_SAYS = re.compile(r"\b(two|three|four|five|six|seven|eight)\s+((?:[a-z][a-z-]*\s+)?[a-z][a-z-]*)", re.I)
+NOT_THINGS = ("text", "pipe", "hose", "wire", "arrow", "callout", "node", "token", "label", "badge", "step_track", "log")
+
+
+def promised(spec, visual):
+    """[sentence] - a slide's figure against what its planned visual promises, each a must-fix:
+    STARTER  a part --init-build put there as a stand-in (a line's words in a box, a kit word inside a sentence) still
+             where it put it (the spec's "_starter") - nobody drew the thing
+    TABLE    the visual promises a table, columns or tick and cross lists: those are words, never a drawing
+    FEWER    the visual names a number of things ("three tank cross-sections") and the figure draws fewer of them"""
+    parts = [p for p in (spec or {}).get("parts") or [] if isinstance(p, dict)]
+    by_id = {p.get("id"): p for p in parts if p.get("id")}
+    out = []
+    left = [pid for pid, kind, x, y in ((spec or {}).get("_starter") or []) if pid in by_id
+            and (by_id[pid].get("type"), by_id[pid].get("x"), by_id[pid].get("y")) == (kind, x, y)]
+    if left:
+        out.append("STARTER: %s still the starter's stand-in%s (a line's words in a box, or a part guessed from a word in a "
+                   "sentence) where --init-build put %s - draw the thing the line is about, or give the slide no figure"
+                   % (", ".join(left), "s" if len(left) > 1 else "", "them" if len(left) > 1 else "it"))
+    said = " ".join(str(visual or "").split())
+    m = TABLE_SAYS.search(said)
+    if m:
+        out.append("TABLE: the visual promises \"%s\" - a table, columns or tick and cross lists are words, never a drawing: give "
+                   "the slide a words blueprint (\"template\": \"reference-table\" for rows, \"content-in-parts\") or make it two "
+                   "slides, and draw only a thing the words are about" % m.group(0))
+    names = truths().get("names") or []
+    drawn = [p for p in parts if p.get("type") not in NOT_THINGS and not (p.get("type") == "space" and not p.get("label"))]
+    for m in COUNT_SAYS.finditer(said):
+        want = COUNTS[m.group(1).lower()]
+        phrase = m.group(2).lower()
+        if TABLE_SAYS.search(m.group(0)):
+            continue
+        types = {t for e in names for w in e.get("words") or [] if re.search(r"\b%ss?\b" % re.escape(w), phrase)
+                 for t in e.get("parts") or []}
+        got = [p for p in drawn if not types or p.get("type") in types]
+        if len(got) < want:
+            out.append("FEWER: the visual promises %s and the figure draws %d - draw each of them (one part each, side by side), "
+                       "or say in the visual what it shows" % (m.group(0), len(got)))
+            break
+    return out
+
+
 def figure_kinds(spec):
     """the figure kinds (figure-truths.json) a spec is, with their must-be-true sentences - for the FIGURE review"""
     got = kit_relate.run([spec]) or [{"spec": spec, "geometry": []}]

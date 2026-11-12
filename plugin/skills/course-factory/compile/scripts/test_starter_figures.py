@@ -68,8 +68,9 @@ def boxes(spec):
 
 
 # 2.72.0 - s03, s04 and s06 name a figure of the kit's library (ship plan, engine modes): their starter IS the pattern, and
-# the placeholder grid below is judged on a slide no pattern fits (s04 with its last three lines)
-GRID_S04 = dict(SLIDES["s04"], id="s04g", text="\n".join(SLIDES["s04"]["text"].split("\n")[2:5]))
+# the placeholder grid below is judged on a slide no pattern fits (s04 with its last three lines, and a line naming the ship:
+# the starter no longer draws one from the visual's words)
+GRID_S04 = dict(SLIDES["s04"], id="s04g", text="\n".join(SLIDES["s04"]["text"].split("\n")[2:5] + ["Ship - the hull that holds them all."]))
 
 
 def canvas():
@@ -214,6 +215,28 @@ def track_part():
           "gauge, a scale no step moves (IGF Advanced M03 s08)", not still, eng["parts"])
 
 
+def promise_part():
+    """the trial of 2.133.0, gas M01 s02: the starter drew a 0-100 scale named "scale", a dial named "pressure" and a ship
+    from the visual's "drawn to the same scale" and "pressure vessel", and a line's words in a box - and they shipped"""
+    s02 = {"id": "s02", "kind": "slide", "title": "Three carriage conditions", "visual_kind": "comparison",
+           "text": "18 bar | Fully pressurised: Type C tanks at ambient temperature, no insulation\n7 bar | Semi-pressurised / "
+                   "semi-refrigerated: insulated Type C tanks, down to -48 °C\nAtmospheric | Fully refrigerated: near "
+                   "atmospheric pressure, at the cargo's boiling point",
+           "visual": "Three tank cross-sections side by side, drawn to the same scale - thick uninsulated pressure vessel, "
+                     "thinner insulated bi-lobe tank, large insulated prismatic tank."}
+    spec = cm.starter_figure({"module": 1, "screens": [s02]}, s02)
+    types = [p.get("type") for p in spec["parts"]]
+    check("no part is taken from the visual's words - no scale, dial or ship no line names and no step moves",
+          not {"scale", "gauge", "ga"} & set(types), types)
+    check("... and its stand-ins (a line's words in a box, a kit word inside a sentence) are named in \"_starter\", so the "
+          "build refuses them while they stand where it put them", sorted(x[0] for x in spec.get("_starter") or [])
+          == sorted(p["id"] for p in spec["parts"] if p.get("id")), spec.get("_starter"))
+    probs = []
+    cm.kit_figure(json.dumps(spec), s02, probs, "Slide 3 (s02)")
+    check("the compile refuses the figure: the starter's stand-ins, and one tank where the visual names three",
+          any("STARTER" in x for x in probs) and any("FEWER" in x for x in probs), probs)
+
+
 def task_part():
     """a question answered ON a picture is drawn at --init-build when its answers name kit equipment - never a placeholder
     with its tap areas on a grid over nothing (the trial of 2.133.0: M16 q01, m01; M01 m06)"""
@@ -261,6 +284,7 @@ def main():
     by_words()
     track_part()
     task_part()
+    promise_part()
     studio_part()
     print("\n%d failure(s)" % len(FAILS) if FAILS else "\nALL PASS")
     return 1 if FAILS else 0
