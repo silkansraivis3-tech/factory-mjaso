@@ -250,7 +250,7 @@ def main():
         s02_lines = tcs.S02_TEXT.split("\n")
         s02_new = "\n".join(s02_lines[:3] + ["The colder the cargo, the lower the pressure the tank must hold - and the more insulation and boil-off handling the ship needs."])
         s03_lines = tcs.S03_TEXT.split("\n")
-        s03_new = "\n".join(["The IGC Code names four systems for containing the cargo."] + s03_lines[1:])
+        s03_new = "\n".join(["The IGC Code lists four systems."] + s03_lines[1:])
         changes = [{"module": 1, "field": "s03.title", "new": "The four containment systems"},
                    {"module": 1, "field": "s01.notes", "new": new_notes},
                    {"module": 1, "screen": "s02", "field": "text", "new": s02_new},
@@ -310,7 +310,7 @@ def main():
         sec = section(d2, "t01")
         check("module 2: a task slide's title, in h2 and data-title",
               'data-title="Self-check 1 - why the cargo stays liquid"' in sec and ">Self-check 1 - why the cargo stays liquid</h2>" in sec, sec[:300])
-        check("module 2: the first text line of s03 is replaced", '<p data-script-field="text">The IGC Code names four systems for containing the cargo.</p>' in section(d2, "s03"))
+        check("module 2: the first text line of s03 is replaced", '<p data-script-field="text">The IGC Code lists four systems.</p>' in section(d2, "s03"))
         check("module 2: the line with formatting inside it, not changed, keeps its formatting",
               "<strong>Liquefied gases</strong>" in section(d2, "s01"))
         check("everything else in the deck is byte for byte as it was", d1.count("\n") == read_lines(decks_before[1])

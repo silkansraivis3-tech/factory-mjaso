@@ -228,12 +228,19 @@ def promise_part():
     types = [p.get("type") for p in spec["parts"]]
     check("no part is taken from the visual's words - no scale, dial or ship no line names and no step moves",
           not {"scale", "gauge", "ga"} & set(types), types)
-    check("... and its stand-ins (a line's words in a box, a kit word inside a sentence) are named in \"_starter\", so the "
-          "build refuses them while they stand where it put them", sorted(x[0] for x in spec.get("_starter") or [])
-          == sorted(p["id"] for p in spec["parts"] if p.get("id")), spec.get("_starter"))
+    check("... its lines name nothing the kit draws, so they are a step track", types == ["step_track"], types)
     probs = []
     cm.kit_figure(json.dumps(spec), s02, probs, "Slide 3 (s02)")
-    check("the compile refuses the figure: the starter's stand-ins, and one tank where the visual names three",
+    check("the compile refuses the figure: nothing drawn where the visual names three tanks", any("FEWER" in x for x in probs), probs)
+    s05 = {"id": "s05", "kind": "slide", "title": "Pressure vessel", "visual_kind": "process",
+           "text": "Cargo tank: holds the liquid at its boiling point\nThe relief valve lifts when the pressure rises\n"
+                   "Boil-off is managed by the crew", "visual": "Two tanks side by side, each with its relief valve."}
+    spec = cm.starter_figure({"module": 1, "screens": [s05]}, s05)
+    check("a line's words in a box and a kit word inside a sentence are named in \"_starter\", so the build refuses them "
+          "while they stand where it put them", sorted(x[0] for x in spec.get("_starter") or []) == ["P2", "P3"], spec.get("_starter"))
+    probs = []
+    cm.kit_figure(json.dumps(spec), s05, probs, "Slide 5 (s05)")
+    check("... the compile refuses the stand-ins, and one tank where the visual names two",
           any("STARTER" in x for x in probs) and any("FEWER" in x for x in probs), probs)
 
 
