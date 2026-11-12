@@ -98,6 +98,7 @@ Nobody is there to answer. The course in this folder is "FACTORY TRIAL"; its sou
 here, and its decisions are already in course/working_claude (intake.json, kb_sources.json) - do not ask them again.
 Use the course-factory skill and build it by its "Auto build" rules (SKILL.md), with these differences:
 {stages}
+{flow}
 - There is no expert: sign every STOP --by "Factory trial" (NOVIKONTAS_TRIAL=1 allows it). Never call course_portal.py -
   a trial never goes to the training app.
 - Generate no paid pictures or videos; fill picture spaces from the free sources, and a space nobody could fill keeps its
@@ -110,6 +111,19 @@ Use the course-factory skill and build it by its "Auto build" rules (SKILL.md), 
 - This folder and the factory are as said here and in SKILL.md: list no folders and read no factory script's source (its
   --help says how to run it).
 End with one line: TRIAL DONE, or TRIAL STOPPED: <why>."""
+FIRST_PASS = """- THIS TRIAL MEASURES THE FACTORY'S FIRST PASS: what it makes by itself, not what helpers can repair. Nothing loops.
+  Scripts: the writer writes each script once; the task-coverage-checker, the fact-checker and the approval check run once
+  (`content_script.py status` lists the must-fixes). At most ONE rewrite round to clear the must-fixes, then the checks once
+  more. Then approve it as it stands (`approve --by "Factory trial"`), or - when must-fixes are still open - approve it with
+  `--despite-findings` (the build goes on, so the build stage is measured too) and record it as not approvable on the first
+  pass. Write `working_claude/first_pass.json` as you go: {"scripts": {"<module number>": {"rewrite_rounds": 0 or 1,
+  "must_fixes_first_check": <count at the first check>, "approved_clean": true/false, "open_must_fixes": ["<where: what>", ...]}}}.
+  Build: in args.json for brief.mjs set "first_pass": true and "builds": 3. Each module gets Phase A and at most 3 builder
+  builds, no carry-on builder, no fix round, no polish round and no second walk - the 3D check, QA and the walk review run
+  once on that build and their findings are recorded in result.json, not fixed. Fix nothing yourself after the build:
+  a module that is not clean is the result. Report it as it is."""
+FULL_RUN = """- This is the full trial (--full): the build keeps its fix round, its polish round and the walk's second look, as a real
+  course build does."""
 FRESH = """- Stage 1 and Stage 2 cover the whole programme as usual. Only modules {modules} get a content script, the fact-checker,
   a build and its checks; leave every other module unscripted."""
 READ_REUSED = """- Stage 1 and Stage 2 are DONE and approved, taken from the last trial ({why}): do not run them again. COURSE_STATE.md and
@@ -629,6 +643,11 @@ def reuse_into(kept, course, plan, plugin_dir=None):
     return plan
 
 
+def flow_prompt(full=False):
+    """the prompt's lines on how far the run goes: the first pass alone, or the full build with its fix round"""
+    return FULL_RUN if full else FIRST_PASS
+
+
 def stages_prompt(plan, modules):
     """the prompt's lines on what this run does of Stage 1-3"""
     mods = ", ".join(str(m) for m in modules)
@@ -658,7 +677,7 @@ def reuse_lines(plan):
     return out
 
 
-def prepare_run(home, cfg, modules, plugin_dir=None, fresh=False):
+def prepare_run(home, cfg, modules, plugin_dir=None, fresh=False, full=False):
     """the new trial course: -> (master folder, run folder, prompt). The last run's stages are kept first (snapshot), then
     taken where nothing they depend on changed (decide, reuse_into)"""
     master = os.path.join(home, "run", TITLE)
@@ -669,7 +688,7 @@ def prepare_run(home, cfg, modules, plugin_dir=None, fresh=False):
     course = os.path.join(master, "course")
     os.makedirs(os.path.join(course, "working_claude"))
     mark = {"trial": True, "modules": modules, "from": cfg["from"], "plugin": plugin_version(plugin_dir),
-            "started": datetime.now().strftime("%Y-%m-%d %H:%M"), "factory": factory_record(plugin_dir)}
+            "started": datetime.now().strftime("%Y-%m-%d %H:%M"), "factory": factory_record(plugin_dir), "first_pass": not full}
     save(os.path.join(master, MARKER), mark)
     for name in ("source_files", "old_course"):
         link(cfg["inputs"][name], os.path.join(master, name))
@@ -683,7 +702,7 @@ def prepare_run(home, cfg, modules, plugin_dir=None, fresh=False):
     save(os.path.join(master, MARKER), mark)
     run_dir = os.path.join(home, "runs", datetime.now().strftime("%Y%m%d-%H%M") + "_" + plugin_version(plugin_dir))
     os.makedirs(run_dir, exist_ok=True)
-    prompt = TRIAL_PROMPT.format(stages=stages_prompt(plan, modules))
+    prompt = TRIAL_PROMPT.format(stages=stages_prompt(plan, modules), flow=flow_prompt(full))
     io.open(os.path.join(run_dir, "prompt.txt"), "w", encoding="utf-8").write(prompt)
     return master, run_dir, prompt
 
@@ -732,10 +751,9 @@ def measured(fn, *args):
 CUT_KINDS = ("cut", "spill", "picture", "figure")      # fit_gate.py's findings of something shown in part
 
 
-def fit_slides(deck, no_browser):
-    """{size: slides with words cut or a picture cropped at that size, every Next pressed} - fit_gate.py at the tablets'
-    1280 x 800 and at 1024 x 768; {} when nothing could be measured. Only what is cut or cropped counts: the gate's other
-    findings (a drawing that never changes, lines walked twice) are not a cut slide"""
+def fit_found(deck, no_browser):
+    """{size: [[slide, step, kind, what]]} - every finding of fit_gate.py at the tablets' 1280 x 800 and at 1024 x 768, every
+    Next pressed; {} when nothing could be measured"""
     if no_browser or not os.path.isfile(deck):
         return {}
     sys.path.insert(0, os.path.join(PLUGIN, "skills", "course-module-ux", "measure", "scripts"))
@@ -750,8 +768,14 @@ def fit_slides(deck, no_browser):
         found = load(out) if code in (0, 1) else None
     finally:
         shutil.rmtree(os.path.dirname(out), ignore_errors=True)
-    if not isinstance(found, dict):
-        return {}
+    return found if isinstance(found, dict) else {}
+
+
+def fit_slides(deck, no_browser, found=None):
+    """{size: slides with words cut or a picture cropped at that size} from fit_found; {} when nothing could be measured. Only
+    what is cut or cropped counts: the gate's other findings (a drawing that never changes, lines walked twice) are not a
+    cut slide"""
+    found = fit_found(deck, no_browser) if found is None else found
     return {size: len({x[0] for x in found.get(size) or [] if x[2] in CUT_KINDS}) for size in FIT_SIZES if size in found}
 
 
@@ -868,7 +892,35 @@ def perf_slides(deck, no_browser):
     return int(m.group(1)) if m else (0 if code == 0 else None)
 
 
-def score_module(course, m, no_browser=False):
+FINDING_KINDS = (("overflow_cut", "overflow/cut"), ("blueprint", "blueprint"), ("three_d", "3D"), ("words", "words"),
+                 ("task_pages", "task pages"), ("script", "script"), ("figures", "figures"), ("other", "other"))
+
+
+def first_pass_row(course, m):
+    """the first-pass lines of one module: the script's rounds (working_claude/first_pass.json, written by the run) and what the
+    first build and its one review found (the build workflow's result.json); nothing of either in a full trial"""
+    row = {}
+    script = (((load(workspace.claude_path(course, "first_pass.json")) or {}).get("scripts") or {}).get(str(m)) or {})
+    if script:
+        row["script_rewrite_rounds"] = script.get("rewrite_rounds")
+        row["must_fixes_first_check"] = script.get("must_fixes_first_check")
+        row["script_approved_first_pass"] = "yes" if script.get("approved_clean") else "no - open: %s" % (
+            "; ".join(script.get("open_must_fixes") or []) or "not recorded")[:160]
+    result = load(os.path.join(workspace.claude_path(course, "_build"), "agents", "result.json")) or {}
+    build = next((x for x in ((result.get("first_pass") or {}).get("modules") or []) if str(x.get("module")) == str(m)), None)
+    if build:
+        row["builds_used"] = build.get("builds")
+        row["first_build_verdict"] = str(build.get("first_build") or "")[:90]
+        kinds = build.get("findings") or {}
+        row["first_review_findings"] = ", ".join("%s %d" % (name, kinds[k]) for k, name in FINDING_KINDS if kinds.get(k)) or "none"
+        row["first_review_findings_total"] = build.get("findings_total")
+    if script or build:
+        row["first_pass_clean"] = "yes" if (build and build.get("clean") and script.get("approved_clean", True)
+                                            and not script.get("rewrite_rounds")) else "no"
+    return row
+
+
+def score_module(course, m, no_browser=False, found=None):
     mid = cs.mid(m)
     row = {"module": m}
     sp = cs.paths(course, m)["script"]
@@ -878,7 +930,7 @@ def score_module(course, m, no_browser=False):
     row["build_says"], row["passed"] = measured(build_verdict, course, mid) or ("", None)
     row["build_says"] = row["build_says"][:90]
     row["build_minutes"] = measured(build_minutes, course, mid)
-    fit = measured(fit_slides, deck, no_browser) or {}
+    fit = measured(fit_slides, deck, no_browser, found) or {}
     row["cut_or_cropped_slides"], row["cut_at_1024x768"] = fit.get("1280x800"), fit.get("1024x768")
     row["slides_3d_lagging"] = measured(perf_slides, deck, no_browser)
     slides = measured(scan_deck, deck) if row["built"] else None
@@ -901,6 +953,7 @@ def score_module(course, m, no_browser=False):
         row["self_check_basic_tasks"] = measured(lambda: [cs.sc_mix(st["questions"])[0] for st in cs.plan_of(script)[1]
                                                           if st["kind"] == "self-check"])
         row["self_checks_off_mix"] = None if found is None else len({f["screen"] for f in found if f["rule"] == "t_sc_mix"})
+    row.update(first_pass_row(course, m))
     rev = load(workspace.claude_path(course, "pedagogy_review.json"), {}) or {}
     rows = ((rev.get("modules") or {}).get(str(m)) or {}).get("rows") or {}
     row["bloom_lifts_over_one"] = sum(1 for x in rows.values() if isinstance((x.get("now") or {}).get("level"), int)
@@ -931,7 +984,7 @@ def sim_pending(course):
 
 LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped",
                    "old_thinner", "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row", "same_look_in_a_row",
-                   "beside_share", "build_minutes",
+                   "beside_share", "build_minutes", "script_rewrite_rounds", "must_fixes_first_check", "builds_used", "first_review_findings_total",
                    "off_blueprint_slides", "pictures_pending", "max_words_slide", "slides_over_120_words", "self_checks_off_mix",
                    "simulator_drafts_pending")
 # a number that is best inside a band: closer to it is better (L67: 60-80 % of the teaching slides with interactive 3D)
@@ -940,7 +993,9 @@ SHOWN = ("built", "passed", "build_says", "build_minutes", "cut_or_cropped_slide
          "pictures_pending", "interactive_3d_share", "max_words_slide", "slides_over_120_words", "claims", "claims_unproven",
          "claims_unchecked", "old_moved", "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates",
          "same_template_in_a_row", "look_shapes", "same_look_in_a_row", "beside_share", "self_check_basic_tasks", "self_checks_off_mix",
-         "practical_kind", "simulator_exercises", "simulator_drafts_pending")
+         "practical_kind", "simulator_exercises", "simulator_drafts_pending", "script_rewrite_rounds", "must_fixes_first_check",
+         "script_approved_first_pass", "builds_used", "first_build_verdict", "first_review_findings", "first_review_findings_total",
+         "first_pass_clean")
 
 
 def compare(now, before):
@@ -1022,7 +1077,17 @@ def course_to_score(folder):
     return course, mark
 
 
-def report(home, run_dir=None, no_browser=False, course=None, against=None):
+def fault_report_of(course, mods, run_dir, found):
+    """FAULTS.html, faults.json and the pictures beside the scorecard (fault_report.py); -> the html path"""
+    import fault_report
+    decks = {}
+    for m in mods:
+        deck = os.path.join(module_dir(course, m), "presentation", "index.html")
+        decks[m] = (deck, measured(scan_deck, deck) if os.path.isfile(deck) else None, found.get(m))
+    return fault_report.write(run_dir, fault_report.collect(course, mods, decks))
+
+
+def report(home, run_dir=None, no_browser=False, course=None, against=None, faults=False):
     if course:
         course, mark = course_to_score(course)
         if not mark:
@@ -1042,8 +1107,10 @@ def report(home, run_dir=None, no_browser=False, course=None, against=None):
     if against and not isinstance(load(against), dict):
         print("Stopped - %s is not a scorecard.json" % against)
         return 2
+    found = {m: measured(fit_found, os.path.join(module_dir(course, m), "presentation", "index.html"), no_browser) or {}
+             for m in mark.get("modules") or []}
     card = {"plugin": mark.get("plugin"), "started": mark.get("started"), "scored": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "course": course, "modules": [score_module(course, m, no_browser) for m in mark.get("modules") or []]}
+            "course": course, "modules": [score_module(course, m, no_browser, found[m]) for m in mark.get("modules") or []]}
     if mark.get("reused"):
         card["reused"] = mark["reused"]
     card["practical"] = measured(lambda: sim_cov().practical_lines(sim_cov().practical(course)))
@@ -1061,6 +1128,9 @@ def report(home, run_dir=None, no_browser=False, course=None, against=None):
             break
     code = show(card, before)
     print("\n    %s" % (os.path.join(run_dir, "scorecard.json") if run_dir else "not saved - --run <folder> keeps it"))
+    if run_dir and (faults or mark.get("first_pass")):
+        page = measured(fault_report_of, course, mark.get("modules") or [], run_dir, found)
+        print("    faults for the owner: %s" % (page or "could not be written"))
     return code
 
 
@@ -1132,6 +1202,8 @@ def main(argv=None):
     ap.add_argument("--no-browser", action="store_true")
     ap.add_argument("--reuse")
     ap.add_argument("--fresh", action="store_true")
+    ap.add_argument("--faults", action="store_true", help="report: also write the fault report (a first-pass trial always does)")
+    ap.add_argument("--full", action="store_true", help="the full build with its fix round, not the first pass alone")
     a = ap.parse_args(argv)
     home = home_of(a.home)
     if a.cmd == "setup":
@@ -1146,7 +1218,7 @@ def main(argv=None):
                                                         ": " + ", ".join(runs[-5:]) if runs else ""))
         return 0
     if a.cmd == "report":
-        return report(home, a.run, a.no_browser, a.course, a.against)
+        return report(home, a.run, a.no_browser, a.course, a.against, a.faults)
     if a.cmd == "compare":
         cards = [load(p) for p in a.files]
         if len(cards) != 2 or not all(isinstance(c, dict) for c in cards):
@@ -1161,7 +1233,7 @@ def main(argv=None):
         print("Stopped - --modules like 1,4")
         return 2
     try:
-        master, run_dir, prompt = prepare_run(home, cfg, mods, a.plugin_dir, a.fresh)
+        master, run_dir, prompt = prepare_run(home, cfg, mods, a.plugin_dir, a.fresh, a.full)
     except OSError as err:
         print("Stopped - %s" % err)
         return 2

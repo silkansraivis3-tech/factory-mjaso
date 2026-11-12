@@ -757,6 +757,31 @@ def main():
               len(hands) >= 5 and all("ITS CODE IS NOT" in p and "never write a\ntool of your own" in p and "--slides <ids> --no-perf" in p
                                       and "FACTORY: <what>" in p and "up to 4 in one message" in p for p in hands.values()),
               sorted(k for k, p in hands.items() if "ITS CODE IS NOT" not in p))
+        # first pass (the trial's default): one look, nothing fixed, a capped build
+        fp = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "first_pass": True, "_broken": ["1"],
+                       "_scene": ["1"], "_bad3d": ["1"], "_badfig": ["1"], "_figs": ["1"], "_badwalk": ["1"], "_stuck": ["1"]})
+        lfp = fp.get("labels", [])
+        check("first_pass: no fix round, no figure fixers, no fix build, no carry-on builder, no polish, no second look of any judge",
+              not any(x.startswith(("fix:", "fixfig:", "fixbuild:", "polish:")) or re.search(r"\+(fix|polish|1)$", x) for x in lfp)
+              and lfp.count("walk:1") == 1 and lfp.count("qa:1") == 1 and lfp.count("review3d:1") == 1, lfp)
+        check("... the builder is told the cap (3 builds) and to report BUILDS and FIRST",
+              "At most 3 build_module.py\nruns in all" in fp.get("prompts", {}).get("build:1", "")
+              and 'THIRD line: "BUILDS <n>"' in fp.get("prompts", {}).get("build:1", ""))
+        check("... the 3D check only reports", "first pass: do not change anything" in fp.get("prompts", {}).get("3d:1", ""))
+        rec = ((fp.get("r") or {}).get("first_pass") or {}).get("modules") or []
+        rec1 = next((x for x in rec if x["module"] == "1"), {})
+        check("... the result records the first pass: findings by kind, builds, clean = false",
+              rec1.get("clean") is False and rec1["findings"]["three_d"] == 1 and rec1["findings"]["figures"] == 1
+              and rec1["findings"]["script"] == 1 and rec1["findings"]["words"] + rec1["findings"]["other"] + rec1["findings"]["task_pages"]
+              + rec1["findings"]["overflow_cut"] + rec1["findings"]["blueprint"] >= 2 and not rec1.get("passed"), rec1)
+        four = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "first_pass": True, "builds": 2})
+        check("... --builds sets the cap; a module that is clean at the first look is recorded clean, on its own build line",
+              "At most 2 build_module.py" in four.get("prompts", {}).get("build:1", "")
+              and next((x for x in (four.get("r", {}).get("first_pass") or {}).get("modules", []) if x["module"] == "1"), {}).get("clean") is True,
+              four.get("r", {}).get("first_pass"))
+        check("a run without first_pass keeps its fix lane (the real course build) and records no first pass",
+              (run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_broken": ["1"]}).get("r") or {}).get("first_pass") is None
+              and any(x.startswith("fix:") for x in run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_broken": ["1"]}).get("labels", [])))
         brief_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

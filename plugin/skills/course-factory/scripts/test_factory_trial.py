@@ -160,6 +160,15 @@ def main():
         check("... the build's helpers come from brief.mjs, the trial's rules in its notes, and the session explores nothing",
               "helpers come from brief.mjs" in prompt and "list no folders and read no factory script's source" in prompt
               and "only catalogues the old course's own photographs" in prompt and "--none" not in prompt, prompt)
+        check("... the default run is the first pass: one rewrite round, a capped build, nothing fixed after, first_pass.json kept; "
+              "the marker says so", "FIRST PASS" in prompt and "ONE rewrite round" in prompt and '"first_pass": true' in prompt
+              and '"builds": 3' in prompt and "--despite-findings" in prompt and "first_pass.json" in prompt
+              and "full trial" not in prompt and ft.load(os.path.join(master, ft.MARKER))["first_pass"] is True, prompt)
+        code, out = cli("run", "--home", home, "--modules", "1,4", "--dry-run", "--full")
+        full_prompt = io.open(os.path.join(home, "runs", sorted(os.listdir(os.path.join(home, "runs")))[-1], "prompt.txt"), encoding="utf-8").read()
+        check("... --full keeps today's build, with its fix round", code == 0 and "full trial" in full_prompt
+              and "FIRST PASS" not in full_prompt and ft.load(os.path.join(master, ft.MARKER))["first_pass"] is False, full_prompt)
+        cli("run", "--home", home, "--modules", "1,4", "--dry-run")
         io.open(os.path.join(master, "course", "working_claude", "left_over.txt"), "w").write("x")
         code, out = cli("run", "--home", home, "--dry-run")
         check("a second run starts from an empty course again", code == 0 and not os.path.isfile(os.path.join(master, "course", "working_claude", "left_over.txt")), out)
@@ -377,6 +386,33 @@ def main():
         check("... a FAIL did not pass, and a clock with no PASS has no minutes", row["passed"] is False and row["build_minutes"] is None
               and row["build_says"].startswith("FAIL M01"), row)
         check("a number that cannot be measured is None, never a stop", ft.measured(lambda: 1 / 0) is None)
+        check("a full trial's module has no first-pass lines", "first_pass_clean" not in row and "builds_used" not in row, row)
+        agents = os.path.join(build, "agents")
+        os.makedirs(agents, exist_ok=True)
+        io.open(os.path.join(oc, "working_claude", "first_pass.json"), "w", encoding="utf-8").write(json.dumps({"scripts": {"1": {
+            "rewrite_rounds": 1, "must_fixes_first_check": 4, "approved_clean": False, "open_must_fixes": ["s05: a task is not covered"]}}}))
+        io.open(os.path.join(agents, "result.json"), "w", encoding="utf-8").write(json.dumps({"first_pass": {"builds_cap": 3, "modules": [
+            {"module": "1", "builds": 3, "first_build": "FAIL M01 - figures (80 s)", "clean": False, "findings_total": 4,
+             "findings": {"overflow_cut": 2, "three_d": 1, "script": 1, "words": 0}}]}}))
+        row = ft.score_module(oc, 1, no_browser=True)
+        check("first-pass lines: script rewrite rounds, must-fixes at the first check, the script not approvable (with its open "
+              "must-fixes), builds used, the first build's verdict, the findings of the first review by kind, and clean: no",
+              row["script_rewrite_rounds"] == 1 and row["must_fixes_first_check"] == 4
+              and row["script_approved_first_pass"].startswith("no - open: s05") and row["builds_used"] == 3
+              and row["first_build_verdict"].startswith("FAIL M01") and row["first_review_findings"] == "overflow/cut 2, 3D 1, script 1"
+              and row["first_review_findings_total"] == 4 and row["first_pass_clean"] == "no", row)
+        shown_out = io.StringIO()
+        with contextlib.redirect_stdout(shown_out):
+            ft.show({"plugin": "x", "modules": [dict(row, module=1)]})
+        check("... and the scorecard prints them", "first pass clean" in shown_out.getvalue() and "first review findings" in shown_out.getvalue(),
+              shown_out.getvalue())
+        io.open(os.path.join(oc, "working_claude", "first_pass.json"), "w", encoding="utf-8").write(json.dumps({"scripts": {"1": {
+            "rewrite_rounds": 0, "must_fixes_first_check": 0, "approved_clean": True, "open_must_fixes": []}}}))
+        io.open(os.path.join(agents, "result.json"), "w", encoding="utf-8").write(json.dumps({"first_pass": {"modules": [
+            {"module": "1", "builds": 1, "first_build": "PASS M01", "clean": True, "findings_total": 0, "findings": {}}]}}))
+        row = ft.score_module(oc, 1, no_browser=True)
+        check("... a script approved at once and a build with nothing found at the first review: clean yes",
+              row["first_pass_clean"] == "yes" and row["first_review_findings"] == "none" and row["script_approved_first_pass"] == "yes", row)
 
         class FakeFit:
             @staticmethod
@@ -420,6 +456,7 @@ def main():
         moved = ft.compare({"modules": [{"module": 1, "interactive_3d_share": 75}]}, {"modules": [{"module": 1, "interactive_3d_share": 70}]})
         check("... and inside the band neither", moved == [(1, "interactive_3d_share", 70, 75, "-")], moved)
         reuse_part(tmp, src)
+        faults_part(tmp)
     finally:
         os.environ.clear()
         os.environ.update(old_env)
@@ -430,6 +467,73 @@ def main():
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0
+
+
+def faults_part(tmp):
+    """the fault report: rule checks on a built deck, the fit gate's cuts, the judges' fails, and the page for the owner"""
+    import fault_report as fr
+    from PIL import Image
+    print("\n-- the fault report")
+    course = os.path.join(tmp, "fr", "course")
+    pres = os.path.join(course, "modules", "module01", "presentation")
+    os.makedirs(os.path.join(pres, "..", "assets", "img"))
+    Image.new("RGB", (300, 200)).save(os.path.join(pres, "..", "assets", "img", "wide.jpg"))      # 1.50:1
+    Image.new("RGB", (200, 300)).save(os.path.join(pres, "..", "assets", "img", "tall.jpg"))      # 0.67:1
+    Image.new("RGB", (250, 250)).save(os.path.join(pres, "..", "assets", "img", "square.jpg"))
+    words = " ".join(["word"] * 90)
+
+    def slide(sid, tid, var, img, text):
+        return ('<section class="slide" id="%s" data-template="%s.v1" data-variant="%s"><h2>T</h2><img src="../assets/img/%s">'
+                '<p>%s</p></section>' % (sid, tid, var, img, text))
+    page = "<html><body>%s</body></html>" % (slide("s01", "explain-figure", "figure-right", "wide.jpg", "a few words")
+                                              + slide("s02", "photo-explain", "column", "square.jpg", "a few words")
+                                              + slide("s03", "photo-explain", "column", "tall.jpg", words))
+    io.open(os.path.join(pres, "index.html"), "w", encoding="utf-8").write(page)
+    deck = os.path.join(pres, "index.html")
+    slides = ft.scan_deck(deck)
+    found = fr.rule_checks(deck, slides)
+    by = {(f["slide"], f["kind"]): f for f in found}
+    check("a photograph in a blueprint that takes none is a layout fault, with the rule, its file and what it did",
+          ("s01", "layout") in by and "takes no photo" in by[("s01", "layout")]["did"]
+          and "explain-figure.figure-right" in by[("s01", "layout")]["source"] and "1.50:1" in by[("s01", "layout")]["did"] and "a photograph" in by[("s01", "layout")]["did"], found)
+    check("... a photograph inside its blueprint's box, and words inside its budget, are no fault", not any(f["slide"] == "s02" for f in found), found)
+    check("... a slide over its blueprint's word budget is a words fault with the numbers",
+          ("s03", "words") in by and "against" in by[("s03", "words")]["did"], found)
+    check("... a picture outside the box's shape range names the range",
+          ("s03", "layout") in by and "outside 0.85-1.3:1" in by[("s03", "layout")]["did"], found)
+    fit = fr.fit_faults({"1024x768": [["s03", 2, "cut", "the table is cut by 66 px"], ["s03", 2, "static", "a drawing never changes"]]}, None)
+    check("the fit gate's cuts are overflow faults at the size they were found (its other findings are none)",
+          len(fit) == 1 and fit[0]["kind"] == "overflow_cut" and "1024x768" in fit[0]["found_by"] and "66 px" in fit[0]["did"], fit)
+    check("... with no browser, the build's own list of slides it measured out", fr.fit_faults({}, ["s09"])[0]["slide"] == "s09")
+    agents = os.path.join(course, "working_claude", "_build", "agents")
+    os.makedirs(agents)
+    io.open(os.path.join(agents, "walk_1.json"), "w", encoding="utf-8").write(json.dumps({"fails": [
+        {"slide": "s04", "what": "stop 3: the chart is cut off at the right edge"}, {"slide": "tasks/q2", "what": "the answer boxes overlap"}]}))
+    io.open(os.path.join(agents, "qa_1.json"), "w", encoding="utf-8").write(json.dumps({"findings": [
+        {"severity": "BROKEN", "where": "SCRIPT: s05", "what": "a Your turn activity counts 5 practice minutes"},
+        {"severity": "POLISH", "where": "s02", "what": "a label could sit closer"}]}))
+    walk = os.path.join(course, "working_claude", "_build", "walk", "M01")
+    os.makedirs(walk)
+    for n in ("s04_k1.png", "s04_k3.png", "s01_k1.png"):
+        Image.new("RGB", (40, 30)).save(os.path.join(walk, n))
+    judged = fr.judge_faults(course, 1)
+    kinds = sorted((f["slide"], f["kind"]) for f in judged)
+    check("the judges' fails: the walk's (a task page apart), QA's BROKEN script finding; a POLISH line is no fault",
+          kinds == [("s04", "overflow_cut"), ("s05", "script"), ("tasks/q2", "task_page")], kinds)
+    run = os.path.join(tmp, "fr", "run")
+    os.makedirs(run)
+    allf = fr.collect(course, [1], {1: (deck, slides, {"1280x800": [["s04", 3, "cut", "the chart is cut"]]})})
+    path = fr.write(run, allf)
+    data = json.load(io.open(os.path.join(run, "faults.json"), encoding="utf-8"))
+    pics = {f["slide"]: f["picture"] for f in data if f["picture"]}
+    check("the report: faults.json, FAULTS.html, the pictures copied beside it (the stop the judge named), each fault with an "
+          "empty decision",
+          os.path.isfile(path) and pics.get("s04") == "faults/M01_s04_s04_k3.png" and os.path.isfile(os.path.join(run, pics["s04"]))
+          and pics.get("s01") == "faults/M01_s01_s01_k1.png" and all(f["decision"] == "" and f["rule"] and f["did"] and f["source"] for f in data), data)
+    page = io.open(path, encoding="utf-8").read()
+    check("... the page is self-contained: relative picture links, the rule, what it did, the decision field, no script",
+          'src="faults/M01_s04' in page and "The rule" in page and "What it did" in page and "Owner" in page and "<script" not in page
+          and "http" not in page.replace("https://", ""), page[:300])
 
 
 def write(path, text):
