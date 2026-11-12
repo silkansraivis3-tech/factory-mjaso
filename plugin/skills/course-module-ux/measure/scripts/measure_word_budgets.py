@@ -212,7 +212,9 @@ def measure(tcm, pool, lay, n0, rows=0):
             block = re.split(r"\n\d+x\d+\s", p.stdout.split(size, 1)[1] if size in p.stdout else "")[0]
             for j in range(4):
                 sid = "s%02d" % (j + 1)
-                px = [int(float(x)) for x in re.findall(r"\(%s\): (?:spills|scrolls) [^\n]*? by (\d+(?:\.\d+)?) px" % sid, block)]
+                # a full-screen or framed photograph's slow zoom (lt-kb) "scrolls" its own box the same at any word count:
+                # it is the picture moving, not the words, and is not counted
+                px = [int(float(x)) for x in re.findall(r"\(%s\): (?:spills|scrolls) (?!div\.photo-wrap )[^\n]*? by (\d+(?:\.\d+)?) px" % sid, block)]
                 row.setdefault(sid, {"built": built.get(sid)})[size] = max(px) if px else 0
             if "NOT MEASURED" in p.stdout:
                 row["error"] = "not measured at %s" % size

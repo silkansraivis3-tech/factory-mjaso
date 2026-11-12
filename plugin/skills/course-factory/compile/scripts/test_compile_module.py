@@ -1564,9 +1564,10 @@ def layouts_part(tmp):
     check("... and its parts hold 75 words or fewer (a part of 85 spilled 68 px)",
           all(cs.wc(" ".join(words90[i - 1] for i in ix)) <= 80 for ix in cm.auto_parts(words90)) and cm.PART_WORDS == 75)
     top = lambda n: [o["key"][0] for o in cm.layout_options("explain-figure", "figure-right", True, n, {}, "two-col", False, False)]
-    check("... a photograph across the top only up to 70 words (102 spilled 66 px on IGF M04 s05; was up to 110)",
-          "picture-top" in top(70) and "picture-top" not in top(80), (top(70), top(80)))
-    check("... a photo under the words beside a picture: about 70 (was 86)", cm.INSET_MAX_WORDS["two-col"] == 70)
+    check("... a photograph across the top only up to %d words (102 spilled 66 px on IGF M04 s05; was up to 110)" % cm.TOP_WORDS,
+          "picture-top" in top(cm.TOP_WORDS) and "picture-top" not in top(80), (top(cm.TOP_WORDS), top(80)))
+    check("... a photo under the words beside a picture: its measured budget (%d; was 86)" % cm.BUDGETS["beside_picture_with_inset"],
+          cm.INSET_MAX_WORDS["two-col"] == cm.BUDGETS["beside_picture_with_inset"] < 86)
     check("... a long photograph's column keeps its words whole past 85 (2.116.0: no automatic parts)",
           cm.auto_template({}, {}, "wide-left", True, True, words90, False, True) == ("photo-explain", "column")
           and cm.auto_template({}, {}, "wide-left", True, True, words90[:3], False, True) == ("photo-explain", "column"))

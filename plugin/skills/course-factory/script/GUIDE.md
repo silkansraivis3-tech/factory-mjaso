@@ -303,7 +303,7 @@ tablets (L35), and the script says which screen is where:
   words, beside a 3D model on a split slide 65 (1024 x 768, layout-templates.json "budgets"; `compile/GUIDE.md` §2) -
   over it the slide is split in two or made another slide type (`t_over_budget`). The picture's shape (`"picture"`
   `"aspect"`) decides the layouts a slide can take: a landscape photograph (4:3 or wider) never sits in a box beside
-  the words, only in a band across the slide (70 words) or full-screen (50); a 1:1 photograph sits beside up to 85. Words
+  the words, only in a band across the slide (65 words) or full-screen (50); a 1:1 photograph sits beside up to 75. Words
   no layout of its picture's shape holds are a must-fix here too (`t_no_shape`, a room activity with a picture as well):
   split the slide, or say the picture's real shape. The factory never pages or cuts
   words beside a picture; a slide the script keeps in parts on purpose (`"in_parts"`) has parts of at most 75 words,

@@ -85,7 +85,7 @@ def main():
     o, why = lp.options("photo-explain.column", 81, "photo", 1.79, seed="c|M01", sid="s08")
     check("words no shape its picture takes holds: the blueprints over by least, marked over - never a box the picture "
           "does not fit (the script check asks to split the slide)",
-          o and all(x.get("over") == (11, 0, 0) and x["shape"] in ("top", "bottom") for x in o), (o, why))
+          o and all(x.get("over") == (81 - lp.BUDGETS["under_top_row"], 0, 0) and x["shape"] in ("top", "bottom") for x in o), (o, why))
     o, why = lp.options("explain-figure.figure-right", 40, "drawing", 2.0, fixed="its build sheet names its template", sid="s06")
     check("a slide whose build sheet names its template keeps it while its picture fits it", [x["bp"] for x in o] == ["explain-figure.figure-right"]
           and why["top"] == "its build sheet names its template")
@@ -232,7 +232,7 @@ def main():
     over = [item("s08", "photo-explain.column", 81, "photo", 1.79)]
     n = lp.notes(over, lp.plan(over))
     check("the plan's note names a slide over every shape its picture takes, and asks to split it",
-          any("s08" in x and "11 words over" in x and "split" in x for x in n), n)
+          any("s08" in x and "%d words over" % (81 - lp.BUDGETS["under_top_row"]) in x and "split" in x for x in n), n)
 
     print("\n%d passed, %d failed" % (len(PASSED), len(FAILS)))
     return 1 if FAILS else 0

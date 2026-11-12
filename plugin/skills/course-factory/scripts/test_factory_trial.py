@@ -507,19 +507,21 @@ def faults_part(tmp):
                 'and LPG chemical ships</h2><div class="fill fig"><img src="../assets/img/%s"></div><p data-script-field="text">%s</p>'
                 '</section>' % (cls, sid, tid, var, img, text))
     one = os.path.join(pres, "one.html")
+    B = cs.LAYOUT_RULES["budgets"]
     io.open(one, "w", encoding="utf-8").write("<html><body>%s</body></html>" % (
-        titled("s08", "photo-explain", "column", "square.jpg", " ".join(["word"] * 82))
-        + titled("s06", "explain-figure", "figure-top", "wide.jpg", " ".join(["word"] * 65), cls="slide dark")
+        titled("s08", "photo-explain", "column", "square.jpg", " ".join(["word"] * (B["photo_column"] - 3)))
+        + titled("s06", "explain-figure", "figure-top", "wide.jpg", " ".join(["word"] * B["under_top_row"]), cls="slide dark")
         + titled("s09", "photo-explain", "column", "wide.jpg", "a few words", cls="slide photo")
         + titled("s10", "photo-explain", "column", "square.jpg", "a few words")))
     sl = ft.scan_deck(one)
     found1 = fr.rule_checks(one, sl)
     by1 = {(f["slide"], f["kind"]): f for f in found1}
-    check("the words a budget counts are the text's, the title apart, as measure_word_budgets.py measured them: 82 words "
-          "under a 6-word title beside a photo column (85) are no fault (the 2.131.0 trial's M01 s08: '87 against 85')",
-          {s["id"]: s["text_words"] for s in sl}["s08"] == 82 and ("s08", "words") not in by1, (sl, found1))
+    check("the words a budget counts are the text's, the title apart, as measure_word_budgets.py measured them: %d words "
+          "under a 6-word title beside a photo column (%d) are no fault (the 2.131.0 trial's M01 s08: '87 against 85')"
+          % (B["photo_column"] - 3, B["photo_column"]),
+          {s["id"]: s["text_words"] for s in sl}["s08"] == B["photo_column"] - 3 and ("s08", "words") not in by1, (sl, found1))
     check("... and the budget is the blueprint's measured one, never its template's word range: 65 words under a band of "
-          "photographs (70) are no fault (the trial's '65 against 60 in explain-figure.figure-top')", ("s06", "words") not in by1, found1)
+          "photographs (its budget) are no fault (the trial's '65 against 60 in explain-figure.figure-top')", ("s06", "words") not in by1, found1)
     check("... a slide whose section has more classes (dark, photo) is read on its own: its picture is judged, and the slide "
           "before it does not take its photograph", ("s09", "layout") in by1 and "1.50:1" in by1[("s09", "layout")]["did"]
           and ("s10", "layout") not in by1 and ("s06", "layout") not in by1, found1)

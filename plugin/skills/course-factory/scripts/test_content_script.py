@@ -57,8 +57,7 @@ PASS, FAIL = [], []
 S01_TEXT = ("Liquefied gases stay liquid only because the ship keeps them cold, under pressure, or both.\n"
             "LNG is mostly methane and boils at about -162 °C at atmospheric pressure, so it is carried fully refrigerated.\n"
             "Propane boils at -42 °C and butane at -0.5 °C; small ships carry them fully pressurised at ambient temperature.\n"
-            "If the containment fails, the liquid boils off into a heavy, cold cloud that can burn or displace oxygen.\n"
-            "Tanks, pipes, valves and gas detection keep the cargo liquid and contained.")
+            "If the containment fails, the liquid boils off into a heavy, cold cloud that can burn or displace oxygen around it.")
 S01_NOTES = ("- Ask who has sailed on a gas tanker, and with which cargo.\n"
              "- Ask: what happens to liquid at -162 °C on a warm steel deck?\n"
              "- Add: the cloud can also explode; the emergency shutdown stops the transfer.\n"
@@ -70,10 +69,10 @@ S02_TEXT = ("Fully pressurised ships carry LPG and ammonia at ambient temperatur
 S02_NOTES = ("- Draw the propane pressure-temperature line; mark the three ship types on it.\n"
              "- Ask which type suits a short coastal trade, and which an ocean voyage.\n"
              "- Point out the ethylene carrier.")
-S03_TEXT = ("The IGC Code names four containment systems.\n"
+S03_TEXT = ("The IGC Code names four systems.\n"
             "Type A tanks are prismatic, under 0.7 bar, with a full secondary barrier.\n"
             "Type B tanks - spherical Moss or prismatic SPB - need a partial secondary barrier.\n"
-            "Type C tanks are cylindrical pressure vessels: no secondary barrier.\n"
+            "Type C tanks are pressure vessels: no secondary barrier.\n"
             "Membrane tanks are thin metal barriers that rely on the hull, through the insulation, for their strength, and need a full secondary barrier.")
 S03_NOTES = ("- Let the room name each tank type on the model first.\n"
              "- Ask: why does a pressure vessel need no secondary barrier?\n"
@@ -353,7 +352,7 @@ def budget_part():
           not [x for x in f if x["rule"] == "t_over_budget"]
           and [(x["screen"], x["level"]) for x in f if x["rule"] == "t_parts_in_row"] == [("s02", cs.FAIL)], [x["rule"] for x in f])
     apart = copy.deepcopy(SCRIPT)
-    screen(apart, "s03").update(text=S03_TEXT + "\n" + MORE, in_parts="the four systems side by side")
+    screen(apart, "s03").update(text=S03_TEXT + ("\n" + MORE) * 2, in_parts="the four systems side by side")
     f = cs.theory_findings(apart)[0]
     check("... two in a module, not next to each other, pass", not cs.blocking(f), [x["rule"] for x in f])
     many = copy.deepcopy(apart)
@@ -418,7 +417,7 @@ def main():
               and lv("s_media_clean") in page)
         long3 = copy.deepcopy(SCRIPT)
         for x in ("s01", "s03"):
-            screen(long3, x)["text"] += "\n" + MORE
+            screen(long3, x)["text"] += ("\n" + MORE) * 2
         paged = cs.paged_findings(long3)
         check("F1: a slide over the column beside its picture is still listed as paged into number tabs, for the build - a warning",
               [f["screen"] for f in paged] == ["s01", "s03"] and all(f["level"] == cs.NOTE for f in paged), paged)
