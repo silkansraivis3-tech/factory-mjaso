@@ -938,18 +938,26 @@
     if (!el || !el.getBoundingClientRect) { return; }
     var r = el.getBoundingClientRect(), t = (from || el).getBoundingClientRect().top, d = 0, b = band();
     if (r.bottom > b.bot) { d = Math.min(r.bottom - b.bot, t - b.top); } else if (t < b.top) { d = t - b.top; }
-    if (d) { try { W.scrollBy(0, d); } catch (x) { D.documentElement.scrollTop += d; } }
+    if (d) { scroller().scrollTop += d; }
+  }
+  /* what scrolls: the question's band (gb_answer.css body>.wrap) - or, on a page whose sheet lets it, the page itself */
+  function scroller() {
+    var w = $('body>.wrap'), cs = w && W.getComputedStyle ? W.getComputedStyle(w) : null;
+    return cs && /auto|scroll/.test(cs.overflowY) ? w : (D.scrollingElement || D.documentElement);
   }
   /* a question of several parts (2.50.1): once the earlier parts have folded, the question, the folded parts, the part
      in hand and its verdict usually fit the screen together - then the page goes back to the top, so nothing of it
      is left above the frame; when they do not, bring() keeps the part's own label under the top bar */
   function settle(el, from) {
     if (!el || !el.getBoundingClientRect) { return; }
-    var y = W.pageYOffset || D.documentElement.scrollTop || 0;
+    var y = scroller().scrollTop || 0;
     if (y > 0 && el.getBoundingClientRect().bottom + y <= band().bot) { toTop(); return; }
     bring(el, from);
   }
-  function toTop() { try { W.scrollTo(0, 0); } catch (x) { /* an old WebView */ } D.documentElement.scrollTop = 0; body.scrollTop = 0; }
+  function toTop() {
+    try { W.scrollTo(0, 0); } catch (x) { /* an old WebView */ }
+    D.documentElement.scrollTop = 0; body.scrollTop = 0; scroller().scrollTop = 0;
+  }
   function allOk(q) {
     var ok = true;
     each(q.parts, function (p) { if (!(p.done && p.ok)) { ok = false; } });
