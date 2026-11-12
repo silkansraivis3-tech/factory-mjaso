@@ -87,6 +87,17 @@ const SKILL = A.factory
   : 'the course-factory skill (Skill tool, name "course-factory")'
 const SCRIPTS = A.factory ? `${A.factory}/course-factory` : '<the course-factory skill folder>'
 const NOTES = A.notes ? `\n\nTHE OPERATOR SAYS, FOR THIS RUN: ${A.notes}` : ''
+/* first_pass (the factory trial's default): the run measures what the factory does by itself. Each module gets Phase A and at
+   most A.builds builder builds (default 3); no carry-on builder, no fix round, no polish round and no second walk - the 3D check,
+   the figure review, QA and the walk judge each look ONCE at the first build, and what they find is recorded, not fixed.
+   Without it the build keeps its one fix round, its polish round and the walk's second look. */
+const FIRST = !!A.first_pass
+const BUILDS = Math.max(1, Math.floor(Number(A.builds)) || 3)
+const FIRST_BUILD = FIRST ? `
+
+FIRST PASS: this run measures the factory's first build, so the number of builds is capped. At most ${BUILDS} build_module.py
+runs in all - never a fourth, however the third ends: stop and report. Your report's THIRD line: "BUILDS <n>" - how many
+build_module.py runs you made; its FOURTH: "FIRST <the PASS / FAIL line of your first run>", word for word.` : ''
 /* every brief that runs a long command: the 2.126.0 trial's "M01 3D check" and "M19 build after fixes" sent their commands
    to the background and ended their turns ("waiting on its own background work") - the session then had nothing running,
    claude -p quit, and neither ever reported */
@@ -675,8 +686,8 @@ clean, then STOP - QA does the review. Its last report was:
 
 ${String(last || '(no report)').slice(0, 2500)}`
 async function buildUntilPass(m, extra) {
-  let r = await agent(build(m) + (extra || ''), { label: `build:${m.id}`, phase: 'Build', ...MECHANICAL })
-  for (let k = 1; k <= (A.retries === undefined ? 1 : A.retries) && stoppedShort(r); k++) {
+  let r = await agent(build(m) + (extra || '') + FIRST_BUILD, { label: `build:${m.id}`, phase: 'Build', ...MECHANICAL })
+  for (let k = 1; k <= (FIRST ? 0 : A.retries === undefined ? 1 : A.retries) && stoppedShort(r); k++) {
     log(`module ${m.id}: no build answer in the builder's report (it stopped mid-build) - a fresh agent carries it on (${k})`)
     r = await agent(carryOn(m, r) + (extra || ''), { label: `build:${m.id}+${k}`, phase: 'Build', ...MECHANICAL })
   }
@@ -729,7 +740,7 @@ const scene3d = (m, again) => `Run the 3D check of module ${m.id} - one command,
 it prints its JSON - never in the background, never ending your turn while it runs.
 Exit 2 ("No 3D-kit scene"): has_scene = false, ok = true, shots = [] - and stop.
 Otherwise has_scene = true, shots = every "shots" path in its JSON, scenes = each scene's slide and spec, report = its output.
-${again ? 'This runs after a fix round: do not change anything, only report.' : `If it found problems (a spec check, smoke3d, perf3d, perf_gate or the shots - "problems" in its JSON, and the
+${again || FIRST ? (FIRST ? 'This is the first pass: do not change anything, only report.' : 'This runs after a fix round: do not change anything, only report.') : `If it found problems (a spec check, smoke3d, perf3d, perf_gate or the shots - "problems" in its JSON, and the
 deck's "lag"): fix exactly those in the scene's spec (or the module's assets/kit3d_parts.js - course-visuals/kit3d/SPEC.md,
 PARTS.md; a scene whose turn lags: "light": "lite", and leave out the parts its slide does not name), rebuild with
     python ${SCRIPTS}/compile/scripts/build_module.py "${A.course}" --module ${m.id} --no-course-pages
@@ -966,6 +977,7 @@ const walkSum = (what, first, last) => {
   return Object.assign({ ok, state, round: w.round || 0, open }, first !== last ? { first_fails: walkFails(first) } : {}, { list })
 }
 const WALKS = []
+const FIRSTS = []
 
 /* ------------------------------------------------- THE POLISH ROUND (a module that passes, nothing BROKEN left) */
 /* the judges' POLISH lines, fixed on the best model in about ten minutes, most visible first, so fewer small flaws are left
@@ -1036,6 +1048,24 @@ get, never a fetcher of your own and never a person's name, e-mail address or ac
 "visually_verified": "yes - <what you saw> <YYYY-MM-DD>" once you opened it; a question's picture: its answers' boxes onto
 the real things), place the 3D parts, fix what the build printed, and build again until module clean. A placeholder never ships.` : ''
 }
+/* a finding's kind for the first-pass record: what the course office would call it */
+const kindOf = (text) => {
+  const t = String(text || '')
+  if (/\b(overflow|cut off|cut|cropped|clipped|spill|scrolls?|off the screen|overlap)/i.test(t)) return 'overflow_cut'
+  if (/\b(blueprint|template|layout|same look|centred|aspect)\b/i.test(t)) return 'blueprint'
+  if (/\btask pages?\b|\btasks?\/|\bquestion page/i.test(t)) return 'task_pages'
+  if (/\b(words?|text|wording|label|caption|reads|too much)\b/i.test(t)) return 'words'
+  return 'other'
+}
+const firstFindings = (b3, bf, bq, bw) => {
+  const kinds = { overflow_cut: 0, blueprint: 0, three_d: 0, words: 0, task_pages: 0, script: 0, figures: 0, other: 0 }
+  kinds.three_d += b3.length
+  kinds.figures += bf.length
+  for (const f of bq) kinds[/^\s*SCRIPT\b/i.test(f.where || '') ? 'script' : kindOf(f.where + ' ' + f.what)]++
+  for (const f of bw) kinds[/\btasks?\//i.test(f.slide || '') || /task page/i.test(f.what || '') ? 'task_pages' : kindOf(f.what)]++
+  return kinds
+}
+const firstQA = (q) => ((q && q.findings) || []).filter((f) => f.severity === 'BROKEN')
 async function oneModule(m) {
   if (!APPROVED.has(String(m.id))) {
     await agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' })
@@ -1062,7 +1092,7 @@ async function oneModule(m) {
   const b3 = broken3d(d3a), bf = brokenFigs(fga && fga.review), bq = fixable(q), bw = spent ? [] : walkFails(w1)
   if (spent && walkFails(w1).length) log(`module ${m.id}: walk fails after its two rounds - to the operator's list, no fixer`)
   let d3 = d3a, fg = fga, out = q, wk = w1
-  if (b3.length || bf.length || bq.length || bw.length) {
+  if (!FIRST && (b3.length || bf.length || bq.length || bw.length)) {
     log(`module ${m.id}: BROKEN - 3D ${b3.length}, figures ${bf.length}, QA ${bq.length}, walk ${bw.length} - one fix round`)
     const fixers = rebuilt3d.slice()
     if (bf.length) {
@@ -1099,12 +1129,25 @@ async function oneModule(m) {
       for_aleksis: fixable(q2).map((f) => `QA ${f.where}: ${f.what}`) }) : q
   }
   const ws = walkSum(walkOf(m), w1, wk)
+  const first = FIRST ? (() => {
+    const bq1 = firstQA(q), bw1 = walkFails(w1)
+    const kinds = firstFindings(b3, bf, bq1, bw1)
+    const n = Object.values(kinds).reduce((a, b) => a + b, 0)
+    const said = (r) => { const t = /BUILDS (\d+)/.exec(String(r || '')), f = /^FIRST (.*)$/m.exec(String(r || '')); return { n: t ? Number(t[1]) : null, line: f ? f[1] : null } }
+    const b = built === null ? { n: 0, line: null } : said(built)
+    return { module: String(m.id), phase_a_clean: built === null, builds: b.n,
+             first_build: b.line || (built === null ? lineOf(m) : String(built || '').split('\n')[0] || null),
+             passed: reachedPass, findings: kinds, findings_total: n, clean: reachedPass && n === 0 && !!ws.ok,
+             open: b3.map((f) => `3D ${f.where}: ${f.what}`).concat(bf.map((f) => `FIGURE ${f.slide}: ${f.what}`),
+               bq1.map((f) => `QA ${f.where}: ${f.what}`), bw1.map((f) => `WALK ${f.slide}: ${f.what}`)) }
+  })() : null
   WALKS.push({ module: String(m.id), ok: ws.ok, state: ws.state, open: ws.open })
   if (!ws.ok) log(`module ${m.id}: walk review not passed - ${ws.state} - on the operator's list, the upload waits for it`)
   if (out) {                                         /* the walk's left-overs are the operator's list, not a module failure */
     out = Object.assign({}, out, { walk: { ok: ws.ok, state: ws.state, round: ws.round, open: ws.open, first_fails: ws.first_fails } },
       ws.list.length ? { for_aleksis: ((out.for_aleksis) || []).concat(ws.list) } : {})
   }
+  if (first) FIRSTS.push(first)
   if (out && d3) {
     out = Object.assign({}, out, { three_d: d3 },
       broken3d(d3).length || (d3.check && !d3.check.ok) ? { blocking: true } : {})
@@ -1120,7 +1163,7 @@ async function oneModule(m) {
   }
   /* polish only while the walk has a round left: a kept change makes its slides stale, and the walk looks at them again */
   const items = polishList([q, out], fga, d3a)
-  if (out && reachedPass && items.length && !fixable(out).length && !(out.for_aleksis || []).length && !walkSpent(wk)
+  if (!FIRST && out && reachedPass && items.length && !fixable(out).length && !(out.for_aleksis || []).length && !walkSpent(wk)
       && !(d3 && (broken3d(d3).length || (d3.check && !d3.check.ok)))) {
     const p = await place(() => agent(polishRound(m, items), { label: `polish:${m.id}`, phase: 'Build', ...JUDGEMENT }))
     const wp = await walkIt('+polish', [`polish:${m.id} (workflow polish round)`])
@@ -1267,6 +1310,8 @@ return {
   blocking: blocking.map((q) => q.module),
   /* each built module's walk review as it stands, the final's too; not_passed: the portal refuses the course's upload */
   walk: { reviewed: WALKS.length, not_passed: WALKS.filter((w) => !w.ok) },
+  /* first_pass: what the first build and its one look found, module by module - recorded, never fixed */
+  first_pass: FIRST ? { builds_cap: BUILDS, modules: FIRSTS } : undefined,
   /* 2.65.0 - each built module's minutes to its first PASS against the gold standard (30-40), and which went over */
   gold_standard: {
     target: '30-40 min a module, 20 min for its fixes',

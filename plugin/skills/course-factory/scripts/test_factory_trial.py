@@ -160,6 +160,15 @@ def main():
         check("... the build's helpers come from brief.mjs, the trial's rules in its notes, and the session explores nothing",
               "helpers come from brief.mjs" in prompt and "list no folders and read no factory script's source" in prompt
               and "only catalogues the old course's own photographs" in prompt and "--none" not in prompt, prompt)
+        check("... the default run is the first pass: one rewrite round, a capped build, nothing fixed after, first_pass.json kept; "
+              "the marker says so", "FIRST PASS" in prompt and "ONE rewrite round" in prompt and '"first_pass": true' in prompt
+              and '"builds": 3' in prompt and "--despite-findings" in prompt and "first_pass.json" in prompt
+              and "full trial" not in prompt and ft.load(os.path.join(master, ft.MARKER))["first_pass"] is True, prompt)
+        code, out = cli("run", "--home", home, "--modules", "1,4", "--dry-run", "--full")
+        full_prompt = io.open(os.path.join(home, "runs", sorted(os.listdir(os.path.join(home, "runs")))[-1], "prompt.txt"), encoding="utf-8").read()
+        check("... --full keeps today's build, with its fix round", code == 0 and "full trial" in full_prompt
+              and "FIRST PASS" not in full_prompt and ft.load(os.path.join(master, ft.MARKER))["first_pass"] is False, full_prompt)
+        cli("run", "--home", home, "--modules", "1,4", "--dry-run")
         io.open(os.path.join(master, "course", "working_claude", "left_over.txt"), "w").write("x")
         code, out = cli("run", "--home", home, "--dry-run")
         check("a second run starts from an empty course again", code == 0 and not os.path.isfile(os.path.join(master, "course", "working_claude", "left_over.txt")), out)
@@ -377,6 +386,33 @@ def main():
         check("... a FAIL did not pass, and a clock with no PASS has no minutes", row["passed"] is False and row["build_minutes"] is None
               and row["build_says"].startswith("FAIL M01"), row)
         check("a number that cannot be measured is None, never a stop", ft.measured(lambda: 1 / 0) is None)
+        check("a full trial's module has no first-pass lines", "first_pass_clean" not in row and "builds_used" not in row, row)
+        agents = os.path.join(build, "agents")
+        os.makedirs(agents, exist_ok=True)
+        io.open(os.path.join(oc, "working_claude", "first_pass.json"), "w", encoding="utf-8").write(json.dumps({"scripts": {"1": {
+            "rewrite_rounds": 1, "must_fixes_first_check": 4, "approved_clean": False, "open_must_fixes": ["s05: a task is not covered"]}}}))
+        io.open(os.path.join(agents, "result.json"), "w", encoding="utf-8").write(json.dumps({"first_pass": {"builds_cap": 3, "modules": [
+            {"module": "1", "builds": 3, "first_build": "FAIL M01 - figures (80 s)", "clean": False, "findings_total": 4,
+             "findings": {"overflow_cut": 2, "three_d": 1, "script": 1, "words": 0}}]}}))
+        row = ft.score_module(oc, 1, no_browser=True)
+        check("first-pass lines: script rewrite rounds, must-fixes at the first check, the script not approvable (with its open "
+              "must-fixes), builds used, the first build's verdict, the findings of the first review by kind, and clean: no",
+              row["script_rewrite_rounds"] == 1 and row["must_fixes_first_check"] == 4
+              and row["script_approved_first_pass"].startswith("no - open: s05") and row["builds_used"] == 3
+              and row["first_build_verdict"].startswith("FAIL M01") and row["first_review_findings"] == "overflow/cut 2, 3D 1, script 1"
+              and row["first_review_findings_total"] == 4 and row["first_pass_clean"] == "no", row)
+        shown_out = io.StringIO()
+        with contextlib.redirect_stdout(shown_out):
+            ft.show({"plugin": "x", "modules": [dict(row, module=1)]})
+        check("... and the scorecard prints them", "first pass clean" in shown_out.getvalue() and "first review findings" in shown_out.getvalue(),
+              shown_out.getvalue())
+        io.open(os.path.join(oc, "working_claude", "first_pass.json"), "w", encoding="utf-8").write(json.dumps({"scripts": {"1": {
+            "rewrite_rounds": 0, "must_fixes_first_check": 0, "approved_clean": True, "open_must_fixes": []}}}))
+        io.open(os.path.join(agents, "result.json"), "w", encoding="utf-8").write(json.dumps({"first_pass": {"modules": [
+            {"module": "1", "builds": 1, "first_build": "PASS M01", "clean": True, "findings_total": 0, "findings": {}}]}}))
+        row = ft.score_module(oc, 1, no_browser=True)
+        check("... a script approved at once and a build with nothing found at the first review: clean yes",
+              row["first_pass_clean"] == "yes" and row["first_review_findings"] == "none" and row["script_approved_first_pass"] == "yes", row)
 
         class FakeFit:
             @staticmethod
