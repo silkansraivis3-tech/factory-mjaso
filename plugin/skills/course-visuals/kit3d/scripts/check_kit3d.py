@@ -9,9 +9,11 @@ SPEC   valid JSON; a label; every part of a type the kit has (or the module's ki
        named is one the part's type has; `when` well formed; view angles numbers. What stands where: deck parts on the deck,
        parts joined by their ports, a gas carrier's tanks in their hull (none through another, out through the hull's ends
        or down through its double bottom; a membrane tank lining the hold, a Moss skirt and saddles on the inner bottom), no
-       part inside a tank that is not its content, a dimension's ends on something drawn. What a label names: no box standing
-       in for what the kit draws, no hull's word on a tank, "double hull" on a double hull, one dot a point, no dot hidden
-       behind a tank from its step's view.
+       part inside a tank that is not its content, no solid part through a tank, no deckhouse in the air past the hull, no
+       cargo tank filled above 0.98, a dimension's ends on something drawn. What a label names: no box (or plain room)
+       standing in for what the kit draws, words naming a kind of thing (a door, an alarm, a sensor, a drip tray, a dome, the
+       hold space ...) on a part of that kind, no hull's word on a tank, "double hull" on a double hull, one dot a point, no
+       dot hidden behind a tank from its step's view. Two hulls (or tanks) a step shows are seen at one scale.
 MODULE every *.kit3d.json in the figures folder; and when the module's deck holds data-kit3d: assets/kit3d.js and
        assets/kit3d.css are there and equal the factory's byte for byte, assets/vendor/three.min.js is there, and each
        scene's step lines are lines of its slide (1..n, counted from 1 as the deck counts them) up to its last line.
@@ -128,6 +130,8 @@ def sub_ids(part, entry, parts=None):
             f = part.get("fill")
             if not (num(f) and f > 0):
                 continue
+        if s == "mesh" and part.get("type") == "foam_branch_pipe" and part.get("kind") == "low":
+            continue                                       # a low-expansion branch pipe has no mesh
         v = given.get(s)
         out.append(v if isinstance(v, str) and v else "%s_%s" % (pid, s))
     for key in entry.get("subs_from", []):
@@ -154,9 +158,20 @@ def made_ids(part, given, parts):
                 out.append(sid("outer"))
             out.append(sid("inner"))
             out += [sid(n) for n, on in (("wing", sec["zi"] < sec["hz"] - 1e-6), ("hopper", sec["hh"] > 0), ("topwing", sec["th"] > 0)) if on]
-    elif t == "tank_c" and nv(part.get("lobes"), 1) >= 2:
-        out.append(sid("bulkhead"))
+            if not part.get("spaces"):
+                out.append(sid("hold"))
+    elif t == "tank_c":
+        if nv(part.get("lobes"), 1) >= 2:
+            out.append(sid("bulkhead"))
+        if part.get("dome"):
+            out.append(sid("dome"))
+        if part.get("saddles") != []:
+            out.append(sid("saddles"))
+    elif t == "accommodation" and nv(part.get("doors"), 0) > 0:
+        out.append(sid("doors"))
     elif t == "tank_sphere":
+        if part.get("dome") is not False:
+            out.append(sid("dome"))
         q = seat(part, parts)
         base = nv(q.get("base"), -nv(q.get("r"), 5) * 1.25)
         if part.get("drip") and base < 0:
@@ -304,6 +319,14 @@ def check_spec(spec, types):
         if "labels" in st:
             names_ok(st["labels"], tag + " labels", "label part")
             label_parts |= {x for x in st["labels"] if isinstance(x, str)} if isinstance(st["labels"], list) else set()
+            # a part the step's "labels" names whose every label is kept to other steps: the step shows no name for it (gas
+            # trial M16 s02: "Suction (ejector function)" on "steps": [3], its step the fifth - the cutaway's point unnamed)
+            for x in st["labels"] if isinstance(st["labels"], list) else []:
+                own = [lb for lb in labels if isinstance(lb, dict) and lb.get("part") == x and not lb.get("tap_only")]
+                if own and all(isinstance(lb.get("steps"), list) and i not in lb["steps"] for lb in own):
+                    P.append("%s: \"labels\" names %s, but its label %r shows only on step%s %s - steps count from 0: give the "
+                             "label this step too" % (tag, x, own[0].get("text"), "s" if len(own[0]["steps"]) > 1 else "",
+                                                      ", ".join(str(n) for n in own[0]["steps"])))
         ln = st.get("line")
         if "line" in st and not (isinstance(ln, list) and ln and all(isinstance(x, int) and not isinstance(x, bool) for x in ln)
                                  or (isinstance(ln, int) and not isinstance(ln, bool))):
@@ -375,6 +398,7 @@ def check_spec(spec, types):
     P.extend(join_problems(spec, types))
     P.extend(stand_in_problems(spec))
     P.extend(construction_problems(spec))
+    P.extend(scale_problems(spec))
     P.extend(label_problems(spec, types))
     return P, N
 
@@ -502,8 +526,18 @@ STAND_IN = ((re.compile(r"\b(inductor|eductor|ejector|proportioner)\b", re.I), "
             (re.compile(r"\bchocks?\b", re.I), "a tank_prism \"kind\": \"type_a\" \"in\" its hull - <tank>_chocks"),
             (re.compile(r"\b(double\s*-?\s*hull|inner\s+hull|(side|outer)\s+shell|double\s+bottom|wing|hopper|ballast|"
                         r"secondary\s+barrier|hull)\b", re.I),
-             "a \"hull\" with \"double\" / \"hopper\" / \"topwing\" - its sub-parts <hull>_outer, _inner, _bottom, _wing, _hopper, _topwing"))
+             "a \"hull\" with \"double\" / \"hopper\" / \"topwing\" - its sub-parts <hull>_outer, _inner, _bottom, _wing, _hopper, _topwing"),
+            # an airlock's doors and alarm, a sensor: a dark slab on a wall named "Self-closing gastight door" (gas trial M01 s16)
+            (re.compile(r"\bdoors?\b", re.I), "an \"airlock\" - its sub-parts <id>_door1, <id>_door2 - or an \"accommodation\" with \"doors\""),
+            (re.compile(r"\balarms?\b|\bsounders?\b|\bbeacons?\b", re.I), "an \"airlock\" - its sub-part <id>_alarm - or a \"detector\""),
+            (re.compile(r"\bsensors?\b|\bdetectors?\b", re.I), "detector"))
 PRIMITIVE = ("box", "cylinder", "sphere")
+# the spaces the kit draws whole, built instead from plain rooms: three grey boxes named compressor room, motor room and
+# airlock show no gastight bulkhead, no doors, no alarm (gas trial M01 s16, s17)
+ROOM_STAND_IN = ((re.compile(r"\bair\s*-?\s*locks?\b", re.I), "an \"airlock\": two self-closing doors, the alarm on both sides"),
+                 (re.compile(r"\b(?:compressor|motor)\s+(?:rooms?|houses?)\b", re.I),
+                  "a \"compressor_house\": the compressor room and the motor room with the gastight bulkhead between them"))
+ROOMS = ("room", "enclosure")
 
 
 def stand_in_problems(spec):
@@ -517,6 +551,13 @@ def stand_in_problems(spec):
         if not isinstance(lb, dict) or not isinstance(lb.get("text"), str):
             continue
         k = kinds.get(lb.get("part"))
+        if k and k <= set(ROOMS):
+            for rx, kit in ROOM_STAND_IN:
+                if rx.search(lb["text"]):
+                    out.append("part %s (%s) is named %r - the kit draws that: %s (PARTS.md), not a plain room"
+                               % (lb["part"], "/".join(sorted(k)), lb["text"], kit))
+                    break
+            continue
         if not k or not k <= set(PRIMITIVE):
             continue
         for rx, kit in STAND_IN:
@@ -536,8 +577,15 @@ TANKS = ("tank_c", "tank_sphere", "tank_prism")
 LINING = ("membrane", "semi_membrane")
 # parts that are not judged as standing inside a tank: what measures or flows, pipes (a fill line starts inside), the hull
 NOT_CONTENT = ("dimension", "limit_box", "zone", "gas", "arrow", "flow", "pipe", "pipe_dw", "hose", "hull", "deck_plate") + TANKS
-# parts whose "at" is the centre of their floor and whose "size" is [w, h, d]
-BASE_SIZED = ("room", "enclosure", "cabinet", "accommodation")
+# parts whose "at" is the centre of their floor and whose "size" is [w, h, d] (the kit's own size when none is given)
+BASE_SIZED = ("room", "enclosure", "cabinet", "accommodation", "airlock", "compressor_house")
+SIZE = {"room": [6, 3, 4], "enclosure": [4, 3, 4], "accommodation": [10, 9, 8], "airlock": [2, 2.4, 1.6], "compressor_house": [10, 4, 5]}
+# solid parts that never pass through a tank (gas trial M01 s13: the deckhouse over the cargo hold, the tank through it)
+SOLID = ("accommodation", "airlock", "compressor_house", "cabinet") + PRIMITIVE
+# what stands on a ship's deck and is never in the air beside it
+DECK_HOUSES = ("accommodation", "airlock", "compressor_house")
+# a cargo tank's fill: never full - the vapour space stays (gas trial M01: a pressure tank drawn 100 % full)
+MAX_FILL = 0.98
 
 
 def nv(v, d):
@@ -774,8 +822,72 @@ def construction_problems(spec):
             if all(inside_tank(c, q) for c in (corners(box) if box else [p["at"]])) and p.get("in") != q.get("id"):
                 out.append("%s %s stands inside tank %s - only the tank's own content goes there (a submerged pump: \"in\": \"%s\"); "
                            "put it where it is on board" % (t, p.get("id") or "", q.get("id") or q["type"], q.get("id") or q["type"]))
+            elif box and t in SOLID and p.get("in") != q.get("id") and not (t in PRIMITIVE and nv(p.get("opacity"), 1) < 0.95) \
+                    and overlap(box, tank_box(q)) and any(inside_tank(c, q) for c in grid(box)):
+                out.append("%s %s stands through tank %s - a solid part never passes through a tank: put it where it stands on board, "
+                           "clear of the tank" % (t, p.get("id") or "", q.get("id") or q["type"]))
+    out += floating_problems(parts, hulls)
+    for q in tanks:
+        if nv(q.get("fill"), 0) > MAX_FILL:
+            out.append("tank %s is filled to %g - a cargo tank is never loaded full: its vapour space stays above the liquid "
+                       "(\"fill\" %g at most)" % (q.get("id") or q["type"], q["fill"], MAX_FILL))
     out += dimension_problems(parts, hulls, tanks)
     return sorted(set(out), key=out.index)              # two entries of one id: one sentence
+
+
+# ------------------------------------------------------------------ several hulls (or tanks) seen at one scale
+# A step that shows two hulls or more shows them to be compared: in a row along the line of sight the near one is drawn larger
+# and seen from another angle, and a tank's distance from the side cannot be compared (gas trial M01 s29, s31: three hulls
+# along x seen from az 30, the chlorine tank reading smaller rather than further inboard)
+SCALE_RATIO = 1.15
+
+
+def peers_of(parts):
+    """[(id, box, [ids it stands for])] - the hulls of a scene, or its tanks when no hull holds them"""
+    hulls = [h for h in parts if h.get("type") == "hull" and isinstance(h.get("id"), str) and not turned(h)]
+    if len(hulls) >= 2:
+        return [(h["id"], hull_box(h)[0], [h["id"]] + [q.get("id") for q in parts if q.get("in") == h["id"]]) for h in hulls]
+    if hulls:
+        return []
+    tanks = [seat(p, parts) for p in parts if p.get("type") in TANKS and isinstance(p.get("id"), str) and is_at(p.get("at"))]
+    return [(q["id"], tank_box(q), [q["id"]]) for q in tanks if not turned(q)] if len(tanks) >= 2 else []
+
+
+def scale_problems(spec):
+    parts = [p for p in spec.get("parts") or [] if isinstance(p, dict)]
+    peers = peers_of(parts)
+    if not peers:
+        return []
+    home = spec.get("view") if isinstance(spec.get("view"), dict) else {}
+    th = math.tan(nv(spec.get("fov"), 32) * math.pi / 360.0)
+    steps = [st for st in spec.get("steps") or [] if isinstance(st, dict)] or [{}]
+    out = []
+    for i, st in enumerate(steps):
+        v = st.get("view") if isinstance(st.get("view"), dict) else {}
+        frame = [x for x in v.get("frame") or [] if isinstance(x, str)]
+        shown = [(pid, b) for pid, b, ids in peers if not frame or set(ids) & set(frame)]
+        if len(shown) < 2:
+            continue
+        az, el = nv(v.get("az"), nv(home.get("az"), 30)) * math.pi / 180, nv(v.get("el"), nv(home.get("el"), 24)) * math.pi / 180
+        d = [math.sin(az) * math.cos(el), math.sin(el), math.cos(az) * math.cos(el)]
+        r = [math.cos(az), 0.0, -math.sin(az)]
+        u = [d[1] * r[2] - d[2] * r[1], d[2] * r[0] - d[0] * r[2], d[0] * r[1] - d[1] * r[0]]
+        box = [min(b[k] for _, b in shown) for k in range(3)] + [max(b[k + 3] for _, b in shown) for k in range(3)]
+        c = [(box[k] + box[k + 3]) / 2.0 for k in range(3)]
+        dot = lambda p, a: sum((p[k] - c[k]) * a[k] for k in range(3))      # noqa: E731
+        # the camera's distance from the box's centre, as kit3d.js fit() finds it: every corner inside the picture
+        D = max(dot(q, d) + max(abs(dot(q, r)) / (th * 1.5 * 0.9), abs(dot(q, u)) / (th * 0.9)) for q in corners(box))
+        depth = sorted((dot([(b[k] + b[k + 3]) / 2.0 for k in range(3)], d), pid) for pid, b in shown)
+        near, far = depth[-1], depth[0]
+        ratio = (D - far[0]) / max(D - near[0], 1e-6)
+        if ratio > SCALE_RATIO:
+            out.append("step %d shows %s together, but from its view (az %g) they stand one behind another: %s is drawn %d %% larger "
+                       "than %s and seen from another angle, so their sizes and distances cannot be compared - stand them in a row "
+                       "square to the view, each the same distance from the camera (the next one so many metres x cos(az) along x "
+                       "and -sin(az) along z), and frame them together" % (
+                           i, " and ".join(pid for pid, _ in shown), round(az * 180 / math.pi, 1), near[1],
+                           round((ratio - 1) * 100), far[1]))
+    return out
 
 
 # ------------------------------------------------------------------ a dimension measures between two things drawn
@@ -872,14 +984,53 @@ def prim_box(p):
     if t == "deck_plate":                                   # its top at "at", the ship's side at z, inboard -z
         s = p.get("size") if isinstance(p.get("size"), list) and len(p["size"]) == 2 else [6, 5]
         return [a[0] - s[0] / 2.0, a[1] - nv(p.get("thick"), 0.3), a[2] - s[1], a[0] + s[0] / 2.0, a[1], a[2]]
-    if t in BASE_SIZED and isinstance(p.get("size"), list) and len(p["size"]) == 3:
-        s = p["size"]
-        return [a[0] - s[0] / 2.0, a[1], a[2] - s[2] / 2.0, a[0] + s[0] / 2.0, a[1] + s[1], a[2] + s[2] / 2.0]
+    if t in BASE_SIZED:
+        s = p.get("size") if isinstance(p.get("size"), list) and len(p["size"]) == 3 and all(num(v) for v in p["size"]) else SIZE.get(t)
+        if t == "airlock" and s is SIZE.get(t):
+            s = [nv(p.get("gap"), 2), 2.4, 1.6]
+        if s:
+            return [a[0] - s[0] / 2.0, a[1], a[2] - s[2] / 2.0, a[0] + s[0] / 2.0, a[1] + s[1], a[2] + s[2] / 2.0]
     return None
 
 
 def corners(b):
     return [[b[0] if i & 1 else b[3], b[1] if i & 2 else b[4], b[2] if i & 4 else b[5]] for i in range(8)]
+
+
+def grid(b, n=4):
+    """points through a box, n on a side"""
+    f = lambda i, k: b[i] + (b[i + 3] - b[i]) * k / (n - 1.0)      # noqa: E731
+    return [[f(0, i), f(1, j), f(2, k)] for i in range(n) for j in range(n) for k in range(n)]
+
+
+def floating_problems(parts, hulls):
+    """a deckhouse, an airlock or a compressor house above the ground stands on a deck - a hull's, a deck plate's or another
+    deck house's roof - never in the air beside the hull (gas trial M01 s13: the accommodation at deck height past the hull's
+    end, seen from aft over the cargo hold)"""
+    out, tops = [], []
+    for q in parts:
+        b = prim_box(q) if q.get("type") in BASE_SIZED and not turned(q) else None
+        if b:
+            tops.append((b, q))
+    for p in parts:
+        t = p.get("type")
+        if t not in DECK_HOUSES or not is_at(p.get("at")) or isinstance(p.get("on"), str) or p["at"][1] <= 0.05:
+            continue
+        x, y, z = p["at"]
+        held = False
+        for h in hulls:
+            hb, _, _ = hull_box(h)
+            held = held or hb[0] - 0.05 <= x <= hb[3] + 0.05 and hb[2] <= z <= hb[5] and abs(y - deck_level(h)) <= 0.3
+        for q in parts:
+            if q.get("type") == "deck_plate" and is_at(q.get("at")):
+                b = prim_box(q)
+                held = held or b and b[0] <= x <= b[3] and abs(y - q["at"][1]) <= 0.3
+        held = held or any(q is not p and b[0] <= x <= b[3] and b[2] <= z <= b[5] and abs(y - b[4]) <= 0.3 for b, q in tops)
+        if not held:
+            out.append("the %s %s stands at y %g on nothing - past the end of the hull it is in the air, and from aft it reads as if "
+                       "it stood in the cargo hold: stand it on the hull's deck (the hull's \"x\" running under it, \"on\": "
+                       "\"<hull>.deck\")" % (t, p.get("id") or "", y))
+    return out
 
 
 def dimension_problems(parts, hulls, tanks):
@@ -946,7 +1097,173 @@ def hull_roles(parts, types):
                 if name == "bottom" and isinstance(h.get("bottom_id"), str) or name == "outer" and isinstance(h.get("side_id"), str):
                     continue
                 roles[sid] = (h, name)
+            if not h.get("spaces"):
+                roles[given.get("hold") or "%s_hold" % hid] = (h, "hold")
     return roles
+
+
+# ------------------------------------------------------------------ what kind of thing a label names
+# A label's words name a kind of thing, and its dot must be on a part of that kind - by its type, its id or the sub-part it
+# is (gas trial M01, 3D review: "Alarm on both sides" on a room's roof, "Leak sensors in the hold" and "Hold space: inert gas"
+# on the double bottom, "Partial secondary barrier only" on the inner hull, "Cofferdam" on the deckhouse, "Tank dome through
+# the deck" on the tank's shell, "Temperature sensors in insulation" on a barrier). Each kind: its name, its words, the part
+# types that are it, the words of the ids and sub-parts that are it, the types whose sub-parts are it too, and what the kit
+# draws for it.
+KINDS = (
+    ("airlock", r"\bair\s*-?\s*locks?\b", ("airlock",), ("airlock",), (), "an \"airlock\" part"),
+    ("compressor room", r"\bcompressor\s+(?:rooms?|houses?)\b", ("compressor_house",), ("compressor",), (),
+     "a \"compressor_house\" (<id>_compressor)"),
+    ("motor room", r"\b(?:electric\s+)?motor\s+rooms?\b", (), ("motor",), (), "a \"compressor_house\" (<id>_motor)"),
+    ("partial secondary barrier", r"\bdrip\s+(?:trays?|pans?)\b|\bpartial\s+(?:secondary\s+)?barriers?\b", ("drip_tray",), ("drip",), (),
+     "a tank_sphere, or a tank_prism \"type_b\", with \"drip\" (<tank>_drip), or a \"drip_tray\""),
+    ("secondary barrier", r"\bsecondary\s+barriers?\b", (), ("barrier2", "drip"), (),
+     "a membrane tank's <tank>_barrier2, or the inner hull of a hold with a Type A tank (<hull>_inner)"),
+    ("door", r"\bdoors?\b", (), ("door",), (), "an \"airlock\" (<id>_door1, _door2), or an \"accommodation\" with \"doors\""),
+    ("alarm", r"\balarms?\b|\bsounders?\b|\bbeacons?\b|\b(?:alarm|warning)\s+lamps?\b", ("detector",), ("alarm", "lamp", "sounder"), (),
+     "an \"airlock\" (<id>_alarm) or a \"detector\" (its lamp)"),
+    ("sensor", r"\bsensors?\b|\bdetectors?\b|\bthermometers?\b|\bthermocouples?\b|\bprobes?\b", ("detector",),
+     ("sensor", "detector", "probe"), (), "a \"detector\" (\"kind\": \"gas\", \"leak\" or \"temperature\")"),
+    ("cofferdam", r"\bcofferdams?\b", (), ("coff",), (), "a hull space (\"spaces\": [{\"id\": \"cofferdam\", \"x\": [a, b]}])"),
+    ("seat", r"\bseats?\b|\bchocks?\b|\bsaddles?\b|\bskirts?\b", (), ("chock", "saddle", "skirt", "seat"), (),
+     "a tank_prism \"type_a\" / \"type_b\" \"in\" its hull (<tank>_chocks), a tank_c's <tank>_saddles, a Moss <tank>_skirt"),
+    ("dome", r"\bdomes?\b", (), ("dome",), (), "a tank_c with \"dome\": true (<tank>_dome), a tank_sphere's <tank>_dome"),
+    ("tank cover", r"\b(?:tank|dome)\s+covers?\b", (), ("cover",), (), "a tank_sphere with \"cover\": true (<tank>_cover)"),
+    ("valve", r"\bvalves?\b", ("valve", "fire_hydrant"), ("valve",), (), "a \"valve\""),
+    ("pump", r"\bpumps?\b(?!\s+rooms?)", ("pump",), ("pump",), (), "a \"pump\""),
+    ("compressor", r"\bcompressors?\b(?!\s+(?:rooms?|houses?))", ("compressor_house",), ("compressor",), (),
+     "a \"compressor_house\" (<id>_compressor)"),
+    ("motor", r"\b(?:electric\s+)?motors?\b(?!\s+rooms?)", ("compressor_house", "pump"), ("motor",), (),
+     "a \"compressor_house\" (<id>_motor)"),
+    ("fan", r"\bfans?\b|\bblowers?\b", (), ("fan",), (), "a part of the module's own (kit3d_parts.js)"),
+    ("monitor", r"\bmonitors?\b", (), ("monitor",), (), "a part of the module's own (kit3d_parts.js)"),
+    ("pipe", r"\bpipes?\b|\bpipelines?\b|\bpiping\b|\bheaders?\b", ("pipe", "pipe_dw", "hose", "foam_branch_pipe", "flange", "coupling", "cylinder"),
+     ("pipe", "header"),
+     ("pipe_dw",), "a \"pipe\" or a \"pipe_dw\""),
+    ("insulation", r"\binsulat\w*", (), ("insulation", "ins1", "ins2"), (), "a tank with \"insulation\" (its layer)"),
+    ("hold space", r"\bhold\s+spaces?\b|\bin\s+the\s+hold\b", ("hull",), ("hold",), (),
+     "a gas carrier hull's <hull>_hold, or one of its spaces"),
+    ("ballast tank", r"\bballast\b|\bwing\s+tanks?\b|\btop\s*-?\s*wing\b|\bhopper\b|\bdouble\s+bottom\b", (),
+     ("bottom", "wing", "hopper", "topwing"), (), "a hull with \"double\" / \"hopper\" / \"topwing\": <hull>_bottom, _wing, _hopper, _topwing"),
+    ("accommodation", r"\baccommodation\b|\bdeck\s*house\b|\bliving\s+quarters\b", ("accommodation",), ("accommodation",), (),
+     "an \"accommodation\" part"),
+    ("gas flow", r"\bswept\b|\bsweep(?:s|ing)?\b|\bpurg(?:e|es|ed|ing)\b", ("flow", "arrow", "gas", "pipe", "pipe_dw", "hose"), ("flow",), (),
+     "a \"flow\" along the space it sweeps"),
+)
+KIND_RX = [(k[0], re.compile(k[1], re.I)) for k in KINDS]
+KIND_OF = {k[0]: k for k in KINDS}
+# a kind a negated label still says something about: the part that lacks it ("No insulation" is the bare tank's)
+LACKED_BY_TANK = ("insulation", "secondary barrier", "partial secondary barrier")
+TANK_WORD = re.compile(r"\btanks?\b", re.I)
+NEAR_NO = re.compile(r"\b(no|not|without|never|none|nor)\W+(?:\w+\W+){0,2}$", re.I)
+
+
+def kinds_named(text):
+    """[(position, kind)] - the kinds of thing the words name, in order, leaving out a kind said to be absent ("no hook",
+    "no pump room below")"""
+    out = []
+    for name, rx in KIND_RX:
+        for m in rx.finditer(text or ""):
+            if not NEAR_NO.search(text[:m.start()]):
+                out.append((m.start(), -len(m.group(0)), name))
+                break
+    return [(pos, name) for pos, _, name in sorted(out)]
+
+
+def negated_kinds(text):
+    """the kinds the words say are absent: "No insulation, no reliquefaction plant" -> insulation"""
+    return [name for name, rx in KIND_RX for m in [rx.search(text or "")] if m and NEAR_NO.search(text[:m.start()])]
+
+
+def part_table(parts, types):
+    """{id: (type, sub-part name or None, owner part)} - every part and sub-part a scene has"""
+    out = {}
+    for p in parts:
+        pid = p.get("id")
+        if not isinstance(pid, str):
+            continue
+        out.setdefault(pid, (p.get("type"), None, p))
+        given = p.get("subs") if isinstance(p.get("subs"), dict) else {}
+        back = {v: k for k, v in given.items() if isinstance(v, str)}
+        entry = types.get(p.get("type"), {})
+        for key in entry.get("subs_from", []):           # an item of the part's "sensors" list is a sensor: "sensors:o2"
+            for it in p.get(key) if isinstance(p.get(key), list) else []:
+                if isinstance(it, dict) and isinstance(it.get("id"), str):
+                    back.setdefault(it["id"], "%s:%s" % (key, it["id"]))
+        for s in sub_ids(p, entry, parts):
+            name = back.get(s) or (s[len(pid) + 1:] if s.startswith(pid + "_") else s)
+            out.setdefault(s, (p.get("type"), name, p))
+    return out
+
+
+def is_kind(pid, kind, table, parts, roles):
+    """is the part (or sub-part) pid a thing of this kind - by its type, its id, the sub-part it is"""
+    if pid not in table:
+        return False
+    name, _, types, words, sub_types, _ = KIND_OF[kind]
+    t, sub, owner = table[pid]
+    low = pid.lower()
+    if sub is None:
+        if t in types or any(w in low for w in words):
+            return True
+    else:
+        if any(w in sub.lower() for w in words) or t in sub_types:
+            return True
+    role = (roles.get(pid) or (None, None))[1]
+    if kind == "hold space" and role in ("space", "hold", "hull"):
+        return True
+    if kind == "insulation":
+        q = owner if sub is None else None
+        return bool(q and q.get("type") in TANKS and (nv(q.get("insulation"), 0) > 0 or q.get("type") == "tank_prism"))
+    if kind == "secondary barrier" and role == "inner":
+        # the hull is the secondary barrier of a Type A tank in its hold - never beside a membrane tank's own
+        h = roles[pid][0]
+        return not any(q.get("type") == "tank_prism" and lining(q) and hold_of(parts, q.get("in"))[0] is h
+                       for q in parts if isinstance(q.get("in"), str))
+    return False
+
+
+def kind_problems(labels, parts, types, roles, skip):
+    """[sentence] - a label whose words name a kind of thing, its dot on a part of another kind. A label "X: Y" names X (Y is
+    what is said about it: "Bunker manifold: valves and flanges")"""
+    table = part_table(parts, types)
+    out = []
+    for lb in labels:
+        full, part = lb["text"], lb.get("part")
+        if not isinstance(part, str) or part not in table or full in skip:
+            continue
+        txt = full.split(": ", 1)[0]
+        found = kinds_named(txt)
+        if found:
+            kind = found[0][1]
+            if is_kind(part, kind, table, parts, roles):
+                continue
+            have = [i for i in table if is_kind(i, kind, table, parts, roles)]
+            out.append("label %r names %s %s, and its dot is on %s (%s) - %s" % (
+                full, "an" if kind[0] in "aeiou" else "a", kind, part, describe(part, table, roles),
+                "put it on %s" % " / ".join(have[:3]) if have else "the scene has no %s: draw it - %s (PARTS.md)" % (kind, KIND_OF[kind][5])))
+            continue
+        lacked = [k for k in negated_kinds(txt) if k in LACKED_BY_TANK]
+        t, sub, owner = table[part]
+        role = (roles.get(part) or (None, None))[1]
+        if lacked and not (owner.get("type") in TANKS or role in ("hold", "space")):
+            out.append("label %r says what a tank has not (%s), and its dot is on %s (%s) - the words read as that part's: put it on "
+                       "the tank that lacks it" % (full, lacked[0], part, describe(part, table, roles)))
+        elif TANK_WORD.search(txt) and role in HULL_SUBS + ("side",) and not lacked:
+            out.append("label %r names a tank, and its dot is on %s (%s) - put it on the tank" % (full, part, describe(part, table, roles)))
+    return out
+
+
+def describe(pid, table, roles):
+    """a part as a reader of the picture sees it: "the hull's double bottom", "a room", "tank tank's dome" """
+    t, sub, owner = table[pid]
+    role = (roles.get(pid) or (None, None))[1]
+    names = {"bottom": "double bottom", "outer": "outer shell", "inner": "inner hull", "wing": "wing tank", "hopper": "hopper tank",
+             "topwing": "top wing tank", "hold": "hold space", "space": "space", "side": "side shell", "hull": "hull"}
+    if role:
+        return "the hull's %s" % names.get(role, role) if role != "hull" else "the whole hull"
+    if sub:
+        return "the %s's %s" % (t, sub)
+    return "a %s" % t
 
 
 def label_problems(spec, types):
@@ -960,11 +1277,12 @@ def label_problems(spec, types):
             if num(f) and f > 0:
                 given = p.get("subs") if isinstance(p.get("subs"), dict) else {}
                 tank_ids[given.get("liquid") or p["id"] + "_liquid"] = p["type"]
-    out = []
+    out, said = [], set()
     labels = [lb for lb in spec.get("labels") or [] if isinstance(lb, dict) and isinstance(lb.get("text"), str)]
     for lb in labels:
         txt, part = lb["text"], lb.get("part")
         if part in tank_ids and HULL_WORDS.search(txt) and not NEGATION.search(txt):
+            said.add(txt)
             out.append("label %r names the hull's structure but its dot is on tank %s - name the hull's own sub-part (a hull with "
                        "\"double\" / \"hopper\" / \"topwing\": <hull>_outer, _inner, _bottom, _wing, _hopper, _topwing)" % (txt, part))
         r = roles.get(part)
@@ -976,6 +1294,7 @@ def label_problems(spec, types):
         if SINGLE_HULL.search(txt) and r and (r[1] == "bottom" or r[1] in HULL_SUBS and hold_section(r[0])["zi"] < hold_section(r[0])["hz"]):
             out.append("label %r is on %s, %s - a single hull is the side shell of a hull with no \"double\"" % (
                 txt, part, "the double bottom" if r[1] == "bottom" else "a part of a double hull"))
+    out += kind_problems(labels, parts, types, roles, said)
     # -- two dots of one part on one spot: the second name reads as the first's
     steps = spec.get("steps") if isinstance(spec.get("steps"), list) else []
     seen = set()

@@ -1,0 +1,159 @@
+{
+ "label": "Three 3D hull sections side by side with the tanks at different distances from the side shell: a type 1G chlorine ship, a 2G ship and a 3G ship.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "h1",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -45,
+    -35
+   ],
+   "half": 9,
+   "bottom": 0,
+   "floor": 1.4,
+   "top": 10,
+   "double": 4.5
+  },
+  {
+   "id": "t1",
+   "type": "tank_c",
+   "in": "h1",
+   "r": 2.6,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.5,
+    2.5
+   ],
+   "rings": 0
+  },
+  {
+   "id": "h2",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -15,
+    -5
+   ],
+   "half": 7,
+   "bottom": 0,
+   "floor": 1.2,
+   "top": 10,
+   "topwing": [
+    2.2,
+    2.2
+   ]
+  },
+  {
+   "id": "t2",
+   "type": "tank_c",
+   "in": "h2",
+   "r": 3,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.5,
+    2.5
+   ],
+   "rings": 0
+  },
+  {
+   "id": "h3",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    10,
+    20
+   ],
+   "half": 7,
+   "bottom": 0,
+   "floor": 1.2,
+   "top": 10,
+   "double": 1.0
+  },
+  {
+   "id": "t3",
+   "type": "tank_c",
+   "in": "h3",
+   "r": 3.4,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.5,
+    2.5
+   ],
+   "rings": 0
+  }
+ ],
+ "labels": [
+  {
+   "part": "t1",
+   "text": "Greater hazard: furthest inboard",
+   "steps": [
+    2
+   ]
+  },
+  {
+   "part": "t2",
+   "text": "Ship types 1G, 2G, 2PG and 3G",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "t3",
+   "text": "Type 3G: least hazardous",
+   "steps": [
+    0
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 30,
+    "el": 20,
+    "frame": [
+     "h1",
+     "h2",
+     "h3"
+    ]
+   },
+   "line": 1
+  },
+  {
+   "view": {
+    "az": 35,
+    "el": 18,
+    "frame": [
+     "h1",
+     "h2",
+     "h3"
+    ]
+   },
+   "line": 2,
+   "select": "t2"
+  },
+  {
+   "view": {
+    "az": 35,
+    "el": 18,
+    "frame": [
+     "h1",
+     "h2",
+     "h3"
+    ]
+   },
+   "line": 3,
+   "select": "t1"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "Three 3D hull sections side by side with the tanks at different distances from the side shell: a type 1G chlorine ship, a 2G ship and a 3G ship."
+}

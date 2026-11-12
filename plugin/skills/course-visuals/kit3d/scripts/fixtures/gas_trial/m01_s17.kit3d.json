@@ -1,0 +1,146 @@
+{
+ "label": "3D plan of the cargo compressor room, the electric motor room and the airlock: the compressor room under negative pressure, the motor room and airlock under positive pressure.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "comp",
+   "type": "room",
+   "at": [
+    -4,
+    0,
+    0
+   ],
+   "size": [
+    5,
+    3,
+    4
+   ],
+   "open": "front",
+   "roof": true
+  },
+  {
+   "id": "motor",
+   "type": "room",
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "size": [
+    5,
+    3,
+    4
+   ],
+   "open": "front",
+   "roof": true
+  },
+  {
+   "id": "lock",
+   "type": "room",
+   "at": [
+    3,
+    0,
+    4
+   ],
+   "size": [
+    2.5,
+    3,
+    2.5
+   ],
+   "open": "front",
+   "roof": true
+  }
+ ],
+ "labels": [
+  {
+   "part": "comp",
+   "text": "Compressor room: negative pressure",
+   "steps": [
+    0,
+    2
+   ]
+  },
+  {
+   "part": "motor",
+   "text": "Motor room: positive pressure",
+   "steps": [
+    1,
+    3
+   ]
+  },
+  {
+   "part": "lock",
+   "text": "Airlock",
+   "steps": [
+    4
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 25,
+    "el": 24,
+    "frame": [
+     "comp",
+     "motor",
+     "lock"
+    ]
+   },
+   "line": 1,
+   "select": "comp"
+  },
+  {
+   "view": {
+    "az": 25,
+    "el": 24,
+    "frame": [
+     "comp",
+     "motor",
+     "lock"
+    ]
+   },
+   "line": 2,
+   "select": "motor"
+  },
+  {
+   "view": {
+    "az": 50,
+    "el": 20,
+    "frame": [
+     "comp"
+    ]
+   },
+   "line": 3,
+   "select": "comp"
+  },
+  {
+   "view": {
+    "az": 50,
+    "el": 20,
+    "frame": [
+     "motor"
+    ]
+   },
+   "line": 4,
+   "select": "motor"
+  },
+  {
+   "view": {
+    "az": 30,
+    "el": 24,
+    "frame": [
+     "lock"
+    ]
+   },
+   "line": 5,
+   "select": "lock"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D plan of the cargo compressor room, the electric motor room and the airlock: the compressor room under negative pressure, the motor room and airlock under positive pressure."
+}

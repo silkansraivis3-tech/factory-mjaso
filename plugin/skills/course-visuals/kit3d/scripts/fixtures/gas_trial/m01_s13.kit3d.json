@@ -1,0 +1,146 @@
+{
+ "label": "3D view of a gas carrier deck showing the gas-dangerous zone round the tank dome and the gas-safe accommodation aft.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "hull",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -8,
+    2
+   ],
+   "half": 7,
+   "bottom": 0,
+   "floor": 1.2,
+   "top": 10,
+   "topwing": [
+    2.2,
+    2.2
+   ]
+  },
+  {
+   "id": "tank",
+   "type": "tank_c",
+   "in": "hull",
+   "r": 3,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.5,
+    2.5
+   ],
+   "rings": 0,
+   "dome": true
+  },
+  {
+   "id": "zone",
+   "type": "zone",
+   "at": [
+    0,
+    11,
+    0
+   ],
+   "level": 2,
+   "shape": "sphere",
+   "r": 3
+  },
+  {
+   "id": "acc",
+   "type": "accommodation",
+   "at": [
+    14,
+    10,
+    0
+   ],
+   "size": [
+    5,
+    6,
+    10
+   ],
+   "decks": 2
+  }
+ ],
+ "labels": [
+  {
+   "part": "hull",
+   "text": "Cargo area: gas-dangerous",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "acc",
+   "text": "Accommodation: gas-safe",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "zone",
+   "text": "Within 3 m of tank outlets",
+   "steps": [
+    2
+   ]
+  },
+  {
+   "part": "tank",
+   "text": "Tank dome",
+   "steps": [
+    3
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 30,
+    "el": 24,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 1,
+   "select": "hull"
+  },
+  {
+   "view": {
+    "az": 60,
+    "el": 16,
+    "frame": [
+     "acc"
+    ]
+   },
+   "line": 2,
+   "select": "acc"
+  },
+  {
+   "view": {
+    "az": 35,
+    "el": 22,
+    "frame": [
+     "zone"
+    ]
+   },
+   "line": 3,
+   "select": "zone"
+  },
+  {
+   "view": {
+    "az": 40,
+    "el": 20,
+    "frame": [
+     "tank"
+    ]
+   },
+   "line": 4,
+   "select": "tank"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D view of a gas carrier deck showing the gas-dangerous zone round the tank dome and the gas-safe accommodation aft."
+}

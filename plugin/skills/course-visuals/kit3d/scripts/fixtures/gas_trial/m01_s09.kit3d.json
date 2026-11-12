@@ -1,0 +1,126 @@
+{
+ "label": "Two 3D hull sections side by side: an LNG carrier with a Moss sphere and one with membrane tanks.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "moss",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -30,
+    -14
+   ],
+   "half": 10,
+   "bottom": 0,
+   "floor": 2,
+   "top": 11,
+   "double": 2.2
+  },
+  {
+   "id": "sphere",
+   "type": "tank_sphere",
+   "in": "moss",
+   "r": 7,
+   "insulation": 0.3,
+   "cut": true,
+   "fill": 0.5,
+   "drip": true,
+   "cover": true
+  },
+  {
+   "id": "memb",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    5,
+    17
+   ],
+   "half": 9,
+   "bottom": 0,
+   "floor": 2,
+   "top": 14,
+   "double": 2,
+   "hopper": [
+    2.5,
+    2.5
+   ],
+   "topwing": [
+    2.5,
+    2.5
+   ]
+  },
+  {
+   "id": "membrane",
+   "type": "tank_prism",
+   "kind": "membrane",
+   "in": "memb",
+   "fill": 0.6
+  }
+ ],
+ "labels": [
+  {
+   "part": "sphere",
+   "text": "Moss sphere",
+   "steps": [
+    0,
+    2
+   ]
+  },
+  {
+   "part": "membrane",
+   "text": "Membrane tank",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "moss_wing",
+   "text": "Wing tank",
+   "steps": [
+    2
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 35,
+    "el": 18,
+    "frame": [
+     "moss"
+    ]
+   },
+   "line": 1,
+   "select": "sphere"
+  },
+  {
+   "view": {
+    "az": 40,
+    "el": 16,
+    "frame": [
+     "memb"
+    ]
+   },
+   "line": 2,
+   "select": "membrane"
+  },
+  {
+   "view": {
+    "az": 65,
+    "el": 12,
+    "frame": [
+     "moss",
+     "sphere"
+    ]
+   },
+   "line": 3,
+   "select": "sphere"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "Two 3D hull sections side by side: an LNG carrier with a Moss sphere and one with membrane tanks."
+}

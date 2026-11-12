@@ -1,0 +1,120 @@
+{
+ "label": "Two 3D hull sections side by side: a fully pressurised ship with a bare Type C tank and a semi-pressurised ship whose Type C tank is insulated.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "pres",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -30,
+    -20
+   ],
+   "half": 7,
+   "bottom": 0,
+   "floor": 1.2,
+   "top": 10,
+   "topwing": [
+    2.2,
+    2.2
+   ]
+  },
+  {
+   "id": "tanka",
+   "type": "tank_c",
+   "in": "pres",
+   "r": 3,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.5,
+    2.5
+   ],
+   "rings": 0
+  },
+  {
+   "id": "semi",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    0,
+    10
+   ],
+   "half": 7,
+   "bottom": 0,
+   "floor": 1.2,
+   "top": 10,
+   "topwing": [
+    2.2,
+    2.2
+   ]
+  },
+  {
+   "id": "tankb",
+   "type": "tank_c",
+   "in": "semi",
+   "r": 3,
+   "cut": true,
+   "fill": 0.6,
+   "saddles": [
+    -2.5,
+    2.5
+   ],
+   "rings": 0,
+   "insulation": 0.3
+  }
+ ],
+ "labels": [
+  {
+   "part": "tanka",
+   "text": "Fully pressurised: about 18 bar",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "tankb",
+   "text": "Semi-pressurised: 5 to 7 bar",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "semi_topwing",
+   "text": "Top wing tank",
+   "steps": [
+    1
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 35,
+    "el": 20,
+    "frame": [
+     "pres"
+    ]
+   },
+   "line": 1,
+   "select": "tanka"
+  },
+  {
+   "view": {
+    "az": 35,
+    "el": 20,
+    "frame": [
+     "semi"
+    ]
+   },
+   "line": 2,
+   "select": "tankb"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "Two 3D hull sections side by side: a fully pressurised ship with a bare Type C tank and a semi-pressurised ship whose Type C tank is insulated."
+}

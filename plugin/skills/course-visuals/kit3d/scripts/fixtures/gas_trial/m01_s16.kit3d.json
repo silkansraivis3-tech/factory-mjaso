@@ -1,0 +1,123 @@
+{
+ "label": "3D view of an airlock: two self-closing gastight doors 1.5 to 2.5 m apart, with an alarm on each side.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "lock",
+   "type": "room",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "size": [
+    4,
+    2.6,
+    3
+   ],
+   "open": "front",
+   "roof": true
+  },
+  {
+   "id": "door1",
+   "type": "box",
+   "at": [
+    -2,
+    1.1,
+    0
+   ],
+   "size": [
+    0.1,
+    2.2,
+    1.0
+   ],
+   "mat": "steel_dark"
+  },
+  {
+   "id": "door2",
+   "type": "box",
+   "at": [
+    2,
+    1.1,
+    0
+   ],
+   "size": [
+    0.1,
+    2.2,
+    1.0
+   ],
+   "mat": "steel_dark"
+  }
+ ],
+ "labels": [
+  {
+   "part": "lock",
+   "text": "Airlock from the open deck",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "door1",
+   "text": "Self-closing gastight door",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "door2",
+   "text": "Second door, no hook",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "lock",
+   "text": "Alarm on both sides",
+   "steps": [
+    2
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 30,
+    "el": 22,
+    "frame": [
+     "lock"
+    ]
+   },
+   "line": 1,
+   "select": "lock"
+  },
+  {
+   "view": {
+    "az": 30,
+    "el": 22,
+    "frame": [
+     "lock"
+    ]
+   },
+   "line": 2,
+   "select": "door1"
+  },
+  {
+   "view": {
+    "az": 60,
+    "el": 18,
+    "frame": [
+     "lock"
+    ]
+   },
+   "line": 3,
+   "select": "lock"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D view of an airlock: two self-closing gastight doors 1.5 to 2.5 m apart, with an alarm on each side."
+}

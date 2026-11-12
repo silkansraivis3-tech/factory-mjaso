@@ -1,0 +1,113 @@
+{
+ "label": "3D cross-section of an LNG carrier: a Moss sphere on its skirt at the equatorial ring, a drip tray beneath and the tank cover above the deck.",
+ "units": "m",
+ "view": {
+  "az": 30,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "hull",
+   "type": "hull",
+   "pick": false,
+   "x": [
+    -8,
+    8
+   ],
+   "half": 10,
+   "bottom": 0,
+   "floor": 2,
+   "top": 11,
+   "double": 2.2
+  },
+  {
+   "id": "sphere",
+   "type": "tank_sphere",
+   "in": "hull",
+   "r": 7,
+   "insulation": 0.3,
+   "cut": true,
+   "fill": 0.5,
+   "drip": true,
+   "cover": true
+  }
+ ],
+ "labels": [
+  {
+   "part": "sphere",
+   "text": "Moss sphere",
+   "steps": [
+    0
+   ]
+  },
+  {
+   "part": "sphere_drip",
+   "text": "Drip tray",
+   "steps": [
+    1
+   ]
+  },
+  {
+   "part": "sphere_skirt",
+   "text": "Skirt at the equator",
+   "steps": [
+    2
+   ]
+  },
+  {
+   "part": "sphere_cover",
+   "text": "Tank cover",
+   "steps": [
+    3
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 35,
+    "el": 18,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 1,
+   "select": "sphere"
+  },
+  {
+   "view": {
+    "az": 35,
+    "el": 12,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 2,
+   "select": "sphere_drip"
+  },
+  {
+   "view": {
+    "az": 45,
+    "el": 16,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 3,
+   "select": "sphere_skirt"
+  },
+  {
+   "view": {
+    "az": 30,
+    "el": 28,
+    "frame": [
+     "hull"
+    ]
+   },
+   "line": 4,
+   "select": "sphere_cover"
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D cross-section of an LNG carrier: a Moss sphere on its skirt at the equatorial ring, a drip tray beneath and the tank cover above the deck."
+}

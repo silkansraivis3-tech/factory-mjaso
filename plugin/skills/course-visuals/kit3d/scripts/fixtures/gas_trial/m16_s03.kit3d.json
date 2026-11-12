@@ -1,0 +1,177 @@
+{
+ "label": "3D cut-open model of the applicator's foam nozzle unit: foam solution entering, air drawn in, the foam leaving in a short throw that bends with the wind.",
+ "units": "m",
+ "view": {
+  "az": 24,
+  "el": 26
+ },
+ "parts": [
+  {
+   "id": "hose",
+   "type": "hose",
+   "r": 0.034,
+   "to": "ind.in",
+   "path": [
+    [
+     -1.2,
+     0.04,
+     0.3
+    ],
+    [
+     -0.6,
+     0.04,
+     0.1
+    ]
+   ]
+  },
+  {
+   "id": "ind",
+   "type": "foam_inductor",
+   "at": [
+    0,
+    0.14,
+    0
+   ],
+   "pickup": "can.mouth"
+  },
+  {
+   "id": "br",
+   "type": "foam_branch_pipe",
+   "connect": "ind.out"
+  },
+  {
+   "id": "can",
+   "type": "foam_container",
+   "at": [
+    0.12,
+    0,
+    -0.5
+   ]
+  },
+  {
+   "id": "wind",
+   "type": "arrow",
+   "a": [
+    1.6,
+    0.35,
+    -0.9
+   ],
+   "b": [
+    1.6,
+    0.35,
+    0.9
+   ],
+   "r": 0.02
+  }
+ ],
+ "labels": [
+  {
+   "part": "br",
+   "text": "Medium-expansion branch pipe"
+  },
+  {
+   "part": "br_air",
+   "text": "Air drawn in - no fan"
+  },
+  {
+   "part": "br_mesh",
+   "text": "Foam leaves here"
+  },
+  {
+   "part": "ind",
+   "text": "Concentrate from the same stock"
+  },
+  {
+   "part": "wind",
+   "text": "Wind disperses the foam"
+  },
+  {
+   "part": "can",
+   "text": "Foam concentrate"
+  },
+  {
+   "part": "hose",
+   "text": "Fire hose"
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": -38,
+    "el": 20,
+    "frame": [
+     "br"
+    ]
+   },
+   "state": {
+    "br.on": 1
+   },
+   "select": "br",
+   "line": 1,
+   "labels": [
+    "br",
+    "br_mesh"
+   ]
+  },
+  {
+   "view": {
+    "az": 24,
+    "el": 30,
+    "frame": [
+     "ind",
+     "can",
+     "br"
+    ]
+   },
+   "state": {
+    "br.on": 1
+   },
+   "select": "br_air",
+   "line": 2,
+   "labels": [
+    "ind",
+    "br_air",
+    "can"
+   ]
+  },
+  {
+   "view": {
+    "az": 60,
+    "el": 28,
+    "frame": [
+     "br",
+     "wind"
+    ]
+   },
+   "state": {
+    "br.on": 1,
+    "wind.on": 1
+   },
+   "select": "wind",
+   "line": 3,
+   "labels": [
+    "br",
+    "wind"
+   ]
+  },
+  {
+   "view": {
+    "az": -38,
+    "el": 20,
+    "frame": [
+     "br"
+    ]
+   },
+   "state": {
+    "br.on": 1
+   },
+   "select": "br_mesh",
+   "line": 4,
+   "labels": [
+    "br_mesh"
+   ]
+  }
+ ],
+ "why": "spatial",
+ "why_text": "Medium-expansion foam leaves the nozzle unit with air drawn in; its short throw is bent by wind"
+}

@@ -1,0 +1,185 @@
+{
+ "label": "A turnable 3D model of a portable foam applicator rigged on the fire line: the fire hose from the hydrant to the in-line inductor, the medium-expansion branch pipe on the inductor's outlet, the pick-up tube from the metering valve into the foam concentrate container; the inductor cut open to show the jet nozzle, the throat and the concentrate port.",
+ "units": "m",
+ "view": {
+  "az": 24,
+  "el": 26
+ },
+ "parts": [
+  {
+   "id": "hyd",
+   "type": "fire_hydrant",
+   "at": [
+    -1.7,
+    0,
+    -0.2
+   ]
+  },
+  {
+   "id": "hose",
+   "type": "hose",
+   "r": 0.034,
+   "from": "hyd.out",
+   "to": "ind.in",
+   "path": [
+    [
+     -1.2,
+     0.04,
+     0.25
+    ],
+    [
+     -0.6,
+     0.04,
+     0.1
+    ]
+   ]
+  },
+  {
+   "id": "ind",
+   "type": "foam_inductor",
+   "at": [
+    0,
+    0.14,
+    0
+   ],
+   "pickup": "can.mouth"
+  },
+  {
+   "id": "br",
+   "type": "foam_branch_pipe",
+   "connect": "ind.out"
+  },
+  {
+   "id": "can",
+   "type": "foam_container",
+   "at": [
+    0.12,
+    0,
+    -0.5
+   ]
+  }
+ ],
+ "labels": [
+  {
+   "part": "hyd",
+   "text": "Fire line hydrant"
+  },
+  {
+   "part": "hose",
+   "text": "Fire hose"
+  },
+  {
+   "part": "ind",
+   "text": "Foam ejector"
+  },
+  {
+   "part": "ind_pickup",
+   "text": "Small hose"
+  },
+  {
+   "part": "can",
+   "text": "Foam container"
+  },
+  {
+   "part": "br",
+   "text": "Foam nozzle unit"
+  },
+  {
+   "part": "ind_venturi",
+   "text": "Suction (ejector function)",
+   "anchor": "nozzle",
+   "steps": [
+    3
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 24,
+    "el": 26
+   },
+   "line": 1,
+   "labels": [
+    "hose",
+    "ind",
+    "br",
+    "can"
+   ]
+  },
+  {
+   "view": {
+    "az": 30,
+    "el": 28,
+    "frame": [
+     "hyd",
+     "hose"
+    ]
+   },
+   "select": "hose",
+   "line": 2,
+   "labels": [
+    "hyd",
+    "hose"
+   ]
+  },
+  {
+   "view": {
+    "az": 24,
+    "el": 30,
+    "frame": [
+     "hose",
+     "ind",
+     "br"
+    ]
+   },
+   "select": "ind",
+   "line": 3,
+   "labels": [
+    "hose",
+    "ind",
+    "br"
+   ]
+  },
+  {
+   "view": {
+    "az": 20,
+    "el": 34,
+    "frame": [
+     "ind",
+     "can"
+    ]
+   },
+   "select": "ind_pickup",
+   "line": 4,
+   "labels": [
+    "ind",
+    "ind_pickup",
+    "can"
+   ]
+  },
+  {
+   "view": {
+    "az": 6,
+    "el": 16,
+    "frame": [
+     "ind_venturi"
+    ]
+   },
+   "state": {
+    "ind.cut": 1,
+    "ind.on": 1,
+    "hose.on": 1
+   },
+   "select": "ind_venturi",
+   "line": 5,
+   "labels": [
+    "ind_venturi",
+    "ind",
+    "can"
+   ]
+  }
+ ],
+ "why": "spatial",
+ "why_text": "3D model of the mobile foam equipment laid out at a foam station"
+}
