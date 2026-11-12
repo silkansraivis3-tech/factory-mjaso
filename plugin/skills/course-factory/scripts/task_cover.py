@@ -80,13 +80,25 @@ def shows(s):
             "picture": cs.as_text(pic), "notes": cs.as_text(s.get("notes"))}
 
 
-def question_view(q):
-    """the question as the agent judges it: what the trainee reads and answers, the right answer and its feedback"""
+def outcomes(course, module):
+    """{Sub-ILO id: its words, in English} for the module from the ILO map - what each question's outcome asks"""
+    import ilo_map
+    m = ilo_map.read(course)
+    return {str(r["sub_ilo_id"]): r.get("sub_ilo_en") or r.get("sub_ilo") or "" for r in ilo_map.module_rows(m, module)
+            if r.get("sub_ilo_id")} if m else {}
+
+
+def question_view(q, outs=None):
+    """the question as the agent judges it: what the trainee reads and answers, the right answer and its feedback, and
+    the words of the outcome it checks - every part it names and the method of what it has the trainee do are taught"""
     out = {"id": q["id"]}
     out.update({k: v for k, v in q.items() if k not in QUESTION_SKIP and v not in (None, "")})
     _, right, _ = cs.read_answer(q)
     if right:
         out["right"] = right
+    said = (outs or {}).get(str(q.get("sub_ilo") or ""))
+    if said:
+        out["outcome"] = "%s %s" % (q["sub_ilo"], said)
     return out
 
 
@@ -285,9 +297,9 @@ def main(argv=None):
         if load_store(course, a.module) is None:
             save_store(course, a.module, {"module": str(a.module), "questions": {}})   # from now on an unjudged question holds the approval
         left = set(status(course, a.module, script)["unjudged"])
-        out, n = [], 0
+        out, n, outs = [], 0, outcomes(course, a.module)
         for sid, kind, slides, qs in units(script):
-            todo = [question_view(q) for q in qs if q["id"] in left][:max(0, a.n - n)]
+            todo = [question_view(q, outs) for q in qs if q["id"] in left][:max(0, a.n - n)]
             if todo:
                 out.append({"set": sid, "kind": kind, "slides_before": slides, "questions": todo})
                 n += len(todo)

@@ -20,7 +20,9 @@ You check one module's content script against the course's sources. Nothing else
 1. `F prepare <c> --module <n>` - finds every claim, proves the ones a source says word for word.
 2. `F next <c> --module <n>` - up to 20 claims, each with its source passages. Judge each from the passages only -
    never from what you know:
-   - **found** - a passage says it (other words are fine, the meaning and every number the same).
+   - **found** - a passage says it (other words are fine, the meaning and every number the same). Steps in an order
+     (dress, rig, start, shut down) are found only when a passage gives the same order: another order is partly, its
+     `fix` in the source's order; no passage gives the order: not_found.
    - **partly** - part of it is said, or a number or detail differs. `fix`: the claim rewritten as the source says it
      (a point of a slide of short points stays a point: 14 words or fewer).
    - **not_found** - no passage says it. First search once more: `F search <c> --module <n> "<key words>"`. Still
