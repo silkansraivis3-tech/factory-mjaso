@@ -80,6 +80,7 @@
     "folders": ["presentation", "instructor*", "plan", "plans", "prepare", "record", "answers", "instructor_screens"],
     "names": ["answer_key", "model_answer", "_criteria", "instructor_analysis", "observation_checklist", "practical_skills_record", "gb_answers", "gb_review", "gb_roster", "gb_observe", "_paper.html", "START_HERE.html", "START_COURSE.html", "COURSE.html", "module.html", "MODULE_NN_PLAN", "ROTATION_PLAN", "SAFETY_BRIEF"],
     "trainee_copy": "only files in tasks/, handout/, documents/, assets/, assessment/ (and _course_shell/course_bridge.js, gb_tokens.css) reach the trainee tablet - and never one of the instructor-only names",
+    "day_sheets": "2.129.0 - _course_shell/documents/day_sheets/*.html (compile/scripts/day_sheets.py): documents/ is copied to both trees, so the instructor's plan viewer shows them as tabs and the trainee's Handout lists them (the overview and the days up to today); app side admin/classroom/shared/day-sheets.mjs",
     "rule": "a trainee page (tasks/, assessment/check.html, handout/) never links to an instructor-only file - the link would not open on the tablet; a 'back to the guide' link to START_HERE.html is the commonest mistake"
   },
 

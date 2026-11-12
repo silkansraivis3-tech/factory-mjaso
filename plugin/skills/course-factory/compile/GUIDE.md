@@ -828,6 +828,8 @@ course\
     day-sheets\Course_on_one_page.*                    their requirements; and the course on one page
                                                        (`day_sheets.py`, `instructor-led/GUIDE.md` section 4)
   modules\_course_shell\advanced_course_plan.html      the ACP on the instructor's tablet
+  modules\_course_shell\documents\day_sheets\*.html   the day sheets as tablet pages - uploaded with the course, they
+                                                       reach the instructor terminal and every trainee tablet
   modules\moduleNN\instructor\advanced_module_plan.html   the module explained step by step, for the tablet
 ```
 

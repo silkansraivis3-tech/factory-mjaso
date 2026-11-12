@@ -28,8 +28,14 @@ this up cold, including one with no memory of why any of it is the way it is.
   titles, counted exercises and self-checks, about N academic hours) and the activity rows the file does not override (the
   activity's title with its task names). The hand-built files were not touched.
 - Tests: `compile/scripts/test_day_sheets.py` (new, 15).
-- Not done: the classroom platform does not show them yet (`additional-materials` is not uploaded to the classroom);
-  `day_sheets.json` has no `draft` or approval step - it is the course lead's words, checked at the STOP like the scripts.
+- In the classroom by the upload alone: the build also writes each sheet as a standalone tablet page into
+  `modules/_course_shell/documents/day_sheets/` (`TABLET_DIR`; `tablet_stem` renames a day whose name holds an importer
+  instructor-only word). The training app (branch `aleksis/day-sheets`, `admin/classroom/shared/day-sheets.mjs`) shows
+  them as tabs of the instructor's plan viewer and under the trainee's Handout (overview + days up to today). Checked:
+  the PM modules folder with the five pages through the real `package-core.mjs prepareCourse` - no error, no warning,
+  all five in both trees.
+- Not done: `day_sheets.json` has no `draft` or approval step - it is the course lead's words, checked at the STOP like
+  the scripts.
 
 ## 2.128.0 · Varied practical-activity formats, chosen while a module is written (2026-11-11)
 

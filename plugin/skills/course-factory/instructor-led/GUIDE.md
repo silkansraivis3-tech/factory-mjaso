@@ -180,7 +180,15 @@ Preview before a build, written outside the course:
 python compile/scripts/day_sheets.py <course> --out <folder> [--no-data]
 ```
 
-`--no-data` shows what the scripts alone give. A day sheet never carries a clock time: a script's "Timing:" notes and an
+`--no-data` shows what the scripts alone give.
+
+**In the classroom, with no extra step.** The same build also writes each sheet as a tablet page (no link, no script,
+`gb-standalone`) into `modules\_course_shell\documents\day_sheets\` - inside the folder the admin's "+" uploads. The
+importer copies `documents\` to both trees, so the instructor terminal shows the sheets as tabs of its plan viewer
+(Overview, Day 1, Day 2 ...) and every trainee tablet lists them under Handout - the overview and the days up to today,
+never a day still to come - offline like the rest of `_course_shell\` (novikontas-training-app
+`admin/classroom/shared/day-sheets.mjs`). A day whose file name would hold one of the importer's instructor-only
+words (`COURSE.html`, `_criteria`, `SAFETY_BRIEF` ...) is called `Day_N` alone, so it still reaches the trainees. A day sheet never carries a clock time: a script's "Timing:" notes and an
 activity's minutes stay on the instructor's own pages (the module plan, the practical kit).
 
 ## 5 · Not the factory's yet

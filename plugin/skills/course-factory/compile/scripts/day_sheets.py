@@ -49,6 +49,14 @@ import workspace  # noqa: E402
 
 NAME = "day_sheets.json"
 FOLDER = "day-sheets"
+# in the course folder the admin uploads: documents/ is copied to the trainee tablets as well as the instructor's
+# (novikontas-training-app admin/package-core.mjs), _course_shell/ goes with every module and is kept offline
+TABLET_DIR = os.path.join("_course_shell", "documents", "day_sheets")
+# the importer's instructorOnly() file-name words (package-core.mjs) - a day sheet named with one would reach no trainee
+INSTRUCTOR_ONLY = re.compile(r"answer[_-]?key|model[_-]?answer|_criteria|instructor[_-]analysis|observation_checklist|"
+                             r"practical_skills_record|gb_answers|gb_review|gb_roster|gb_observe|_paper\.html|"
+                             r"START_HERE\.html|START_COURSE\.html|COURSE\.html|module\.html|MODULE_\d+_PLAN|"
+                             r"ROTATION_PLAN|SAFETY_BRIEF", re.I)
 TASK_REF = re.compile(r"\bTasks?\s+(\d+)((?:\s*(?:,|and|&)\s*\d+)*)", re.I)
 TITLES_SHOWN = 6                    # a theory row names at most this many slides, then "and N more"
 W = {
@@ -425,13 +433,26 @@ def documents(course, title, prog, mods, days, probs, data=None):
     return out
 
 
+def tablet_stem(stem, d=None):
+    """the name the classroom keeps for both roles: one that the importer's instructorOnly() names (COURSE.html,
+    _criteria, SAFETY_BRIEF ...) would hide it from the trainees, so such a day is called Day_N alone"""
+    return ("Day_%d" % d) if d and INSTRUCTOR_ONLY.search(stem + ".html") else stem
+
+
 def files(course, title, prog, mods, days, root, probs):
-    """for additional_materials.plan(): [(path, kind, payload)] - each document as HTML, PDF and Word"""
+    """for additional_materials.plan(): [(path, kind, payload)] - each document as HTML, PDF and Word in
+    additional-materials\\day-sheets\\, and (2.129.0) as a tablet page in modules\\_course_shell\\documents\\day_sheets\\:
+    the course folder the admin uploads carries it to the instructor terminal and to every trainee tablet, offline"""
     out = []
+    shell = os.path.join(course, workspace.MODULES, TABLET_DIR)
     for stem, name, blocks in documents(course, title, prog, mods, days, probs):
         base = os.path.join(root, FOLDER, stem)
         out += [(base + ".html", "html", am.to_html(name, blocks)), (base + ".pdf", "pdf", am.to_html(name, blocks)),
                 (base + ".docx", "docx", blocks)]
+        d = re.match(r"Day_(\d+)_", stem)
+        screen = [b for b in blocks if b[0] != "small" or b is not blocks[-1]]       # the tablet page: no build note
+        out.append((os.path.join(shell, tablet_stem(stem, int(d.group(1)) if d else None) + ".html"), "html",
+                    am.to_html(name, screen, screen=True)))
     return out
 
 

@@ -107,6 +107,16 @@ def main():
         want = ["Day_1_igf_ships.%s" % k for k in ("docx", "html", "pdf")] + ["Day_2_fuel_systems.%s" % k for k in ("docx", "html", "pdf")]
         check("the course build writes a sheet per day of course.build.json \"days\" (HTML, PDF, Word) and the one-page overview",
               all(x in files for x in want) and "Course_on_one_page.html" in files, (code, files, out[-800:]))
+        shell = os.path.join(c, "modules", ds.TABLET_DIR)
+        tab = sorted(os.listdir(shell)) if os.path.isdir(shell) else []
+        check("... and a tablet page of each in modules\\_course_shell\\documents\\day_sheets\\ - the uploaded folder carries "
+              "them to both roles", tab == ["Course_on_one_page.html", "Day_1_igf_ships.html", "Day_2_fuel_systems.html"], tab)
+        raw = io.open(os.path.join(shell, "Day_1_igf_ships.html"), encoding="utf-8").read() if tab else ""
+        check("the tablet page stands alone: gb-standalone, no link, no script, no build note",
+              'name="gb-standalone"' in raw and "<a " not in raw and "<script" not in raw and "Never edit it by hand" not in raw, raw[:400])
+        check("a day whose title holds an instructor-only word is called Day_N alone (the importer would hide it from trainees)",
+              ds.tablet_stem("Day_3_the_safety_brief", 3) == "Day_3" and ds.tablet_stem("Day_2_plan_the_project", 2) == "Day_2_plan_the_project"
+              and ds.tablet_stem("Day_1_an_old_course", 1) == "Day_1")          # "...course.html" is the importer's COURSE.html
         index = io.open(os.path.join(c, am.FOLDER, "INDEX.html"), encoding="utf-8").read()
         check("INDEX.html links the day sheets", "day-sheets/Day_1_igf_ships.html" in index and "Course_on_one_page" in index)
         d1 = text(os.path.join(root, "Day_1_igf_ships.html"))
