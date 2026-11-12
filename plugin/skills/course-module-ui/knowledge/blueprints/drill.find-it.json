@@ -8,5 +8,6 @@
  "grid": ["x .", "a ."],
  "cols": "40fr 60fr",
  "fill": {"p": ["Picture", "figure; spots"], "x": ["Text", "lines 'Point to ...'"], "a": ["Animation", "the clock"]},
- "ref": "slides#p28"
+ "ref": "slides#p28",
+ "fits": {"group": "find-it", "pictures": ["photo"], "aspect": {"photo": [1.25, 3]}, "hard": true, "words": [0, 999]}
 }

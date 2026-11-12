@@ -2906,16 +2906,18 @@ def plan_seed(script):
     return "%s|%s" % (script.get("course_title") or script.get("course") or "", cs.mid(script.get("module")))
 
 
-def plan_item(s, b, tid, variant, comp, fig, is_photo, lines, mdir, own_comp, want_t, ph_keys, act, avoid, ground, seed):
+def plan_item(s, b, tid, variant, comp, fig, is_photo, lines, mdir, own_comp, want_t, ph_keys, act, avoid, ground, seed,
+              keeps=PLAN_KEEPS):
     """the layout plan's item for one teaching slide (layout_plan.plan), or a room activity laid out like one: its own
     blueprint, the blueprints it fits (layout_plan.options - its picture's real shape against each box, a hard rule, its
     words against each budget) and why not the other shapes, and why it keeps its own when it does - while its picture fits
-    it. A shape measured out at the last build is left out while another its picture fits is left"""
+    it. A shape measured out at the last build is left out while another its picture fits is left. keeps: the build-sheet
+    fields that keep a slide in its own blueprint (a template's own inputs, like a name-parts slide's "spots", go with it)"""
     own_bp = "%s.%s" % (tid, variant)
     own = layout_plan.shape_of(tid, variant) or "beside"
     family = picture_family(fig, is_photo, b)
     named = [k for k, v in (("template", want_t), ("variant", b.get("variant")), ("layout", own_comp)) if v]
-    laid = [k for k in PLAN_KEEPS if b.get(k)]
+    laid = [k for k in keeps if b.get(k)]
     fixed = ("its build sheet names its %s" % " and ".join(named)) if named else "the module's opening" if comp == "opener"         else "a carousel of photographs" if ph_keys         else ("its build sheet's \"%s\" is laid out for its own shape" % laid[0]) if laid else None
     aspect = None
     if family == "photo":
@@ -3251,9 +3253,14 @@ def answer_over(side, s, you=""):
     box with one sentence and no picture (M01 s05) - a drawing shows the answer's step, a photograph stays in sight"""
     if not side or not (s.get("ask") and s.get("reveal")):
         return side
+    return '<div class="lt-scol">%s%s</div>' % (side, answer_cards(s, you))
+
+
+def answer_cards(s, you=""):
+    """the room's question card (you) and the card its answer opens in on the last Next"""
     card = '<div class="lt-ans-under" data-script-ignore>%s</div>' % "".join(
         "<p>%s</p>" % e(x) for x in cs.lines_of(s.get("reveal")))
-    return '<div class="lt-scol">%s%s%s</div>' % (side, '<ol class="lt-work lt-you">%s\n      </ol>' % you if you else "", card)
+    return '%s%s' % ('<ol class="lt-work lt-you">%s\n      </ol>' % you if you else "", card)
 
 
 WORDS_ONLY = {"p", "span", "b", "i", "em", "strong", "br", "small"}
@@ -3286,10 +3293,31 @@ def img_tag(fig):
     return m.group(0) if m else ""
 
 
-def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir, figdir, probs, where, vkind):
-    """the slide built in the template its information asks for - None when it cannot be (the slide is then built as before)"""
+BANDS = ("figure-top", "figure-bottom")
+
+
+def band_body(variant, pic, cols, ar=None, panel=False, widths="1fr 1fr"):
+    """a picture band across the slide (figure-top, or figure-bottom: the words first) of a template that has the room
+    answer - a scenario, a worked example, a true or false, naming the parts: the picture at the slide's width, its box its
+    own shape (ar), and the template's columns under it or over it - the band of every other template (gb_layouts.css
+    .fig-top, .fig-bottom). panel: a drawing or a 3D scene keeps its panel"""
+    tag = pic.split(">", 1)[0]
+    if ar:
+        pic = pic.replace(' style="', ' style="--ar:%.3f;' % ar, 1) if ' style="' in tag else pic.replace(">", ' style="--ar:%.3f">' % ar, 1)
+    under = '<div class="copy lt-under" style="--cols:%s">%s\n    </div>' % (widths, "".join("\n      " + c for c in cols))
+    first, last = (under, pic) if variant == "figure-bottom" else (pic, under)
+    return '<div class="slide-body two-col %s%s">\n    %s\n    %s\n  </div>' % (
+        "fig-bottom" if variant == "figure-bottom" else "fig-top", " fig-band" if panel else "", first, last)
+
+
+def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir, figdir, probs, where, vkind, is_photo=False):
+    """the slide built in the template its information asks for - None when it cannot be (the slide is then built as before).
+    variant: a band (figure-top, figure-bottom) when the layout plan gives the slide one - a picture too wide for the box
+    beside the words"""
     w = words_of(script)
     lt = lambda f: cs.lines_of(s.get(f))
+    band = bool(fig) and variant in BANDS
+    ar = photo_aspect(mdir, b.get("figure")) if band and is_photo else None
     side = fill(fig).replace('class="fill', 'class="lt-in fill', 1) if fig else ""
     if fig and 'style="' not in side.split(">", 1)[0]:
         side = side.replace(">", ' style="--i:1">', 1)
@@ -3324,17 +3352,23 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         why = "".join('<p data-script-field="text" data-i="%d">%s</p>' % (i, marked(x, False)) for i, x in enumerate(lines, 1))
         vote = "".join('<button type="button" data-v="%s"%s>%s</button>' % (v, ' class="ok"' if v == right else "", e(w[k]))
                        for v, k in (("t", "true"), ("f", "false")))
-        variant = "picture" if fig else "text-only"
+        variant = (variant if band else "picture") if fig else "text-only"
         why_box = ('<div class="lt-why" data-k="1"><span class="stamp" data-script-ignore>%s</span><div>%s</div></div>'
                    % (e(w["true" if right == "t" else "false"]), why))
-        if fig:
+        if band:
+            # the claim and the vote by the picture band, why opening in the column beside them
+            body = band_body(variant, side, ['<div class="lt-ucol lt-tf"><p class="lt-claim lt-in" style="--i:1" data-script-field="claim">'
+                                             '%s</p><div class="lt-vote lt-in" style="--i:2">%s</div></div>' % (e(s.get("claim")), vote),
+                                             '<div class="lt-ucol">%s</div>' % why_box], ar, not is_photo)
+        elif fig:
             # beside a picture, why opens in the picture's column, under the picture: under the claim and the vote it had a
             # third of the slide, and a why of three lines was cut (the factory trial, M01 s04); over the picture it hid the
             # whole figure, and the steps the figure walks with the why's lines were drawn where no one saw them (M19 s08)
             side, why_box = '<div class="lt-scol">%s%s</div>' % (side, why_box), ""
-        body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-tf">\n      <p class="lt-claim lt-in" style="--i:1" '
-                'data-script-field="claim">%s</p>\n      <div class="lt-vote lt-in" style="--i:2">%s</div>\n      %s</div>%s</div>'
-                % ("48fr 52fr" if fig else "1fr", e(s.get("claim")), vote, why_box, "\n    " + side if fig else ""))
+        if not band:
+            body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-tf">\n      <p class="lt-claim lt-in" style="--i:1" '
+                    'data-script-field="claim">%s</p>\n      <div class="lt-vote lt-in" style="--i:2">%s</div>\n      %s</div>%s</div>'
+                    % ("48fr 52fr" if fig else "1fr", e(s.get("claim")), vote, why_box, "\n    " + side if fig else ""))
 
     elif tid == "scenario":
         # the situation and the question, the choices the room picks from; Next shows why each, the right one green
@@ -3345,14 +3379,21 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
                        for L, c, f in zip(cs.letters(len(ch)), ch, why + [""] * len(ch)))
         sit = "".join('<p class="lt-sit lt-in" style="--i:1" data-script-field="text" data-i="%d">%s</p>' % (i, e(x)) for i, x in enumerate(lines, 1))
         d["data-stops"] = "2"
-        variant = "picture-left" if fig else "text-only"
-        if fig:
+        variant = (variant if band else "picture-left") if fig else "text-only"
+        if band:
+            # by the picture band the situation and the question across the slide, the choices side by side under them: a
+            # column of choices with their whys open was taller than the band leaves
+            body = band_body(variant, side.replace("--i:1", "--i:0"), [
+                '<div class="lt-ucol lt-dcopy">%s<p class="lt-ask lt-in" style="--i:2" data-script-field="ask">%s</p></div>' % (sit, e(s.get("ask"))),
+                '<ol class="lt-opts lt-in" style="--i:3;--n:%d">%s\n      </ol>' % (max(1, len(ch)), opts)], ar, not is_photo, "1fr")
+        elif fig:
             # the situation under the picture, the question and its choices beside them: in one column with the whys
             # open, every scenario of the first factory trial ran 50 to 290 px past the slide
             side, sit = '<div class="lt-scol">%s%s</div>\n    ' % (side.replace("--i:1", "--i:0"), sit), ""
-        body = ('<div class="slide-body lt-split" style="--cols:%s">%s<div class="copy lt-dcopy">%s<p class="lt-ask lt-in" style="--i:2" '
-                'data-script-field="ask">%s</p><ol class="lt-opts lt-in" style="--i:3">%s\n      </ol></div></div>'
-                % ("46fr 54fr" if fig else "1fr", side if fig else "", sit, e(s.get("ask")), opts))
+        if not band:
+            body = ('<div class="slide-body lt-split" style="--cols:%s">%s<div class="copy lt-dcopy">%s<p class="lt-ask lt-in" style="--i:2" '
+                    'data-script-field="ask">%s</p><ol class="lt-opts lt-in" style="--i:3">%s\n      </ol></div></div>'
+                    % ("46fr 54fr" if fig else "1fr", side if fig else "", sit, e(s.get("ask")), opts))
 
     elif tid == "worked-example":
         # each step of the worked example lights on Next; then the room's turn, and its answer on the last Next
@@ -3373,11 +3414,17 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
                            j + 1, joined(cells(x), ("b", "span")) if " | " in x else "<b>%s</b>" % e(x)) for j, x in enumerate(lines))
         you = room_turn(s, len(lines))
         d["data-stops"] = str(len(lines) + 2)
-        variant = "figure" if fig else "text-only"
-        if fig:
+        variant = (variant if band else "figure") if fig else "text-only"
+        if band:
+            # the steps by the picture band, the room's question and its answer in the column beside them
+            body = band_body(variant, side, ['<div class="lt-ucol"><ol class="lt-work">%s\n      </ol></div>' % steps,
+                                             '<div class="lt-ucol">%s</div>' % answer_cards(s, you)],
+                             ar, not is_photo, "56fr 44fr")
+        elif fig:
             side, you = answer_over(side, s, you), ""
-        body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
-                % ("56fr 44fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
+        if not band:
+            body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
+                    % ("56fr 44fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
 
     elif tid == "name-parts":
         # the room names each numbered part on the picture first; Next shows the names one by one
@@ -3390,10 +3437,17 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         names = "".join('\n        <li data-k="%d"><span class="n" data-script-ignore>%d</span><span class="blank"></span>'
                         '<b data-script-field="text" data-i="%d">%s</b></li>' % (i, i, i, e(x)) for i, x in enumerate(lines, 1))
         marks = "".join('<span class="lt-spot" data-k="%d" data-x="%g" data-y="%g"><i>%d</i></span>' % (i, x, y, i) for i, (x, y) in sorted(spots.items()))
-        body = ('<div class="slide-body lt-split" style="--cols:38fr 62fr"><div class="copy"><p class="lt-ask lt-in" style="--i:0" '
-                'data-script-field="ask">%s</p>\n      <ol class="lt-name lt-in" style="--i:1">%s\n      </ol></div>\n    '
-                '<figure class="lt-pic lt-in" style="--i:1">%s<div class="lt-spots" data-script-ignore>%s</div></figure></div>'
-                % (e(s.get("ask")), names, img, marks))
+        if band:
+            # the numbered picture across the slide, the question and the names in a row by it
+            pic = '<figure class="lt-pic lt-in" style="--i:1">%s<div class="lt-spots" data-script-ignore>%s</div></figure>' % (img, marks)
+            body = band_body(variant, pic, ['<p class="lt-ask lt-in" style="--i:0" data-script-field="ask">%s</p>' % e(s.get("ask")),
+                                            '<ol class="lt-name lt-in" style="--i:1">%s\n      </ol>' % names],
+                             photo_aspect(mdir, b.get("figure")), False, "1fr")
+        else:
+            body = ('<div class="slide-body lt-split" style="--cols:38fr 62fr"><div class="copy"><p class="lt-ask lt-in" style="--i:0" '
+                    'data-script-field="ask">%s</p>\n      <ol class="lt-name lt-in" style="--i:1">%s\n      </ol></div>\n    '
+                    '<figure class="lt-pic lt-in" style="--i:1">%s<div class="lt-spots" data-script-ignore>%s</div></figure></div>'
+                    % (e(s.get("ask")), names, img, marks))
 
     elif tid == "before-after":
         # one picture over the other, a line between them that Next (or a finger) moves; the differences light beside it
@@ -3733,9 +3787,24 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             note_once("Note: %s - %s has %d words beside the picture; the %s template holds %d at 1024 x 768 and has no parts: "
                       "expect the audit to find it cut or scrolling - split it into two slides (content_script.py propose)"
                       % (where, cs.T(script, part), w, shaped[0], most))
-        out = shaped_html(script, s, b, shaped[0], shaped[1], fig, lines, base, m, n, total, mdir, figdir, probs, where, vkind)
+        variant, item = shaped[1], None
+        if fig and b.get("variant") in BANDS and "%s.%s" % (shaped[0], b["variant"]) in layout_plan.LIB:
+            variant = b["variant"]                    # the build sheet names the template's band
+        own_bp = "%s.%s" % (shaped[0], variant)
+        if LAYOUT_PLAN and fig and (info is not None or plan) and (layout_plan.LIB.get(own_bp) or {}).get("fits"):
+            # the template stays the one its words ask for; its picture's shape picks the variant: the box beside the words
+            # while it takes the picture, else a variant of the same template whose box does (a band for a wide picture)
+            item = plan_item(s, b, shaped[0], variant, "two-col", fig, is_photo, lines, mdir, own_comp, want_t, ph_keys, False,
+                             avoid, "dark" if b.get("dark") else "light", plan_seed(script), keeps=())
+            if layout_plan.picture_fit(own_bp, item["family"], item["aspect"]) is None:
+                item = None
+            elif plan and any(o["bp"] == plan for o in item["options"]):
+                variant = layout_plan.LIB[plan]["variant"]
+        out = shaped_html(script, s, b, shaped[0], variant, fig, lines, base, m, n, total, mdir, figdir, probs, where, vkind, is_photo)
         if out:
-            if info is not None and kind == "slide":
+            if item is not None and info is not None:
+                info[sid] = item
+            elif info is not None and kind == "slide":
                 tv = re.search(r'\bdata-template="([\w-]+)\.v\d+"[^>]*\bdata-variant="([\w-]+)"', out)
                 own = (layout_plan.shape_of(*tv.groups()) if tv else None) or "beside"
                 info[sid] = {"id": sid, "own": own, "fits": {own: None}, "fixed": "its words make it the %s template" % shaped[0],

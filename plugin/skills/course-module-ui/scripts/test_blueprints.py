@@ -66,12 +66,28 @@ def main():
     bp.BP["slides"][1]["grid"] = ["x p", "x"]
     bp.BP["slides"] = [b for b in bp.BP["slides"] if b["id"] != "drill.say-it"]
     bp.BP["tasks"][-1]["ref"] = "engines#99_none"
+    for b in bp.BP["slides"]:
+        if b["id"] == "scenario.picture-left":          # the trial's M01 s21: a box no rule judged
+            del b["fits"]
+        if b["id"] == "scenario.figure-top":
+            b["fits"]["parts"] = dict(b["fits"]["parts"], t_part_choices="scenario_choices_guess")
     probs = bp.problems()
     bp.BP.clear()
     bp.BP.update(keep)
     for what, word in (("a slot that is not one of the six kinds", "is a 'Words'"), ("a grid whose rows differ", "not all as wide"),
-                       ("a template variant with no blueprint", "drill.say-it has no blueprint"), ("a reference that is not there", "99_none")):
+                       ("a template variant with no blueprint", "drill.say-it has no blueprint"), ("a reference that is not there", "99_none"),
+                       ("a picture box that says no shape of picture (scenario.picture-left, M01 s21)",
+                        "scenario.picture-left: it holds a picture and says no picture shape"),
+                       ("a part's budget that was never measured", "\"scenario_choices_guess\", is not a measured budget")):
         check("... and it catches %s" % what, any(word in p for p in probs), probs)
+    slides = [bp.resolved(b, bp.BP["slides"]) for b in bp.BP["slides"]]
+    one = [b["id"] for b in slides if b.get("shape") not in ("", "two") and any(k in ("Picture", "3D") for k, _ in b["fill"].values())]
+    check("every teaching slide that holds one picture says the shapes of picture its box takes, a mirror its base's (%d)" % len(one),
+          one and all((b.get("fits") or {}).get("aspect") for b in slides if b["id"] in one),
+          [b["id"] for b in slides if b["id"] in one and not (b.get("fits") or {}).get("aspect")])
+    bands = {"%s.%s" % (t, v) for t in ("scenario", "worked-example", "true-false", "name-parts") for v in ("figure-top", "figure-bottom")}
+    check("a scenario, a worked example, a true or false and naming the parts each have a band for a wide picture, of their "
+          "own template", bands <= {b["id"] for b in slides} and all(b["fits"]["group"] == b["template"] for b in slides if b["id"] in bands))
 
     print("\n-- the catalogue")
     page = io.open(bp.OUT, encoding="utf-8").read()

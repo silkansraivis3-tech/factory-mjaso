@@ -9,6 +9,10 @@ cut from the course's own approved scripts (a statement and bullets), each measu
 slides so the layout plan keeps its own layout; then run_audits.py at 1024 x 768, 1280 x 800 and 1280 x 720 says what
 spills and by how much. A layout's budget is the longest count at which all four texts fit at every size. Re-run it when a template, the type or the logo
 changes. Writes nothing in the course. Needs Chrome or Edge.
+
+Each layout's photograph is the shape its box takes (PICTURES): a picture is never put in a box of another shape. The
+templates that have the room answer (a scenario, a worked example, a true or false - ACTIVE) open more on their last Next,
+so their decks are walked with fit_gate.py, every Next, instead of run_audits.py.
 """
 from __future__ import annotations
 
@@ -29,6 +33,7 @@ SK = os.path.normpath(os.path.join(HERE, "..", "..", ".."))
 sys.path.insert(0, os.path.join(SK, "course-factory", "compile", "scripts"))
 sys.path.insert(0, os.path.join(SK, "course-factory", "scripts"))
 RUN = os.path.join(HERE, "run_audits.py")
+FIT = os.path.join(HERE, "fit_gate.py")
 KIT = {"size": [640, 390], "label": "a drawing", "parts": [
     {"id": "T", "type": "tank", "x": 40, "y": 150, "w": 260, "h": 140, "label": "Fuel tank", "value": 0.5},
     {"id": "R", "type": "space", "x": 360, "y": 60, "w": 250, "h": 260, "label": "Tank connection space"},
@@ -41,10 +46,10 @@ KIT_WIDE = {"size": [960, 380], "label": "a wide drawing", "parts": [      # a s
 LAYOUTS = {   # layout -> (the picture, the build-sheet entry)
     "beside-drawing": ("kit", {"composition": "two-col"}),
     "beside-drawing+inset": ("kit", {"composition": "two-col", "inset": {"photo": "", "caption": "A ship's deck tank."}}),
-    "beside-photo-column": ("photo", {"composition": "wide-left"}),
+    "beside-photo-column": ("column", {"composition": "wide-left"}),
     "under-top-photo": ("photo", {"composition": "stage", "template": "figure-stage", "variant": "figure-top"}),
     "photo-full": ("photo", {"composition": "photo", "dark": True}),
-    "photo-framed": ("photo", {"composition": "two-col", "template": "photo-explain", "variant": "split", "dark": True}),
+    "photo-framed": ("column", {"composition": "two-col", "template": "photo-explain", "variant": "split", "dark": True}),
     "parts": ("kit", {"composition": "two-col", "template": "content-in-parts"}),
     "under-top-tiles": ("tiles", {"composition": "two-col", "variant": "figure-top"}),
     "parts-under-top-tiles": ("tiles", {"composition": "two-col", "template": "content-in-parts", "variant": "figure-top"}),
@@ -55,13 +60,28 @@ LAYOUTS = {   # layout -> (the picture, the build-sheet entry)
     "over-band-drawing": ("wide", {"composition": "two-col", "variant": "figure-bottom"}),
     "parts-under-band-drawing": ("wide", {"composition": "two-col", "template": "content-in-parts", "variant": "figure-top"}),
     "table-beside-drawing": ("kit", {"composition": "two-col", "template": "reference-table", "variant": "with-figure"}),
-    "table-beside-photo": ("photo", {"composition": "wide-left", "template": "reference-table", "variant": "figure-left"}),
+    "table-beside-photo": ("column", {"composition": "wide-left", "template": "reference-table", "variant": "figure-left"}),
     "table-under-top-tiles": ("tiles", {"composition": "two-col", "template": "reference-table", "variant": "figure-top"}),
     "table-over-bottom-tiles": ("tiles", {"composition": "two-col", "template": "reference-table", "variant": "figure-bottom"}),
     "table-under-band-drawing": ("wide", {"composition": "two-col", "template": "reference-table", "variant": "figure-top"}),
     "table-over-band-drawing": ("wide", {"composition": "two-col", "template": "reference-table", "variant": "figure-bottom"}),
     "table-alone": ("none", {"template": "reference-table", "variant": "text-only"}),
+    "scenario-under-band": ("band", {"variant": "figure-top"}),
+    "scenario-over-band": ("band", {"variant": "figure-bottom"}),
+    "scenario-choices-under-band": ("band", {"variant": "figure-top"}),
+    "scenario-choices-over-band": ("band", {"variant": "figure-bottom"}),
+    "worked-under-band": ("band", {"variant": "figure-top"}),
+    "worked-over-band": ("band", {"variant": "figure-bottom"}),
+    "true-false-under-band": ("band", {"variant": "figure-top"}),
+    "true-false-over-band": ("band", {"variant": "figure-bottom"}),
 }
+# the templates that have the room answer, in their band (a wide photograph across the slide, their two columns under it or
+# over it): the words measured are the column's - the situation, the choices (the question, the choices and why each), the
+# steps, the why - the other column kept short, as the columns stand side by side
+ACTIVE = {"scenario-under-band": "situation", "scenario-over-band": "situation", "scenario-choices-under-band": "choices",
+          "scenario-choices-over-band": "choices", "worked-under-band": "steps", "worked-over-band": "steps",
+          "true-false-under-band": "why", "true-false-over-band": "why"}
+PICTURES = {"photo": (1600, 1067), "portrait": (1200, 1600), "column": (1600, 1333), "band": (2000, 800)}   # the photographs' shapes
 TABLE_ROWS = (4, 5, 6, 7, 8)       # a table layout is measured by its rows and the words of a row: --words are the row's
 SIZES = ("1024x768", "1280x800", "1280x720")
 
@@ -98,6 +118,30 @@ def table_of(pool, rows, per, k):
     return "\n".join(out)
 
 
+def lines_cut(pool, n, k, per=12):
+    """n words of the course's own lines, as lines of about per words, no bullets"""
+    words = []
+    while len(words) < n:
+        words += pool[k % len(pool)].rstrip(".,;:").split()
+        k += 1
+    words = words[:n]
+    return "\n".join(" ".join(words[i:i + per]).rstrip(",;:") + "." for i in range(0, len(words), per))
+
+
+def active_of(kind, pool, n, k):
+    """the fields of a scenario, a worked example or a true or false whose measured column (kind) holds n words"""
+    if kind in ("situation", "choices"):
+        sit = lines_cut(pool, n if kind == "situation" else 15, k, 30)
+        why = 5 if kind == "situation" else max(3, (n - 7 - 12) // 3)
+        return {"active": "scenario", "text": sit, "ask": lines_cut(pool, 7 if kind == "choices" else 5, k + 1, 99).rstrip(".") + "?",
+                "choices": "\n".join(lines_cut(pool, 4, k + 2 + i, 99) for i in range(3)),
+                "why": "\n".join(lines_cut(pool, why, k + 5 + i, 99) for i in range(3)), "right": "A"}
+    if kind == "steps":
+        return {"active": "worked-example", "text": lines_cut(pool, n, k, 10), "ask": lines_cut(pool, 10, k + 3, 99).rstrip(".") + "?",
+                "reveal": lines_cut(pool, 12, k + 4, 99)}
+    return {"claim": lines_cut(pool, 9, k + 2, 99), "claim_is": "false", "text": lines_cut(pool, n, k, 14)}
+
+
 def measure(tcm, pool, lay, n0, rows=0):
     pic, entry = LAYOUTS[lay]
     tmp = tempfile.mkdtemp(prefix="budget_")
@@ -106,9 +150,11 @@ def measure(tcm, pool, lay, n0, rows=0):
         for j in range(4):
             sid = "s%02d" % (j + 1)
             screens.append({"id": sid, "kind": "slide", "title": "The fuel system of an IGF ship", "layout": "split",
-                            "visual_kind": "photo" if pic in ("photo", "portrait") else "none" if pic == "none" else "comparison", "text": table_of(pool, rows, n0, 7 * j + 3 * n0) if rows else text_of(pool, n0, 7 * j + 3 * n0),
+                            "visual_kind": "photo" if pic in PICTURES else "none" if pic == "none" else "comparison", "text": table_of(pool, rows, n0, 7 * j + 3 * n0) if rows else text_of(pool, n0, 7 * j + 3 * n0),
                             "visual": "A picture.", "notes": "- Say it.", "minutes": 2})
-            e = dict(entry, figure=("assets/img/p%02d.jpg" % j) if pic in ("photo", "portrait") else "w.kit.json" if pic == "wide" else "k.kit.json",
+            if lay in ACTIVE:
+                screens[-1].update(active_of(ACTIVE[lay], pool, n0, 7 * j + 3 * n0))
+            e = dict(entry, figure=("assets/img/p%02d.jpg" % j) if pic in PICTURES else "w.kit.json" if pic == "wide" else "k.kit.json",
                      declined_3d="flat")
             if pic == "none":
                 e = dict(entry, figure="", visual_kind="none")
@@ -131,7 +177,7 @@ def measure(tcm, pool, lay, n0, rows=0):
         img, meta = os.path.join(md, "assets", "img"), {}
         for j in range(4):
             for f in ("p%02d.jpg" % j, "i%02d.jpg" % j):
-                size = (1200, 1600) if pic == "portrait" else (1600, 1067)      # a tall photograph for the tall box
+                size = PICTURES.get(pic, PICTURES["photo"])       # each layout's photograph the shape its box takes
                 io.open(os.path.join(img, f), "wb").write(tcm.png(size[0], size[1], (60 + 3 * j, 90, 120)))
                 meta[f] = {"source": "Wikimedia Commons", "author": "A. Person", "licence": "CC BY 4.0", "description": "A ship."}
         tcm.cs.save(os.path.join(img, "_photo_meta.json"), meta)
@@ -147,6 +193,19 @@ def measure(tcm, pool, lay, n0, rows=0):
             if sid and t:
                 built[sid.group(1)] = "%s/%s" % t.groups()
         row = {}
+        if lay in ACTIVE:              # the answer opens on the last Next: fit_gate.py walks every Next, run_audits.py does not
+            out = os.path.join(tmp, "fit.json")
+            p = subprocess.run([sys.executable, FIT, page, "--json", out] + ["--viewport=" + z for z in SIZES], capture_output=True,
+                               text=True, encoding="utf-8", errors="replace")
+            found = json.load(io.open(out, encoding="utf-8")) if os.path.isfile(out) else {}
+            for j in range(4):
+                sid = "s%02d" % (j + 1)
+                for size in SIZES:
+                    row.setdefault(sid, {"built": built.get(sid)})[size] = sum(
+                        1 for x in found.get(size, []) if x[0] == sid and x[2] in ("cut", "spill", "picture"))
+            if p.returncode == 2 or not found and p.returncode:
+                row["error"] = "not measured: %s" % p.stdout[-300:]
+            return lay, n0, row
         for size in SIZES:
             p = subprocess.run([sys.executable, RUN, page, "--quiet", "--viewport", size], capture_output=True, text=True,
                                encoding="utf-8", errors="replace")

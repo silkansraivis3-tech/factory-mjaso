@@ -195,13 +195,36 @@ def main():
     page = (pic("s08", "photo-explain.column", "wide.jpg") + pic("s04b", "figure-stage.figure", "tall.jpg")
             + pic("s02", "photo-explain.column", "square.jpg")
             + pic("s05", "explain-figure.figure-top", "wide.jpg", '<figure class="inset"><img src="../assets/img/tall.jpg"></figure>')
-            + pic("s09", "worked-example.figure", "wide.jpg"))
+            + pic("s09", "task-launch.tablet", "wide.jpg"))
     got = {x["slide"]: x for x in lp.picture_misfits(page, mdir)}
     check("a 1.79:1 photograph in photo-explain.column and a 0.71:1 one in figure-stage are misfits, with the box's range and "
           "the blueprints that take them", set(got) == {"s08", "s04b"} and got["s08"]["range"] == [0.85, 1.3]
           and "reading-with-figure.figure-top" in got["s08"]["fit"] and "explain-figure.figure-tall" in got["s04b"]["fit"], got)
-    check("... a photograph of its box's shape is none, an inset photograph is not the slide's picture, and a template with no "
-          "rule for pictures is not judged", "s02" not in got and "s05" not in got and "s09" not in got, got)
+    check("... a photograph of its box's shape is none, an inset photograph is not the slide's picture, and a slide the plan "
+          "does not lay out (a task launch) is not judged", "s02" not in got and "s05" not in got and "s09" not in got, got)
+
+    print("\n-- the templates that have the room answer: the same rule, a band of their own (the trial's M01 s21)")
+    Image.new("RGB", (506, 200)).save(os.path.join(mdir, "assets", "img", "band.jpg"))               # 2.53:1
+    one = {"scenario": "picture-left", "worked-example": "figure", "true-false": "picture", "name-parts": "picture"}
+    keep = {"scenario": "figure-top", "worked-example": "figure-bottom", "true-false": "figure-top", "name-parts": "figure-bottom"}
+    page = "".join(pic("s%02d" % k, "%s.%s" % tv, "band.jpg") for k, tv in enumerate(one.items(), 21)) \
+        + "".join(pic("b%02d" % k, "%s.%s" % tv, "band.jpg") for k, tv in enumerate(keep.items(), 21))
+    got = {x["slide"]: x for x in lp.picture_misfits(page, mdir)}
+    check("a 2.53:1 photograph beside the words of a scenario, a worked example, a true or false or naming the parts is a "
+          "misfit (M01 s21 in scenario.picture-left), and the blueprints that take it are the same template's bands",
+          set(got) == {"s21", "s22", "s23", "s24"} and got["s21"]["bp"] == "scenario.picture-left"
+          and all(x["fit"] and all(f.startswith(x["bp"].split(".")[0] + ".figure-") for f in x["fit"]) for x in got.values()), got)
+    check("... and in the template's band it is none", not [s for s in got if s.startswith("b")], got)
+    for tid, var in one.items():
+        opts, why = lp.options("%s.%s" % (tid, var), 20, "photo", 2.53, 4, None, None, "course|M01", "s21")
+        check("options() moves a %s slide with a 2.53:1 photograph to its own band, never to another template" % tid,
+              opts and {o["bp"].split(".")[0] for o in opts} == {tid} and {o["shape"] for o in opts} == {"top", "bottom"}
+              and "%s.%s" % (tid, var) in why.get("beside", ""), (opts, why))
+        opts, _ = lp.options("%s.%s" % (tid, var), 20, "photo", 1.1, 4, None, None, "course|M01", "s21")
+        check("... and keeps a 1.1:1 one beside the words, in its own box", [o["bp"] for o in opts] == ["%s.%s" % (tid, var)], opts)
+    for bp in ("three-content-blocks.figure-left", "long-explanation.points", "drill.say-it", "drill.find-it", "opening.photo"):
+        check("%s says the shape of picture its box takes (a mirror takes its base's)" % bp,
+              bool((lp.LIB[bp].get("fits") or {}).get("aspect")))
     two = pic("s04", "figure-stage.figure", "square.jpg").replace("</div>", '<img src="../assets/img/tall.jpg"></div>', 1)
     t = lp.picture_misfits(two, mdir)
     check("two photographs in a blueprint that takes no tiles (M16 s04): a misfit, the narrowest counts",

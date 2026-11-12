@@ -7,5 +7,6 @@
  "grid": ["a p", "b p", "c p"],
  "cols": "40fr 60fr",
  "fill": {"a": ["Text", "blocks[0]"], "b": ["Text", "blocks[1]"], "c": ["Text", "blocks[2]"], "p": ["3D", "one live scene; its reading"]},
- "ref": "slides#p12"
+ "ref": "slides#p12",
+ "fits": {"group": "blocks", "pictures": ["3d", "drawing", "photo"], "aspect": {"3d": [0.8, 2.2], "drawing": [0.8, 2.2], "photo": [0.6, 1.3]}, "words": [0, 999], "budget": {"3d": "beside_picture", "drawing": "beside_picture", "photo": "beside_picture"}}
 }

@@ -252,8 +252,13 @@ gets a box of its own shape, the words and the picture centred. **The picture's 
 blueprint that holds a picture (its `fits.pictures` and `fits.aspect`): a wide photograph is never put in a tall box, a tall
 one never in a band - the plan moves it to a blueprint that takes it, and the compiler refuses a deck with a picture in a box
 of another shape (`layout_plan.picture_misfits`, the same check as the trial's fault report), naming the blueprints that
-take it. A slide whose build sheet names a template, a variant or a layout keeps it while its picture fits it; so does a
-slide that fits one shape only - `Layout plan (M01): ...` and its `Note:` lines say each. The words are counted one way
+take it. A slide of its own template (a scenario, a worked example, a true or false, naming the parts) keeps its template:
+its picture sits beside the words while that box takes it, and a picture too wide for it goes in the same template's band
+(`figure-top`, `figure-bottom`: the picture across the slide, the template's columns under or over it; a build sheet may
+name the band as its `"variant"`). A drill, three-content-blocks and long-explanation points have no band: a picture of
+another shape there is the compiler's must-fix - choose a picture of the box's shape. A slide whose build sheet names a
+template, a variant or a layout keeps it while its picture fits it; so does a slide that fits one shape only -
+`Layout plan (M01): ...` and its `Note:` lines say each. The words are counted one way
 everywhere: the slide's text (its title apart - every budget was measured under a one-line title; its largest part when
 it is in parts) against the blueprint's measured budget (`layout_plan.holds`, layout-templates.json `budgets`) - the
 script check, the plan and the fault report alike. A slide whose words no blueprint its picture takes holds is built in the

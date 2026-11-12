@@ -7,5 +7,6 @@
  "grid": ["x p"],
  "cols": "38fr 62fr",
  "fill": {"x": ["Text", "ask; the names (text), hidden until Next"], "p": ["Picture", "figure with numbered spots"]},
- "ref": "slides#p22"
+ "ref": "slides#p22",
+ "fits": {"group": "name-parts", "pictures": ["photo"], "aspect": {"photo": [0.6, 1.5]}, "words": [0, 999]}
 }
