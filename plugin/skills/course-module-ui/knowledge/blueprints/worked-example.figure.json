@@ -7,5 +7,6 @@
  "grid": ["x p"],
  "cols": "46fr 54fr",
  "fill": {"x": ["Text", "steps 'what you do | what you get'; ask; reveal"], "p": ["Animation", "figure: a meter, a 3D model or a photo"]},
- "ref": "slides#p19"
+ "ref": "slides#p19",
+ "fits": {"group": "worked-example", "pictures": ["photo", "drawing", "3d"], "aspect": {"photo": [0.6, 1.3], "drawing": [0.8, 2.2], "3d": [0.8, 2.2]}, "words": [0, 999], "budget": {"photo": "worked_steps", "drawing": "worked_steps", "3d": "worked_steps"}, "parts": {"t_part_steps": "worked_steps"}}
 }

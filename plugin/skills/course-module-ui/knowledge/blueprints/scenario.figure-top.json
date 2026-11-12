@@ -1,0 +1,11 @@
+{
+ "id": "scenario.figure-top",
+ "template": "scenario",
+ "variant": "figure-top",
+ "shape": "top",
+ "for": "what to do when something happens, by a wide picture across the slide",
+ "grid": ["p", "x", "i"],
+ "rows": "1fr auto auto",
+ "fill": {"p": ["Picture", "figure: a wide photograph, 2D drawing or 3D scene across the slide"], "x": ["Text", "the situation (text) and ask, across the slide"], "i": ["Info", "choices A-C side by side, why each after Next"]},
+ "fits": {"group": "scenario", "pictures": ["photo", "drawing", "3d"], "aspect": {"photo": [1.25, 8], "drawing": [1.8, 8], "3d": [1.6, 8]}, "hard": true, "words": [0, 999], "budget": {"photo": "scenario_situation_band", "drawing": "scenario_situation_band", "3d": "scenario_situation_band"}, "parts": {"t_part_situation": "scenario_situation_band", "t_part_choices": "scenario_choices_band"}, "names": 15}
+}

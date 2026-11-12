@@ -35,6 +35,7 @@ The few classes of its own, all written by the compiler:
 | `.fig-top` | the `figure-top` variant: wide photographs in a row on top, each box the photograph's own shape (its width over its height, written on the tile), the words under them |
 | `.fig-bottom` | the `figure-bottom` variant: the words first, the picture band across the slide under them |
 | `.fig-band` | a band (`.fig-top`, `.fig-bottom`) holding a drawing or a live 3D scene: it keeps its panel |
+| `.lt-under` · `.lt-ucol` | the band of a template that has the room answer (scenario, worked-example, true-false, name-parts): its columns (`.lt-ucol`) side by side under the band or over it |
 | `.fig-tall` | the `figure-tall` variant: a tall picture beside the words, its box the picture's own shape |
 | `.kit-tap` | a line that is a way to its figure's step (kit.js, kit3d.js): tapped, the figure plays that step; it has its mark's gap above and under its words already |
 | `.lt-you` | the room's question card in the picture's column, under the picture; its answer opens under it on the last Next (`.lt-ans-under`) |

@@ -363,6 +363,54 @@ def picture_shape_part(tmp):
         os.environ["CF_LAYOUT_PLAN"] = "0"
 
 
+def active_band_part(tmp):
+    """a template that has the room answer keeps its template and takes its own band when its picture is wide: the trial's
+    M01 s21, a 2.53:1 photograph in scenario.picture-left - the tall box beside the words - that no check judged"""
+    print("\n-- a scenario, a worked example, a true or false, naming the parts: a wide picture goes in their band")
+    import layout_plan
+    os.makedirs(os.path.join(tmp, "ab"))
+    pick = {k: v for k, v in ((s["id"], s) for s in SHAPED_SCREENS)}
+    sc = script(screens=[dict(pick["s41"], id="s21"), pick["s30"], dict(pick["s33"], visual_kind="photo", visual="A detector."),
+                         pick["s35"], dict(pick["s41"], id="s42", title="Before the entry again")] + SCREENS[-2:])
+    c, md = new_course(os.path.join(tmp, "ab"), sc, build=False)
+    meta = cs.load(os.path.join(md, "assets", "img", "_photo_meta.json"))
+    for n, size in (("w1", (506, 200)), ("w2", (506, 200)), ("w3", (506, 200)), ("w4", (506, 200)), ("sq", (220, 200))):
+        io.open(os.path.join(md, "assets", "img", "%s.png" % n), "wb").write(png(size[0], size[1], (60, 90, 120)))    # 2.53:1
+        meta["%s.png" % n] = dict(PHOTO_META["ship.jpg"], description="Ship %s." % n, url_or_origin="https://example.org/%s" % n)
+    cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s21": {"figure": "assets/img/w1.png"}, "s30": {"figure": "assets/img/w2.png"}, "s33": {"figure": "assets/img/w3.png"},
+        "s35": {"figure": "assets/img/w4.png", "spots": {"1": [100, 60], "2": [400, 150]}}, "s42": {"figure": "assets/img/sq.png"}}})
+    os.environ["CF_LAYOUT_PLAN"] = "1"
+    try:
+        code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+        page = deck(md) if os.path.isfile(os.path.join(md, "presentation", "index.html")) else ""
+        tpl = lambda sid: (re.search(r'data-template="([\w-]+)\.v1" data-variant="([\w-]+)"', section(page, sid)) or re.search("$^", "")).groups()
+        built = {sid: tpl(sid) for sid in ("s21", "s30", "s33", "s35", "s42")}
+        check("a 2.53:1 photograph on a scenario (M01 s21), a true or false, a worked example and naming the parts is built in "
+              "the same template's band, never in the tall box beside the words",
+              page and [built[x][0] for x in ("s21", "s30", "s33", "s35")] == ["scenario", "true-false", "worked-example", "name-parts"]
+              and all(built[x][1] in ("figure-top", "figure-bottom") for x in ("s21", "s30", "s33", "s35")), (built, out[-1200:]))
+        check("... its picture across the slide in its own shape, the template's columns by it, every field of the slide kept",
+              'class="slide-body two-col fig-' in section(page, "s21") and 'class="copy lt-under"' in section(page, "s21")
+              and "--ar:2.530" in section(page, "s21") and section(page, "s21").count('data-script-field="choices"') == 2
+              and 'data-script-field="ask"' in section(page, "s21") and 'class="lt-ans-under"' in section(page, "s33")
+              and section(page, "s35").count('class="lt-spot"') == 2, section(page, "s21")[:1500])
+        check("... a square photograph keeps the scenario's own box beside the words", built["s42"] == ("scenario", "picture-left"), built)
+        check("... and the built deck has no picture in a box of another shape - the compiler's must-fix and the fault report's "
+              "check", page and layout_plan.picture_misfits(page, md) == [] and "whose box takes" not in out,
+              (layout_plan.picture_misfits(page, md), out[-900:]))
+        build_of(c, lambda b: b["screens"]["s42"].update(figure="assets/img/w1.png", reuse_why="the same ship"))
+        os.environ["CF_LAYOUT_PLAN"] = "0"
+        code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+        before = layout_plan.picture_misfits(deck(md), md)
+        check("without the plan (the factory's own tests) the wide photograph stays in the box beside the words, and the check "
+              "every built deck gets names it with the band that takes it - what M01 s21 would have shown",
+              any(x["slide"] == "s42" and x["bp"] == "scenario.picture-left" and "scenario.figure-top" in x["fit"] for x in before), before)
+    finally:
+        os.environ["CF_LAYOUT_PLAN"] = "0"
+
+
 def shapes_part(tmp):
     """the information decides the slide: a slide's own approved words (a claim, choices, a worked example and the
     room's turn, short points, a drill, the summary's questions, the self-check list) and the shape of its lines (numbers,
@@ -535,7 +583,7 @@ def reveal_part(tmp):
           p[:2000])
     css = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_upgrade.css"), encoding="utf-8").read()
     check("... and the stylesheet shows it only on the last Next, the question kept",
-          ".slide[data-last] .lt-ans-under{display:block" in css and ".slide[data-last] .lt-split:has(.lt-ans-under) .lt-work li.you .ask{display:block}" in css)
+          ".slide[data-last] .lt-ans-under{display:block" in css and ".slide[data-last] :is(.lt-split,.lt-under):has(.lt-ans-under) .lt-work li.you .ask{display:block}" in css)
     w = section(page, "s44")
     heads = re.findall(r'<li data-k="(\d)" class="lead head"><div data-script-field="text" data-i="\d"><b>([^<]*)</b>', w)
     nums = re.findall(r'<span class="n" data-script-ignore>([^<]*)</span>', w)
@@ -550,7 +598,7 @@ def reveal_part(tmp):
           and cm.empty_picture_boxes('<div class="fill fig"><p>The cargo is carried at ambient temperature.</p></div>')
           == ["a picture box with no picture in it"]
           and not cm.empty_picture_boxes(section(page, "s43")) and not cm.empty_picture_boxes(w))
-    five = {"kind": "slide", "visual_kind": "photo", "picture": {"kind": "photo"}, "active": "explain-then-reveal",
+    five = {"kind": "slide", "visual_kind": "photo", "picture": {"kind": "photo", "aspect": "1:1"}, "active": "explain-then-reveal",
             "ask": "Why can a fully pressurised ship be built of ordinary steel?", "reveal": "The cargo is at ambient temperature.",
             "text": "Advantages:\nBuilt of ordinary grades of steel - the cargo is at ambient temperature and no insulation is needed.\n"
                     "No reliquefaction plant is required, and operations are simpler.\nDisadvantages:\nThe high design pressure makes "
@@ -4258,6 +4306,7 @@ def main():
         shapes_part(tmp)
         tables_part(tmp)
         picture_shape_part(tmp)
+        active_band_part(tmp)
         reveal_part(tmp)
         tasks_part(tmp)
         figures_part(tmp)

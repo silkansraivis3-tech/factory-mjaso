@@ -1,0 +1,11 @@
+{
+ "id": "name-parts.figure-bottom",
+ "template": "name-parts",
+ "variant": "figure-bottom",
+ "shape": "bottom",
+ "for": "parts of equipment taught earlier, on a wide picture across the slide under the words",
+ "grid": ["x", "p"],
+ "rows": "auto 1fr",
+ "fill": {"p": ["Picture", "a wide photograph or static 3D render with numbered spots"], "x": ["Text", "ask; the names (text) in a row, hidden until Next"]},
+ "fits": {"group": "name-parts", "pictures": ["photo"], "aspect": {"photo": [1.25, 8]}, "hard": true, "words": [0, 999], "names": 15}
+}

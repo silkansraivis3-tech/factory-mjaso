@@ -8,5 +8,6 @@
  "cols": "42fr 58fr",
  "fill": {"x": ["Text", "points: 3-5, 14 words or fewer"], "p": ["3D", "figure"]},
  "notes": "text goes to the notes",
- "ref": "slides#p25"
+ "ref": "slides#p25",
+ "fits": {"group": "points", "pictures": ["3d", "drawing", "photo"], "aspect": {"3d": [0.8, 2.2], "drawing": [0.8, 2.2], "photo": [0.6, 1.4]}, "words": [0, 999]}
 }

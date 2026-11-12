@@ -1091,13 +1091,18 @@ def overfull(s):
     if s.get("kind") != "slide" or picture_of(s)["kind"] in ("", "none"):
         return []
     tid = shaped_kind(s)
-    if tid == "scenario":
-        parts = (("t_part_situation", wc(s.get("text", "")), B["scenario_situation"]),
-                 ("t_part_choices", wc(*[as_text(s.get(f)) for f in ("ask", "choices", "why")]), B["scenario_choices"]))
-    elif tid == "worked-example":
-        parts = (("t_part_steps", wc(s.get("text", ""), as_text(s.get("ask"))), B["worked_steps"]),)
-    else:
+    if tid not in ("scenario", "worked-example"):
         return []
+    # the budgets of the variant it is built in: beside the picture, or in the template's band when the picture is wide
+    # (blueprints/<template>.<variant>.json "fits" "parts")
+    _, lp = _planner()
+    most = ((lp.LIB.get(shaped_blueprint(s)) or {}).get("fits") or {}).get("parts") or {}
+    if tid == "scenario":
+        parts = (("t_part_situation", wc(s.get("text", "")), B[most.get("t_part_situation", "scenario_situation")]),
+                 ("t_part_choices", wc(*[as_text(s.get(f)) for f in ("ask", "choices", "why")]),
+                  B[most.get("t_part_choices", "scenario_choices")]))
+    else:
+        parts = (("t_part_steps", wc(s.get("text", ""), as_text(s.get("ask"))), B[most.get("t_part_steps", "worked_steps")]),)
     whole = wc(s.get("title", ""), s.get("text", ""), *[as_text(s.get(f)) for f in SHOWN_TOO])
     parts += (("t_part_whole", whole, RULES["slide"]["steps_from"]),)
     return [(p, w, most) for p, w, most in parts if w > most]
@@ -3725,6 +3730,23 @@ def script_blueprint(s):
     return "%s.%s" % (tid, var), fam, fixed
 
 
+def kept(lp, own_bp, fam, aspect, fixed):
+    """why a slide keeps its own blueprint (script_blueprint's) - None for one of its own template whose box does not take
+    its picture: it is built in the variant of the same template whose box does (a band for a wide picture), and judged there"""
+    return None if fixed and lp.picture_fit(own_bp, fam, aspect) else fixed
+
+
+def shaped_blueprint(s):
+    """the blueprint a slide of its own template (shaped_kind) is built in, read from the script: its own variant while its
+    box takes the picture the script gives it ("picture" "aspect"), else the variant of the same template whose box does"""
+    _, lp = _planner()
+    own_bp, fam, _ = script_blueprint(s)
+    aspect = None if fam == "tiles" else aspect_of(picture_of(s)["aspect"])
+    if not fam or lp.picture_fit(own_bp, fam, aspect) is None:
+        return own_bp
+    return (lp.fitting(fam, aspect, ((lp.LIB.get(own_bp) or {}).get("fits") or {}).get("group")) or [own_bp])[0]
+
+
 def no_shape(s):
     """(its words, the most a layout its picture takes holds, [those layouts], the picture's declared shape) of a teaching
     slide whose words no layout holds once its picture keeps the shape the script gives it ("picture" "aspect") - or None.
@@ -3741,10 +3763,10 @@ def no_shape(s):
     _, lp = _planner()
     own_bp, fam, fixed = script_blueprint(s)
     group = ((lp.LIB.get(own_bp) or {}).get("fits") or {}).get("group")
-    if not fam or fixed or not group:
-        return None
     said = picture_of(s)["aspect"]
     aspect, w = None if fam == "tiles" else aspect_of(said), wc(" ".join(lines))     # tiles: each photograph its own shape
+    if not fam or kept(lp, own_bp, fam, aspect, fixed) or not group:
+        return None
     opts, _ = lp.options(own_bp, w, fam, aspect, 0, None, None, "", s.get("id", ""))
     if opts and not any(o.get("over") for o in opts):
         return None
@@ -3766,7 +3788,9 @@ def shape_line(script):
         lines = lines_of(s.get("text"))
         own_bp, fam, fixed = script_blueprint(s)
         tid, vk = own_bp.split(".")[0], s.get("visual_kind") or "none"
-        opts, why = lp.options(own_bp, wc(" ".join(lines)), fam, aspect_of(picture_of(s)["aspect"]), 0, None, fixed, seed, s["id"])
+        aspect = aspect_of(picture_of(s)["aspect"])
+        fixed = kept(lp, own_bp, fam, aspect, fixed)
+        opts, why = lp.options(own_bp, wc(" ".join(lines)), fam, aspect, 0, None, fixed, seed, s["id"])
         items.append({"id": s["id"], "own": lp.MAP.get(own_bp) or "beside", "own_bp": own_bp, "options": opts, "why": why,
                       "fixed": fixed, "echo": lp.comparison(tid, vk, s.get("title"))})
     choice = lp.plan(items)

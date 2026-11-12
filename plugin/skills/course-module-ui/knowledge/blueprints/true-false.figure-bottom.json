@@ -1,0 +1,12 @@
+{
+ "id": "true-false.figure-bottom",
+ "template": "true-false",
+ "variant": "figure-bottom",
+ "shape": "bottom",
+ "for": "a common wrong belief, a wide picture across the slide under the words",
+ "grid": ["x i", "p p"],
+ "cols": "1fr 1fr",
+ "rows": "auto 1fr",
+ "fill": {"p": ["Picture", "figure: a wide photograph, 2D drawing or 3D scene across the slide"], "x": ["Text", "claim; True / False vote"], "i": ["Info", "why (text) and the stamp, after Next"]},
+ "fits": {"group": "true-false", "pictures": ["photo", "drawing", "3d"], "aspect": {"photo": [1.25, 8], "drawing": [1.8, 8], "3d": [1.6, 8]}, "hard": true, "words": [0, 999], "budget": {"photo": "true_false_band", "drawing": "true_false_band", "3d": "true_false_band"}, "names": 15}
+}

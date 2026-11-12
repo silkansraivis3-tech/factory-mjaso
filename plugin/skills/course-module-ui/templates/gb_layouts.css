@@ -282,6 +282,19 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] :is(.fig-top,.fig-bottom) .lt-pfig > .fill > img:only-child{
   width:min(100cqw,calc(100cqh * var(--ar,1.5)));height:auto;aspect-ratio:var(--ar,1.5);object-fit:cover;margin:0 auto}
 .slide[data-template] :is(.fig-top,.fig-bottom) > .fill:has(> img:only-child){align-items:center}
+/* the band of a template that has the room answer (scenario, worked-example, true-false, name-parts): its columns side by
+   side under the band or over it, as they stand beside a picture - the situation and the question, then the choices; the
+   steps, then the room's turn; the claim and the vote, then why; the names in a row. Their words are what the room
+   answers from, so the band gives way to them first: its least height is lower than the other bands' (still a wide picture
+   larger than the box beside the words would show it) */
+.slide[data-template] .slide-body.two-col:is(.fig-top,.fig-bottom):has(> .lt-under){--band-min:min(24vmin,190px)}
+.slide[data-template] .slide-body.two-col:is(.fig-top,.fig-bottom) > .copy.lt-under{display:grid;grid-template-columns:var(--cols,1fr 1fr);
+  gap:min(2.2vmin,18px) var(--lt-gap);align-items:start;justify-content:stretch}
+.slide[data-template] .lt-under > .lt-ucol{display:flex;flex-direction:column;gap:min(2.2vmin,18px);min-width:0}
+.slide[data-template] .lt-under > .lt-name{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(30vmin,240px),1fr))}
+.slide[data-template] .lt-under > .lt-opts{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));align-items:stretch}
+.slide[data-template] .slide-body.two-col:is(.fig-top,.fig-bottom) > .lt-pic{height:100%;width:auto;max-width:100%;min-height:0;
+  aspect-ratio:var(--ar,1.5);justify-self:center}
 /* under or over the band the points flow in two columns, packed - a long point never leaves a hole beside a short one:
    the words take the slide's width and as little of its height as they can */
 .slide[data-template] :is(.fig-top,.fig-bottom) .copy .support{display:block;column-count:2;column-gap:var(--lt-gap)}

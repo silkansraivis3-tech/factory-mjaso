@@ -8,5 +8,6 @@
  "cols": "50fr 50fr",
  "rows": "1fr 2fr",
  "fill": {"p": ["Picture", "figure"], "x": ["Text", "the situation (text); ask"], "i": ["Info", "choices A-C, why each after Next"]},
- "ref": "slides#p21"
+ "ref": "slides#p21",
+ "fits": {"group": "scenario", "pictures": ["photo", "drawing", "3d"], "aspect": {"photo": [0.6, 1.3], "drawing": [0.8, 2.2], "3d": [0.8, 2.2]}, "words": [0, 999], "budget": {"photo": "scenario_situation", "drawing": "scenario_situation", "3d": "scenario_situation"}, "parts": {"t_part_situation": "scenario_situation", "t_part_choices": "scenario_choices"}}
 }

@@ -324,6 +324,28 @@ def budget_part():
     check("a 3D scene over every 3D shape (%d words beside it, %d in a band) is the same must-fix" % (B["beside_3d"], B["under_band"]),
           (cs.no_shape(wide3d) or (0, 0))[1] == B["under_band"], cs.no_shape(wide3d))
 
+    # the trial's M01 s21: a scenario with a 2.53:1 photograph - the box beside its words takes up to 1.3:1. It is built in the
+    # scenario's band, and its words are judged there, never against the box it does not go in
+    words = lambda n: " ".join(["word"] * (n - 1) + ["end."])
+    s21 = {"id": "s21", "kind": "slide", "title": "The wedged airlock door", "active": "scenario", "visual_kind": "photo",
+           "picture": {"kind": "photo", "aspect": "2.53:1", "shows": "A crew member at a wedged-open airlock door"},
+           "text": words(B["scenario_situation_band"] + 5), "ask": "What must the crew member do now?",
+           "choices": "Remove the wedge\nSilence the alarm\nOpen the inner door", "why": "Right.\nNo.\nNo.", "right": "A",
+           "notes": "- Pairs agree first.", "minutes": 2}
+    check("a scenario with a 2.53:1 photograph is built in the scenario's band (the script reads the blueprint the compiler builds)",
+          cs.shaped_blueprint(s21) in ("scenario.figure-top", "scenario.figure-bottom"), cs.shaped_blueprint(s21))
+    over = {p: (w, most) for p, w, most in cs.overfull(s21)}
+    check("... its situation is judged against the band's measured budget (%d words, %d beside the picture): %d words are a "
+          "must-fix there" % (B["scenario_situation_band"], B["scenario_situation"], B["scenario_situation_band"] + 5),
+          over.get("t_part_situation") == (B["scenario_situation_band"] + 5, B["scenario_situation_band"]), over)
+    check("... the layout plan's own count says the same (t_no_shape: the band holds %d)" % B["scenario_situation_band"],
+          (cs.no_shape(s21) or (0, 0))[1] == B["scenario_situation_band"] and cs.no_shape(s21)[2]
+          and all(b.startswith("scenario.figure-") for b in cs.no_shape(s21)[2]), cs.no_shape(s21))
+    square = dict(s21, picture=dict(s21["picture"], aspect="1:1"))
+    check("... and with a 1:1 photograph it stays beside its words, judged by that box's budget (%d): no finding"
+          % B["scenario_situation"], cs.shaped_blueprint(square) == "scenario.picture-left" and not cs.overfull(square)
+          and cs.no_shape(square) is None, (cs.overfull(square), cs.no_shape(square)))
+
     row = copy.deepcopy(SCRIPT)
     screen(row, "s01").update(text=S01_TEXT + "\n" + MORE, in_parts="each risk on its own")
     f = cs.theory_findings(row)[0]

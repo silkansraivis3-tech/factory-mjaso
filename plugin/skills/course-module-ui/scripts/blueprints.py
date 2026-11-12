@@ -75,9 +75,18 @@ def problems():
         for fam, key in (f.get("budget") or {}).items():
             if not isinstance(key, (int, float)) and key not in budgets:
                 probs.append("%s: its budget for a %s, \"%s\", is not a measured budget (layout-templates.json \"budgets\")" % (b["id"], fam, key))
+        for part, key in (f.get("parts") or {}).items():
+            if key not in budgets:
+                probs.append("%s: its budget for %s, \"%s\", is not a measured budget (layout-templates.json \"budgets\")" % (b["id"], part, key))
         for fam in f.get("pictures") or []:
             if fam not in (f.get("aspect") or {}):
                 probs.append("%s: it takes a %s and says no picture shape its box suits (\"aspect\")" % (b["id"], fam))
+        # a teaching slide's picture box is made for one shape of picture: the plan, the compiler and the script check read it
+        # here, and a blueprint that does not say it is never judged (M01 s21: a 2.53:1 photograph in scenario.picture-left).
+        # Two pictures side by side ("two") are not judged by one shape; a task launch is not laid out by the plan
+        if b.get("shape") not in ("", "two") and any(k in ("Picture", "3D") for k, _ in b["fill"].values()) and not f.get("aspect"):
+            probs.append("%s: it holds a picture and says no picture shape its box suits (\"fits\" \"aspect\", measured from its "
+                         "box) - a picture is never put in a box of another shape" % b["id"])
     for b in slides + tasks:
         cells = set(" ".join(b["grid"]).split()) - {"."}
         if b.get("bg"):

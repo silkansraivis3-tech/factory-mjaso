@@ -8,5 +8,6 @@
  "cols": "48fr 52fr",
  "rows": "2fr 1fr",
  "fill": {"x": ["Text", "claim; then why (text)"], "i": ["Info", "True / False vote, the stamp"], "p": ["Picture", "figure"]},
- "ref": "slides#p20"
+ "ref": "slides#p20",
+ "fits": {"group": "true-false", "pictures": ["photo", "drawing", "3d"], "aspect": {"photo": [0.6, 1.3], "drawing": [0.8, 2.2], "3d": [0.8, 2.2]}, "words": [0, 999]}
 }
