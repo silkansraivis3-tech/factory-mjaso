@@ -1393,9 +1393,72 @@ def text_findings(script):
                 key = (s["id"], f, x.rule, x.detail)
                 if key not in seen:
                     seen.add(key)
-                    found.append({"where": place(script, s["id"]), "screen": s["id"], "field": f, "level": x.level,
+                    # the notes are the deck's instructor cue (data-cue), read out in the room: a marker in them fails the
+                    # build's check_slide_text, so it fails here, before the script is approved
+                    level = FAIL if f == "notes" and x.rule == "markers" else x.level
+                    found.append({"where": place(script, s["id"]), "screen": s["id"], "field": f, "level": level,
                                   "rule": x.rule, "detail": x.detail, "fix": x.fix})
     return found
+
+
+def track_of(s):
+    """(track, minutes) of an instructor screen as the compiler marks it for check_balance.py: a room activity is practice
+    unless it says "track": "theory"; a practical slide ("track": "practical" or "practical_minutes") is practice, its
+    practical minutes; every other slide and every task slide is theory"""
+    if s.get("kind") == "activity":
+        if str(s.get("track") or "").strip().lower() == "theory":
+            return "theory", minutes(s)
+        pm = s.get("practice_minutes")
+        return "practice", float(pm) if pm not in (None, "") else minutes(s)
+    if s.get("kind") == "slide" and (str(s.get("track") or "").lower().startswith("practic") or s.get("practical_minutes") is not None):
+        pm = s.get("practical_minutes")
+        return "practice", float(pm) if pm not in (None, "") else minutes(s)
+    return "theory", minutes(s)
+
+
+def allocation_of(course, module):
+    """(theory, practical) minutes the programme gives the module: its topics in architecture.json, their hours in
+    programme.json times the academic hour - None when either file does not say"""
+    try:
+        arch = load(workspace.claude_path(course, "architecture.json"))
+        prog = load(workspace.claude_path(course, "programme.json"))
+    except (OSError, ValueError):
+        return None
+    mod = next((m for m in arch.get("modules") or [] if str(m.get("module")) == str(module)), None)
+    topics = prog.get("topics") if isinstance(prog.get("topics"), dict) else {}
+    if not mod or not mod.get("topics") or not topics:
+        return None
+    hour = float(prog.get("academic_hour_min") or 45)
+    theory = practical = 0.0
+    for t in mod["topics"]:
+        row = topics.get(str(t))
+        if not isinstance(row, dict):
+            return None
+        theory += float(row.get("theory") or 0) * hour
+        practical += float(row.get("practical") or 0) * hour
+    return theory, practical
+
+
+def track_findings(course, script):
+    """MUST - the module's minutes on each track (theory, practice) equal the programme's allocation for it (L1), counted
+    as the build counts them (check_balance.py), so a bucket swap is caught before approval, not at the build"""
+    if not course or str(script.get("module")).lower() == "final":
+        return []
+    alloc = allocation_of(course, script.get("module"))
+    if not alloc:
+        return []
+    got = {"theory": 0.0, "practice": 0.0}
+    for s in script.get("screens", []):
+        if s.get("kind") in INSTRUCTOR:
+            track, m = track_of(s)
+            got[track] += m
+    if abs(got["theory"] - alloc[0]) < 0.01 and abs(got["practice"] - alloc[1]) < 0.01:
+        return []
+    theory = ", ".join("%s %g" % (s["id"], track_of(s)[1]) for s in script.get("screens", [])
+                       if s.get("kind") in INSTRUCTOR and track_of(s)[0] == "theory" and track_of(s)[1])
+    return [{"where": T(script, "s_the_module"), "screen": "", "field": "minutes", "level": FAIL, "rule": "tr_split",
+             "detail": T(script, "tr_split", t="%g" % got["theory"], p="%g" % got["practice"], at="%g" % alloc[0],
+                         ap="%g" % alloc[1], ids=theory), "fix": ""}]
 
 
 def said_words(s, vocab, but=(), fields=("title", "text", "visual")):
@@ -2537,7 +2600,7 @@ def all_findings(script, course=None):
     th, _ = theory_findings(script)
     return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script) \
         + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script) \
-        + task_cover_findings(course, script) + tablet_findings(course, script)
+        + task_cover_findings(course, script) + tablet_findings(course, script) + track_findings(course, script)
 
 
 # the words that send the trainees to their own tablet: "on your tablet", "every trainee tablet", "vote on the tablet"
