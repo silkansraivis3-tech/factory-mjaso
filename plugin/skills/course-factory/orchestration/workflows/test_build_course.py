@@ -712,6 +712,18 @@ def main():
         check("... and the builder is told they were placed and to keep them",
               "WERE PLACED BEFORE YOU" in ps.get("build:1", "") and "s09" in ps.get("build:1", "")
               and "WERE PLACED BEFORE YOU" not in ps.get("build:2", ""), ps.get("build:1", "")[-700:])
+        tp_run = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": four[:2], "_approved": ["1", "2"],
+                           "_phase_a": [{"module": "1", "line": "FAIL M01 - task pictures (90 s) | 3D TO PLACE: s01 | TASK PICTURES: q02 q04"},
+                                        {"module": "2", "line": "FAIL M02 - compile (60 s)"}]})
+        lt, pt = tp_run.get("labels", []), tp_run.get("prompts", {})
+        check("TASK PICTURES: the questions on a placeholder go to ONE task-picture author beside the scene authors, before "
+              "the builder, who is told to keep them; a module with none gets no author (the 2.135.0 trial: nine questions "
+              "shipped on grey boxes)", "taskpics:1" in lt and lt.index("taskpics:1") < lt.index("build:1") and "taskpics:2" not in lt
+              and "q02, q04" in pt.get("taskpics:1", "") and "NEVER run build_module.py" in pt.get("taskpics:1", "")
+              and "studio.py" in pt.get("taskpics:1", "") and "NEVER DELETE A FOLDER" in pt.get("taskpics:1", "")
+              and "WERE DRAWN OR FOUND BEFORE YOU" in pt.get("build:1", "") and "scenes:1:s01" in lt
+              and "module 1: q02, q04 -" in pt.get("taskpics:1", ""),
+              (lt, pt.get("taskpics:1", "")[:500]))
         check("every brief that changes a module forbids deleting a folder (the 2.135.0 trial: a builder ran rm -rf in "
               "working_claude and lost working_claude/modules - the course has no undo)",
               all("NEVER DELETE A FOLDER" in ps.get(k, "") for k in ("build:1", "scenes:1:s01")), ps.get("build:1", "")[-900:])

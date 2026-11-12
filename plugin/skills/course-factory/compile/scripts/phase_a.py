@@ -82,6 +82,9 @@ def one(course, n, auto):
     todo = scenes_to_place(course, n)
     if todo and not key.startswith("PASS"):
         key += " | 3D TO PLACE: " + " ".join(todo)
+    blind = [q for q, _way in bm.blind_tasks(course, n)]
+    if blind and not key.startswith("PASS"):
+        key += " | TASK PICTURES: " + " ".join(blind)
     return n, code, key, time.time() - t0
 
 

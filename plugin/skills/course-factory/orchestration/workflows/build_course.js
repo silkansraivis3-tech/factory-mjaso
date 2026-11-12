@@ -1105,6 +1105,42 @@ async function placeScenes(m) {
   }))
   return ids
 }
+/* the questions answered ON a picture that Phase A left on a placeholder ("TASK PICTURES: q02 q04 ...") go to ONE task-picture
+   author beside the scene authors, before the builder: the 2.135.0 trial's builder spent its builds elsewhere and shipped nine
+   questions on grey boxes. One author, because the build sheet holds every question's entry */
+const tasksOf = (m) => { const x = /TASK PICTURES:\s*([\w ]+)/.exec(lineOf(m)); return x ? x[1].trim().split(/\s+/) : [] }
+const KIT_SCRIPTS_ = A.factory ? `${A.factory}/course-visuals/kit/scripts` : '<the course-visuals skill folder>/kit/scripts'
+const drawTasks = (m, ids) => `DRAW THE PICTURES OF ${ids.length} QUESTION(S) of module ${m.id}: ${ids.join(', ')} - nothing else.
+
+  Course folder:  ${A.course}
+  The questions:  working_claude/script/M${two(m)}.json (read only: the approved words are never changed) - each is answered
+                  ON its picture (tap the place, spot the hazard, label the drawing); today it stands on a grey placeholder
+  Their entries:  working_claude/script/M${two(m)}.build.json, "screens" -> the question's id: "figure", "areas" / "labels"
+  The kit:        ${KIT_SPEC} ("Relations", "Patterns") and CATALOGUE.md beside it
+
+For each question: a real photograph first when one shows exactly the things its answers name (Wikimedia Commons with
+python ${COMMONS} search / get, into modules/module${two(m)}/assets/img with its _photo_meta.json record - "shows" in your own
+words of what you saw, "visually_verified": "yes - <what you saw> <YYYY-MM-DD>"); else draw it with the figure kit as
+working_claude/figures/M${two(m)}/<question id>.kit.json - every thing an answer names drawn as its own part, placed by what it
+stands on or joins. Put the picture in the question's "figure" and its answers' places on the drawn parts ("areas" /
+"labels" by part id, "unlabel": "answers" so the drawing does not print the answers). Check a drawing with
+python ${KIT_SCRIPTS_}/studio.py <spec> --quick until it is clean - AT MOST SIX runs a question; one still not clean keeps
+what it has and is listed in your report. Write only those questions' entries, specs and photos.
+NEVER run build_module.py: the module's builder starts after you.
+
+${HANDS_ON}
+
+Report: each question's id, its picture (photo or drawing), clean or not.${NOTES}`
+async function drawTaskPictures(m) {
+  const ids = tasksOf(m)
+  if (!ids.length) return []
+  await agent(drawTasks(m, ids), { label: `taskpics:${m.id}`, phase: 'Build', ...JUDGEMENT })
+  return ids
+}
+const drawnNote = (m, ids) => ids.length ? `
+
+THE PICTURES OF QUESTIONS ${ids.join(', ')} WERE DRAWN OR FOUND BEFORE YOU by a task-picture author (their entries in
+working_claude/script/M${two(m)}.build.json): keep them, and fix only what the build prints about them.` : ''
 const placedNote = (m, ids) => ids.length ? `
 
 THE 3D SCENES ${ids.join(', ')} WERE PLACED BEFORE YOU by scene authors (working_claude/figures/M${two(m)}/<id>.kit3d.json):
@@ -1136,14 +1172,16 @@ async function oneModule(m) {
     return { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
   }
   /* 2.73.0 - Phase A finished it (PASS / MODULE CLEAN): no builder, straight to the judges; else the builder's brief is its needs file */
-  const placed = cleanA(lineOf(m)) ? [] : await placeScenes(m)
-  const built = cleanA(lineOf(m)) ? null : await place(() => buildUntilPass(m, phaseB(m) + placedNote(m, placed)))
+  const [placed, drawn] = cleanA(lineOf(m)) ? [[], []] : await Promise.all([placeScenes(m), drawTaskPictures(m)])
+  const built = cleanA(lineOf(m)) ? null
+    : await place(() => buildUntilPass(m, phaseB(m) + placedNote(m, placed) + drawnNote(m, drawn)))
   const time = built === null ? null : timeOf(built)     // 2.65.0 (Raivis) - the module clock, from the builder's report
   let reachedPass = built === null || passed(built)      // no PASS from build_module.py, not done - whatever the judges say
   /* who built it is what the walk judge signs against: a builder's own signature is refused, and so is a fixer's - the
      look after a fix round is told every agent that changed the module in it */
   const builtBy = [built === null ? 'phase-a:modules (workflow Phase A, no builder)' : `build:${m.id} (workflow builder)`]
     .concat(placed.length ? [`scenes:${m.id} (workflow scene authors)`] : [])
+    .concat(drawn.length ? [`taskpics:${m.id} (workflow task-picture author)`] : [])
   const walkIt = (tag, fixers = [], used = false) => agent(walk(walkOf(m), builtBy.concat(fixers), !!tag, used),
     { label: `walk:${m.id}${tag || ''}`, phase: 'Verify', schema: WALK_SCHEMA, ...JUDGEMENT })
   /* the 3D check and the figure check may rebuild the module: the walk looks at the module only after its last build of the

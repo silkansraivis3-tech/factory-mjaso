@@ -273,7 +273,16 @@ def main():
               "trial: M01's builder stopped on SAME FINDING 3 BUILDS RUNNING after two builds of its own)", not os.path.isfile(streak_p))
         check("... and its line names the 3D scenes still at their starter, for the workflow's scene authors (the 2.134.0 trial: "
               "M01's builder left 19 of them) - never a placed one",
-              " | 3D TO PLACE: s03 " in ans and ans.endswith(" s07") and "s05" not in ans.split("3D TO PLACE")[1], ans)
+              " | 3D TO PLACE: s03 " in ans and "s07" in ans.split("3D TO PLACE")[1] and "s05" not in ans.split("3D TO PLACE")[1], ans)
+        real_blind = bm.blind_tasks
+        bm.blind_tasks = lambda course, n: [("q02", "hotspot"), ("q04", "label_diagram")]
+        phase_a.run = counted_build
+        try:
+            ans2 = phase_a.one(c, 1, False)[2]
+        finally:
+            phase_a.run, bm.blind_tasks = real_run, real_blind
+        check("... and the questions answered on a placeholder picture, for the workflow's task-picture author (the 2.135.0 "
+              "trial: nine questions shipped on grey boxes)", ans2.endswith(" | TASK PICTURES: q02 q04"), ans2)
         res_p, run_p = phase_a.status_paths(c)
         io.open(run_p, "w", encoding="utf-8").write(json.dumps({"pid": os.getpid(), "modules": [4], "jobs": 1}))
         buf = io.StringIO()
