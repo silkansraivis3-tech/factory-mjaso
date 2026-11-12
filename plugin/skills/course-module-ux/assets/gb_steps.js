@@ -115,12 +115,16 @@
     /* a kit figure beside a question and its answer (worked example, points with an ask, predict / explain then reveal): the
        figure plays the steps whose "line" is a line now lit (line L = stop L - 1) and the ones before it; the steps that name
        a line past the visible ones, or are marked "reveal": true, play on the last stop, when the answer shows. Tapping a lit
-       line (its stop) replays its step. Only a slide with a question (li.you): other stop slides keep kit.js's own step hook. Complete at the last stop,
-       so kit.js's own step hook (which would step the figure on after the stops and light line 1 again) has nothing left to do. */
+       line (its stop) replays its step. A slide of points (.lt-points) walks its figure the same way, point k being line k + 1:
+       its figure stood still through the points and played its steps after them, one stop behind and more. Steps that name no
+       line go one a stop. Only a slide with a question (li.you) or points: other stop slides keep kit.js's own step hook.
+       Complete at the last stop, so kit.js's own step hook (which would step the figure on after the stops and light line 1
+       again) has nothing left to do. */
     function (s) {
       var host = q('[data-kit], [data-kit2d], [data-kit3d]', s);
       var ask = !!q('li.you', s);       /* the last two stops are the question and the answer */
-      if (!host || !ask) { return null; }
+      var points = !ask && !!q('.lt-points', s);
+      if (!host || !(ask || points)) { return null; }
       var at = -1, total = 0;
       /* the figure's steps after its opening view, and a way to put it at one: kit.js on its host, the 2D and 3D kits on
          the slide (__fig) */
@@ -132,6 +136,7 @@
       var want = function (k, n) {
         var F = fig(), st = F ? F.st : [], seen = ask ? n - 2 : n, last = k >= n - 1, c = 0, i, top;
         if (!F) { return -1; }
+        if (points && !st.some(function (x) { return x.line != null; })) { return Math.min(k, st.length); }
         for (i = 0; i < st.length && !last; i++) {
           top = st[i].line == null ? 0 : Math.max.apply(Math, [].concat(st[i].line).map(Number));
           if (st[i].reveal || top > Math.min(k + 1, seen)) { break; }

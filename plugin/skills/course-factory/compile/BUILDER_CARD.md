@@ -58,6 +58,15 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
 
 ## What a builder must also know
 - Draw 2D figures with the 2D kit (`course-visuals/kit2d/SPEC.md`) beside the kit; 3D only where the figure's why is spatial.
+- **Every lit line changes the figure to the thing it names.** One step per line, in the line's order: the opening step
+  (step 0) shows what line 1 names - never an overview first and line 1's part after it (that moves every part one line
+  late, and the last two steps land on one line); step 1 line 2, and so on. On a slide of points, point k is `"line": k`.
+  A step that lights the line the step before lit, a line no step lights, steps that name no line, or a step showing a part
+  its line does not name fail the compile.
+- **Never the flat boxes-with-titles figure**: 2D `node` boxes of the slide's words with arrows between them fail the
+  compile (BOXES) - draw the thing (a kit part drawing, 3D, a photograph), or no figure and a blueprint for the words alone
+  (`reference-table`, `content-in-parts`) or two slides. Options the slide compares stand side by side, never joined by
+  arrows (CHAIN).
 - Every figure spec carries `"why"` + `"why_text"` - what the figure's steps serve.
 - When no kit part shows the idea, write a `custom_figure` (an offline, self-contained file whose steps Next drives).
 - The walk review is never the builder's: the workflow's walk judge runs it (by hand: the lead session). The "WALK REVIEW"
@@ -75,6 +84,8 @@ The answer lists only what fails (the full log's path is its last line - open it
 | `... a fit was saved as ... candidate.kit.json` | it was not applied (it would add a meaning BLOCK, or needs the photo row off): fix the spec yourself |
 | `COMPILE ... nothing built: ... starter's blanks` | fill exactly what it names in the build sheet (or `compile_module.py ... --fill-slots`: placeholders) |
 | `PHASE A CLEAN MNN ... picture slot(s) still hold Phase A's stand-ins` | fill each from the needs file (above), then ONE build |
+| `COMPILE ... one stop behind / the same line on two Nexts / no step for line N / name no line / does not show what its line names / never changes` | bind each line to the one step that shows what it names (`"line"`, counted from 1; a point's number on a slide of points): line 1's subject on step 0, no overview step before it; point the step at the part (`"select"`, `"frame"`, `"labels"`) |
+| `COMPILE ... its 2D kit figure - BOXES / CHAIN` | the figure is the slide's words in boxes: draw the thing instead (a kit part drawing, 3D, a photograph), or drop the figure for a blueprint of words alone (`"template"` in the build sheet) or two slides; options side by side with no arrow from one to the next |
 | `COMPILE ... the words say X, the drawing's readout shows Y` | make the step's readout agree (`play`), or `"numbers_differ": "<why>"` |
 | `COMPILE ... the photo ... is "not a X" by its own record` | a picture of the thing itself, or `"photo_ok": "<why>"` |
 | `COMPILE ... the real photograph ... could carry` a question | use the line it gives (areas in % of the photo), or `"photo_declined": "<why>"` |

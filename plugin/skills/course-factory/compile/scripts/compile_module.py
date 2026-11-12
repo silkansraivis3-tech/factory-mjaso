@@ -130,6 +130,7 @@ if HERE not in sys.path:                                       # 2.49.1 - `pytho
 import content_script as cs  # noqa: E402
 import layout_fit  # noqa: E402
 import layout_plan  # noqa: E402
+import line_binding  # noqa: E402
 import workspace  # noqa: E402
 
 SHELL = os.path.join(SKILLS, "course-module-ui", "templates", "gb_shell.html")
@@ -771,6 +772,11 @@ def kit2d_figure(text, s, probs, where):
         return ""
     if spec.get("_todo"):                              # --init-build's starter, its values still placeholders
         probs.append("%s: its 2D kit figure is still the starter (\"_todo\": %s) - then delete the \"_todo\" key" % (where, spec["_todo"]))
+    # boxes of words with arrows are the slide's words again, never a picture; arrows chain options set side by side
+    sys.path.insert(0, os.path.join(SKILLS, "course-visuals", "kit", "scripts"))
+    import kit_meaning
+    probs += ["%s: its 2D kit figure - %s" % (where, x)
+              for x in kit_meaning.kit2d_boxes(spec, cs.parse_kind(s.get("visual_kind", "")) == "comparison")]
     if not spec.get("label"):
         spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
     sid = "k2-" + s["id"]
@@ -2289,7 +2295,7 @@ def step_line_problems(page):
     import check_kit3d
     out = []
     for sid, body in SECTION.findall(page):
-        lines = len(set(re.findall(r'\bdata-i="(\d+)"', re.sub(r"<svg\b.*?</svg>", "", body, flags=re.S))))
+        lines = len(line_binding.slide_lines(body))     # its data-i lines, or its points (gb_steps.js walks them as lines)
         ask = bool(re.search(r'class="[^"]*\byou\b', body))
         answer = ask or bool(re.search(r'class="[^"]*\b(lt-why|lt-opts|lt-vote)\b', body))
         for m in KIT_DATA.finditer(body):
@@ -4249,9 +4255,11 @@ def starter_kit3d(script, s):
     nothing: a label from the slide, metres, a home view, and one part per thing the slide's lines name (the term before " - " or
     ": ", else the kit's word in the line; the kit's words in the first sentence of `visual` the lines did not name; up to
     KIT3D_MAX_PARTS), each with an id and a label in the script's own word, side by side along x. A slide that names nothing gets
-    a tank. Its steps show the line numbering the deck uses: step 0 (the scene as it opens) lights line 1, and a line that named a
-    part gets a step that frames that part and lights it ("line": the line's number, counted from 1 as data-i). "_todo" says
-    to place the parts as they are on board."""
+    a tank. One step per line, in the line numbering the deck uses ("line": the line's number, counted from 1 as data-i): step 0
+    (the scene as it opens) lights line 1 and frames the part line 1 names, and each later line's step frames the part that line
+    names - a line naming none shows the whole scene, for the builder to point at its subject. Never an overview step before
+    line 1's own: the builder who added line 1's part after it moved every part one line late. "_todo" says to place the
+    parts as they are on board."""
     lines = cs.lines_of(s.get("text"))
     statement = len(lines) > 1 and not TERM.match(lines[0]) and any(TERM.match(x) for x in lines[1:])
     items, seen = [], set()
@@ -4285,7 +4293,7 @@ def starter_kit3d(script, s):
     width = sum(KIT3D_SIZE[k][0] for k, _, _ in items) + KIT3D_GAP * (len(items) - 1)
     x, parts, labels, ids = -width / 2.0, [], [], set()
     home = {"az": 24, "el": 23}
-    steps = [{"view": dict(home), "line": 1}] if lines else []
+    at_line = {}                                       # line number -> the part it names
 
     def ident(label, kind):
         base = re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")[:30].strip("_") or kind
@@ -4310,18 +4318,19 @@ def starter_kit3d(script, s):
             pid = ident(label, kind)
             parts.append(dict({"id": pid, "type": kind, "at": [cx, y, 0]}, **own))
             labels.append({"part": pid, "text": label})
-        if ln and ln > 1:
-            first_id = parts[-3 if kind == "station" else -1]["id"]
-            steps.append({"view": dict(home, frame=[first_id]), "select": first_id, "line": ln})
+        if ln:
+            at_line[ln] = parts[-3 if kind == "station" else -1]["id"]
         x += w + KIT3D_GAP
+    steps = [{"view": dict(home, frame=[at_line[i]]), "select": at_line[i], "line": i} if i in at_line else
+             {"view": dict(home), "line": i} for i in range(1, len(lines) + 1)]
     out = {"label": first or s.get("title") or "", "units": "m", "view": dict(home), "parts": parts, "labels": labels}
     if steps:
         out["steps"] = steps
     out["_todo"] = ("Starter written by --init-build: the parts are guessed from the slide's words and laid side by side. Place them "
                     "as they are on board (true metres, SPEC.md), size them, give the slide's lines their steps and a cut-away where "
-                    "the inside is the lesson. A step's \"line\" is the slide's line counted from 1 as the deck counts it (\"line\": 1 "
-                    "is the first line, never 0), up to its last line; check_kit3d.py spec <file> says what is missing. Delete this "
-                    "key when it is done.")
+                    "the inside is the lesson. Keep one step per line: step N shows what line N+1 names (\"line\": 1 is the first "
+                    "line, never 0) - point a step that shows the whole scene at its line's subject, never add an overview step before "
+                    "line 1's; check_kit3d.py spec <file> says what is missing. Delete this key when it is done.")
     return out
 
 
@@ -5020,50 +5029,6 @@ def kit2d_times(lines):
     return (out, units.pop()) if len(out) >= 3 and len(units) == 1 else (None, None)
 
 
-def kit2d_process(items, lines, W, H, how):
-    """the steps of a process laid out four ways - across, in two rows, down the page, stepping down - one box per line,
-    an arrow to the next, each step bringing its box in and lighting it"""
-    its = items[:8]
-    n = len(its)
-    pos, bw, bh = [], 0, 74
-    if how == "row":
-        gap = (W - 40) / float(n)
-        bw = min(220, gap - 50)
-        pos = [(20 + gap * (i + 0.5), H / 2.0) for i in range(n)]
-    elif how == "rows":
-        per = (n + 1) // 2
-        gap = (W - 40) / float(per)
-        bw = min(220, gap - 50)
-        for i in range(n):
-            r, c = divmod(i, per)
-            pos.append((20 + gap * ((c if r == 0 else per - 1 - c) + 0.5), H * 0.3 if r == 0 else H * 0.72))
-    elif how == "column":
-        bw, bh = 380, 62
-        step = (H - 60) / float(n)
-        pos = [(W / 2.0, 30 + step * (i + 0.5)) for i in range(n)]
-    else:                                          # stair: left to right, top to bottom
-        gap = (W - 40) / float(n)
-        bw = min(210, gap * 1.4)
-        pos = [(20 + gap * (i + 0.5), 70 + (H - 140) * i / float(n - 1)) for i in range(n)]
-    parts, state, steps = [], {}, []
-    for i, (t, rest) in enumerate(its):
-        state["n%d" % (i + 1)] = state["l%d" % (i + 1)] = 0
-        parts.append({"id": "N%d" % (i + 1), "type": "node", "x": round(pos[i][0]), "y": round(pos[i][1]), "w": round(bw), "h": bh,
-                      "text": t, "show": "@n%d" % (i + 1), "lit": "@l%d" % (i + 1), "cat": i % 5 + 1})
-    for i in range(1, n):
-        state["a%d" % i] = 0
-        arrow = {"id": "A%d" % i, "type": "arrow", "from": "N%d" % i, "to": "N%d" % (i + 1), "draw": "@a%d" % i}
-        if how == "stair":
-            arrow["via"] = "h"
-        parts.append(arrow)
-    for i in range(n):
-        st = {"n%d" % (i + 1): 1, "l%d" % (i + 1): 1}
-        if i:
-            st.update({"a%d" % i: 1, "l%d" % i: 0})
-        steps.append({"title": lines[i], "set": st, "line": i + 1, "after": {"n%d" % (i + 1): 300} if i else {}})
-    return {"state": state, "rates": {"a%d" % i: 4 for i in range(1, n)}, "parts": parts, "steps": steps}
-
-
 def kit2d_candidates(script, s):
     """every 2D figure the slide's own words can make, best fit first: [(fit, look, why, make)] - make() gives the spec's
     body. Nothing is invented: a value the words cannot give is left to "_todo"."""
@@ -5152,11 +5117,8 @@ def kit2d_candidates(script, s):
                        "items": [{"name": t, "r": 1, "c": 1, "show": "@show", "dy": (i - len(items) / 2.0) * 30} for i, (t, _) in enumerate(items[:5])]}],
             "steps": [{"title": lines[0], "set": {"show": 1}, "line": 1}],
             "_todo": "the rows, the columns and where each item stands, from the course's sources (SPEC.md: matrix)"}))
-    m = min(n, 8)
-    for fit, how, ok in ((50, "row", m <= 4), (50, "rows", m >= 5), (47, "rows", m == 4), (45, "column", 2 <= m <= 5),
-                         (44, "stair", 3 <= m <= 5)):
-        if ok:
-            out.append((fit, "process:" + how, "one step a line", (lambda how=how: kit2d_process(items, lines, W, H, how))))
+    # never one box a line with arrows between them: the slide's words again in boxes, which the compile refuses
+    # (kit_meaning.kit2d_boxes) - a slide whose words make none of these keeps the figure kit's starter
     out.sort(key=lambda c: -c[0])
     return out
 
@@ -5164,10 +5126,10 @@ def kit2d_candidates(script, s):
 def starter_kit2d(script, s, recent=()):
     """the starter 2D-kit spec of a drawing slide, composed from its own words: of every figure they can make (a graph,
     bars of its numbers, a time line of its times, a cycle, people speaking, two things compared, a pyramid, a schedule,
-    a grid, a process laid out four ways) the best fit whose look is not in `recent` (the 2D figures of the slides just
-    before it) - so a module's figures never look alike. Nothing is invented: where the words cannot give the values the
-    spec says so in "_todo", which the compile reports until it is gone. "_brief" says what the figure shows and why this
-    one was chosen; "_look" is its look. None when the slide has no lines."""
+    a grid) the best fit whose look is not in `recent` (the 2D figures of the slides just before it) - so a module's figures
+    never look alike. Nothing is invented: where the words cannot give the values the spec says so in "_todo", which the
+    compile reports until it is gone. "_brief" says what the figure shows and why this one was chosen; "_look" is its look.
+    None when the slide has no lines, or its words make none of these (never boxes of its lines with arrows)."""
     cands = kit2d_candidates(script, s)
     if not cands:
         return None
@@ -6407,7 +6369,8 @@ def main(argv=None):
             probs.append("slide %s (%s): the drawing says \"%s\" but %s. Make the drawing say what the approved "
                          "answer says (the figure's spec), or say why it differs in the build sheet: \"numbers_differ\": \"<why>\""
                          % (sid, cs.place(script, sid), drawn, said))
-        for sid, msg in dead_figure_problems(page) + lines_twice_problems(page) + step_line_problems(page):
+        for sid, msg in dead_figure_problems(page) + lines_twice_problems(page) + step_line_problems(page) + \
+                line_binding.deck_problems(page):
             probs.append("slide %s (%s): %s" % (sid, cs.place(script, sid), msg))
         # 2.63.3 - a figure shows what its slide says, and a photo is not one its own record says it is not
         for sid, rel, k, line, said, shown in figure_number_mismatches(build, figdir, mdir):

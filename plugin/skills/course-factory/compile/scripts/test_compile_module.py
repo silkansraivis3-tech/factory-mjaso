@@ -2558,7 +2558,9 @@ KIT3D_SPEC = {"label": "A fuel tank, cut open.", "units": "m", "why": "spatial",
               "why_text": "The trainee turns the cut-open tank and sees where the vent mast stands.",
               "parts": [{"id": "tank", "type": "tank_c", "at": [0, 2, 0], "r": 1.6, "len": 7, "cut": True, "fill": 0.6},
                         {"id": "vm", "type": "vent_mast", "at": [6, 0, 0]}],
-              "labels": [{"part": "tank", "text": "Fuel tank </script>"}, {"part": "vm", "text": "Vent mast"}]}
+              "labels": [{"part": "tank", "text": "Fuel tank </script>"}, {"part": "vm", "text": "Vent mast"}],
+              "steps": [{"view": {"az": 24, "el": 23}, "line": 1}, {"view": {"az": 30, "el": 20, "frame": ["tank"]}, "select": "tank", "line": 2},
+                        {"view": {"az": 30, "el": 20, "frame": ["vm"]}, "select": "vm", "line": 3}]}
 
 
 KIT2D_SPEC = {"label": "Fuel against speed.", "size": [960, 540], "state": {"d": 0}, "why": "quantity-change",
@@ -2566,7 +2568,8 @@ KIT2D_SPEC = {"label": "Fuel against speed.", "size": [960, 540], "state": {"d":
               "parts": [{"id": "C", "type": "chart", "x": 120, "y": 70, "w": 740, "h": 380,
                          "xaxis": {"min": 0, "max": 20, "step": 2}, "yaxis": {"min": 0, "max": 60, "step": 10}},
                         {"id": "F", "type": "curve", "on": "C", "fn": {"kind": "power", "a": 0.0075, "n": 3}, "draw": "@d", "label": "a </script> b"}],
-              "steps": [{"title": "Draw it", "set": {"d": 1}}]}
+              "steps": [{"title": "Draw it", "set": {"d": 0.4}, "line": 1}, {"title": "Faster", "set": {"d": 0.7}, "line": 2},
+                        {"title": "Fastest", "set": {"d": 1}, "line": 3}]}
 
 
 CUSTOM_FIG = ('<svg viewBox="0 0 400 200" role="img" aria-label="A pump and its relief valve"><rect x="20" y="40" width="120" height="100"/>'
@@ -2731,15 +2734,13 @@ def kit2d_part(tmp):
     # 2.108.1 - the starter of a drawing slide about an idea, a sequence or numbers is a 2D-kit spec from the slide's words
     proc = {"id": "s05", "kind": "slide", "visual_kind": "process_animation", "title": "Handling a change",
             "visual": "The steps of a change request.", "text": "Request - the change is written down.\nAssess - cost, time and risk.\nDecide - approve or escalate.\nPlan - the plan is updated."}
-    st = cm.starter_kit2d({"module": 1}, proc)
-    nodes = [x for x in st["parts"] if x["type"] == "node"]
-    check("starter_kit2d: a process slide - one box per line in the line's own name, an arrow between each and the next, a step per "
-          "line bringing its box in and lighting it, the column's shape, no \"_todo\" (nothing to invent)",
-          cm.kit2d_slide({"module": 1}, proc) and [x["text"] for x in nodes] == ["Request", "Assess", "Decide", "Plan"]
-          and len([x for x in st["parts"] if x["type"] == "arrow"]) == 3 and [x["line"] for x in st["steps"]] == [1, 2, 3, 4]
-          and st["size"] == list(cm.KIT2D_SIZE) and "_todo" not in st and st.get("_k2"), st)
+    check("starter_kit2d: a process slide whose words make no other 2D figure gets none - never one box a line with arrows "
+          "(the compile refuses that figure); the figure kit's starter takes it",
+          cm.kit2d_slide({"module": 1}, proc) and cm.starter_kit2d({"module": 1}, proc) is None, cm.starter_kit2d({"module": 1}, proc))
     cyc = dict(proc, id="s06", text="Plan - set the goal.\nDo - try it.\nCheck - measure it.\nAct - keep what works, and round again.")
     sc = cm.starter_kit2d({"module": 1}, cyc)
+    check("... with the column's shape and a step per line, nothing to invent",
+          sc["size"] == list(cm.KIT2D_SIZE) and [x["line"] for x in sc["steps"]] == [1, 2, 3, 4] and "_todo" not in sc and sc.get("_k2"), sc)
     check("... a slide whose words say it goes round is a cycle of its lines' names",
           sc["parts"][0]["type"] == "cycle" and [x["name"] for x in sc["parts"][0]["stages"]] == ["Plan", "Do", "Check", "Act"], sc)
     ch = cm.starter_kit2d({"module": 1}, dict(proc, id="s07", visual_kind="chart"))
@@ -2753,11 +2754,11 @@ def kit2d_part(tmp):
     # each figure composed from its own slide's words, never one template after another
     looks, seen = [], []
     for i in range(3):
-        sp = cm.starter_kit2d({"module": 1}, dict(proc, id="s1%d" % i), seen)
+        sp = cm.starter_kit2d({"module": 1}, dict(cyc, id="s1%d" % i, title="The levels of the improvement schedule"), seen)
         looks.append(sp["_look"]); seen.append(sp["_look"])
-    check("starter_kit2d: three process slides in a row are laid out three ways (across, two rows, down the page), and "
+    check("starter_kit2d: three slides in a row whose words make a cycle, a pyramid and a schedule get the three in turn, and "
           "\"_brief\" says what each shows and why",
-          looks == ["process:row", "process:rows", "process:column"] and "Composed as" in sp["_brief"]
+          looks == ["cycle", "pyramid", "gantt"] and "Composed as" in sp["_brief"]
           and "Not " in sp["_brief"], (looks, sp.get("_brief")))
     bars = cm.starter_kit2d({"module": 1}, dict(proc, visual_kind="step_animation", title="Fuel a day",
                                                 text="Main engine - 30 t/day.\nGenerators - 7 t/day.\nBoiler - 3 t/day."))
@@ -2780,7 +2781,7 @@ def kit2d_part(tmp):
     def page(sid, spec):
         return '<script type="application/json" id="k2-%s">%s</script>' % (sid, json.dumps(spec).replace("</", "<\\/"))
     near, far = [], []
-    scr = [dict(cyc, id="s%02d" % i) for i in range(1, 8)]
+    scr = [dict(cyc, id="s%02d" % i, title="The levels of the improvement cycle") for i in range(1, 8)]
     cm.kit2d_variety({"module": 1, "screens": scr}, scr, [page("s01", cyc_spec), "", page("s03", cyc_spec), "", "", "", ""], near)
     cm.kit2d_variety({"module": 1, "screens": scr}, scr, [page("s01", cyc_spec), "", "", "", "", page("s06", cyc_spec), ""], far)
     check("kit2d_variety: two 2D figures that look alike two slides apart are a problem naming the other slide and what else "
@@ -4198,7 +4199,8 @@ def main():
                     "why_text": "The trainee sees the valve that stops the flow.",
                     "parts": [{"id": "F", "type": "pipe", "d": "M10 100 H290", "value": 1},
                               {"id": "V", "type": "valve", "x": 150, "y": 100, "value": 1, "label": "valve </script>"}],
-                    "steps": [{"title": "The valve closes", "line": 2, "play": [["V", 0, 800], ["F", 0, 400]]}]}
+                    "steps": [{"title": "The valve closes", "line": 2, "play": [["V", 0, 800]]},
+                              {"title": "The flow stops", "line": 3, "play": [["F", 0, 400]]}]}
         cs.save(os.path.join(c7, "working_claude", "figures", "M01", "valve.kit.json"), kit_spec)
         bp = os.path.join(c7, "working_claude", "script", "M01.build.json")
         sheet = cs.load(bp)

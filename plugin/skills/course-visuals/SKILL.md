@@ -118,6 +118,11 @@ This is the one place the rule is written; the law, the script guide and the tem
 >   diagrams; a **custom figure** where no kit part shows the idea well.
 > - **Never the old flat SVG illustration** - the figure kit's line drawing (`kit/`) is kept only for a control screen
 >   the trainee reads (an HMI).
+> - **Never boxes with titles** - the slide's words in 2D `node` boxes joined by arrows draw nothing: the compile
+>   refuses them (BOXES), and arrows from one compared option to the next (CHAIN). A slide with nothing to draw takes
+>   no figure and a blueprint for its words alone, or becomes two slides.
+> - **Every lit line changes the figure to what it names** - one step per line, step 0 showing line 1's subject
+>   (`kit3d/SPEC.md` "Steps"); the compile refuses a figure that runs behind its words or stands still while they change.
 >
 > 60-80 % of a module's teaching slides are interactive 3D; the rest static 3D, photographs, 2D-kit and custom
 > figures, mixed in so that never more than 3 interactive 3D slides come in a row. Under 60 % or over 80 % is a

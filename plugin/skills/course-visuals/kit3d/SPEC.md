@@ -136,7 +136,7 @@ A part can make its own labels (a dimension's value, a hull space's `name`).
 
 ```json
 "steps": [
-  {"view": {"az": 24, "el": 23}, "line": 1},
+  {"view": {"az": 24, "el": 23, "frame": ["tank", "pipe"]}, "labels": ["tank", "pipe"], "line": 1},
   {"view": {"az": 17, "el": 17, "frame": ["pipe"]}, "state": {"pipe.cut": 1}, "select": "pipe", "line": 2},
   {"view": {"az": 30, "el": 25, "frame": ["tank"]}, "select": "tank", "line": 3}
 ]
@@ -149,10 +149,16 @@ walks the steps before it turns the slide; Back walks them back.
 
 **Lines count from 1, as the deck counts them**: the slide's first line is `"line": 1` (`data-i="1"`), never 0 - a
 scene counting from 0 lights nothing on its first step and every line one step late. Steps are numbered from 0 (step 0
-opens the slide), lines from 1: above, step 0 lights line 1, step 1 line 2, step 2 line 3. Light up to the slide's last
-line: the lines after the last one a step lights come with the scene standing still. Or give no step a `line`: the deck
-then walks the lines with the steps, one each Next. The compile and `check_kit3d.py module` refuse a line outside the
-slide's 1..n and lines left after the last one lit; `check_kit3d.py spec` refuses a line under 1.
+opens the slide), lines from 1: above, step 0 lights line 1, step 1 line 2, step 2 line 3. On a slide of points the
+points are its lines: point 1 is `"line": 1`.
+
+**One step per line, and each shows what its line names.** Step 0 is not an overview before the lesson: it frames and
+labels what line 1 names. A builder who opened on an overview for line 1 and then gave line 1's part a step of its own
+moved every part one line late - the figure ran one stop behind its words, and the last two steps landed on one line.
+Light every line, in order, each once: the compile refuses a line outside 1..n, a line no step lights, steps that name no
+line, two steps in a row on the same line, a step whose view, part and labels are the step before's, and a step whose line
+names a labelled part while it shows another (`compile/scripts/line_binding.py`); `check_kit3d.py spec` refuses a line
+under 1.
 
 ## Controls
 

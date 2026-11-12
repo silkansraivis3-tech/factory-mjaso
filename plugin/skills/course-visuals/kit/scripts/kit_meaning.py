@@ -29,6 +29,8 @@ kit.js itself resolves (kit_relate.py), against course-visuals/knowledge/figure-
              every one it moves goes the other way
   READOUT    (2.72.7) a level readout and its tank disagree after a step (a BLOCK with one tank; a NOTE when paired to the
              nearest of several)
+  BOXES      (kit2d_boxes, a 2D kit figure; the compile refuses it) boxes of words and arrows with nothing drawn, or a
+             list of word boxes beside a few drawings; CHAIN an arrow from one option to the next on a comparison
   JOINS      (2.72.7) in a figure with pipes, a valve / pump / line part on no pipe and mounted on nothing (a BLOCK); a tank or
              engine no pipe reaches, or a figure whose words say a path with no pipe at all (NOTEs). Calibrated on the
              hand-fixed original's 96 specs: 0 BLOCKs, 2 notes
@@ -1115,6 +1117,44 @@ def check(spec, where="", resolved=None):
     return analyse(spec, where, resolved)["block"]
 
 
+# a 2D kit figure (course-visuals/kit2d) made of boxes of words: its word parts, and the parts that only join them
+K2_WORDS = ("node", "callout")
+K2_LINKS = ("arrow", "token")
+INSTEAD = ("draw the thing the words are about - a part drawing (the 2D kit's tank, pump, pipe, gate_valve, gauge or a hero "
+           "figure; bars, a chart or a time line for numbers), a 3D scene or a photograph - or show no figure and give the "
+           "slide a blueprint for its words alone (reference-table for rows, content-in-parts) or two slides")
+
+
+def kit2d_boxes(spec, parallel=False):
+    """[sentence] - a 2D kit figure that is the flat "boxes with titles" drawing, each a must-fix:
+    BOXES  only boxes of words and the arrows between them, nothing drawn;
+           or four boxes of words or more, more than the parts drawn beside them;
+    CHAIN  on a figure of options set side by side (parallel: the slide or the figure is a comparison), an arrow from an
+           option to the next: a chain of arrows reads as a process that does not exist"""
+    parts = [p for p in (spec or {}).get("parts") or [] if isinstance(p, dict)]
+    boxes = [p for p in parts if p.get("type") in K2_WORDS]
+    links = [p for p in parts if p.get("type") in K2_LINKS]
+    drawn = [p for p in parts if p.get("type") not in K2_WORDS + K2_LINKS]
+    out = []
+    if len(boxes) >= 2 and not drawn:
+        out.append("BOXES: the figure is %d boxes of words%s and draws nothing - the slide's words again, in boxes. Instead, %s"
+                   % (len(boxes), " joined by %d arrow(s)" % len(links) if links else "", INSTEAD))
+    elif len([p for p in boxes if p.get("type") == "node"]) >= 4 and len(boxes) > len(drawn):
+        out.append("BOXES: %d of its parts are boxes of words and %d are drawn - a list in boxes beside a few drawings. The words "
+                   "are the slide's lines; instead, %s" % (len(boxes), len(drawn), INSTEAD))
+    if parallel or str((spec or {}).get("why") or "").lower() == "comparison":
+        ends = [(str(p.get("from")), str(p.get("to"))) for p in links if p.get("type") == "arrow" and p.get("from") and p.get("to")]
+        into = {b for _, b in ends}
+        chain = [(a, b) for a, b in ends if a in into]
+        if chain:
+            a, b = chain[0]
+            back = next((x for x, y in ends if y == a), "")
+            out.append("CHAIN: the arrows %s -> %s -> %s lead from one option to the next, and the figure sets them side by side "
+                       "(a comparison) - a chain of arrows reads as a process that does not exist. Draw the options side by side "
+                       "with no arrow between them (one branch from a common root is right)" % (back, a, b))
+    return out
+
+
 def figure_kinds(spec):
     """the figure kinds (figure-truths.json) a spec is, with their must-be-true sentences - for the FIGURE review"""
     got = kit_relate.run([spec]) or [{"spec": spec, "geometry": []}]
@@ -1131,9 +1171,19 @@ def main(argv=None):
         return 2
     want_kinds = "--kinds" in argv
     files = [a for a in argv if not a.startswith("--")]
+    flat = [f for f in files if f.lower().endswith(".kit2d.json")]     # a 2D kit figure: its boxes judged, nothing more
+    k2 = 0
+    for f in flat:
+        for x in kit2d_boxes(json.load(io.open(f, encoding="utf-8"))):
+            print("  - %s: %s" % (os.path.basename(f), x))
+            k2 += 1
+    files = [f for f in files if f not in flat]
+    if not files:
+        print("%s - %d 2D figure(s)" % (("%d BLOCK(s)" % k2) if k2 else "no block", len(flat)))
+        return 1 if k2 else 0
     specs = [json.load(io.open(f, encoding="utf-8")) for f in files]
     got = kit_relate.run(specs) or [None] * len(specs)
-    n = nn = nw = 0
+    n, nn, nw = k2, 0, 0
     for f, s, r in zip(files, specs, got):
         if want_kinds:
             print(os.path.basename(f), json.dumps(figure_kinds(s), ensure_ascii=False))
