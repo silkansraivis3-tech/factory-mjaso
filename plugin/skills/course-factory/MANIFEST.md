@@ -7,6 +7,10 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.135.0 · Tanks in their hull sections, scenes placed before the builder, summary cards checked (2026-11-12)
+
+- `compile/scripts/compile_module.py` `starter_hull3d`, `house_rooms`, `contain_hits`: the 3D starter stands each named tank type in its hull section and folds the compressor and motor rooms into one compressor house; `compile/scripts/phase_a.py` `scenes_to_place` ("3D TO PLACE" on its line); `orchestration/workflows/build_course.js` scene authors before the builder (`placeScenes`); `scripts/content_script.py` `misasked`; `BUILDER_CARD.md`. Tests: test_compile_module, test_line_binding, test_phase_a, test_build_course, test_content_script.
+
 ## 2.134.0 · The first-pass trial's faults fixed in the factory (2026-11-12)
 
 - `compile/scripts/line_binding.py` COMPARE and MISSING; `compile_module.py` the 3D starter knows the airlock and compressor house, the figure starter takes no parts from the visual's words, `raw_separators()`, a "value | caption" line drawn as a value; `build_module.py` `blind_tasks()` (TASK PICTURES) and `walk_behind()`; `--init-build` task drawings from the figure kit; `scripts/content_script.py` honesty markers in notes and `track_findings()`; `task_cover.py next` shows the outcome's words; agents `task-coverage-checker.md` and `fact-checker.md`; `BUILDER_CARD.md`. Tests: test_line_binding, test_compile_module, test_build_module, test_content_script, test_task_cover, test_starter_figures, test_task_engine, test_interact_types.

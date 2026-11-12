@@ -103,6 +103,10 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## A lit point never splits at a column break — 2.135.0 (2026-11-12)
+
+`templates/gb_layouts.css`: each point of a two-column list (fig-top, fig-bottom, a figure-top stage's words) is one box that cannot split, so the lit line's frame never leaves an empty edge at the foot of the first column; `course-module-ux/measure/scripts/fit_probe.js` names a frame split at a column break (fixture `deck_columns.html`, test_fit_gate).
+
 ## A why beside a picture lights its line; a value over its caption; a room activity centred — 2.134.0 (2026-11-12)
 
 `templates/gb_upgrade.css`: `.lt-why [data-i]` takes the `.cur` / `.lit` highlight; `.lt-val` (in `references/vocabulary.md`); `gb_layouts.css`: a one-column room activity is centred at the width of its words.

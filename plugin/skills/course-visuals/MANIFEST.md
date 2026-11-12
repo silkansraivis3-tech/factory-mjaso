@@ -146,6 +146,10 @@ lane, `trace` and `region` on charts, and the minified copy modules ship (`min/k
 changing the kit - `test_minify_engines.py` fails a stale copy).
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
+## 2.135.0 · The whole model in its box, off the controls (2026-11-12)
+
+`kit3d/kit3d.js`: `viewFor` makes a step's frame a close-up only when it comes three times nearer than the whole model, `reserve` keeps the model off the corner controls, `fit` fills an off-centre room; SPEC.md. Fixtures `row_band`, `long_row`; test_kit3d.
+
 ## 2.134.0 · Labels on what they name, frames that hold the step, airlock and compressor house (2026-11-12)
 
 `kit3d/kit3d.js`: hull sub-part anchors where the hull is drawn, `<hull>_hold`, `<tank>_dome`, `<tank>_saddles`, a step's frame holds its selected part and its labels, new `airlock`, `compressor_house`, `detector` kinds, `accommodation` doors, crowded names compacted or hidden in a low box; `check_kit3d.py` label kinds, stand-ins, solids through tanks, compared scale, fill; `kit/scripts/kit_meaning.py` `promised()` STARTER, TABLE, FEWER. Tests: test_kit3d, test_check_kit3d, test_meaning, test_kit.

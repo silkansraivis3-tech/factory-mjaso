@@ -45,10 +45,8 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
   structure the kit lacks is a kit part made in the module's `assets/kit_parts.js` (`course-visuals/kit/PARTS.md`), or a
   `custom_figure` when no kit part shows the idea; a labelled box standing for equipment - a `space` box a pipe runs into,
   or one named for equipment - fails the build (BOX). A 3D slide, only where the figure's why is spatial: its `sNN.kit3d.json` (`course-visuals/kit3d/SPEC.md`,
-  `PARTS.md`) - place the parts as on board, delete `"_todo"`. In the workflow, scene authors place the scenes Phase A left as
-  starters before you start: keep theirs. The workflow's 3D step checks and photographs it after you. A gas carrier section:
-  a `hull` with `double` / `hopper` / `topwing` and each tank `"in"` it (PARTS.md "Gas carrier hull sections") - the starter
-  already stands the tank type the slide names in its section.
+  `PARTS.md`) - place the parts as on board, delete `"_todo"`; scene authors placed Phase A's starters before you: keep theirs.
+  The 3D step photographs it after you. A gas carrier's tank stands `"in"` its `hull` (PARTS.md "Gas carrier hull sections").
 - **BUILD FIRST, then fix only what the build prints** - redrawing figures by hand costs the build. Fill the blanks the build names and
   run the build - the starters are drawn already: never delete or rewrite a starter, never open the studio on a figure
   the build did not name. A starter marked `"_pattern"` is a tested, physically correct IGF figure: change only its words
