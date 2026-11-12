@@ -7,6 +7,10 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.134.0 · The first-pass trial's faults fixed in the factory (2026-11-12)
+
+- `compile/scripts/line_binding.py` COMPARE and MISSING; `compile_module.py` the 3D starter knows the airlock and compressor house, the figure starter takes no parts from the visual's words, `raw_separators()`, a "value | caption" line drawn as a value; `build_module.py` `blind_tasks()` (TASK PICTURES) and `walk_behind()`; `--init-build` task drawings from the figure kit; `scripts/content_script.py` honesty markers in notes and `track_findings()`; `task_cover.py next` shows the outcome's words; agents `task-coverage-checker.md` and `fact-checker.md`; `BUILDER_CARD.md`. Tests: test_line_binding, test_compile_module, test_build_module, test_content_script, test_task_cover, test_starter_figures, test_task_engine, test_interact_types.
+
 ## 2.133.0 · The trial's faults fixed in the factory (2026-11-12)
 
 - `compile/scripts/layout_plan.py` picture shape hard, `picture_misfits`; `compile_module.py` misfit must-fix, room activities, one step per line in the 3D starter, no box-and-arrow starter; new `compile/scripts/line_binding.py`; `precheck.py` photo looks, task picture records, same drawing names; `scripts/content_script.py` `t_no_shape`, `tablet_findings`, `i_item_not_checked`; `scripts/fault_report.py` the plan's checks; `photo_catalogue.py look`, `visual_needs.py`, `upscale_photos.py`, publisher `gates.py`; `BUILDER_CARD.md`, `compile/GUIDE.md`. Tests: test_layout_plan, test_compile_module, test_line_binding, test_precheck, test_content_script, test_factory_trial, test_build_course.

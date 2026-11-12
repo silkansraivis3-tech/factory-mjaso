@@ -6,6 +6,10 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.134.0 · A repeated label, the expand button off the words, every statement after Check (2026-11-12)
+
+`assets/gb_answer.js` `rightZone`: each card goes to a free zone of its name; `assets/gb_interact.js`: the swipe lab lists every statement with its verdict and sentence after Check; `course-module-ux/assets/gb_zoom.js` `placeCorner` tries places beside the picture before any on words. Checks: `review_sheets.mjs` `cover()` and a repeated label.
+
 ## 2.133.0 · Labels inside their pills, a drawing in its own shape (2026-11-12)
 
 `assets/gb_answer.css`: a task drawing's box takes its viewBox shape (`--ar`), label words fit two lines and never under 12.5 px, the badge in the corner. Checks: `review_sheets.mjs` words outside their box, `audit_drawing.js` drawing text at its shown size.

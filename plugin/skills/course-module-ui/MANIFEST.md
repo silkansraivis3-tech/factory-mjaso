@@ -103,6 +103,10 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## A why beside a picture lights its line; a value over its caption; a room activity centred — 2.134.0 (2026-11-12)
+
+`templates/gb_upgrade.css`: `.lt-why [data-i]` takes the `.cur` / `.lit` highlight; `.lt-val` (in `references/vocabulary.md`); `gb_layouts.css`: a one-column room activity is centred at the width of its words.
+
 ## Every picture blueprint has its shape; bands for scenario, worked example, true-false, name-parts; screens right first time — 2.133.0 (2026-11-12)
 
 `knowledge/blueprints`: `fits` on every blueprint with a picture box, `.figure-top` / `.figure-bottom` for scenario, worked-example, true-false and name-parts, their budgets in `layout-templates.json` measured at the three sizes. `templates/gb_compose.css`: every tap line 44 px; `gb_upgrade.css`: the current question card stays in its column; true-false and name-parts on dark ground.
