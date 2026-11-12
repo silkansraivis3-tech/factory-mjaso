@@ -532,6 +532,17 @@ for i, st in enumerate([x.get("probe") or {} for x in r[1:]]):
     check("gas carriers step %d: labels on their parts, inside the box, none on another" % i,
           st.get("off") == [] and st.get("over") == [] and len(st.get("shown") or []) >= 3, st)
 
+# ---------------------------------------------------------------- names on parts close together in a low box (M16 s03 at 1280 x 800:
+# the why under the picture left the scene 558 x 180, and three names round the inductor lay on each other, one cut)
+LOW = BASE + "course-visuals/kit3d/studio3d.html?spec=scripts/fixtures/foam_low.kit3d.json&w=558&h=180"
+r = run([{"url": LOW, "wait": "window.k3ready", "do": [HELP], "settle": 600, "probe": J % GSTEP}]
+        + [{"do": "k3.step(%d)" % i, "settle": 1500, "probe": J % ("(function(o){o.lit=k3.info().labels.filter(function(l){return l.shown&&l.lit})"
+                                                                   ".map(function(l){return l.text});return o})(%s)" % GSTEP)} for i in range(4)],
+        "--w=1280", "--h=800")
+for i, st in enumerate([x.get("probe") or {} for x in r[1:]]):
+    check("a low box, step %d: no name on another or past the edge - the step's own name always shown" % i,
+          st.get("over") == [] and st.get("off") == [] and st.get("lit") and len(st.get("shown") or []) >= 1, st)
+
 srv.shutdown()
 print()
 print("ALL PASS" if not FAILS else "%d FAILED: %s" % (len(FAILS), "; ".join(FAILS)))
