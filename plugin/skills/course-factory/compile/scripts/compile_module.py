@@ -5508,6 +5508,143 @@ def prefill(script, sheet, mdir, figdir):
     return said
 
 
+# a question answered ON a picture is drawn at --init-build when every answer names a piece of equipment the figure kit draws:
+# one part each, side by side, with no words on them - the trainee finds or names them. Rooms, ships and decks are not
+# drawn this way (a box or a hull stands for nothing a trainee can find on it)
+TASK_FIG_CELL = (220, 180)
+TASK_FIG_SKIP = {"space", "zone", "ga", "midship", "text", "step_track", "log", "panel", "scale", "level", "gauge"}
+# a cargo tank named by its containment system is drawn as that system's symbol (the kit's tank_type), never as one more
+# horizontal Type C tank; a hose as wide as the hose it is (SPEC.md: a fire hose 12, a pick-up tube 6)
+TANK_SYSTEMS = (("semi_membrane", r"semi-?membrane"), ("membrane", r"membrane"), ("b", r"type b|moss|spheric|sphere"),
+                ("a", r"type a|prismatic"), ("c", r"type c|bi-?lobe|cylindric|pressure vessel"))
+THIN_HOSE = re.compile(r"(?i)\b(small|pick-?up|suction|tube)\b")
+
+
+def kit_examples():
+    """{part type: its example part} from course-visuals/kit/CATALOGUE.md"""
+    out = {}
+    try:
+        text = io.open(os.path.join(SKILLS, "course-visuals", "kit", "CATALOGUE.md"), encoding="utf-8").read()
+    except OSError:
+        return out
+    for m in re.finditer(r"^- `(\w+)` .*? - ex: `(\{.*\})`\s*$", text, re.M):
+        try:
+            out[m.group(1)] = json.loads(m.group(2))
+        except ValueError:
+            pass
+    return out
+
+
+def equipment_of(item, names, examples):
+    """the kit part an answer is a drawing of: the figure-truths words its name ends on (its head noun - "Fire hose", never
+    "Cargo compressor room"), the first of their parts the kit draws on its own - None when there is none"""
+    t = re.sub(r"[^a-z0-9]+", " ", str(item).lower()).strip()
+    best = None
+    for ent in names:
+        for w in ent.get("words") or []:
+            if not (t == w or t.endswith(" " + w)) or (best and len(w) <= best[0]):
+                continue
+            kind = next((k for k in ent.get("parts") or [] if k not in TASK_FIG_SKIP
+                         and (k in examples or k in STARTER_PART or k == "hose")), None)
+            if kind:
+                best = (len(w), kind)
+    return best[1] if best else None
+
+
+def task_figure(s):
+    """a figure-kit drawing for a question answered ON a picture, when every answer names a piece of equipment the kit
+    draws -> (spec, {answer: part id}), else None. The parts carry no words: the answers are what the trainee gives"""
+    items = [t for t in cs.answer_items(s)[0] if t]
+    if len(items) < 2:
+        return None
+    try:
+        names = json.load(io.open(os.path.join(SKILLS, "course-visuals", "knowledge", "figure-truths.json"),
+                                  encoding="utf-8")).get("names") or []
+    except (OSError, ValueError):
+        return None
+    examples = kit_examples()
+    kinds = [equipment_of(t, names, examples) for t in items]
+    if not all(kinds):
+        return None
+    look = []
+    for k, (item, kind) in enumerate(zip(items, kinds)):
+        sub = next((n for n, rx in TANK_SYSTEMS if re.search(rx, item, re.I)), None) if kind == "tank" else None
+        if sub:
+            kinds[k] = "tank_type"
+        look.append((kinds[k], sub, kind == "hose" and bool(THIN_HOSE.search(item))))
+    if len(set(look)) < len(look):                      # two answers drawn alike: the trainee could not tell them apart
+        return None
+    cols = len(items) if len(items) <= 3 else int(math.ceil(len(items) / 2.0))
+    rows = int(math.ceil(len(items) / float(cols)))
+    cw, ch = TASK_FIG_CELL
+    m = STARTER_MARGIN
+    parts, at = [], {}
+    for k, (item, kind) in enumerate(zip(items, kinds)):
+        pid = "P%d" % (k + 1)
+        x0, y0 = (k % cols) * cw, (k // cols) * ch
+        cx = int(round(x0 + cw / 2.0))
+        if kind == "hose":
+            got = [{"id": pid, "type": "hose", "d": "M%d %d H%d" % (x0 + m, y0 + ch // 2, x0 + cw - m), "empty": True, "value": 0,
+                    "w": 6 if look[k][2] else 12, "open": "both"}]           # a hose laid out on its own, both ends free
+        elif kind == "tank_type":
+            w, h = cw - 2 * m - 40, ch - 2 * m - 30
+            got = [{"id": pid, "type": "tank_type", "kind": look[k][1], "x": int(x0 + (cw - w) / 2.0), "y": int(y0 + (ch - h) / 2.0),
+                    "w": w, "h": h}]
+        elif kind in STARTER_PART:
+            got = [p for p in starter_part(pid, {"kind": kind, "label": "", "start": 0}, (x0, y0, cw, ch)) if p.get("type") != "text"]
+        else:
+            p = {k2: v for k2, v in examples[kind].items() if k2 not in ("x", "y", "label", "reachLabel", "sub", "value")}
+            w = int(min(float(p.get("w") or cw * 0.5), cw - 2 * m))
+            h = int(min(float(p.get("h") or w * 0.5), ch - 2 * m))
+            if "w" in p:
+                p["w"] = w
+            if "h" in p:
+                p["h"] = h
+            if "reach" in p:
+                p["reach"] = int(min(float(p["reach"]), max(20, cw - 2 * m - w)))
+                w += p["reach"]
+            # a gas bottle stands on the middle of its base; every other part is placed by its top left corner
+            p.update({"id": pid, "x": cx, "y": y0 + ch - m} if kind == "gas_cylinder" else
+                     {"id": pid, "x": int(round(cx - w / 2.0)), "y": int(round(y0 + (ch - h) / 2.0))})
+            got = [p]
+        for p in got:
+            p.pop("label", None)
+        parts += got
+        at[item] = pid
+    shows = (cs.picture_of(s).get("shows") or s.get("visual") or s.get("question") or "").strip()
+    spec = {"size": [cols * cw, rows * ch], "label": shows[:160], "idle": "", "parts": parts, "steps": [],
+            "why": "real-thing-recognition", "why_text": "the trainee finds on the drawing each thing the question names",
+            "_note": "drawn by --init-build for the question answered on it: one part a thing its answers name, no words on "
+                     "them - place them as they stand on board if the question needs it (course-visuals/kit/SPEC.md)"}
+    return spec, at
+
+
+def task_figures(script, sheet, figdir):
+    """a question answered ON a picture that has none yet gets its drawing (task_figure) - never a placeholder the trainee
+    cannot answer on. -> the lines to print; the questions it cannot draw keep their blank (fill_slots, then the build fails)"""
+    said, screens = [], sheet.setdefault("screens", {})
+    for s in script.get("screens", []):
+        e = screens.get(s["id"])
+        if s.get("kind") not in cs.TASKS or cs.mech(s) not in STARTER_ON_PICTURE or not isinstance(e, dict) \
+                or (e.get("figure") or "").strip():
+            continue
+        got = task_figure(s)
+        if not got:
+            continue
+        spec, at = got
+        name = "%s.kit.json" % s["id"]
+        os.makedirs(figdir, exist_ok=True)
+        cs.save(os.path.join(figdir, name), spec)
+        e["figure"] = name
+        if cs.mech(s) == "label_diagram":
+            e["labels"] = {a: {"at": pid} for a, pid in at.items()}
+        else:
+            e["areas"] = dict(at)
+        said.append("  %s: drawn with the figure kit - figures\\%s\\%s, one part a thing its answers name (%s)"
+                    % (s["id"], cs.mid(script.get("module")), name, ", ".join(p["type"] for p in spec["parts"])))
+    return said
+
+
 PLACE_ON_PICTURE = tuple(STARTER_ON_PICTURE) + ("read_instrument",)
 SLOT_BOX = re.compile(r'<img\b(?=[^>]*\bsrc="[^"]*_placeholder_[^"/]*\.png")')
 
@@ -6252,9 +6389,12 @@ def main(argv=None):
             print("Stopped - " + why)
             return 2
         sheet_ = cs.load(bp)
+        drawn = task_figures(script, sheet_, workspace.claude_path(o.course, "figures", cs.mid(o.module)))
         filled = fill_slots(script, sheet_, mdir)
-        if filled:
+        if filled or drawn:
             cs.save(bp, sheet_)
+        if drawn:
+            print("Drawn for the questions answered on a picture:\n%s" % "\n".join(drawn))
         import visual_needs
         print("Phase A - %d empty picture slot(s) now hold a placeholder: %s\n  %s"
               % (len(filled), ", ".join("%s (%s)" % x for x in filled) or "none was empty", visual_needs.write(o.course, o.module)))
@@ -6312,6 +6452,7 @@ def main(argv=None):
                   "PARTS.md)" % (cs.mid(o.module), sid, KIT3D_SPEC, len(spec["parts"])))
         sheet_ = cs.load(bp)                            # 2.72.3: the photos and the questions' pictures its own files decide
         said = prefill(script, sheet_, module_folder(o.course, o.module, o.module_dir)[0], figdir)
+        said += task_figures(script, sheet_, figdir)
         if said:
             cs.save(bp, sheet_)
             print("  filled from the module's own files (a start - change any of them like the rest of the sheet):\n%s" % "\n".join(said))
