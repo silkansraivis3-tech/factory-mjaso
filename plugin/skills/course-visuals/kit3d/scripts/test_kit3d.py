@@ -591,6 +591,50 @@ for i, st in enumerate([x.get("probe") or {} for x in r[1:]]):
     check("a low box, step %d: no name on another or past the edge - the step's own name always shown" % i,
           st.get("over") == [] and st.get("off") == [] and st.get("lit") and len(st.get("shown") or []) >= 1, st)
 
+# ---------------------------------------------------------------- the camera at every step keeps the model in its box and off
+# the controls (gas trial M01 s04, s12, s14, s15 at 1280 x 800: a starter scene's parts side by side in a wide low band, each
+# step framing one of them 1.8 times nearer - the rest of the model ran off the right edge under the Labels button). The
+# boxes are the slides' own: the band under or over the words at 1280 x 800, 1024 x 768 and 1280 x 720, a true-or-false
+# strip, a column beside the words
+FRAMING = J % ("(function(){var S=k3.scene,p=new THREE.Vector3(),wr=S.wrap.getBoundingClientRect(),c=S.ctl.getBoundingClientRect();"
+               "function px(b){var x0=1e9,x1=-1e9,y0=1e9,y1=-1e9,i;for(i=0;i<8;i++){p.set(i&1?b.max.x:b.min.x,i&2?b.max.y:b.min.y,"
+               "i&4?b.max.z:b.min.z).project(S.camera);var sx=(p.x*.5+.5)*S.W,sy=(-p.y*.5+.5)*S.H;x0=Math.min(x0,sx);x1=Math.max(x1,sx);"
+               "y0=Math.min(y0,sy);y1=Math.max(y1,sy);}return [x0,y0,x1,y1].map(Math.round);}"
+               "var v=(S.steps()[S.step]||{}).view||{};return {step:S.step,size:[S.W,S.H],framed:px(v.frame&&v.frame.length?S.boxOf(v.frame):S.box),"
+               "model:px(S.box),ctl:c.width?[c.left-wr.left,c.top-wr.top,c.right-wr.left,c.bottom-wr.top].map(Math.round):null}})()")
+
+
+def framing_faults(o):
+    """what a step's picture shows wrong: its framed parts or the model past the box's edge, or under the controls"""
+    out, (w, h), c = [], o.get("size") or [0, 0], o.get("ctl")
+    for what in ("framed", "model"):
+        b = o.get(what) or [0, 0, 1e9, 1e9]
+        if b[0] < -1 or b[1] < -1 or b[2] > w + 1 or b[3] > h + 1:
+            out.append("%s %s past the box %dx%d" % (what, b, w, h))
+        if c and b[0] < c[2] and c[0] < b[2] and b[1] < c[3] and c[1] < b[3]:
+            out.append("%s %s under the controls %s" % (what, b, c))
+    return out
+
+
+BOXES = [(1128, 256), (878, 241), (1143, 248), (1128, 166), (626, 363)]
+ROW = BASE + "course-visuals/kit3d/studio3d.html?spec=scripts/fixtures/row_band.kit3d.json&w=%d&h=%d"
+plan = []
+for bw, bh in BOXES:
+    plan.append({"url": ROW % (bw, bh), "wait": "window.k3ready", "settle": 900, "probe": FRAMING})
+    plan += [{"do": "k3.step(%d)" % i, "settle": 1300, "probe": FRAMING} for i in (1, 2, 3)]
+r = run(plan, "--w=1280", "--h=900")
+bad = ["%s step %s: %s" % (p.get("size"), p.get("step"), "; ".join(framing_faults(p)) or x.get("errors"))
+       for x in r for p in [x.get("probe") or {}] if framing_faults(p) or x.get("errors")]
+check("a starter scene in a slide's box: at every step its framed part and the whole model stand inside the box, off the "
+      "Labels button - a step that would come less than 3 times nearer shows the whole model, its part selected", not bad
+      and len(r) == 4 * len(BOXES) and all((x.get("probe") or {}).get("ctl") for x in r), bad or r[:2])
+LONG = BASE + "course-visuals/kit3d/studio3d.html?spec=scripts/fixtures/long_row.kit3d.json&w=%d&h=%d"
+r = run([{"url": LONG % (bw, bh), "wait": "window.k3ready", "settle": 900, "probe": FRAMING} for bw, bh in ((600, 250), (800, 300), (1128, 256))],
+        "--w=1280", "--h=900")
+bad = [framing_faults(x.get("probe") or {}) for x in r]
+check("a long row framed whole, its far end in the corner the Labels button sits in: the model keeps off the button",
+      not any(bad) and all((x.get("probe") or {}).get("ctl") for x in r), bad)
+
 srv.shutdown()
 print()
 print("ALL PASS" if not FAILS else "%d FAILED: %s" % (len(FAILS), "; ".join(FAILS)))

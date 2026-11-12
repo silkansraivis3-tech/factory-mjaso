@@ -1,0 +1,110 @@
+{
+ "label": "A starter scene: four parts side by side along x, each step framing one of them (gas trial M01 s12).",
+ "units": "m",
+ "view": {
+  "az": 24,
+  "el": 23
+ },
+ "parts": [
+  {
+   "id": "spaces",
+   "type": "room",
+   "at": [
+    -9.5,
+    0.0,
+    0
+   ]
+  },
+  {
+   "id": "engine",
+   "type": "engine",
+   "at": [
+    -4.0,
+    0.0,
+    0
+   ]
+  },
+  {
+   "id": "space",
+   "type": "room",
+   "at": [
+    1.5,
+    0.0,
+    0
+   ]
+  },
+  {
+   "id": "tanks",
+   "type": "tank_c",
+   "at": [
+    8.5,
+    2.0,
+    0
+   ],
+   "r": 1.6,
+   "len": 7.0,
+   "cut": true,
+   "fill": 0.6
+  }
+ ],
+ "labels": [
+  {
+   "part": "spaces",
+   "text": "Spaces"
+  },
+  {
+   "part": "engine",
+   "text": "Engine"
+  },
+  {
+   "part": "space",
+   "text": "Space"
+  },
+  {
+   "part": "tanks",
+   "text": "tanks"
+  }
+ ],
+ "steps": [
+  {
+   "view": {
+    "az": 24,
+    "el": 23,
+    "frame": [
+     "spaces"
+    ]
+   },
+   "select": "spaces",
+   "line": 1
+  },
+  {
+   "view": {
+    "az": 24,
+    "el": 23,
+    "frame": [
+     "engine"
+    ]
+   },
+   "select": "engine",
+   "line": 2
+  },
+  {
+   "view": {
+    "az": 24,
+    "el": 23,
+    "frame": [
+     "space"
+    ]
+   },
+   "select": "space",
+   "line": 3
+  },
+  {
+   "view": {
+    "az": 24,
+    "el": 23
+   },
+   "line": 4
+  }
+ ]
+}

@@ -16,9 +16,12 @@ smoke3d, perf3d and a picture of every step in `working_claude\review\MNN_3d\` -
   shadow drawn once, the course palette (`steel`, `gas` yellow, `cold` pale blue, `red` handwheels ...), see-through
   ghost walls, cut-aways that show the insides with the cut edge drawn.
 - **Framing that fills the box**: the whole scene (or the spec's `box`) is fitted to the canvas at every size - room
-  kept above for the labels and below for the controls. A step's `frame` fits its parts, and with them the whole of the
-  part it `select`s and the dots of the labels it names (its `labels`, a label's `steps`): a Moss sphere above its hull is
-  never cut at the top edge, its label never off the picture. A tapped part is framed from its own box. Full screen re-fits.
+  kept above for the labels and below for the controls; buttons in a corner keep the model off them (the strip beside
+  them or the one above them, whichever leaves the model more room). A step's `frame` fits its parts, and with them the
+  whole of the part it `select`s and the dots of the labels it names (its `labels`, a label's `steps`): a Moss sphere above
+  its hull is never cut at the top edge, its label never off the picture. A `frame` is a close-up only when it comes at
+  least 3 times nearer than the whole model would; nearer than that it would only cut the model at the box edge, so the
+  step shows the whole model, its part still selected. A tapped part is framed from its own box. Full screen re-fits.
 - **Labels on the parts**: an amber dot on the part, a white stem, a white pill with a blue border. They never cover
   each other, a stem, a dot, a control, the Full screen button or the box edge: every frame each label that touches
   something tries other stem lengths, the other side of its point and a sideways shift (the hand-made
