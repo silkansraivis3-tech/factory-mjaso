@@ -70,6 +70,14 @@ def main():
         v = tc.shows(script["screens"][0])
         check("... a slide's words apart from its notes", "18 bar" not in v["shows"] and "18 bar" in v["notes"], v)
         check("the final assessment is not judged here", tc.units(dict(script, module="final")) == [])
+        cs.save(os.path.join(c, "working_claude", "ilo_map.json"), {"rows": [
+            {"module": 1, "sub_ilo_id": "1.2", "sub_ilo": "Beschreiben ...", "sub_ilo_en": "Describe each containment system "
+             "- membrane, semi-membrane, Type C - and whether it needs a secondary barrier"}]})
+        qv = tc.question_view(dict(script["screens"][3], sub_ilo="1.2"), tc.outcomes(c, 1))
+        check("a question is given with its outcome's words, in English - so every part the outcome names, and the method "
+              "of what it has the trainee do, is judged taught (semi-membrane's barrier, M01; the foam on a spill fire, M16)",
+              qv.get("outcome", "").startswith("1.2 Describe each containment system") and "sub_ilo" not in qv, qv)
+        os.remove(os.path.join(c, "working_claude", "ilo_map.json"))
 
         print("\n-- the approval before the check has run")
         f = cs.task_cover_findings(c, script)
@@ -185,6 +193,13 @@ def main():
         check("... and a checker's batch file goes in the course's working_claude/scratch/, never the system temp folder",
               all("working_claude/scratch/" in t and "file in the system temp folder" not in t
                   for p, t in briefs.items() if p.endswith("checker.md")))
+        tcc = next(t for p, t in briefs.items() if p.endswith("task-coverage-checker.md"))
+        fcc = next(t for p, t in briefs.items() if p.endswith("fact-checker.md"))
+        check("the coverage checker is told a key the slides contradict is not covered, and an outcome's every part and "
+              "the method of what it has the trainee do must be taught (M01 q01, the semi-membrane barrier; M16 the spill fire)",
+              "key disagrees with the slides" in tcc and "part its `outcome` names" in tcc and "never teach how" in tcc)
+        check("... and the fact-checker that steps in an order are found only in that same order (M16 a02, the dressing order)",
+              "found only when a passage gives the same order" in fcc)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

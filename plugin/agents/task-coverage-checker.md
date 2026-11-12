@@ -25,6 +25,10 @@ You check one module's questions against the slides taught before them. Nothing 
      line(s) that teach it, copied from `shows` or `picture`.
    - **partly** - the topic is taught but a fact or step the task needs is missing, or only the notes say it.
    - **not_covered** - the slides teach another topic, or nothing the task needs.
+   Covered words are not enough. It is **not_covered** when the key disagrees with the slides: an item the slides
+   teach in another group, order or answer than the key gives (`question`: the key as the slides teach it). It is
+   **partly** when a part its `outcome` names is never taught (each system, each barrier - not most of them), or when
+   the outcome has the trainee do something (operate, extinguish, dress, rig) and the slides never teach how.
    Read each question's answer as its type writes it. In a `line_up`, the `TAG: name = open | shut` lines are the
    valves **as the trainee finds them** - the start state, not the answer: the answer is what the trainee changes to
    send the cargo from the goal's source to its destination and keep out what `keep out` names. A valve given shut on

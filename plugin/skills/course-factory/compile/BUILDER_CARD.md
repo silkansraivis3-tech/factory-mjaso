@@ -25,9 +25,9 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
   drawing or photo: build them AS THEY ARE, change only what the build reports. It also fills what the module's
   own files decide - a photo slide's photograph (its record's `used_in`, or its description), a question "on the GA from
   slide 4" with that drawing and the places its labels name - and prints each: check them, fill only what is left.
-- **Phase A, no agent:** `--init-build` then puts a PLACEHOLDER of its shape in every picture slot still empty
-  (photo slots, a question's picture with its answers' boxes on a grid) - never a blank. A build with placeholders (or a 3D
-  starter still `"_todo"`) answers `PHASE A CLEAN MNN` (exit 4) at best, never PASS. Usually Phase A has run already
+- **Phase A, no agent:** `--init-build` then puts a PLACEHOLDER of its shape in every picture slot still empty - never a
+  blank; a question answered ON a picture is drawn with the kit when its answers name kit things, and on a placeholder it
+  FAILS the build (TASK PICTURES). Other placeholders (or a 3D starter `"_todo"`) answer `PHASE A CLEAN MNN` (exit 4). Usually Phase A has run already
   (`phase_a.py`): your brief is then `working_claude\visuals\MNN_VISUAL_NEEDS.md` - each slot's kind, shape, real px size,
   words, what it must show and the course catalogue's candidates. Run `build_module.py ... --auto` first (it takes the
   catalogue's good picks), then fill the rest: a photograph 800 px or more into `assets/img` with its `_photo_meta.json`
@@ -77,9 +77,9 @@ The answer lists only what fails (the full log's path is its last line - open it
 | `the closer fit was applied to the spec by the build` | nothing to copy: fix only what it lists, in the spec as it now is |
 | `... a fit was saved as ... candidate.kit.json` | it was not applied (it would add a meaning BLOCK, or needs the photo row off): fix the spec yourself |
 | `COMPILE ... nothing built: ... starter's blanks` | fill exactly what it names in the build sheet (or `compile_module.py ... --fill-slots`: placeholders) |
-| `PHASE A CLEAN MNN ... picture slot(s) still hold Phase A's stand-ins` | fill each from the needs file (above), then ONE build |
+| `PHASE A CLEAN MNN ... picture slot(s) still hold Phase A's stand-ins` / `TASK PICTURES` | fill each from the needs file (above) - a question's picture a kit drawing (its answers on part ids) or a photo in hand, never one still to come - then ONE build |
 | `COMPILE ... one stop behind / the same line on two Nexts / no step for line N / name no line / does not show what its line names / never changes` | bind each line to the one step that shows what it names (`"line"`, counted from 1; a point's number on a slide of points): line 1's subject on step 0, no overview step before it; point the step at the part (`"select"`, `"frame"`, `"labels"`) |
-| `COMPILE ... its 2D kit figure - BOXES / CHAIN` | the figure is the slide's words in boxes: draw the thing instead (a kit part drawing, 3D, a photograph), or drop the figure for a blueprint of words alone (`"template"` in the build sheet) or two slides; options side by side with no arrow from one to the next |
+| `COMPILE ... figure - BOXES / CHAIN / STARTER / TABLE / FEWER` | the figure is the slide's words in boxes, the starter's stand-ins, a table, or fewer things than its visual names: draw the thing instead (a kit part drawing, 3D, a photograph) - each thing named - or drop the figure for a blueprint of words alone (`"template"` in the build sheet) or two slides; options side by side with no arrow from one to the next |
 | `COMPILE ... the words say X, the drawing's readout shows Y` | make the step's readout agree (`play`), or `"numbers_differ": "<why>"` |
 | `COMPILE ... the photo ... is "not a X" by its own record` | a picture of the thing itself, or `"photo_ok": "<why>"` |
 | `COMPILE ... the real photograph ... could carry` a question | use the line it gives (areas in % of the photo), or `"photo_declined": "<why>"` |

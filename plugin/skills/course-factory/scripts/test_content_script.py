@@ -1402,6 +1402,28 @@ def main():
               "one done on paper is not", [(f["screen"], f["rule"]) for f in fa] == [("s03", "tb_activity_off_tablet")]
               and "A1.1" in fa[0]["detail"], fa)
         check("... and approval stops on it", any(f["rule"] == "tb_activity_off_tablet" for f in cs.blocking(cs.all_findings(sa, ct))))
+        vm = copy.deepcopy(SCRIPT)
+        screen(vm, "s02")["notes"] += "\n[VERIFY: a real photograph of the applicator set]"
+        fv = [f for f in cs.text_findings(vm) if f["rule"] == "markers"]
+        check("a [VERIFY: ...] marker in the instructor notes is a must-fix at the script check - the notes are the deck's "
+              "instructor cue, which the build's check_slide_text fails (M16 s02, a01, a05)",
+              [(f["screen"], f["field"], f["level"]) for f in fv] == [("s02", "notes", cs.FAIL)], fv)
+        arch = cs.load(ap)
+        arch["modules"][0]["topics"] = ["1"]
+        cs.save(ap, arch)
+        cs.save(os.path.join(ct, "working_claude", "programme.json"),
+                {"academic_hour_min": 1, "topics": {"1": {"theory": 23, "practical": 0}}})
+        tk = copy.deepcopy(SCRIPT)
+        check("the minutes on each track as the programme gives them: nothing to say", cs.track_findings(ct, tk) == [],
+              cs.track_findings(ct, tk))
+        cs.save(os.path.join(ct, "working_claude", "programme.json"),
+                {"academic_hour_min": 1, "topics": {"1": {"theory": 13, "practical": 10}}})
+        ft = cs.track_findings(ct, tk)
+        check("theory over and practice under its allocation is a must-fix at the script check, not first at the build's "
+              "check_balance (M16: theory 14 / practice 76 against 10 / 80) - a task slide counts as theory",
+              [(f["rule"], f["level"]) for f in ft] == [("tr_split", cs.FAIL)] and "theory 23 / practice 0" in ft[0]["detail"]
+              and "theory 13 / practice 10" in ft[0]["detail"] and "t01" in ft[0]["detail"], ft)
+        check("... and approval stops on it", any(f["rule"] == "tr_split" for f in cs.blocking(cs.all_findings(tk, ct))))
         nomap = new_course(tmp, "nomapfind", gate=False)
         check("without an ILO map the check adds nothing (the gate stops the module instead)", cs.ilo_findings(nomap, bad) == [])
         cb2 = new_course(tmp, "ilobad", script=bad)

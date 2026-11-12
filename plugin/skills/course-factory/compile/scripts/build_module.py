@@ -1484,8 +1484,12 @@ def main(argv=None):
         jobs["audits 1280x800 %s" % " ".join(sizes)] = a
         # the deck walked with Next to every slide's last step (fit_gate.py, Playwright): the audits measure each slide as
         # it opens, and an answer or a last line that arrives later was never measured - one job a size, side by side
+        behind = walk_behind(course, o.module) if o.no_walk and not o.draft else []
+        if behind:
+            notes.append("WALK - the deck changed since its walk pictures (%s): walked again, so the walk review sees this "
+                         "build" % ", ".join(behind[:8]))
         for v in ["1280x800"] + sizes:
-            jobs["fit %s (every Next)" % v] = fit_job(course, o.module, deck, v, o.no_walk)
+            jobs["fit %s (every Next)" % v] = fit_job(course, o.module, deck, v, o.no_walk and not behind)
 
     if not o.no_course_pages:
         jobs["course pages (compile_course.py)"] = [PY, os.path.join(HERE, "compile_course.py"), course]
@@ -1582,6 +1586,14 @@ def main(argv=None):
                          time.time() - t0, m))
             sys.stdout.flush()
             return main(list(sys.argv[1:] if argv is None else argv) + ["--layout-round", str(o.layout_round + 1)])
+    blind = [] if o.draft else blind_tasks(course, o.module)
+    if blind:
+        fails.append("task pictures")
+        say.append("TASK PICTURES - %d question(s) answered ON a picture still hold a placeholder: %s - their tap areas and "
+                   "label leaders sit on a grid over a grey box, so no trainee can answer them. Give each a picture that exists "
+                   "now: a figure-kit drawing in figures\\%s with \"areas\" / \"labels\" on its part ids (a kit part the kit lacks: "
+                   "assets\\kit_parts.js), or a photograph already in assets\\img - never a space for a picture still to come"
+                   % (len(blind), ", ".join("%s (%s)" % x for x in blind), m))
     passed = not fails
     # 2.63.3 - MODULE CLEAN: in a parallel build (--no-course-pages) everything but the course package passed - the package is
     # judged after assembly
@@ -1699,6 +1711,38 @@ def walk_review_py():
         sys.path.insert(0, MEASURE)
     import walk_review
     return walk_review
+
+
+def blind_tasks(course, module):
+    """the questions answered ON a picture (tap the place, spot the hazard, label the drawing) whose picture is a Phase A
+    placeholder: [(question id, its way)] - unanswerable, so the build fails, never PHASE A CLEAN"""
+    import content_script as cs
+    import compile_module as cm
+    try:
+        script = cs.load(cs.paths(course, module)["script"])
+        build = cs.load(cm.build_path(course, module))
+    except (OSError, ValueError):
+        return []
+    out = []
+    for s in script.get("screens", []):
+        e = (build.get("screens") or {}).get(s.get("id"))
+        if s.get("kind") in cs.TASKS and cs.mech(s) in cm.STARTER_ON_PICTURE and isinstance(e, dict) \
+                and cm.PLACEHOLDER_IMG.search((e.get("figure") or "").replace("\\", "/")):
+            out.append((s["id"], cs.mech(s)))
+    return out
+
+
+def walk_behind(course, module):
+    """the deck's slides whose walk pictures are of an older deck, or that its walk has no picture of. A build with --no-walk
+    (the workflow's QA check) that built a changed deck - a figure changed after the builder's last build - walks it all
+    the same: the walk judge after it sees the last build, never pictures it must refuse as older"""
+    try:
+        d = walk_review_py().Deck(course, module)
+    except Exception:                                    # noqa: BLE001 - no deck or no walk to compare with
+        return []
+    if not d.walked:
+        return []
+    return [s for s in (d.ids or d.walked) if s not in d.walked or d.walked_as(s) != d.now(s)]
 
 
 def task_job(mdir, walk_dir, logdir):

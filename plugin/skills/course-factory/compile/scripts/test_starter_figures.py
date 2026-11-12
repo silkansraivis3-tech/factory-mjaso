@@ -68,8 +68,9 @@ def boxes(spec):
 
 
 # 2.72.0 - s03, s04 and s06 name a figure of the kit's library (ship plan, engine modes): their starter IS the pattern, and
-# the placeholder grid below is judged on a slide no pattern fits (s04 with its last three lines)
-GRID_S04 = dict(SLIDES["s04"], id="s04g", text="\n".join(SLIDES["s04"]["text"].split("\n")[2:5]))
+# the placeholder grid below is judged on a slide no pattern fits (s04 with its last three lines, and a line naming the ship:
+# the starter no longer draws one from the visual's words)
+GRID_S04 = dict(SLIDES["s04"], id="s04g", text="\n".join(SLIDES["s04"]["text"].split("\n")[2:5] + ["Ship - the hull that holds them all."]))
 
 
 def canvas():
@@ -214,10 +215,76 @@ def track_part():
           "gauge, a scale no step moves (IGF Advanced M03 s08)", not still, eng["parts"])
 
 
+def promise_part():
+    """the trial of 2.133.0, gas M01 s02: the starter drew a 0-100 scale named "scale", a dial named "pressure" and a ship
+    from the visual's "drawn to the same scale" and "pressure vessel", and a line's words in a box - and they shipped"""
+    s02 = {"id": "s02", "kind": "slide", "title": "Three carriage conditions", "visual_kind": "comparison",
+           "text": "18 bar | Fully pressurised: Type C tanks at ambient temperature, no insulation\n7 bar | Semi-pressurised / "
+                   "semi-refrigerated: insulated Type C tanks, down to -48 °C\nAtmospheric | Fully refrigerated: near "
+                   "atmospheric pressure, at the cargo's boiling point",
+           "visual": "Three tank cross-sections side by side, drawn to the same scale - thick uninsulated pressure vessel, "
+                     "thinner insulated bi-lobe tank, large insulated prismatic tank."}
+    spec = cm.starter_figure({"module": 1, "screens": [s02]}, s02)
+    types = [p.get("type") for p in spec["parts"]]
+    check("no part is taken from the visual's words - no scale, dial or ship no line names and no step moves",
+          not {"scale", "gauge", "ga"} & set(types), types)
+    check("... and its stand-ins (a line's words in a box, a kit word inside a sentence) are named in \"_starter\", so the "
+          "build refuses them while they stand where it put them", sorted(x[0] for x in spec.get("_starter") or [])
+          == sorted(p["id"] for p in spec["parts"] if p.get("id")), spec.get("_starter"))
+    probs = []
+    cm.kit_figure(json.dumps(spec), s02, probs, "Slide 3 (s02)")
+    check("the compile refuses the figure: the starter's stand-ins, and one tank where the visual names three",
+          any("STARTER" in x for x in probs) and any("FEWER" in x for x in probs), probs)
+
+
+def task_part():
+    """a question answered ON a picture is drawn at --init-build when its answers name kit equipment - never a placeholder
+    with its tap areas on a grid over nothing (the trial of 2.133.0: M16 q01, m01; M01 m06)"""
+    import content_script as cs
+    q01 = {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot",
+           "question": "Tap the part of the set that sucks the foam liquid from the foam container.",
+           "answer": "Foam ejector*\nFoam nozzle unit\nFire hose\nFoam container"}
+    got = cm.task_figure(q01)
+    check("a tap task whose answers name kit equipment gets a drawing: one part each, the answers on their part ids",
+          got and [p["type"] for p in got[0]["parts"]] == ["foam_inductor", "foam_branch_pipe", "hose", "foam_container"]
+          and got[1] == {"Foam ejector": "P1", "Foam nozzle unit": "P2", "Fire hose": "P3", "Foam container": "P4"}, got)
+    check("... with no words on its parts - the trainee finds them", got and not any(p.get("label") for p in got[0]["parts"]), got)
+    m06 = dict(q01, id="m06", answer="Bi-lobe Type C tank*\nPrismatic Type A tank\nMoss spherical Type B tank\nMembrane tank")
+    got = cm.task_figure(m06)
+    check("... a tank named by its containment system is that system's symbol, never four alike Type C tanks",
+          got and [(p["type"], p.get("kind")) for p in got[0]["parts"]] == [("tank_type", "c"), ("tank_type", "a"),
+                                                                            ("tank_type", "b"), ("tank_type", "membrane")], got)
+    m01 = dict(q01, id="m01", mechanic="label_diagram", answer="Fire hose\nFoam ejector\nSmall hose\nFoam container\nFoam nozzle unit")
+    got = cm.task_figure(m01)
+    check("... two hoses drawn as wide as they are (a fire hose 12, a pick-up hose 6), so they can be told apart",
+          got and [p.get("w") for p in got[0]["parts"] if p["type"] == "hose"] == [12, 6], got)
+    check("... no drawing when an answer is a room, a ship or a thing the kit does not draw (the build then fails it)",
+          cm.task_figure(dict(q01, answer="Cargo compressor room*\nElectric motor room\nAirlock")) is None
+          and cm.task_figure(dict(q01, answer="Breathing apparatus*\nHelmet\nSafety lamp")) is None)
+    check("... nor when two answers would be drawn alike", cm.task_figure(dict(q01, answer="Fuel tank*\nStorage tank")) is None)
+    tmp = tempfile.mkdtemp(prefix="taskfig_")
+    try:
+        script = {"module": 16, "screens": [q01, dict(q01, id="q02", answer="Breathing apparatus*\nHelmet")]}
+        sheet = {"screens": {"q01": {"figure": "", "areas": {}}, "q02": {"figure": "", "areas": {}}}}
+        said = cm.task_figures(script, sheet, tmp)
+        check("task_figures writes the drawing beside the module's figures and names it in the build sheet; a question it "
+              "cannot draw keeps its blank", sheet["screens"]["q01"]["figure"] == "q01.kit.json"
+              and os.path.isfile(os.path.join(tmp, "q01.kit.json")) and sheet["screens"]["q02"]["figure"] == ""
+              and len(said) == 1, (sheet, said))
+        import check_kit
+        spec = json.load(open(os.path.join(tmp, "q01.kit.json"), encoding="utf-8"))
+        probs = check_kit.check_spec(spec, check_kit.kit_types(), "q01.kit.json") + check_kit.why_problems(spec, "q01.kit.json")
+        check("... a drawing the kit's spec and meaning checks pass (no loose hose end, its why said)", not probs, probs)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     canvas()
     by_words()
     track_part()
+    task_part()
+    promise_part()
     studio_part()
     print("\n%d failure(s)" % len(FAILS) if FAILS else "\nALL PASS")
     return 1 if FAILS else 0

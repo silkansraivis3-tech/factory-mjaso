@@ -465,7 +465,7 @@ ${first ? `Read the build's answer and run ONE shell call of checks:
      the same: anything it reports, or a stop (exit 2), is a finding. Give the shell call 600000 ms;
      if it answers "STILL BUILDING", run the same command with --wait until it prints its answer.
      (--no-walk, always: the walk pictures - the deck's and the task pages' - are the walk judge's, who reads
-     them beside you - this check never writes them again.)`}
+     them after you - this check writes them again only for a deck changed since its walk, so the judge sees this build.)`}
   2  the checks it does not run - ONLY these, because only these can judge ONE module (2.63.2) - chained
      in ONE call, each by the usage line at the top of its file, printing only what fails:
        check_balance on presentation/index.html WITH THIS MODULE'S OWN allocation:

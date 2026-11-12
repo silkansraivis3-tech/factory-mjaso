@@ -129,6 +129,14 @@ def blanks_part():
         got = b.starter_blanks(c, 1)
         check("the starter's blanks are found: a slide with no picture, a question on no picture, a planned 3D scene not written",
               [x[0] for x in got] == [["s01"], ["q02"], ["s04 (m01_s04_3d.html)"]], got)
+        check("a module with no question on a placeholder has none to fail", b.blind_tasks(c, 1) == [], b.blind_tasks(c, 1))
+        was = io.open(cs.paths(c, 1)["dir"] + os.sep + "M01.build.json", encoding="utf-8").read()
+        tcm.build_of(c, lambda s: s["screens"].update(q02={"figure": "assets/img/_placeholder_q02.png", "placeholder": "figure",
+                                                           "areas": {"Vent mast": [5, 7.5, 40, 35], "Fuel tank": [55, 7.5, 40, 35]}}))
+        check("a tap / label question whose picture is a Phase A placeholder is found - the build fails it, never PHASE A "
+              "CLEAN: its tap areas sit on a grid over nothing (the trial of 2.133.0: M01 q03-q13, M16 q01, m01, m04)",
+              b.blind_tasks(c, 1) == [("q02", "hotspot")], b.blind_tasks(c, 1))
+        io.open(cs.paths(c, 1)["dir"] + os.sep + "M01.build.json", "w", encoding="utf-8").write(was)
         p = subprocess.run([sys.executable, os.path.join(HERE, "build_module.py"), c, "--module", "1"], capture_output=True,
                            text=True, encoding="utf-8", errors="replace", timeout=300)
         out = (p.stdout or "") + (p.stderr or "")
@@ -709,6 +717,14 @@ def walk_part():
         check("... the other sizes save none, and --no-walk keeps the fit walk from writing the walk pictures (the workflow's QA "
               "check runs beside the walk judge)", "--walk-dir" not in b.fit_job(course, 1, deck, "1024x768")
               and "--walk-dir" not in b.fit_job(course, 1, deck, "1280x800", True))
+        was = io.open(deck, encoding="utf-8").read()
+        check("a --no-walk build of the deck that was walked leaves the walk as it is", b.walk_behind(course, 1) == [],
+              b.walk_behind(course, 1))
+        io.open(deck, "w", encoding="utf-8").write(page % "Two, its figure changed after the builder's last build")
+        check("... a deck changed since its walk (the QA check built a figure the builder changed after its last build): "
+              "that slide is behind, and that build walks the deck again (M01 s02, the trial of 2.133.0)",
+              b.walk_behind(course, 1) == ["s02"], b.walk_behind(course, 1))
+        io.open(deck, "w", encoding="utf-8").write(was)
         wdir = walk_review.walk_dir(course, 1)
         job = b.task_job("m", wdir, "logs")
         check("the task pages' job walks them into the module's walk folder, beside the deck's stops",
