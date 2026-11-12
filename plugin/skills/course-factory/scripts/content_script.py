@@ -585,6 +585,8 @@ def read_answer(s):
             probs.append("%s: '%s' needs at least three lines, the right one(s) marked *" % (sid, mech_label(m)))
         if m == "choose_and_justify" and len(good) != 1:
             probs.append("%s: 'choose the action, then the reason' needs exactly one reason marked *" % sid)
+        if m == "choose_and_justify":
+            probs += given_away(sid, s.get("options") or [], s.get("correct"), [unstar(x) for x in ls])
         right += good
         wrong += [unstar(x) for x in ls if not starred(x)]
     elif m == "cloze":
@@ -877,6 +879,29 @@ def shape_of(s):
     if (s.get("active") in REVEALS and (s.get("ask") or s.get("reveal"))) or (s.get("ask") and s.get("reveal")):
         return "worked-example"
     return None
+
+
+def given_away(sid, options, correct, reasons):
+    """choose and justify: reasons that name the right choice by what only it is ("Type C tanks are ...", "Type C tanks
+    carry ...") hand the first answer over before it is chosen (gas M01 m05). The words and word pairs of the right option
+    that no other option has; two reasons or more naming them is a must-fix"""
+    i = "ABCDEFGH".find(str(correct or "").strip()[:1].upper())
+    if not (0 <= i < len(options)) or len(reasons) < 2:
+        return []
+    words = [re.findall(r"[a-z0-9]+", str(o).lower()) for o in options]
+    if any(len(w) > 5 for w in words):                     # choices that are actions, not names: a reason may echo them
+        return []
+
+    def marks(ws):
+        return {a + " " + b for a, b in zip(ws, ws[1:])}
+    others = set().union(*[marks(w) for j, w in enumerate(words) if j != i]) if len(words) > 1 else set()
+    own = {x for x in marks(words[i]) if x not in others}
+    named = [r for r in reasons if any(re.search(r"\b%s\b" % re.escape(x), " ".join(re.findall(r"[a-z0-9]+", r.lower())))
+                                       for x in own)]
+    if len(named) < 2:
+        return []
+    return ["%s: %d of the reasons name the right choice (\"%s\") - \"%s\" - so the reasons hand the first answer over. "
+            "Write each reason without naming a choice" % (sid, len(named), options[i], "\" / \"".join(named))]
 
 
 def misasked(sid, asks, answers):

@@ -1015,6 +1015,18 @@ def main():
               any("card 3 asks \"What is the rigging order?\"" in x and "card 4's question" in x for x in pb)
               and any("card 5 asks" in x and "card 2's question" in x for x in pb), pb)
         check("... and approval is refused", any("Pair each question" in x for x in cs.validate(shifted)), cs.validate(shifted))
+        opts = ["Independent Type C tanks", "Prismatic Type A tanks", "Membrane tanks", "Moss spherical Type B tanks"]
+        told = cs.given_away("m05", opts, "A", ["Leakage through the primary barrier is so unlikely it can be neglected",
+                                                "Type C tanks are always below -55 C", "Type C tanks carry no cargo pressure"])
+        fair = cs.given_away("m05", opts, "A", ["Leakage through the primary barrier is so unlikely it can be neglected",
+                                                "The tanks are always below -55 C", "The tanks carry no cargo pressure"])
+        long_ = cs.given_away("q03", ["Start only after ship and terminal sign the checklist", "Start now", "Wait for the pilot"],
+                              "A", ["No cargo operation begins until ship and terminal sign the checklist", "The pilot decides",
+                                    "The terminal checklist is optional"])
+        check("choose and justify: reasons that name the right choice by what only it is hand the first answer over - a "
+              "must-fix naming them (gas M01 m05: two reasons began 'Type C tanks'); reasons naming no choice, and choices that "
+              "are actions a reason may echo, pass", len(told) == 1 and "Type C tanks carry" in told[0] and fair == [] and long_ == [],
+              (told, fair, long_))
         dr = copy.deepcopy(SCRIPT)
         dr["screens"].insert(5, {"id": "s05", "kind": "slide", "title": "Quick fire", "drill": "quick-fire", "text": "No answer here",
                                  "notes": "", "minutes": 0, "seconds": 500})
