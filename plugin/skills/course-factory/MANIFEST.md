@@ -7,6 +7,10 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.131.3 · Tables that fit their slide (2026-11-12)
+
+- `compile/scripts/layout_plan.py` `table_budget`: a table's rows and words against each shape; `compile_module.py`: table rows to the plan, a figureless table as `reference-table.text-only`; `scripts/content_script.py` `t_table_over` (a must-fix). Tests: test_layout_plan, test_content_script, test_compile_module.
+
 ## 2.131.2 · The whole slide counted, the old photos catalogued, briefs that say their shape, the walk after the 3D check (2026-11-11)
 
 - `scripts/content_script.py` `overfull()`: the whole slide against 120 (`t_part_whole`). `compile/scripts/phase_a.py` `catalogue()`. `orchestration/workflows/brief.mjs` `checkModules()`, `minutesOf()`. `build_course.js`: the walk after the 3D and figure checks; a trial's photo pass only catalogues. `compile/scripts/additional_materials.py` `stem_title()`; `scripts/classroom_files.py` full place and equipment on papers.

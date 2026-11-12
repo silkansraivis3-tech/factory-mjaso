@@ -103,6 +103,10 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## Tables measured, three table layouts — 2.131.3 (2026-11-12)
+
+`knowledge/blueprints/reference-table.figure-top`, `.figure-bottom`, `.text-only` (new), `.with-figure` with its `fits`; `layout-templates.json` budgets `table_beside` and `table_alone` 6 rows / 48 words, the band ones 4 rows / 40 words, measured at the three sizes.
+
 ## Many blueprints, bands above and below, centred words, no line numbers — 2.131.0 (2026-11-11)
 
 `knowledge/blueprints/` - one file a layout (54), each with its grid, its `shape` and `fits`; `blueprints.json` points to the folder and
