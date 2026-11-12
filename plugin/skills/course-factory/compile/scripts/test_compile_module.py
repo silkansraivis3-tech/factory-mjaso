@@ -1003,6 +1003,44 @@ def figures_course(tmp, build=None, screens=FIGURE_TASKS):
     return c, md
 
 
+def separator_part(tmp):
+    """the 2.133.0 trial (M16 s04, M01 s02 and s30): a line "value | what it means" showed its bar on the slide, and the
+    figure starter drew it into a drawing's label and steps - the value is drawn big over its caption, the bar hidden in the
+    line; a figure starter reads the cells as one phrase; the build refuses any bar a slide or its figure still shows"""
+    print("\n-- a line \"value | what it means\": its value and caption, never the bar")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    v = "\n".join(cm.words_html(["At least 1 | foam applicator unit in each engine room", "45 litres | minimum, each one",
+                                 "Pale cream | the colour code for foam"]))
+    check("each value line is its value (.lt-val) over its caption (.lt-cap), the bar kept hidden in the line (.lt-sep)",
+          v.count('<b class="lt-val">') == 3 and '<b class="lt-val">45 litres</b><span class="lt-sep"> | </span><span class="lt-cap">' in v
+          and not cm.raw_separators(v), v)
+    sp = cm.starter_figure({"module": 1, "screens": []}, {
+        "id": "s02", "kind": "slide", "title": "Three conditions", "visual_kind": "comparison", "visual": "Three tanks.",
+        "text": "18 bar | Fully pressurised: Type C tanks\n7 bar | Semi-pressurised: insulated\nAtmospheric | Fully refrigerated: at the boiling point"})
+    check("a figure starter draws no bar into its labels or steps", sp and "|" not in json.dumps(sp, ensure_ascii=False), sp)
+    shown = cm.raw_separators('<section><p data-i="1">At least 1 | foam applicator</p><script type="application/json">'
+                              '{"parts": [{"id": "P2", "type": "text", "text": "Atmospheric\\n| Fully\\nrefrigerated"}]}</script></section>')
+    check("raw_separators finds the bar in a slide's words and in its figure's text, a line break round it too", len(shown) == 2, shown)
+    os.makedirs(os.path.join(tmp, "sep"))
+    screens = [dict(SCREENS[1], text="The Code sets the rules for gas-fuelled ships.\nFlashpoint | below 60 °C\nMandatory since 2017."),
+               dict(SCREENS[2])]
+    build = {"module": 1, "screens": {"s02": {"figure": "assets/fig/scale.svg"}, "s03": {"figure": "plant.kit.json"}}}
+    c, md = figures_course(os.path.join(tmp, "sep"), build=build, screens=screens)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    s02 = section(deck(md), "s02") if os.path.isfile(os.path.join(md, "presentation", "index.html")) else ""
+    check("a value line among a slide's lines: built as its value over its caption, and no bar shown", s02.count('class="lt-val"') == 1
+          and "the script's separator" not in out, (out[-600:], s02[:600]))
+    code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
+    check("... and check_script_match still reads the approved words", code == 0, out)
+    kit = json.loads(json.dumps(PLANT_KIT))
+    kit["parts"][3]["text"] = "Fuel | plant"
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "plant.kit.json"), "w", encoding="utf-8").write(json.dumps(kit))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    check("a figure's label with the bar is refused by the build, named on its slide", code != 0 and "s03" in out
+          and "the script's separator" in out and "Fuel | plant" in out, out[-800:])
+
+
 def figures_part(tmp):
     """a task stands on a REAL PHOTOGRAPH or a FIGURE-KIT drawing - the same *.kit.json the deck plays"""
     print("\n-- real photographs and figure-kit drawings on the task pages")
@@ -4313,6 +4351,7 @@ def main():
         reveal_part(tmp)
         tasks_part(tmp)
         figures_part(tmp)
+        separator_part(tmp)
         every_way_part(tmp)
         team_part(tmp)
         groups_part(tmp)
