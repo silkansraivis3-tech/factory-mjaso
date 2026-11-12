@@ -7,6 +7,10 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.136.0 · Task pictures before the builder, a removed picture comes back, no folder deleted (2026-11-13)
+
+- `compile/scripts/phase_a.py` "TASK PICTURES"; `orchestration/workflows/build_course.js` the task-picture author (`drawTaskPictures`) and NEVER DELETE A FOLDER in every brief that changes a module; `compile/scripts/build_module.py` `starter_blanks` names `--fill-slots` and `no_figure`; `scripts/content_script.py` `given_away`. Tests: test_phase_a, test_build_course, test_build_module, test_content_script.
+
 ## 2.135.0 · Tanks in their hull sections, scenes placed before the builder, summary cards checked (2026-11-12)
 
 - `compile/scripts/compile_module.py` `starter_hull3d`, `house_rooms`, `contain_hits`: the 3D starter stands each named tank type in its hull section and folds the compressor and motor rooms into one compressor house; `compile/scripts/phase_a.py` `scenes_to_place` ("3D TO PLACE" on its line); `orchestration/workflows/build_course.js` scene authors before the builder (`placeScenes`); `scripts/content_script.py` `misasked`; `BUILDER_CARD.md`. Tests: test_compile_module, test_line_binding, test_phase_a, test_build_course, test_content_script.

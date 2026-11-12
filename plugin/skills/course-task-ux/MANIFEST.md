@@ -6,6 +6,10 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.136.0 · The question scrolls above the Check bar (2026-11-13)
+
+`assets/gb_answer.css`: a task page is one screen high - the top bar, the question's own scrolling band, the dock - so no choice lies under Check; `#grpScr .grp` scoped, categorise columns `minmax(220px,1fr)`; `assets/gb_answer.js` `scroller()`. Check: `course-module-ux/measure/scripts/review_sheets.mjs` `reach()` (test_review_sheets `reach_part`).
+
 ## 2.134.0 · A repeated label, the expand button off the words, every statement after Check (2026-11-12)
 
 `assets/gb_answer.js` `rightZone`: each card goes to a free zone of its name; `assets/gb_interact.js`: the swipe lab lists every statement with its verdict and sentence after Check; `course-module-ux/assets/gb_zoom.js` `placeCorner` tries places beside the picture before any on words. Checks: `review_sheets.mjs` `cover()` and a repeated label.
