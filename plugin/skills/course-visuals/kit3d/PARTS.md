@@ -8,7 +8,7 @@ of all of them (a space with its pipes and valves). Sub-parts get the id `<id>_<
 **Palette** (`mat`): steel, steel_mid, steel_dark, steel_black, flange, pipe, hull, deck, side, floor, floor_dark,
 wall, frame, trim, shell, tank, ring, saddle, insulation, barrier, membrane, stainless, gas (yellow natural gas),
 cold (pale blue insulated LNG line), vapour, red, amber, yellow, green, rubber, engine, engine_dark, cover,
-foundation, cabinet, panel, screen, accommodation, window, skin, overall, helmet, lng, glass.
+foundation, cabinet, panel, screen, accommodation, window, skin, overall, helmet, lng, glass, wood (chocks).
 Tints (hull spaces, panels): amber, green, blue, grey, red, violet - or any `#hex`.
 
 ## Primitives
@@ -23,7 +23,7 @@ Tints (hull spaces, panels): amber, green, blue, grey, red, violet - or any `#he
 
 | type | at | settings | made from |
 |---|---|---|---|
-| `hull` | its own origin: x as given, y = 0 bottom shell, z = 0 centre line | `x` [from, to], `half` (half breadth), `bottom`, `floor` (top of the double bottom), `top` (main deck); `spaces` [{`id`, `x` [a, b], `tint`, `floor`, `wall`}] - each a sub-part; `bulkheads` [{`x`, `hole` [y, r], `opacity`}] (default: one at every space boundary); `near` / `far` / `ends` wall opacities; `ribs` (spacing); `bottom_id`, `side_id` (the double bottom / the far side as sub-parts) | M01, M02 |
+| `hull` | its own origin: x as given, y = 0 bottom shell, z = 0 centre line | `x` [from, to], `half` (half breadth), `bottom`, `floor` (top of the double bottom), `top` (main deck); `spaces` [{`id`, `x` [a, b], `tint`, `floor`, `wall`}] - each a sub-part; `bulkheads` [{`x`, `hole` [y, r], `opacity`}] (default: one at every space boundary); `near` / `far` / `ends` wall opacities; `ribs` (spacing); `bottom_id`, `side_id` (the double bottom / the far side as sub-parts). A gas carrier's hull: `double` (the double side's width), `hopper` [w, h], `topwing` [w, h] (bilge hopper and top wing tanks) - then its sub-parts **outer** (outer shell), **inner** (inner hull: the hold's boundary), **bottom** (double bottom), **wing**, **hopper**, **topwing** (ballast tanks, tinted `ballast`), each with its point on the section at the +x end (also the hull's `anchor`s `outer_shell`, `inner_hull`, `double_bottom`, `wing_tank`, `hopper_tank`, `top_wing_tank`) | M01, M02, gas carriers |
 | `deck_plate` | deck top at the ship's side; z = 0 is the side, inboard -z | `size` [along, inboard], `thick`, `side` (depth of side plating, 3.2), `seams`, `rail` | M03, M07 |
 | `room` | floor centre | `size` [w, h, d], `open` "front" / "front+right" ..., `roof`, `glass` ["right", "roof" ...], `frames` (spacing 0.6), `hole` [x0, z0, x1, z1] (a bilge well's opening) | M04, M05, M09 |
 | `enclosure` | floor centre | `size`, `wall` (0.25), `floor`, `keep_frame` (its light outline stays when open), `open_opacity` (open, the walls stay as glass, 0.15 - still a space); state **open** fades the walls | M02 TCS |
@@ -34,9 +34,9 @@ Tints (hull spaces, panels): amber, green, blue, grey, red, violet - or any `#he
 
 | type | at | settings | made from |
 |---|---|---|---|
-| `tank_c` | axis centre, axis along x | `r`, `len` (cylindrical part), `head` (end depth, r/2), `rings` [x] or a count, `ring_t` (band thickness), `saddles` [x], `saddle_w`, `base` (floor y, local), `cut` (front half away), `fill` (0..1 of the diameter; sub-part **liquid**), `insulation` (thickness, seen at the cut), `dome`, `liquid_color` | M01, M02, M07 |
-| `tank_sphere` | centre | `r`, `base`, `cut`, `fill` (sub-part **liquid**), `insulation`, `dome` | Moss |
-| `tank_prism` | centre, length along x | `size` [L, H, B], `chamfer`, `kind` "membrane" / "semi_membrane" (rounded corners, a tank plate for the membrane: a semi-membrane tank is drawn as one, never as a membrane) / "type_b" / "type_a" or `layers` [{`id`, `name`, `t`, `mat`}] from the inner hull inwards (each with an id is a sub-part), `hull` (inner hull plate 0.2), `cut` "end" (default: the section shows every layer) / "front" / false, `fill` (sub-part **liquid**) | containment |
+| `tank_c` | axis centre, axis along x | `r`, `len` (cylindrical part), `head` (end depth, r/2), `rings` [x] or a count, `ring_t` (band thickness), `saddles` [x], `saddle_w`, `base` (floor y, local), `cut` (front half away), `fill` (0..1 of the diameter; sub-part **liquid**), `insulation` (thickness, seen at the cut), `dome`, `liquid_color`; `lobes` 2 - a bilobe: ONE vessel of two intersecting lobes (`spread`, each axis off the centre line, 0.55 r), its sub-part **bulkhead** (the centreline bulkhead), saddles under both lobes, `cut` the +x half away so the section shows both; `in` (below) | M01, M02, M07, gas carriers |
+| `tank_sphere` | centre | `r`, `base` (the skirt's foot below the centre, negative), `cut`, `fill` (sub-part **liquid**), `insulation`, `dome`; sub-part **skirt** (carries the sphere at its equator, with the equatorial ring); `drip` (the drip tray, partial secondary barrier: sub-part **drip**), `cover` (the tank cover above the deck: sub-part **cover**; a number is the deck's height over the centre); `in` (below) | Moss |
+| `tank_prism` | centre, length along x | `size` [L, H, B], `chamfer`, `kind` "membrane" / "semi_membrane" (rounded corners, a tank plate for the membrane: a semi-membrane tank is drawn as one, never as a membrane) / "type_b" / "type_a" or `layers` [{`id`, `name`, `t`, `mat`}] from the inner hull inwards (each with an id is a sub-part), `hull` (inner hull plate 0.2), `cut` "end" (default: the section shows every layer) / "front" / false, `fill` (sub-part **liquid**); `in` (below): a membrane / semi-membrane tank lines the hold (sub-parts **ins2**, **barrier2**, **ins1**, **barrier1**: secondary insulation, secondary barrier, primary insulation, primary barrier), a `type_a` / `type_b` tank stands clear of the hull (`clear`, 0.8) on its **chocks**, **insulation** and **shell** outside in, its **bulkhead** (centreline; `bulkhead` false: none) and, for type_b or `drip`, its **drip** tray | containment |
 
 ## Piping
 
@@ -68,6 +68,31 @@ Tints (hull spaces, panels): amber, green, blue, grey, red, violet - or any `#he
 | `detector` | where it is fixed | `face` down / up; state **alarm** (0.5 amber, 1 red) | M09 |
 | `person` | between the feet, facing +z | `h`, `wear` | scale |
 | `air_intake` | centre, louvres to +z | `size` | M15 |
+
+## Gas carrier hull sections: the tank is "in" its hull
+
+A gas carrier's tank is never placed beside guessed boxes: the hull draws its double hull, the tank stands `"in": "<hull>"`
+(or one of its spaces) and the kit seats it as the ship carries it - the height, the length and the section come from the hold.
+The tank's `at` is then only its x (and a tank_c's z) when two share a hold.
+
+| ship | hull | tank |
+|---|---|---|
+| fully pressurised LPG | double bottom (`floor`), single side, `topwing` | `tank_c` on saddles, `lobes` 2 for a bilobe, no insulation |
+| semi-refrigerated LPG / ethylene | the same | `tank_c` with `insulation` (thicker for ethylene) |
+| fully refrigerated LPG | `hopper`, `topwing` (single side) | `tank_prism` `kind` "type_a": its centreline bulkhead, insulation, chocks; the secondary barrier is the hull: label `<hull>_inner` |
+| LNG Moss | `double` | `tank_sphere` with `drip` and `cover`; the skirt at the equator stands on the inner bottom |
+| LNG membrane / semi-membrane | `double`, `hopper`, `topwing` | `tank_prism` `kind` "membrane" / "semi_membrane": it lines the inner hull, no gap |
+
+A label names the part its words are about: "Double hull" / "Inner hull" on `<hull>_inner`, "Outer shell" on `<hull>_outer`,
+"Wing tank" on `<hull>_wing`, "Double bottom" on `<hull>_bottom`, "Secondary barrier" on the membrane's `<tank>_barrier2` (or a
+Type A's `<hull>_inner`), "Skirt" on `<tank>_skirt` - never a box or a cylinder standing in for them, and give no `at` unless
+the part's own point is hidden: the kit puts each dot on the section. `examples/m01_gas_carriers.kit3d.json` has all five.
+`check_kit3d.py` refuses, before a build: two tanks through each other (two cylinders side by side are a bilobe: `lobes` 2), a
+tank out through its hull's end walls or down through its double bottom, a membrane tank standing free in its hold, a prismatic
+tank, a Moss sphere or saddles placed by hand so that they stand on nothing, a part inside a tank that is not its content
+(`"in": "<tank>"`, a submerged pump), a dimension whose end is on nothing drawn (past a tank's end, on the half a cut took
+away), a hull's word on a tank's label, "Double hull" on a single slab, two dots of one part on one spot, and a dot that the
+step's view puts behind a tank.
 
 ## Joining parts end to end
 

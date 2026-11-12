@@ -271,7 +271,9 @@ allowed (below). Which kit is the picture rule's (above); a part a kit lacks is 
 when it will be reused (below). **A 3D model is a 3D-kit spec**,
 `sNN.kit3d.json` (`kit3d/SPEC.md`, `kit3d/PARTS.md`; made from the nine hand-made IGF scenes): parts in metres,
 labels on the parts, steps the deck's Next walks - full screen, clickable labels, the build-ahead and the poster
-come with it; never a hand-written three.js file per slide. **A 2D figure is a 2D-kit spec**, `sNN.kit2d.json`
+come with it; never a hand-written three.js file per slide. A ship's hull and its cargo tanks are the kit's own: a `hull` with
+its `double` / `hopper` / `topwing`, each tank `"in"` it (`kit3d/PARTS.md` "Gas carrier hull sections"), every label on the
+hull's or the tank's own sub-part - never a box named for a wing tank, a skirt or a bulkhead. **A 2D figure is a 2D-kit spec**, `sNN.kit2d.json`
 (`kit2d/SPEC.md`; see `kit2d/demos.html` and `kit2d/pm.html`): a graph, an object in motion (a cutaway with its flow) or
 a concept (cycle, timeline, matrix, process, trade-off) - depth, labels clear of each other, motion on Next and the
 trainee's controls come with it, and `fit_gate.py` runs its overlap check on every step. Each is composed for its

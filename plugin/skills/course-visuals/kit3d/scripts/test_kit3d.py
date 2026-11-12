@@ -488,6 +488,50 @@ check("foam rig step 3: the inductor opens - its venturi's cut faces show; close
 check("foam rig step 3: the inside is named - jet nozzle, throat, concentrate port",
       {"Jet nozzle", "Throat", "Concentrate port"} <= set(steps[3].get("shown") or []), steps[3].get("shown"))
 
+# ---------------------------------------------------------------- gas carriers: a double hull, tanks seated "in" it (factory trial
+# M01, 3D review: a membrane block standing free, a skirt hanging above the floor, a bilobe of two cylinders through each other)
+sys.path.insert(0, HERE)
+import check_kit3d as ck                                        # noqa: E402  the checker seats a tank as the kit does
+GSPEC = json.load(open(os.path.join(KIT, "examples", "m01_gas_carriers.kit3d.json"), encoding="utf-8"))
+GPROBE = ("(function(){var S=k3.scene,o={},b=function(id){var x=S.parts[id].box;return [x.min.x,x.min.y,x.min.z,x.max.x,x.max.y,x.max.z];};"
+          "Object.keys(S.parts).forEach(function(id){if(S.parts[id].parent){o[id]=b(id);}});"
+          "return {subs:o,tanks:{bilobe:b('bilobe'),typea:b('typea'),sphere:b('sphere'),membrane:b('membrane'),semimem:b('semimem')},"
+          "warn:k3.info().warnings,calls:k3.info().calls,tri:k3.info().triangles}})()")
+GSTEP = "(function(){k3.render();return {off:T3.off(),over:T3.overlaps(),shown:T3.shown()}})()"
+plan = [{"url": STUDIO % ("m01_gas_carriers", 1280, 720), "wait": "window.k3ready", "do": HELP, "settle": 600, "probe": J % GPROBE}]
+plan += [{"do": "k3.step(%d)" % i, "settle": 1500, "probe": J % GSTEP} for i in range(len(GSPEC["steps"]))]
+r = run(plan, "--w=1280", "--h=720")
+g = r[0].get("probe") or {}
+subs, tk = g.get("subs") or {}, g.get("tanks") or {}
+check("gas carriers build with no warning and no page error", g and not g.get("warn") and not any(x.get("errors") for x in r),
+      (g.get("warn"), [x.get("errors") for x in r]))
+check("gas carriers stay light: five sections under 200 draw calls and 120,000 triangles",
+      0 < (g.get("calls") or 0) < 200 and 0 < (g.get("tri") or 0) < 120000, (g.get("calls"), g.get("tri")))
+mine, cat = set(), ck.read_catalog()[0]
+for p in GSPEC["parts"]:
+    mine |= set(ck.sub_ids(p, cat.get(p["type"], {}), GSPEC["parts"]))
+check("the checker knows every sub-part the kit makes, and the kit makes every one the checker expects (outer shell, inner hull, "
+      "wing / hopper / top-wing tanks, layers, skirt, drip tray, cover, bulkheads, chocks)", set(subs) == mine, sorted(set(subs) ^ mine))
+near = lambda a, b, tol=0.06: abs(a - b) <= tol                # noqa: E731
+m2 = subs.get("membrane_ins2") or [0] * 6
+check("the membrane tank lines the inner hull with no gap: its outer layer spans the hold (z -7..7, inner bottom 2 to deck 14)",
+      near(m2[2], -7) and near(m2[5], 7) and near(m2[1], 2) and near(m2[4], 14), m2)
+sk = subs.get("sphere_skirt") or [0] * 6
+check("the Moss skirt stands on the inner bottom (y 2) and carries the sphere at its equator", near(sk[1], 2) and near(sk[4], 2 + 7.3 * 1.25, 0.2), sk)
+bl = tk.get("bilobe") or [0] * 6
+check("the bilobe is ONE vessel: its lobes overlap (narrower than two cylinders side by side) and the bulkhead is there",
+      2 * 3 < bl[5] - bl[2] < 4 * 3 - 0.5 and "bilobe_bulkhead" in subs, (bl, "bilobe_bulkhead" in subs))
+ch = subs.get("typea_chocks") or [0] * 6
+check("the Type A tank stands on its chocks on the inner bottom, its centreline bulkhead inside it",
+      near(ch[1], 1.4) and near(ch[4], 1.4 + 0.8) and "typea_bulkhead" in subs, (ch, sorted(subs)))
+seated = {p["id"]: ck.tank_box(ck.seat(p, GSPEC["parts"])) for p in GSPEC["parts"] if p["type"] in ck.TANKS}
+check("the checker seats each tank where the kit draws it (its ends and its top within 0.3 m; the kit's box holds its saddles and chocks too)",
+      all(i in tk and all(abs(seated[i][k] - tk[i][k]) < 0.3 for k in (0, 3, 4)) for i in ("bilobe", "typea", "membrane", "semimem")),
+      {i: (seated[i], tk.get(i)) for i in seated})
+for i, st in enumerate([x.get("probe") or {} for x in r[1:]]):
+    check("gas carriers step %d: labels on their parts, inside the box, none on another" % i,
+          st.get("off") == [] and st.get("over") == [] and len(st.get("shown") or []) >= 3, st)
+
 srv.shutdown()
 print()
 print("ALL PASS" if not FAILS else "%d FAILED: %s" % (len(FAILS), "; ".join(FAILS)))
