@@ -63,6 +63,44 @@ window.FitProbe = function () {
     var cutBy = Math.max(fr.right - f.R, fr.bottom - f.B, f.L - fr.left, f.T - fr.top);
     if (cutBy > 2) out.cut.push({ el: name(el) + " (its frame)", words: words(el), px: Math.round(cutBy), by: f.by });
   }
+  // 1c. a frame drawn round a line (its ::before / ::after, outside the line's own box) in a list that flows in columns:
+  //     a line that opens a column has the frame's top edge left at the foot of the column before - an empty outlined box
+  //     under another line. Only a line that is one unbreakable box (an inline block) keeps its frame whole
+  function frameOut(el, at) {
+    var c = getComputedStyle(el, at);
+    if (c.content === "none" || c.display === "none" || c.position !== "absolute") return null;
+    if (!["Top", "Right", "Bottom", "Left"].some(function (k) {
+      return parseFloat(c["border" + k + "Width"]) > 0 && c["border" + k + "Style"] !== "none" &&
+             !/rgba\([^)]*,\s*0\)|transparent/.test(c["border" + k + "Color"]);
+    })) return null;
+    return { up: Math.max(0, -parseFloat(c.top) || 0), down: Math.max(0, -parseFloat(c.bottom) || 0) };
+  }
+  function flowsIn(el) {                   // the box that flows el in columns, or null when el (or a box on the way) is unbreakable
+    for (var e = el; e && e !== s; e = e.parentElement) {
+      var c = getComputedStyle(e);
+      if (e !== el && (c.columnCount !== "auto" || c.columnWidth !== "auto")) return e;
+      if (/^inline-/.test(c.display) || /^(IMG|SVG|CANVAS|VIDEO|IFRAME)$/i.test(e.tagName) ||
+          ["auto", "scroll", "hidden"].indexOf(c.overflowY) >= 0) return null;
+    }
+    return null;
+  }
+  for (i = 0; i < all.length; i++) {
+    el = all[i];
+    if (el.closest("svg") || el.closest(".mediabar") || el.closest("[data-fit-skip]") || shown(el) < 0.05) continue;
+    var fo = frameOut(el, "::after") || frameOut(el, "::before");
+    if (!fo || (!fo.up && !fo.down)) continue;
+    var mc = flowsIn(el);
+    if (!mc) continue;
+    var mr = mc.getBoundingClientRect(), ms = getComputedStyle(mc), er = el.getBoundingClientRect();
+    var top = mr.top + parseFloat(ms.borderTopWidth) + parseFloat(ms.paddingTop),
+        bot = mr.bottom - parseFloat(ms.borderBottomWidth) - parseFloat(ms.paddingBottom),
+        lft = mr.left + parseFloat(ms.borderLeftWidth) + parseFloat(ms.paddingLeft),
+        rgt = mr.right - parseFloat(ms.borderRightWidth) - parseFloat(ms.paddingRight);
+    var firstCol = er.left < lft + Math.max(2, er.width / 2), lastCol = er.right > rgt - Math.max(2, er.width / 2);
+    var over = Math.max(firstCol ? 0 : top - (er.top - fo.up), lastCol ? 0 : (er.bottom + fo.down) - bot);
+    if (over > 0.5) out.cut.push({ el: name(el) + " (its frame, split at the column break)", words: words(el),
+                                   px: Math.max(1, Math.round(over)), by: name(mc) });
+  }
   // 2. a card, a line, a picture that spills out of the slide
   var sr = s.getBoundingClientRect(), body = s.querySelector(".slide-body") || s;
   var parts = body.querySelectorAll(".copy, .fill, figure, li, .lt-in, .lt-pic, .lt-opt, img");

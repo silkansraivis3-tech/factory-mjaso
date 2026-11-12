@@ -296,9 +296,13 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .slide-body.two-col:is(.fig-top,.fig-bottom) > .lt-pic{height:100%;width:auto;max-width:100%;min-height:0;
   aspect-ratio:var(--ar,1.5);justify-self:center}
 /* under or over the band the points flow in two columns, packed - a long point never leaves a hole beside a short one:
-   the words take the slide's width and as little of its height as they can */
-.slide[data-template] :is(.fig-top,.fig-bottom) .copy .support{display:block;column-count:2;column-gap:var(--lt-gap)}
-.slide[data-template] :is(.fig-top,.fig-bottom) .copy .support > li{break-inside:avoid;margin-bottom:min(1.8vmin,14px)}
+   the words take the slide's width and as little of its height as they can. Each point is one unbreakable box (an inline
+   block): the lit line's frame reaches --hl-y above its words, and on a point that opens the second column a block point
+   left that edge at the foot of the first column - an empty outlined box under the first point, cut by the footer */
+.slide[data-template] :is(.fig-top,.fig-bottom) .copy .support{display:block;column-count:2;column-gap:var(--lt-gap);orphans:1;widows:1}
+.slide[data-template] :is(.fig-top,.fig-bottom) .copy .support > li{break-inside:avoid;margin-bottom:min(1.8vmin,14px);
+  display:inline-block;width:100%;vertical-align:top}
+.slide[data-template] :is(.fig-top,.fig-bottom) .copy .support.seq > li{display:inline-flex}
 
 /* a part's own picture ("part_figures"): every part's picture in one place, the one of the part shown */
 .slide[data-template] .lt-pfigs{display:grid;min-width:0;min-height:0}
@@ -332,9 +336,10 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .fill.fig{flex:1 1 0;min-height:min(24vmin,190px)}
 .slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .fill.fig > img:only-child{object-position:center 45%}
 .slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy{
-  display:block;column-count:2;column-gap:min(5vmin,40px);width:100%;
+  display:block;column-count:2;column-gap:min(5vmin,40px);width:100%;orphans:1;widows:1
 }
 .slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy > *{break-inside:avoid;margin:0 0 min(1.4vmin,11px)}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy > :not(.statement){display:inline-block;width:100%;vertical-align:top}
 .slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy .lead{font-size:var(--lt-fs)}
 .slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy .statement{font-size:clamp(17px,2.7vmin,32px);column-span:all}
 
