@@ -18,7 +18,12 @@ page it writes, and each finding is a must-fix:
             and the last two steps on the last line
   SUBJECT   (a 3D scene, a figure-kit or 2D figure whose parts carry names) a step whose line names a part the figure
             labels, while the step shows other parts - and "one stop behind" when what it shows is what the line before
-            names
+            names; (a 3D scene) a step whose line names a kind of thing the scene has (a hold space, a drip tray, a door),
+            while it points at a part of no kind the line names
+  MISSING   (a 3D scene) a line names a thing the kit draws - an airlock, its doors and alarm, a compressor or motor room, a
+            sensor, a drip tray, a dome, seats - and the scene has none
+  COMPARE   (a 3D scene of two hulls or more, or of tanks with no hull) a step whose line compares, or names two of them,
+            while it frames only one: they are framed together at one scale (check_kit3d.py: in a row square to the view)
 
 A slide whose words end in a question with its answer (a vote, a pick, a worked example) plays its last steps with the
 answer: only AGAIN and SUBJECT are judged there. A slide the build sheet shows whole (data-still) is not walked.
@@ -27,6 +32,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import re
 import sys
 
@@ -171,6 +177,126 @@ def subject_problems(kind, spec, lines):
     return out
 
 
+# ------------------------------------------------------------------ a 3D scene: the things its lines name, the things it compares
+# What kind of thing a scene's part is (an airlock, a door, a sensor, a drip tray ...) is check_kit3d's (course-visuals/kit3d),
+# read from the kit's own catalogue
+_CK = []
+# the kinds of thing a line names that its 3D scene draws: a line about the alarm on both sides of an airlock, beside a scene
+# with no alarm in it, teaches what no one can see (gas trial M01 s16, s17, s13: no alarm, no compressor room)
+DRAWN = ("airlock", "compressor room", "motor room", "partial secondary barrier", "door", "alarm", "sensor", "dome", "tank cover",
+         "seat")
+# ... and the kinds a step must point at when its line names one the scene has (pointing at another kind the line names, or a
+# part whose label shares the line's words, is pointing at it too)
+POINTED = DRAWN + ("secondary barrier", "hold space", "cofferdam", "ballast tank", "accommodation")
+# words that compare: a line that weighs two things against each other shows both at once
+COMPARES = re.compile(r"\b(compar\w*|versus|vs\.?|than|both|same|differ(?:s|ent)?|whereas|unlike|side\s+by\s+side|greater|further|"
+                      r"farther|thinner|thicker|smaller|larger|bigger|higher|lower|more|less|fewer)\b", re.I)
+
+
+def _kit3d():
+    """(check_kit3d, the kit's catalogue) - or (None, {}) when the 3D kit's checker is not beside the factory"""
+    if not _CK:
+        here = os.path.dirname(os.path.abspath(__file__))
+        sys.path.insert(0, os.path.join(here, "..", "..", "..", "course-visuals", "kit3d", "scripts"))
+        try:
+            import check_kit3d as ck
+            _CK.extend([ck, ck.read_catalog()[0] or {}])
+        except Exception:                                  # noqa: BLE001 - the line checks stand without it
+            _CK.extend([None, {}])
+    return _CK[0], _CK[1]
+
+
+def scene_kinds(spec):
+    """(check_kit3d, {kind: [ids of that kind]}, the scene's parts, its roles, its part table)"""
+    ck, types = _kit3d()
+    if ck is None:
+        return None, {}, [], {}, {}
+    parts = [p for p in spec.get("parts") or [] if isinstance(p, dict)]
+    table, roles = ck.part_table(parts, types), ck.hull_roles(parts, types)
+    have = {k[0]: [i for i in table if ck.is_kind(i, k[0], table, parts, roles)] for k in ck.KINDS}
+    return ck, have, parts, roles, table
+
+
+def pointed_at(spec, k, st):
+    """the ids a step points at: what it selects and the parts of the labels it shows, with their sub-parts"""
+    groups = spec.get("groups") if isinstance(spec.get("groups"), dict) else {}
+    ids = set()
+    for x in _list(st.get("select")):
+        ids |= set(_list(groups.get(x))) or {x}
+    for lb in spec.get("labels") or []:
+        if not isinstance(lb, dict) or lb.get("tap_only") or not isinstance(lb.get("part"), str):
+            continue
+        if isinstance(lb.get("steps"), list) and k not in lb["steps"]:
+            continue
+        if isinstance(st.get("labels"), list) and lb["part"] not in st["labels"]:
+            continue
+        ids |= set(_list(groups.get(lb["part"]))) or {lb["part"]}
+    return ids
+
+
+def scene_problems(spec, lines):
+    """[sentence] - a 3D scene against its slide's lines: a thing a line names that the scene does not draw (MISSING), a step
+    that points elsewhere while its line names a thing the scene has (SUBJECT), and a step whose line compares two hulls or
+    tanks while it frames only one (COMPARE)"""
+    ck, have, parts, roles, table = scene_kinds(spec)
+    if ck is None:
+        return []
+    out, missing = [], {}
+    for n, text in sorted(lines.items()):
+        for _, kind in ck.kinds_named(text):
+            if kind in DRAWN and not have.get(kind):
+                missing.setdefault(kind, []).append(n)
+    for kind, ns in missing.items():
+        out.append("line%s %s name%s %s %s, and the scene has none - the words teach what no one can see: draw it (%s, "
+                   "course-visuals\\kit3d\\PARTS.md)" % ("s" if len(ns) > 1 else "", "+".join(str(x) for x in ns),
+                                                      "" if len(ns) > 1 else "s", "an" if kind[0] in "aeiou" else "a", kind,
+                                                      ck.KIND_OF[kind][5]))
+    steps = [st if isinstance(st, dict) else {} for st in spec.get("steps") or []]
+    wrong = []
+    for k, st in enumerate(steps):
+        ln = step_lines(st)
+        if len(ln) != 1 or ln[0] not in lines or st.get("reveal"):
+            continue
+        named = [kind for _, kind in ck.kinds_named(lines[ln[0]]) if have.get(kind)]
+        ids = pointed_at(spec, k, st)
+        if not ids or not any(kind in POINTED for kind in named):
+            continue
+        said = [words(lb["text"]) for lb in spec.get("labels") or [] if isinstance(lb, dict) and lb.get("part") in ids
+                and isinstance(lb.get("text"), str) and not ck.kinds_named(lb["text"])]     # a label naming a kind is judged by it
+        if any(i in have[kind] for kind in named for i in ids) or _says(words(lines[ln[0]]), said):
+            continue
+        named = [kind for kind in named if kind in POINTED]
+        if named:
+            wrong.append("step %d lights line %d, which names %s %s, and points at %s - point it at %s" % (
+                k, ln[0], "an" if named[0][0] in "aeiou" else "a", named[0], ", ".join(sorted(ids))[:60], " / ".join(have[named[0]][:3])))
+    if wrong:
+        out.append("a step points away from the thing its line names - %s" % "; ".join(wrong[:3]))
+    peers = ck.peers_of(parts)
+    if len(peers) >= 2:
+        label_words = {}
+        for lb in spec.get("labels") or []:
+            if isinstance(lb, dict) and isinstance(lb.get("text"), str):
+                label_words.setdefault(lb.get("part"), []).append(words(lb["text"]))
+        alone = []
+        for k, st in enumerate(steps):
+            ln = step_lines(st)
+            if len(ln) != 1 or ln[0] not in lines:
+                continue
+            lw = words(lines[ln[0]])
+            said = [pid for pid, _, ids in peers if any(_says(lw, label_words.get(i, [])) for i in ids)]
+            if not (COMPARES.search(lines[ln[0]]) or len(said) >= 2):
+                continue
+            view = st.get("view") if isinstance(st.get("view"), dict) else {}
+            frame = set(_list(view.get("frame")))
+            shown = [pid for pid, _, ids in peers if not frame or set(ids) & frame]
+            if len(shown) < len(peers):
+                alone.append("step %d (line %d) frames %s of %s" % (k, ln[0], " and ".join(shown) or "none", " and ".join(p[0] for p in peers)))
+        if alone:
+            out.append("a line compares and its step shows one side of it - %s. Frame them together at one scale (\"frame\": [%s]), "
+                       "in a row square to the view" % ("; ".join(alone[:3]), ", ".join('"%s"' % p[0] for p in peers)))
+    return out
+
+
 def slide_problems(sid, head, body):
     """[(slide id, sentence)] - one slide's figure against its lines"""
     if " data-still" in head:
@@ -225,6 +351,8 @@ def slide_problems(sid, head, body):
                                  "a new line is lit. Point each step at what its line names (\"frame\", \"select\", \"labels\")"
                                  % (what, "s" if len(same) > 1 else "", ", ".join(str(k) for k in same))))
         out += [(sid, "%s: %s" % (what, x)) for x in subject_problems(kind, spec, lines)]
+        if kind == "k3":
+            out += [(sid, "%s: %s" % (what, x)) for x in scene_problems(spec, lines)]
     return out
 
 

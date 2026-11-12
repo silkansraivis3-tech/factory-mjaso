@@ -4269,6 +4269,8 @@ def starter_scene(script, sid, scripts=None):
 KIT3D_WORDS = (
     ("pipe_dw", r"double[- ]wall(?:ed)?|double[- ]pipes?|annul(?:us|ar)"),
     ("drip_tray", r"drip[- ]trays?"),
+    ("airlock", r"air[- ]?locks?"),
+    ("compressor_house", r"compressor (?:rooms?|houses?)|(?:electric )?motor rooms?"),
     ("vent_mast", r"vent(?:ing)?[- ]masts?|masts?|vents?"),
     ("detector", r"detectors?|sensors?"),
     ("tank_c", r"tanks?"),
@@ -4284,7 +4286,8 @@ KIT3D_SIZE = {
     "pipe_dw": (5.0, 1.2, {"len": 5.0}),
     "pipe": (5.0, 1.2, {"path": [[-2.5, 0, 0], [2.5, 0, 0]]}),
     "valve": (1.5, 1.2, {}), "engine": (4.0, 0.0, {}), "vent_mast": (1.5, 0.0, {}), "room": (5.0, 0.0, {}),
-    "drip_tray": (2.5, 0.0, {}), "detector": (1.0, 2.5, {}), "station": (6.0, 0.0, {})}
+    "drip_tray": (2.5, 0.0, {}), "detector": (1.0, 2.5, {}), "station": (6.0, 0.0, {}),
+    "airlock": (2.5, 0.0, {"gap": 2}), "compressor_house": (10.0, 0.0, {})}
 KIT3D_GAP, KIT3D_MAX_PARTS = 1.0, 6
 
 
@@ -4294,6 +4297,8 @@ def kit3d_hit(text, last=False):
     hits = sorted((m.start(), k, m.group(0)) for k, rx in KIT3D_RX for m in rx.finditer(text or ""))
     if any(k == "pipe_dw" for _, k, _ in hits):
         hits = [h for h in hits if h[1] != "pipe"]
+    # a word inside a longer name is that name's: "room" in "compressor room" is the compressor house, not a room
+    hits = [h for h in hits if not any(g[0] <= h[0] and g[0] + len(g[2]) >= h[0] + len(h[2]) and len(g[2]) > len(h[2]) for g in hits)]
     if not hits:
         return None
     _, kind, word = hits[-1] if last else hits[0]

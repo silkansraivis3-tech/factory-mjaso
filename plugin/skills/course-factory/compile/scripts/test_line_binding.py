@@ -72,7 +72,9 @@ S23_LINES = ["The reliquefaction plant is in a compressor house on deck; its ele
 S23_LABELS = [{"part": "comp", "text": "Compressor room (on deck)"}, {"part": "motor", "text": "Electric motor room"},
               {"part": "bulkhead", "text": "Gastight bulkhead"}, {"part": "shaft", "text": "Sealed drive shaft"},
               {"part": "airlock", "text": "Airlock: two self-closing doors"}]
-S23_BEHIND = {"label": "x", "parts": [{"id": "comp", "type": "room"}], "labels": S23_LABELS,
+S23_PARTS = [{"id": "house", "type": "compressor_house", "subs": {"compressor": "comp", "motor": "motor", "bulkhead": "bulkhead",
+                                                                  "shaft": "shaft"}}, {"id": "airlock", "type": "airlock"}]
+S23_BEHIND = {"label": "x", "parts": S23_PARTS, "labels": S23_LABELS,
               "steps": [{"view": {"az": 25, "el": 28}, "line": 1},
                         {"view": {"az": 25, "el": 28}, "labels": ["comp", "motor"], "line": 2},
                         {"view": {"az": 20, "el": 22, "frame": ["bulkhead"]}, "select": "bulkhead", "labels": ["bulkhead", "shaft"], "line": 2},
@@ -259,8 +261,82 @@ def browser():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+# the gas trial M01 scenes as built, with the lines of their slides
+HULL = {"type": "hull", "pick": False, "half": 7, "bottom": 0, "floor": 1.2, "top": 10, "topwing": [2.2, 2.2]}
+S16_LINES = ["Access from a gas-dangerous zone on the open deck to a gas-safe space is through an airlock.",
+             "Two self-closing, gastight steel doors, 1.5 to 2.5 m apart, with no hook or other device to hold them open.",
+             "An audible and visual alarm on both sides warns when the doors are moved from the closed position."]
+S16 = {"label": "x", "units": "m",
+       "parts": [{"id": "lock", "type": "room", "at": [0, 0, 0], "size": [4, 2.6, 3], "open": "front", "roof": True},
+                 {"id": "door1", "type": "box", "at": [-2, 1.1, 0], "size": [0.1, 2.2, 1.0]},
+                 {"id": "door2", "type": "box", "at": [2, 1.1, 0], "size": [0.1, 2.2, 1.0]}],
+       "labels": [{"part": "lock", "text": "Airlock from the open deck", "steps": [0]},
+                  {"part": "door1", "text": "Self-closing gastight door", "steps": [1]},
+                  {"part": "door2", "text": "Second door, no hook", "steps": [1]}, {"part": "lock", "text": "Alarm on both sides", "steps": [2]}],
+       "steps": [{"view": {"az": 30, "el": 22, "frame": ["lock"]}, "line": 1, "select": "lock"},
+                 {"view": {"az": 30, "el": 22, "frame": ["lock"]}, "line": 2, "select": "door1"},
+                 {"view": {"az": 60, "el": 18, "frame": ["lock"]}, "line": 3, "select": "lock"}]}
+S16_KIT = dict(S16, parts=[{"id": "lock", "type": "airlock", "at": [0, 0, 0], "gap": 2}],
+               labels=[{"part": "lock", "text": "Airlock from the open deck", "steps": [0]},
+                       {"part": "lock_door1", "text": "Self-closing gastight door", "steps": [1]},
+                       {"part": "lock_door2", "text": "Second door, no hook", "steps": [1]},
+                       {"part": "lock_alarm", "text": "Alarm on both sides", "steps": [2]}],
+               steps=[S16["steps"][0], dict(S16["steps"][1], select="lock_door1"), dict(S16["steps"][2], select="lock_alarm")])
+S23_TRIAL_LINES = ["The most common Type B tank is the spherical Kvaerner Moss design.",
+                   "Detailed stress, fatigue and crack propagation analysis allows a partial secondary barrier: a drip tray under the tank.",
+                   "The aluminium sphere is supported by an equatorial ring on a cylindrical skirt resting on the inner hull.",
+                   "The hold space may be filled with dry air."]
+S23_TRIAL = {"label": "x", "units": "m",
+             "parts": [{"id": "hull", "type": "hull", "pick": False, "x": [-8, 8], "half": 10, "bottom": 0, "floor": 2, "top": 11, "double": 2.2},
+                       {"id": "sphere", "type": "tank_sphere", "in": "hull", "r": 7, "insulation": 0.3, "cut": True, "fill": 0.5,
+                        "drip": True, "cover": True}],
+             "labels": [{"part": "sphere", "text": "Moss sphere", "steps": [0]}, {"part": "sphere_drip", "text": "Drip tray", "steps": [1]},
+                        {"part": "sphere_skirt", "text": "Skirt at the equator", "steps": [2]}, {"part": "sphere_cover", "text": "Tank cover", "steps": [3]}],
+             "steps": [{"view": {"az": 35, "el": 18, "frame": ["hull"]}, "line": 1, "select": "sphere"},
+                       {"view": {"az": 35, "el": 12, "frame": ["hull"]}, "line": 2, "select": "sphere_drip"},
+                       {"view": {"az": 45, "el": 16, "frame": ["hull"]}, "line": 3, "select": "sphere_skirt"},
+                       {"view": {"az": 30, "el": 28, "frame": ["hull"]}, "line": 4, "select": "sphere_cover"}]}
+S05_LINES = ["A fully pressurised ship carries LPG at ambient temperature in tanks built for about 18 bar.",
+             "A semi-pressurised ship cools the same cargo, so its tanks need only a working pressure of about 5 to 7 bar."]
+S05 = {"label": "x", "units": "m",
+       "parts": [dict(HULL, id="pres", x=[-30, -20]), {"id": "tanka", "type": "tank_c", "in": "pres", "r": 3, "cut": True, "fill": 0.6},
+                 dict(HULL, id="semi", x=[0, 10]), {"id": "tankb", "type": "tank_c", "in": "semi", "r": 3, "cut": True, "fill": 0.6,
+                                                    "insulation": 0.3}],
+       "labels": [{"part": "tanka", "text": "Fully pressurised: about 18 bar", "steps": [0]},
+                  {"part": "tankb", "text": "Semi-pressurised: 5 to 7 bar", "steps": [1]}],
+       "steps": [{"view": {"az": 35, "el": 20, "frame": ["pres"]}, "line": 1, "select": "tanka"},
+                 {"view": {"az": 35, "el": 20, "frame": ["semi"]}, "line": 2, "select": "tankb"}]}
+
+
+def scenes():
+    print("-- a 3D scene against its lines: what they name is drawn and pointed at, what they compare is framed together "
+          "(the gas trial)")
+    text = " | ".join(m for _, m in lb.deck_problems(slide("s16", S16, S16_LINES)))
+    check("M01 s16 as built: an airlock and its alarm named by the lines, a plain room and two slabs in the scene - must-fixes",
+          "names an airlock, and the scene has none" in text and "names an alarm, and the scene has none" in text, text)
+    got = lb.deck_problems(slide("s16", S16_KIT, S16_LINES))
+    check("... drawn with the kit's airlock (its doors and its alarm) it passes", not got, got)
+    text = " | ".join(m for _, m in lb.deck_problems(slide("s23", S23_TRIAL, S23_TRIAL_LINES)))
+    check("M01 s23 as built: line 4 names the hold space, its step points at the tank cover - a must-fix",
+          "step 3 lights line 4, which names a hold space, and points at sphere_cover" in text, text)
+    fixed = json.loads(json.dumps(S23_TRIAL))
+    fixed["labels"][3] = {"part": "hull_hold", "text": "Hold space: dry air", "steps": [3]}
+    fixed["steps"][3]["select"] = "hull_hold"
+    got = lb.deck_problems(slide("s23", fixed, S23_TRIAL_LINES))
+    check("... its step on the hull's hold space passes", not got, got)
+    text = " | ".join(m for _, m in lb.deck_problems(slide("s05", S05, S05_LINES)))
+    check("M01 s05 as built: two ships compared, each step framing one hull - a must-fix",
+          "a line compares and its step shows one side of it" in text and "step 1 (line 2) frames semi of pres and semi" in text, text)
+    both = json.loads(json.dumps(S05))
+    for st in both["steps"]:
+        st["view"]["frame"] = ["pres", "semi"]
+    got = lb.deck_problems(slide("s05", both, S05_LINES))
+    check("... each step framing both hulls passes the line check", not got, got)
+
+
 def main():
     binding()
+    scenes()
     starter()
     boxes()
     browser()
