@@ -636,23 +636,23 @@ MC_WRONG = [["eval", "document.getElementById('go').click();"], ["m01", [["eval"
             ["m03", [["card", t, n] for n, t in enumerate(EVENTS, 1)] + [["dock"], ["dock"], ["stop", "Pressure rose"]]]]
 NO_MOVE = "var nm=document.createElement('style');nm.textContent='*,*::before,*::after{transition:none!important;animation:none!important}';document.head.appendChild(nm);"
 # the top bar on the screen on show: its ground, where the screen's first box starts at the top of the page, and the bar
-# again with the page scrolled to its end
-BAR_AT = ("var st=document.querySelector('header.state'),sc=document.querySelector('.scr.on'),f=sc.firstElementChild;"
+# again with the question's band (body>.wrap, what scrolls between the bar and the dock) scrolled to its end
+BAR_AT = ("var st=document.querySelector('header.state'),sc=document.querySelector('.scr.on'),f=sc.firstElementChild,bd=document.querySelector('body>.wrap');"
           "function a(x){var m=getComputedStyle(x).backgroundColor.match(/[\\d.]+/g)||[];return m.length>3?+m[3]:m.length?1:0;}"
-          "window.scrollTo(0,0);var o={bg:getComputedStyle(st).backgroundColor,alpha:a(st),body:getComputedStyle(document.body).backgroundColor,"
+          "bd.scrollTop=0;var o={bg:getComputedStyle(st).backgroundColor,alpha:a(st),body:getComputedStyle(document.body).backgroundColor,"
           "bar:st.getBoundingClientRect().bottom,first:f.getBoundingClientRect().top};"
-          "window.scrollTo(0,1e6);o.y=scrollY;o.top=st.getBoundingClientRect().top;o.alpha2=a(st);window.scrollTo(0,0);out['%s']=o;")
+          "bd.scrollTop=1e6;o.y=bd.scrollTop;o.top=st.getBoundingClientRect().top;o.alpha2=a(st);bd.scrollTop=0;out['%s']=o;")
 LONG = "var lg=document.createElement('style');lg.textContent='.res li{min-height:240px}';document.head.appendChild(lg);"
 # after each Check, as the engine scrolled: the question, the verdict, the bar and the dock - then Next
 VERDICT_AT = ("var st=document.querySelector('header.state').getBoundingClientRect(),sc=document.querySelector('.scr.on'),"
               "q=sc.querySelector('.q').getBoundingClientRect(),w=sc.querySelector('.why.on'),d=document.getElementById('dock').getBoundingClientRect();"
               "w=w&&w.getBoundingClientRect();(out.verdicts=out.verdicts||[]).push({id:sc.getAttribute('data-script'),bar:st.bottom,"
-              "q:q.top,w:w?[w.top,w.bottom]:null,dock:d.top,y:scrollY});document.getElementById('go').click();")
+              "q:q.top,w:w?[w.top,w.bottom]:null,dock:d.top,y:document.querySelector('body>.wrap').scrollTop});document.getElementById('go').click();")
 MC_SEEN = MC_WRONG[:1] + [x for p in MC_WRONG[1:] for x in ([p[0], p[1], True], ["eval", VERDICT_AT])]
 # a scroll the browser makes itself: the score card, scrolled out of sight, brought into view by the page
-NATIVE = ("var li=document.querySelector('.res-top');window.scrollTo(0,1e6);li.scrollIntoView();"
-          "out.native={top:li.getBoundingClientRect().top,bar:document.querySelector('header.state').getBoundingClientRect().bottom,y:scrollY};"
-          "window.scrollTo(0,0);")
+NATIVE = ("var li=document.querySelector('.res-top'),bd=document.querySelector('body>.wrap');bd.scrollTop=1e6;li.scrollIntoView();"
+          "out.native={top:li.getBoundingClientRect().top,bar:document.querySelector('header.state').getBoundingClientRect().bottom,y:bd.scrollTop};"
+          "bd.scrollTop=0;")
 
 
 def result_part(exe, page, tmp):

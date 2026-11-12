@@ -7,9 +7,16 @@
    "show the gesture" hand and the result ring. Every colour is a token.
    ========================================================================== */
 
+/* the page is one screen high: the top bar, the question, the dock. The question scrolls in its own band between the
+   bar and the dock, so a choice or a drop zone lower than the screen is cut at the dock's edge and scrolled to - never
+   under the dock's button, where the last choices of a long question lay when the whole page scrolled under a sticky
+   dock. Its side padding keeps the words 1240 px wide at most, while the band scrolls from edge to edge. A page without
+   the band (a studio's panel) keeps the page's own scroll */
 body{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
   overflow-x:hidden;min-height:100vh;display:flex;flex-direction:column}
-body>.wrap{flex:1 0 auto;width:100%}
+body:has(>.wrap){overflow:hidden;height:100vh;min-height:0}
+body>.wrap{flex:1 1 auto;min-height:0;width:100%;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+body>.wrap th{top:0}                       /* a table's sticky head (gb_page.css) stops at the band's top, under the bar */
 /* the Android Back button clicks this link; it is not shown in the classroom frame */
 .gbt-topback{display:none}
 
@@ -17,7 +24,7 @@ body>.wrap{flex:1 0 auto;width:100%}
 .state{top:0;min-height:58px;padding:8px 24px}
 .state .part{font-size:18px}
 .state .got{font-size:18px;color:var(--dim-l)}
-.wrap{max-width:1280px;padding:8px 20px 14px}
+.wrap{max-width:none;padding:8px max(20px,calc((100% - 1240px) / 2)) 14px}
 .scr{display:none}
 .scr.on{display:block;animation:gban-in .22s ease-out}
 @keyframes gban-in{from{transform:translateY(10px)}to{transform:none}}
@@ -45,8 +52,10 @@ body>.wrap{flex:1 0 auto;width:100%}
 .why.bad .vd{color:var(--warn)}
 .why p{margin:0;font-size:17px;line-height:1.45}
 .why{scroll-margin-bottom:96px}            /* shown above the dock when the engine brings it into view */
-/* a scroll the browser makes itself (into view, a focus) stops below the 60 px top bar, as the engine's own does */
+/* a scroll the browser makes itself (into view, a focus) stops below the 60 px top bar, as the engine's own does - in the
+   question's band, a little below its top */
 html{scroll-padding-top:68px}
+body>.wrap{scroll-padding-top:8px}
 
 /* ---- choose one, choose all that are right, read the instrument ---------- */
 .opts{counter-reset:o;max-width:1040px;margin:4px auto 0;gap:10px}
@@ -232,7 +241,7 @@ html{scroll-padding-top:68px}
 .slot .chip{width:100%}
 
 /* categorise: the groups side by side */
-.grps{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:6px 0 0}
+.grps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:6px 0 0}
 .grp{border:2px solid var(--navy);border-radius:var(--r-m);background:var(--white);overflow:hidden}
 .grp .gname{padding:10px 14px;background:var(--navy);color:var(--white);font:700 18px/1.25 var(--font)}
 .grp .zone{display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;min-height:130px;
@@ -468,7 +477,7 @@ body.handed .wrap{opacity:.55}
 .try-hello.on{visibility:visible;color:var(--good)}
 
 /* ---- which group: before a set whose questions differ per group ---------- */
-.grp{display:grid;gap:18px;max-width:900px;margin:18px auto 0}
+#grpScr .grp{display:grid;gap:18px;max-width:900px;margin:18px auto 0}
 .grp-pick{display:flex;align-items:center;gap:18px;min-height:110px;padding:18px 28px;border:2px solid var(--blue);
   border-radius:var(--r-l);background:var(--white);box-shadow:var(--sh);color:var(--navy);font:inherit;
   font-size:28px;font-weight:700;text-align:left;cursor:pointer}

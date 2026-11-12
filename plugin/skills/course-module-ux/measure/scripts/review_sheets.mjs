@@ -593,6 +593,59 @@ window.__rv = (function(){
       });
       return out;
     },
+    /* every answer control of the question on screen - a choice, a card, a tap area, a drop zone, a lab's button - as asked:
+       none lies under the dock's button, and each can be scrolled to whole, between the top bar and the dock and inside the
+       screen's width - the last choices of a long question once lay under Check and off a 1024 x 768 screen */
+    reach: function(){
+      var sec = document.querySelector('.scr.on[data-script]'); if (!sec) return [];
+      var out = [], vw = window.innerWidth, vh = window.innerHeight, root = document.scrollingElement || document.documentElement;
+      var dock = document.getElementById('dock'), btn = document.getElementById('go'), bar = document.querySelector('.state');
+      var dr = dock && dock.getClientRects().length && getComputedStyle(dock).visibility !== 'hidden' ? dock.getBoundingClientRect() : null;
+      var top = bar && bar.getClientRects().length ? Math.max(0, bar.getBoundingClientRect().bottom) : 0, bot = dr ? Math.min(vh, dr.top) : vh;
+      var said = 'the "' + ((btn && txt(btn)) || 'Check') + '" bar';
+      function clips(e){ var cs = getComputedStyle(e); return cs.overflowX !== 'visible' || cs.overflowY !== 'visible'; }
+      function scrolls(e){ return /auto|scroll/.test(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight + 1; }
+      function seen(el){            /* the part of el the trainee sees: inside every box that clips it, and inside the window */
+        var r = el.getBoundingClientRect(), a = { l: r.left, t: r.top, r: r.right, b: r.bottom };
+        for (var e = el.parentElement; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+          if (!clips(e)) continue;
+          var c = e.getBoundingClientRect(); a.l = Math.max(a.l, c.left); a.t = Math.max(a.t, c.top); a.r = Math.min(a.r, c.right); a.b = Math.min(a.b, c.bottom);
+        }
+        a.l = Math.max(a.l, 0); a.t = Math.max(a.t, 0); a.r = Math.min(a.r, vw); a.b = Math.min(a.b, vh);
+        return a;
+      }
+      function name(el){
+        var t = txt(el).slice(0, 40), g = el.closest('.grp'), gn = g && g.querySelector('.gname');
+        if (el.classList.contains('opt')) return 'choice ' + (el.getAttribute('data-l') || '') + (t ? ' "' + t + '"' : '');
+        if (el.classList.contains('zone') || el.classList.contains('slot')) return 'the drop zone ' + (gn ? '"' + txt(gn).slice(0, 40) + '"'
+          : '"' + (el.getAttribute('data-name') || el.getAttribute('data-val') || t) + '"');
+        if (el.classList.contains('hot')) return 'the tap area "' + t + '"';
+        if (el.classList.contains('chip')) return 'the card "' + t + '"';
+        return 'the button "' + t + '"';
+      }
+      var ctl = $$('.opt, .hot, .zone, .slot, .chip, .sure button, .lab button', sec).filter(function(el){
+        if (!el.getClientRects().length || getComputedStyle(el).visibility === 'hidden') return false;
+        var r = el.getBoundingClientRect(); return r.width > 2 && r.height > 2; });
+      ctl = ctl.filter(function(el){ return !ctl.some(function(o){ return o !== el && o.contains(el); }); });   /* a card in its zone: the zone */
+      ctl.forEach(function(el){                         /* as the question opens */
+        var a = seen(el), r = el.getBoundingClientRect();
+        if (dr && a.r - a.l > 2 && a.b - a.t > 2 && a.b > dr.top + 2 && a.t < dr.bottom - 2 && a.r > dr.left + 2 && a.l < dr.right - 2)
+          out.push(name(el) + ' lies under ' + said + (r.bottom > vh + 2 ? ' and runs off the foot of the screen' : ''));
+      });
+      var boxes = [root].concat($$('body *').filter(scrolls)), kept = boxes.map(function(e){ return [e.scrollTop, e.scrollLeft]; });
+      ctl.forEach(function(el){                         /* scrolled to, as a trainee would */
+        try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
+        var r = el.getBoundingClientRect(), d = r.bottom > bot ? Math.min(r.bottom - bot, r.top - top) : (r.top < top ? r.top - top : 0);
+        if (d) { var e = el.parentElement; while (e && e !== document.body && !scrolls(e)) e = e.parentElement;
+          (e && e !== document.body ? e : root).scrollTop += d; }
+        r = el.getBoundingClientRect(); var a = seen(el);
+        if (r.right > vw + 2 || r.left < -2) out.push(name(el) + ' runs off the side of the screen');
+        else if (r.height <= bot - top && (r.top < top - 2 || r.bottom > bot + 2 || a.b - a.t < r.height - 2))
+          out.push(name(el) + ' cannot be scrolled whole into the screen above ' + said);
+      });
+      boxes.forEach(function(e, i){ e.scrollTop = kept[i][0]; e.scrollLeft = kept[i][1]; });
+      return out.filter(function(x, i){ return out.indexOf(x) === i; });
+    },
     /* the picture's expand button on words - the question's, the explanation's, a label's (M16 tt1 q01, check m04 at
        1024 x 768: it hid "foam" of "foam container" and "of minimum") */
     cover: function(){
@@ -728,13 +781,13 @@ async function tasks(tiles, failures) {
               requestAnimationFrame(function(){ requestAnimationFrame(function(){ r(1); }); }); }); })`);
             await evaluate(SETTLE);
             for (const x of await evaluate('__rv.leaders()')) failures.push(`${name} ${q}: ${x}`);
-            if (await evaluate(`!!document.querySelector('.scr.on[data-script] .gbz-corner')`)) {
-              for (const [w, h] of [[W, H], [1024, 768], [1280, 720]]) {      // as asked: the picture's button off the words
-                if (w !== W || h !== H) { await size(w, h); await pause(60); }
-                for (const x of await evaluate('__rv.cover()')) failures.push(`${name} ${q}, as asked at ${w}x${h}: ${x}`);
-              }
-              await size(W, H);
+            const corner = await evaluate(`!!document.querySelector('.scr.on[data-script] .gbz-corner')`);
+            for (const [w, h] of [[W, H], [1024, 768], [1280, 720]]) {        // as asked: every answer control reachable, off the dock;
+              if (w !== W || h !== H) { await size(w, h); await pause(60); }  // the picture's button off the words
+              for (const x of (await evaluate('__rv.reach()')).concat(corner ? await evaluate('__rv.cover()') : []))
+                failures.push(`${name} ${q}, as asked at ${w}x${h}: ${x}`);
             }
+            await size(W, H);
           }
           if (!WALK && opt.asked && good) tiles.push({ id: `${name}/${q}/asked`, label: `${name} ${q} - as asked`, png: await shot() });
           if (WALK && mine && good) {          // as asked, at both sizes a tablet in the room may have

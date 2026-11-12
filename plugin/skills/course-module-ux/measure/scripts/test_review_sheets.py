@@ -15,7 +15,10 @@ figure-kit drawing; task pages on photographs and on the kit drawing, every mech
   * words out of their card or label box, once answered, are a failure at 1280 x 800, 1024 x 768 and 1280 x 720 (M01
     check m03, m04: two-line labels spilled out of their pills);
   * the expand button of a picture never lies on words: a picture whose four corners are all tap areas keeps it off the
-    question (every question graded clean), and a button put on the words is a failure (M16 tt1 q01, check m04).
+    question (every question graded clean), and a button put on the words is a failure (M16 tt1 q01, check m04);
+  * an answer control under the Check bar or off the screen, as asked, is a failure naming the question at 1280 x 800,
+    1024 x 768 and 1280 x 720: choices taller than the screen pass in the question's own band and fail on a page that
+    scrolls whole under a sticky dock.
 Skips, and says so, when no Chrome or Edge or no node is installed.
 """
 from __future__ import annotations
@@ -263,6 +266,32 @@ def spill_part(md, tmp):
           and all(any(s in x for x in bad) for s in ("1280x800", "1024x768", "1280x720")), (code, (sheets.get("failures") or [])[:4]))
 
 
+def reach_part(md, tmp):
+    """an answer control under the dock's button or off the screen, as asked (the last choices of a long question under
+    Check and off a 1024 x 768 screen; a fourth drop zone on a second row): the page that scrolled whole under a sticky dock
+    is a failure that names the question; the question's own band, scrolled above the dock, is not"""
+    print("\n-- an answer control under the Check bar or off the screen")
+    tall = "\n.opts .opt{min-height:300px!important}\n"
+    old_frame = ("\nbody{height:auto!important;min-height:100vh!important;overflow-x:hidden!important;overflow-y:visible!important}"
+                 "\nbody>.wrap{flex:1 0 auto!important;overflow:visible!important}\n.dock{position:sticky!important;bottom:0}\n")
+    for extra, bad_expected in ((tall, False), (tall + old_frame, True)):
+        rd = os.path.join(tmp, "reach_module_" + ("old" if bad_expected else "new"))
+        shutil.copytree(md, rd)
+        css = os.path.join(rd, "assets", "gb_answer.css")
+        src = io.open(css, encoding="utf-8").read()
+        io.open(css, "w", encoding="utf-8").write(src + extra)
+        code, out, man, sheets, took = review(rd, os.path.join(tmp, "reach_out_" + ("old" if bad_expected else "new")))
+        bad = [x for x in sheets.get("failures") or [] if "lies under the" in x or "cannot be scrolled whole" in x or "off the side" in x]
+        if bad_expected:
+            check("choices taller than the screen, the page scrolling under a sticky dock: a failure naming the question, at each size",
+                  code == 1 and bad and all(re.search(r"\.html \w+, as asked at", x) for x in bad)
+                  and any("choice" in x and "under the \"Check\" bar" in x for x in bad)
+                  and all(any(s in x for x in bad) for s in ("1280x800", "1024x768", "1280x720")), (code, bad[:4], out[-300:]))
+        else:
+            check("... the same choices in the question's own band above the dock: every one reached whole, none under it",
+                  not bad, (code, bad[:4]))
+
+
 def main():
     exe = browser()
     node = shutil.which("node")
@@ -301,6 +330,7 @@ def main():
         blind_part(md, tmp)
         spill_part(md, tmp)
         cover_part(md, tmp)
+        reach_part(md, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
