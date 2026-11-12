@@ -7,6 +7,10 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.132.0 · The trial measures the first pass; a fault report for the owner (2026-11-12)
+
+- `scripts/factory_trial.py`: first pass by default, `--full`; `first_pass_row`; `report --faults`. `orchestration/workflows/build_course.js`: `first_pass`, `builds`. New `scripts/fault_report.py` (`FAULTS.html`, `faults.json`, `faults/`). Tests: test_factory_trial, test_build_course.
+
 ## 2.131.3 · Tables that fit their slide (2026-11-12)
 
 - `compile/scripts/layout_plan.py` `table_budget`: a table's rows and words against each shape; `compile_module.py`: table rows to the plan, a figureless table as `reference-table.text-only`; `scripts/content_script.py` `t_table_over` (a must-fix). Tests: test_layout_plan, test_content_script, test_compile_module.
