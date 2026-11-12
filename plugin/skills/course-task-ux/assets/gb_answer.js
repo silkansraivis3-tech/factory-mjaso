@@ -432,12 +432,19 @@
     if (z === g.tray) { return g.need === 'slots' && !belongs(g, c); }     /* a card that does not belong stays out */
     return has(z, 'zone') && gbKey(g.id, txt(c), zoneValue(z)) === placeKey(c);
   }
-  function rightZone(g, c) {
-    var i;
+  /* where a card belongs. A label the drawing has twice (two "Insulation" layers) has two right places, and either card
+     fits either: the first of them not already given (used) or, without a list, not already holding another card of one place */
+  function rightZone(g, c, used) {
+    var i, z, held, first = null;
     for (i = 0; i < g.zones.length; i++) {
-      if (gbKey(g.id, txt(c), zoneValue(g.zones[i])) === placeKey(c)) { return g.zones[i]; }
+      z = g.zones[i];
+      if (gbKey(g.id, txt(c), zoneValue(z)) !== placeKey(c)) { continue; }
+      if (!first) { first = z; }
+      if (used) { if (used.indexOf(z) < 0) { return z; } continue; }
+      held = $('.chip', z);
+      if (z.getAttribute('data-cap') !== '1' || !held || held === c) { return z; }
     }
-    return null;
+    return first;
   }
 
   /* ---------------------------------------------------------------- questions */
@@ -876,10 +883,10 @@
         out.push({ k: 'pick', mine: mx, right: rx });
       } else if (g.type === 'place' && $('.rows.order', g.sec)) {
         /* put in order: the trainee's order beside the right one, the cards that moved marked */
-        var mine = g.zones.map(function (z) { var c = $('.chip', z); return c ? txt(c) : ''; }), right = [];
+        var mine = g.zones.map(function (z) { var c = $('.chip', z); return c ? txt(c) : ''; }), right = [], used = [];
         each(g.chips, function (c) {
-          var z = rightZone(g, c), i = z ? g.zones.indexOf(z) : -1;
-          if (i >= 0) { right[i] = txt(c); }
+          var z = rightZone(g, c, used), i = z ? g.zones.indexOf(z) : -1;
+          if (i >= 0) { right[i] = txt(c); used.push(z); }
         });
         out.push({ k: 'order', mine: mine, right: right });
       } else {

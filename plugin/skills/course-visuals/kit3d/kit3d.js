@@ -1202,6 +1202,7 @@
            the pill was cut (a step that frames one tank left its neighbour's point just above the top) */
         if (tmpV.z > 1 || l.sx < 0 || l.sx > W || l.sy < 0 || l.sy > H) { s = false; }
       }
+      if (s && S.outAt === W + 'x' + H + '|' + S.step && S.outs[l.text]) { s = false; }      /* stepped out (P.settle) */
       l.shown = s;
       key += s ? '|' + l.text + ':' + l.sx.toFixed(1) + ',' + l.sy.toFixed(1) : '|-';
     });
@@ -1239,7 +1240,7 @@
      or the box edge tries other stem lengths, the other side of its point and a sideways shift, and takes the place
      where the least touches and the stem changes least (the hand-made settleLabels, IGF slide review 2026-10-22). */
   P.settle = function () {
-    var S = this, W = S.W, H = S.H, res = S.res || [], shown = [], i, k0, a, pass;
+    var S = this, W = S.W, H = S.H, res = S.res || [], shown = [], i, k0, a, pass, outAt = W + 'x' + H + '|' + S.step;
     S.labels.forEach(function (l) {
       if (!l.shown) { return; }
       var j, r0;
@@ -1375,15 +1376,43 @@
     var orders = [shown, shown.slice().reverse(), shown.slice().sort(function (p, q) { return p.sx - q.sx; }),
                   shown.slice().sort(function (p, q) { return p.sy - q.sy; })], oi, bestN = 1e9, bestS = null, nNow;
     var calm = still && !S.tween && !hasCls(S.wrap, 'k3-drag');   /* while the view moves, one order: a turn stays smooth */
-    for (oi = 0; oi < (calm ? orders.length : 1); oi++) {
-      reset();
-      solve(orders[oi]);
-      nNow = total();
-      if (nNow < bestN) { bestN = nNow; bestS = snap(); }
-      if (!nNow) { break; }
+    function search() {
+      bestN = 1e9; bestS = null;
+      for (oi = 0; oi < (calm ? orders.length : 1); oi++) {
+        reset();
+        solve(orders[oi]);
+        nNow = total();
+        if (nNow < bestN) { bestN = nNow; bestS = snap(); }
+        if (!nNow) { break; }
+      }
+      if (bestS && nNow !== bestN) {
+        shown.forEach(function (l, i) { l.up = bestS[i][0]; l.gap = bestS[i][1]; l.dx = bestS[i][2]; l.oy = bestS[i][3]; });
+      }
     }
-    if (bestS && nNow !== bestN) {
-      shown.forEach(function (l, i) { l.up = bestS[i][0]; l.gap = bestS[i][1]; l.dx = bestS[i][2]; l.oy = bestS[i][3]; });
+    search();
+    /* names on parts close together in a low box (M16 s03 at 1280 x 800: the why under the picture left the scene 180 px
+       high, and three names round the inductor found no free place - two lay on each other, one cut): a pill still on
+       another after every order, the compact pills are tried, as for a crowded box; and on a step that names its own part
+       (a lit name), a name still on another that is not lit steps out of this view - a name read whole beats two unread */
+    function onPill(l) { return shown.some(function (b) { return b !== l && hit(pillR(l), pillR(b), 0); }); }
+    if (calm && bestN > 0 && shown.some(onPill)) {
+      if (!S.small) {
+        S.dense = S.small = true;
+        setCls(S.wrap, 'k3-small', true);
+        S.labels.forEach(function (l) { l.pw = 0; });
+        shown.forEach(function (l) { l.pw = l.pill.offsetWidth; l.ph = l.pill.offsetHeight; });
+        search();
+      }
+      var lit = shown.some(function (l) { return hasCls(l.pill, 'k3-hl'); });
+      for (oi = shown.length - 1; oi >= 0 && lit; oi--) {
+        a = shown[oi];
+        if (hasCls(a.pill, 'k3-hl') || !onPill(a)) { continue; }
+        a.shown = false; setCls(a.el, 'k3-off', true);
+        if (S.outAt !== outAt) { S.outAt = outAt; S.outs = {}; }
+        S.outs[a.text] = 1;
+        shown.splice(oi, 1);
+      }
+      S.denseSig = shown.map(function (l) { return l.text; }).join('|');
     }
     function solve(order) {
     for (pass = 0; pass < 6; pass++) {                  /* until nothing moves: a label moved can free or block another */

@@ -319,24 +319,42 @@ var GBZoom = (function (w, d) {
     var again = function () { w.requestAnimationFrame(function () { placeCorner(f, b); }); };
     if (w.ResizeObserver) { new w.ResizeObserver(again).observe(f); }
     var scr = closest(f, ".scr") || closest(f, ".slide");
-    if (scr && w.MutationObserver) { new w.MutationObserver(again).observe(scr, { attributes: true, attributeFilter: ["class"] }); }
+    /* the screen's own parts too: the explanation that opens beside the picture after Check */
+    if (scr && w.MutationObserver) { new w.MutationObserver(again).observe(scr, { attributes: true, attributeFilter: ["class"], subtree: true }); }
     w.addEventListener("resize", again);
   }
   /* 2.63.2 (Aleksis, 2026-10-22: M01 q03 and M08 m01 of the 2.63.2 rebuild, M03 SC2 q6, M04 check q2, M09 check q2 of
      the IGF original course) - the ⤢ button sat in the top right corner whatever was there, on the vent mast's tap area
      and on the right-answer mark. It goes to the corner of the picture with no tap area, label or hotspot under it (the
-     fewest, then the widest gap); with none free, just outside the picture's top right edge */
+     fewest, then the widest gap); with none free, just outside the picture, where it covers no words */
   var TAPS = ".hot,.zone,.lbox,[data-zone],[data-key],.chip,.opt,.ff-part,.lbl,.kit-lbl,text,button,label";
+  /* the words on the screen round the picture - the question over it, the explanation beside it - and the Check bar: the
+     button never lies on them (M16 tt1 q01 and check m04 at 1024 x 768: every corner inside held a tap area, and above the
+     picture it hid the question's words) */
+  function wordsRound(f) {
+    var out = [], tw = d.createTreeWalker(d.body, 4, null, false), n, rg, rs, i, pr;
+    while ((n = tw.nextNode())) {
+      if (!/\S/.test(n.nodeValue) || f.contains(n)) { continue; }
+      pr = n.parentNode.getBoundingClientRect();           /* not words read only to a screen reader (.vh, 1 px) */
+      if (pr.width <= 2 || pr.height <= 2) { continue; }
+      rg = d.createRange(); rg.selectNodeContents(n); rs = rg.getClientRects();
+      for (i = 0; i < rs.length; i++) { if (rs[i].width > 2 && rs[i].height > 2) { out.push(rs[i]); } }
+    }
+    [].forEach.call(d.querySelectorAll("#dock"), function (x) { out.push(x.getBoundingClientRect()); });
+    return out;
+  }
   function placeCorner(f, b) {
-    var R = f.getBoundingClientRect(), S = 48, best = null, things = [];
+    var R = f.getBoundingClientRect(), S = 48, best = null, things = [], words;
     if (!R.width || !R.height) { return; }
     [].forEach.call(f.querySelectorAll(TAPS), function (x) {
       if (x === b || b.contains(x)) { return; }
       var r = x.getBoundingClientRect();
       if (r.width && r.height && !(r.width >= R.width * 0.9 && r.height >= R.height * 0.9)) { things.push(r); }   // not the picture itself
     });
+    words = wordsRound(f);
     [[8, 8, "top", "right"], [8, 8, "top", "left"], [8, 8, "bottom", "right"], [8, 8, "bottom", "left"],
-     [-S - 6, 0, "top", "right"], [-S - 6, 0, "bottom", "right"]].forEach(function (c, k) {
+     [-S - 6, 0, "top", "right"], [-S - 6, 0, "bottom", "right"], [0, -S - 6, "top", "right"], [0, -S - 6, "top", "left"],
+     [0, -S - 6, "bottom", "right"], [0, -S - 6, "bottom", "left"]].forEach(function (c, k) {
       var x = c[3] === "right" ? R.right - c[1] - S : R.left + c[1], y = c[2] === "top" ? R.top + c[0] : R.bottom - c[0] - S;
       var hit = 0, gap = 1e9;
       things.forEach(function (r) {
@@ -345,6 +363,9 @@ var GBZoom = (function (w, d) {
         gap = Math.min(gap, Math.sqrt(dx * dx + dy * dy));
       });
       if (k >= 4) { hit += 0.5; }                        /* outside the picture only when no corner inside is free */
+      /* never on words, never off the screen: such a place is taken only when there is no other */
+      words.forEach(function (r) { if (r.left < x + S - 1 && x < r.right - 1 && r.top < y + S - 1 && y < r.bottom - 1) { hit += 10; } });
+      if (x < 0 || y < 0 || x + S > w.innerWidth || y + S > w.innerHeight) { hit += 10; }
       if (!best || hit < best.hit || (hit === best.hit && gap > best.gap + 0.5)) { best = { c: c, hit: hit, gap: gap }; }
     });
     b.style.top = b.style.bottom = b.style.left = b.style.right = "auto";

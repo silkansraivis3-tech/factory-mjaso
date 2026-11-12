@@ -781,6 +781,54 @@ def fixes_part(exe, tmp):
           icons == ["choose", "drag"], icons or out)
 
 
+REPEAT = [
+    {"id": "t01", "kind": "task-slide", "opens": "MC", "title": "Module check - Module 1", "text": "Module check on your tablet now.", "minutes": 5},
+    {"id": "m01", "kind": "module-check", "set": "MC", "mechanic": "label_diagram", "question": "Drag each label to its place.",
+     "visual": "the GA", "answer": "Fuel tank\nVent mast\nFuel tank", "feedback": "Two tanks and the mast."},
+]
+# put(t, n, v, k): the n-th card named t still in the bank (0 the first) on the k-th box of data-val v
+REPEAT_PUT = ("function put(t, n, v, k) { var c = [].filter.call(s.querySelectorAll('.tray .chip'), function (x) { return x.textContent.trim() === t; })[n],"
+              " r = c.getBoundingClientRect(), o = {bubbles: true, button: 0, clientX: r.left + 5, clientY: r.top + 5};"
+              " c.dispatchEvent(new MouseEvent('mousedown', o)); document.dispatchEvent(new MouseEvent('mouseup', o));"
+              " s.querySelectorAll('.lbox[data-val=\"' + v + '\"]')[k].click(); }")
+REPEAT_LOOK = ("out.go = !document.getElementById('go').disabled;"
+               "out.boxes = [].map.call(s.querySelectorAll('.lbox'), function (b) { return [b.getAttribute('data-val'),"
+               " [].map.call(b.querySelectorAll('.chip'), function (c) { return c.textContent.trim() + '|' + c.className; })]; });")
+
+
+def repeat_part(exe, tmp):
+    """a label the drawing has twice (M01 q11: two "Insulation" layers, two cards of one key) - either card fits either of its
+    places: answered right it is right, and answered wrong each card is put back in a place of its own, never two in one
+    (the first tank place already holds the right card, so the one put back goes to the second)"""
+    print("\n-- a label the drawing has twice")
+    os.makedirs(os.path.join(tmp, "rp"))
+    c, md = tcm.new_course(os.path.join(tmp, "rp"), tcm.script(screens=REPEAT), build=False)
+    io.open(os.path.join(md, "assets", "fig", "ga.svg"), "w", encoding="utf-8").write(tcm.GA)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
+        "t01": {"try_tablet": False}, "m01": {"figure": "assets/fig/ga.svg"}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    mc = os.path.join(md, "assessment", "check.html")
+    check("the fixture page is built", code in (0, 1) and os.path.isfile(mc), out[-600:])
+    if not os.path.isfile(mc):
+        return
+    page = io.open(mc, encoding="utf-8").read()
+    check("... with two cards of one name and two places for it", len(re.findall(r'data-val="sp-tank"', page)) == 2
+          and page.count(">Fuel tank</button>") == 2, re.findall(r'<div class="lbox[^>]*>', page))
+    start = ["eval", "document.getElementById('go').click();"]
+    for name, order in (("the first card on the first place", (0, 1)), ("the first card on the second place", (1, 0))):
+        r = drive(exe, mc, [start, ["m01", [["eval", REPEAT_PUT + "put('Fuel tank', 0, 'sp-tank', %d); put('Vent mast', 0, 'sp-vent', 0);"
+                                                     "put('Fuel tank', 0, 'sp-tank', %d);" % order + REPEAT_LOOK]]]], tmp, look=False)
+        rep = r.get("report") or {}
+        check("answered right, %s: Check is on and the question is right" % name,
+              not r.get("errors") and r.get("go") is True and rep.get("ok") == 1 and rep.get("total") == 1, (r.get("errors"), r.get("go"), rep))
+    r = drive(exe, mc, [start, ["m01", [["eval", REPEAT_PUT + "put('Fuel tank', 0, 'sp-tank', 0); put('Vent mast', 0, 'sp-tank', 1);"
+                                                 "put('Fuel tank', 0, 'sp-vent', 0);"], ["dock"], ["eval", REPEAT_LOOK]], True]], tmp, look=False)
+    boxes = r.get("boxes") or []
+    check("answered wrong: graded wrong, and after Check every place holds one card - each 'Fuel tank' in a tank place of its own",
+          not r.get("errors") and (r.get("report") or {}).get("ok") == 0 and len(boxes) == 3 and all(len(b[1]) == 1 for b in boxes)
+          and all(b[1][0].startswith({"sp-tank": "Fuel tank|", "sp-vent": "Vent mast|"}[b[0]]) for b in boxes), (r.get("errors"), boxes))
+
+
 def picture_part(exe, tmp):
     """2.49.1 - IGF M06: a photo over a sort left its drop zones under the Check bar; the right state on a dark drawing
     was near-black with a tiny tick"""

@@ -41,6 +41,7 @@ The few classes of its own, all written by the compiler:
 | `.lt-you` | the room's question card in the picture's column, under the picture; its answer opens under it on the last Next (`.lt-ans-under`) |
 | `.lt-tiles-fig` · `.lt-tiles` · `.lt-strips` · `.lt-tile` · `.lt-n` | 2.67.0 "tiles": several photographs on one slide, each opens full screen; "strips": cuts of one document, numbered (the compiler builds them - `tiles_figure`) |
 | `.lt-table` · `.lt-sep` | reference-table: one row a line; the hidden ` \| ` that keeps the row the approved line |
+| `.lt-val` | a line "value \| what it means" among a slide's lines: the value big over its caption, the bar hidden (`.lt-sep`) |
 | `.lt-ctable-fig` · `.lt-ctable` | the module's one comparison table as a slide's picture ("table" in the build sheet): 2-4 things side by side, a row a fact, on the white panel (the compiler builds it - `table_figure`) |
 | `.lt-block` | three-content-blocks: one numbered block of lines |
 | `.lt-compare` · `.lt-card` · `.lt-card-visual` · `.lt-card-copy` · `.lt-compare-note` | compare-two: two cards, each its picture and its lines |

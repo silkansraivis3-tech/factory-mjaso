@@ -343,12 +343,15 @@ window.__rv = (function(){
     });
     var chips = $$('.chip', el), zones = $$('.zone', el);
     if (chips.length && zones.length) {
-      var to = chips.map(function(c){ return zones.filter(function(z){ return key(id, txt(c), zv(z)) === place(c); })[0] || null; });
+      /* a label the drawing has twice: each of its cards to its own place of that name, never both to the first */
+      var to = [];
+      chips.forEach(function(c){ var m = zones.filter(function(z){ return key(id, txt(c), zv(z)) === place(c); });
+        to.push(m.filter(function(z){ return to.indexOf(z) < 0; })[0] || m[0] || null); });
       if (!good) {                       /* wrong: the first two cards that belong in different places swap places */
         var a = -1, b = -1;
-        to.forEach(function(z, i){ if (z && a < 0) a = i; else if (z && b < 0 && z !== to[a]) b = i; });
+        to.forEach(function(z, i){ if (z && a < 0) a = i; else if (z && b < 0 && z !== to[a] && zv(z) !== zv(to[a])) b = i; });
         if (a >= 0 && b >= 0) { var t = to[a]; to[a] = to[b]; to[b] = t; }
-        else if (a >= 0) { to[a] = zones.filter(function(z){ return z !== to[a]; })[0] || to[a]; }
+        else if (a >= 0) { to[a] = zones.filter(function(z){ return zv(z) !== zv(to[a]); })[0] || to[a]; }
       }
       chips.forEach(function(c, ci){ if (to[ci]) { press(c); to[ci].click(); } });
       did = true;
@@ -590,6 +593,30 @@ window.__rv = (function(){
       });
       return out;
     },
+    /* the picture's expand button on words - the question's, the explanation's, a label's (M16 tt1 q01, check m04 at
+       1024 x 768: it hid "foam" of "foam container" and "of minimum") */
+    cover: function(){
+      var sec = document.querySelector('.scr.on[data-script]'); if (!sec) return [];
+      var out = [];
+      $$('.gbz-corner', sec).forEach(function(z){
+        if (!z.offsetParent) return;
+        var b = z.getBoundingClientRect(), tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), n, hid = [];
+        while ((n = tw.nextNode())) {
+          if (!n.nodeValue.trim() || z.contains(n)) continue;
+          var el = n.parentElement, cs = el && getComputedStyle(el);
+          var pr = el && el.getBoundingClientRect();           // not words read only to a screen reader (.vh, 1 px)
+          if (!cs || cs.visibility === 'hidden' || +cs.opacity === 0 || pr.width <= 2 || pr.height <= 2) continue;
+          var rg = document.createRange(); rg.selectNodeContents(n);
+          [].forEach.call(rg.getClientRects(), function(r){
+            if (r.width > 2 && r.height > 2 && r.left < b.right - 2 && b.left < r.right - 2 && r.top < b.bottom - 2 && b.top < r.bottom - 2
+                && hid.indexOf(n) < 0) hid.push(n);
+          });
+        }
+        if (hid.length) out.push('the expand button of the picture lies over the words "' + hid.map(function(x){ return x.nodeValue.trim(); }).join(' ').slice(0, 60)
+                                 + '" - it must never hide words');
+      });
+      return out;
+    },
     /* 2.50.1 (M01 benchmark: three re-reviews were spent on these) - every leader line of the question on screen, as the
        engine placed it: it must end ON something drawn of the part it names, and cross no words but its own box's */
     leaders: function(){
@@ -701,6 +728,13 @@ async function tasks(tiles, failures) {
               requestAnimationFrame(function(){ requestAnimationFrame(function(){ r(1); }); }); }); })`);
             await evaluate(SETTLE);
             for (const x of await evaluate('__rv.leaders()')) failures.push(`${name} ${q}: ${x}`);
+            if (await evaluate(`!!document.querySelector('.scr.on[data-script] .gbz-corner')`)) {
+              for (const [w, h] of [[W, H], [1024, 768], [1280, 720]]) {      // as asked: the picture's button off the words
+                if (w !== W || h !== H) { await size(w, h); await pause(60); }
+                for (const x of await evaluate('__rv.cover()')) failures.push(`${name} ${q}, as asked at ${w}x${h}: ${x}`);
+              }
+              await size(W, H);
+            }
           }
           if (!WALK && opt.asked && good) tiles.push({ id: `${name}/${q}/asked`, label: `${name} ${q} - as asked`, png: await shot() });
           if (WALK && mine && good) {          // as asked, at both sizes a tablet in the room may have
@@ -715,7 +749,9 @@ async function tasks(tiles, failures) {
           if (mine && !r.error) {         // the answer on the drawing, at every size a tablet in the room may have
             for (const [w, h] of [[W, H], [1024, 768], [1280, 720]]) {
               if (w !== W || h !== H) await size(w, h);
-              for (const x of await evaluate('__rv.spill()')) failures.push(`${name} ${q}, answered ${good ? 'right' : 'wrong'} at ${w}x${h}: ${x}`);
+              if (w !== W || h !== H) await pause(60);
+              for (const x of (await evaluate('__rv.spill()')).concat(await evaluate('__rv.cover()')))
+                failures.push(`${name} ${q}, answered ${good ? 'right' : 'wrong'} at ${w}x${h}: ${x}`);
             }
             await size(W, H);
           }

@@ -130,6 +130,11 @@
   }
 
   /* one line under a lab: what just happened, without the right answer when the debrief rule is on */
+  /* a line of feedback as a sentence of its own: capital first, full stop last ("its aeration does not require a fan") */
+  function sentence(s) {
+    s = String(s || '').replace(/^\s+|\s+$/g, '');
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) + (/[.!?:;)]$/.test(s) ? '' : '.') : '';
+  }
   function feedback(box, ok, why, brief, later) {
     if (!box) { return; }
     box.className = 'gi-fb ' + (ok ? 'ok' : 'no');
@@ -256,7 +261,7 @@
       done[i] = { v: v, ok: ok, st: st };
       cls(c, 'fly-' + (v ? 't' : 'f')); vibe(ok ? 15 : 40);
       cls(bF, 'off', true); cls(bT, 'off', true);
-      feedback(fb, ok, txt($('.sw-why', c)), '', api.later && !api.blind);
+      feedback(fb, ok, sentence(txt($('.sw-why', c))), '', api.later && !api.blind);
       if (api.blind) { fb.className = 'gi-fb'; fb.innerHTML = ''; }
       api.changed();
       if (i === n - 1) { api.check(); return; }
@@ -278,7 +283,21 @@
       answered: function () { return done.length === n && done.every(function (x) { return !!x; }); },
       touched: function () { return done.length > 0; },
       right: function () { return this.answered() && done.every(function (x) { return x.ok; }); },
-      show: function (ok) { count.textContent = done.filter(function (x) { return x && x.ok; }).length + ' / ' + n; },
+      /* after Check every statement stays on screen, each with its own verdict and its own sentence (M16 check m03: the cards
+         had flown, and one lower-case "why" stood alone, with nothing to say which statement it was about). A wrong one says
+         the debrief's line, when the module keeps the right answers for the debrief */
+      show: function (ok, later) {
+        count.textContent = done.filter(function (x) { return x && x.ok; }).length + ' / ' + n;
+        var old = $('.sw-sum', root), sum;
+        if (old) { old.parentNode.removeChild(old); }
+        sum = el('ol', 'sw-sum', done.map(function (x, k) {
+          if (!x) { return ''; }
+          return '<li class="' + (x.ok ? 'ok' : 'no') + '"><p class="sw-st">' + esc(x.st) + '</p><p><b>' + esc(say(x.ok ? 'right' : 'notRight')) +
+            '</b> ' + esc(x.ok || !later ? sentence(txt($('.sw-why', cards[k]))) : say('later')) + '</p></li>';
+        }).join(''));
+        root.insertBefore(sum, deck);
+        cls(root, 'summed', true);
+      },
       lock: function () { locked = true; },
       keys: function () { return done.filter(function (x) { return !!x; }).map(function (x) { return api.key(api.id, x.st, x.v ? 'true' : 'false'); }); },
       said: function () {

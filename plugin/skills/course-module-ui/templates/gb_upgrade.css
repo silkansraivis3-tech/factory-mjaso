@@ -553,6 +553,17 @@
 .lt-why .stamp{flex:none;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--lt-white);background:var(--up-d04439);padding:.4em .7em;border-radius:8px;transform:rotate(-4deg);
   font-size:clamp(13px,1.9vmin,21px);animation:lt-stamp .45s cubic-bezier(.2,.8,.3,1.4) both}
 .lt-why p{margin:0;font-size:var(--lt-fs);line-height:1.4;color:var(--lt-steel)}.lt-why p b{color:var(--lt-navy)}
+/* the why's lines a figure lights, one a stop: the deck's line mark (gb_compose.css) is drawn on lines in the words column,
+   and beside a picture the why opens in the picture's column - its lit line looked like the others. The same mark here,
+   in the light washes of the why's own white card, on a light or a dark slide */
+.lt-why{--hl-x:min(1.4vmin,12px);--hl-y:min(.8vmin,6px)}
+.slide .lt-why [data-i]{position:relative;padding-left:var(--hl-x);padding-right:var(--hl-x);box-sizing:border-box;border-radius:var(--r-s);
+  transition:background-color .2s ease,box-shadow .2s ease}
+.slide .lt-why [data-i].lit:not(.box):not(.call){--hl-wash:var(--blue-wash-l);background:var(--hl-wash)}
+.slide .lt-why [data-i].cur:not(.box):not(.call){--hl-wash:var(--amber-wash-l);background:var(--hl-wash);font-weight:600;color:var(--lt-navy)}
+.slide .lt-why [data-i].lit:not(.box):not(.call),.slide .lt-why [data-i].cur:not(.box):not(.call){box-shadow:0 calc(-1 * var(--hl-y)) 0 0 var(--hl-wash),0 var(--hl-y) 0 0 var(--hl-wash)}
+.slide .lt-why [data-i].cur:not(.box):not(.call)::after{content:"";position:absolute;left:0;right:0;top:calc(-1 * var(--hl-y));bottom:calc(-1 * var(--hl-y));
+  border:2px solid var(--amber);border-radius:var(--r-s);pointer-events:none}
 @keyframes lt-stamp{from{transform:rotate(-4deg) scale(2);opacity:0}to{transform:rotate(-4deg) scale(1);opacity:1}}
 .lt-pic .lt-edge{position:absolute;left:6%;right:2%;top:26%;bottom:4%;border:3px dashed var(--up-ff8c82);border-radius:50%;opacity:0;transform:scale(.7);
   transition:opacity .5s .3s,transform .9s .3s cubic-bezier(.2,.7,.2,1)}

@@ -388,13 +388,29 @@ TERM = re.compile(r"^([^:]{2,60}?)(\s-\s|:\s)(?=\S)")
 STEP_NUM = re.compile(r"^(\d{1,2}[.)]?)(\s+)(?=\S)")      # "1 Risk ...", "2. Isolate ...", "3) Ventilate ..."
 
 
+VALUE_LINE = re.compile(r"^([^|:]{1,40}?)\s\|\s(?=\S)([^|]+)$")
+
+
 def marked(x, bold=True):
     """a line's words, the term before " - " or ": " in bold when it is a name of four words or fewer
-    ("Gas mode: ...", "Tank connection space - ..."). The words are unchanged, so the match check still reads them."""
+    ("Gas mode: ...", "Tank connection space - ..."). The words are unchanged, so the match check still reads them.
+    A line "value | what it means" ("45 litres | minimum, each ...") is its value, big, over its caption: the separator
+    stays in the line, hidden (.lt-sep), and never shows on the slide"""
+    v = VALUE_LINE.match(x)
+    if v and len(v.group(1).split()) <= 4:
+        return '<b class="lt-val">%s</b><span class="lt-sep"> | </span><span class="lt-cap">%s</span>' % (
+            e(v.group(1).strip()), marked(v.group(2), bold))
     m = TERM.match(x) if bold else None
     if m and 1 <= len(m.group(1).split()) <= 4 and not m.group(1)[:1].islower():
         return "<b>%s</b>%s%s" % (e(m.group(1)), e(m.group(2)), e(x[m.end():]))
     return e(x)
+
+
+def fig_lines(s):
+    """a slide's lines as its figure says them: a line of cells ("value | what it means", a table's row) read as one phrase,
+    its cells apart by commas ("18 bar, Fully pressurised: ...") - the script's separator is never a figure's label or step
+    (M01 s02's drawing: "Atmospheric | Fully refrigerated")"""
+    return [", ".join(c.strip() for c in x.split(" | ")) for x in cs.lines_of(s.get("text")) or []]
 
 
 head_lines = cs.head_lines          # a short line ending with ":" heads a group: a subheading, never a numbered point
@@ -3294,6 +3310,23 @@ def empty_picture_boxes(slide):
     return out
 
 
+SEP_SHOWN = re.compile(r"\S\s+\|\s+\S")
+
+
+def raw_separators(slide):
+    """the words of a built slide - its lines, and its figure's labels, captions and steps - that show the script's cell
+    separator " | " on screen (M16 s04 "At least 1 | foam applicator unit ...", M01 s02's drawing "Atmospheric | Fully
+    refrigerated"). A separator kept hidden in its line (.lt-sep) is not shown"""
+    shown = re.sub(r'<span class="lt-sep">\s*\|\s*</span>', " ", slide)
+    out = []
+    for t in figure_texts(shown):
+        for m in SEP_SHOWN.finditer(t):
+            words = " ".join(t[max(0, m.start() - 30):m.end() + 30].split())
+            if words not in out:
+                out.append(words)
+    return out
+
+
 def img_tag(fig):
     m = re.search(r"<img\b[^>]*>", fig or "")
     return m.group(0) if m else ""
@@ -4334,7 +4367,7 @@ def starter_kit3d(script, s):
     names - a line naming none shows the whole scene, for the builder to point at its subject. Never an overview step before
     line 1's own: the builder who added line 1's part after it moved every part one line late. "_todo" says to place the
     parts as they are on board."""
-    lines = cs.lines_of(s.get("text"))
+    lines = fig_lines(s)
     statement = len(lines) > 1 and not TERM.match(lines[0]) and any(TERM.match(x) for x in lines[1:])
     items, seen = [], set()
 
@@ -4867,7 +4900,7 @@ def starter_figure(script, s, pool=None, taken=None):
     L57 photo row) and spread over all of it, each part grown to its cell (starter_cells, starter_part) - none overlap.
     One step per line after the opening statement, lighting that line and moving the part it names. Returns the spec, or
     None when the slide has no lines to draw."""
-    lines = cs.lines_of(s.get("text"))
+    lines = fig_lines(s)
     if not lines:
         return None
     special = starter_special(script, s, lines)          # 2.67.0 - the part the slide's own words ask for
@@ -5106,7 +5139,7 @@ def kit2d_times(lines):
 def kit2d_candidates(script, s):
     """every 2D figure the slide's own words can make, best fit first: [(fit, look, why, make)] - make() gives the spec's
     body. Nothing is invented: a value the words cannot give is left to "_todo"."""
-    lines = cs.lines_of(s.get("text")) or []
+    lines = fig_lines(s)
     W, H = KIT2D_SIZE
     kind = cs.parse_kind(s.get("visual_kind", ""))
     head = " ".join([s.get("title") or "", s.get("visual") or ""])
@@ -5213,7 +5246,7 @@ def starter_kit2d(script, s, recent=()):
     spec = {"label": label, "size": [W, H], "_k2": True}
     spec.update(pick[3]())
     spec["_look"] = pick[1]
-    lines = cs.lines_of(s.get("text")) or []
+    lines = fig_lines(s)
     words = " ".join([s.get("title") or "", s.get("visual") or ""] + lines)
     brief = ["Shows: %s" % (label.rstrip(".") or "the slide's lines") + ".",
              "Composed as %s - %s." % (KIT2D_KIND_WORDS.get(pick[1], pick[1]), pick[2])]
@@ -5258,7 +5291,7 @@ def kit2d_slide(script, s):
     """a drawing slide the 2D kit starts: its kind is an idea, a sequence or numbers, no tested pattern or molecule / curve
     starter fits it, and its lines are not mostly the names of equipment and spaces the figure kit draws (a layout)"""
     kind = cs.parse_kind(s.get("visual_kind", ""))
-    lines = cs.lines_of(s.get("text")) or []
+    lines = fig_lines(s)
     if kind not in KIT2D_STARTER_KINDS or not lines or pattern_starter(s) or starter_special(script, s, lines):
         return False
     things = sum(1 for t, _ in kit2d_items(lines) if KIT_WORD.search(t))
@@ -5692,6 +5725,10 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
                              "quoted regulation shown whole" % (cs.place(script, s["id"]), s["id"], why))
             else:
                 page = still_slide(page)
+        for words in raw_separators(page):        # "value | what it means": the value and its caption, never the bar
+            probs.append("%s (%s): \"%s\" - the script's separator \" | \" shows on the slide; a line \"value | what it means\" "
+                         "is drawn as its value over its caption: write the figure's label or step in words, without the bar"
+                         % (cs.place(script, s["id"]), s["id"], words))
         for why in empty_picture_boxes(page):    # a picture box shows a picture, at every step
             probs.append("%s (%s): %s - give the box its picture (build sheet \"figure\"), or build the slide with no picture box "
                          "(no \"figure\": its words read on their own)" % (cs.place(script, s["id"]), s["id"], why))

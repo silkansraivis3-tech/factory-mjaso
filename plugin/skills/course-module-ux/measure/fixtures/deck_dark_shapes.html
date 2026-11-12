@@ -15,7 +15,9 @@
 <body>
 <!-- The true-false claim and the name-parts names were navy on the navy ground of a dark slide: unreadable, in the
      picture-beside and the band variants alike. d1, d2: true-false beside a picture and above a band; d3, d4: name-parts
-     beside its picture and above a band, its names opened (lit, current). ?light: the same slides on the light ground. -->
+     beside its picture and above a band, its names opened (lit, current); d5: true-false beside a picture, its why opened
+     in the picture's column and a figure's step on its second line (M16 s03: the lit line looked like the others).
+     ?light: the same slides on the light ground. -->
 <main id="stage">
   <section class="slide dark" id="d1" data-template="true-false.v1" data-variant="picture">
     <h2>True or false?</h2>
@@ -49,6 +51,15 @@
       </ol></div>
       <figure class="lt-pic lt-in" style="--i:1"><div class="pic" style="height:200px"></div></figure></div>
   </section>
+  <section class="slide dark" id="d5" data-template="true-false.v1" data-variant="picture" data-last>
+    <h2>True or false?</h2>
+    <div class="slide-body lt-split" style="--cols:48fr 52fr"><div class="copy lt-tf">
+      <p class="lt-claim lt-in" style="--i:1">An applicator throws foam as far as a monitor.</p>
+      <div class="lt-vote lt-in" style="--i:2"><button type="button" data-v="t">True</button><button type="button" data-v="f" class="ok">False</button></div>
+      </div><div class="lt-scol"><div class="lt-in fill fig"><div class="pic"></div><div class="mediabar"></div></div>
+      <div class="lt-why cur" data-k="1"><span class="stamp">False</span><div><p data-i="1" class="lit">It is medium-expansion foam.</p>
+      <p data-i="2" class="cur">Its aeration needs no fan.</p><p data-i="3">Its throw is short.</p></div></div></div></div>
+  </section>
 </main>
 <pre id="out"></pre>
 <script src="../scripts/audit_deck.js"></script>
@@ -59,7 +70,7 @@
   AuditDeck.all().then(function (res) {
     var low = [];
     (res.failingSlides || []).forEach(function (s) { (s.low || []).forEach(function (f) { low.push(s.id + " " + (f.sel || "") + " " + (f.txt || "")); }); });
-    document.getElementById("out").textContent = JSON.stringify({low: (res.totals || {}).low, which: low});
+    document.getElementById("out").textContent = JSON.stringify({low: (res.totals || {}).low, which: low, mark: (res.totals || {}).mark});
   });
 </script>
 </body></html>

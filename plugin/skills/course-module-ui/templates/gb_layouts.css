@@ -454,6 +454,11 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .lt-table tr td:first-child{font-weight:700;color:var(--lt-navy);width:34%}
 .slide[data-template] .lt-table tr:first-child td{border-top:2px solid var(--lt-navy)}
 .slide[data-template] .lt-sep{display:none}
+/* a line "value | what it means" (compile_module.marked): the value big, its caption under it - never the bar between them */
+.slide[data-template] .lt-val{display:block;font-size:1.45em;line-height:1.1;font-weight:800;color:var(--lt-navy);margin-bottom:.12em}
+.slide[data-template] .statement .lt-val{font-size:1.2em}
+.slide[data-template].dark .lt-val,.slide[data-template].photo .lt-val,.slide[data-template] .photo-copy .lt-val{color:var(--lt-white)}
+.slide[data-template] .lt-why .lt-val{color:var(--lt-navy)}
 .slide[data-template].dark .lt-table td{border-bottom-color:var(--lt-line-d);color:var(--lt-dim-d)}
 .slide[data-template].dark .lt-table tr td:first-child{color:var(--lt-white)}
 /* the module's one comparison table, as a slide's picture ("table" in the build sheet): on the white panel, the things
@@ -477,8 +482,10 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .lt-compare-note{margin-top:min(2vmin,16px);text-align:center;color:var(--lt-steel)}
 .slide[data-template].dark .lt-card{background:var(--lt-blue-06);border-color:var(--lt-line-d)}
 
-/* 2.109.0 (F2) - a room activity with no code of its own: one column, no empty first column; a long text is a lead and bullets */
-.slide[data-template^="task-launch."] .slide-body.activity.no-code{grid-template-columns:1fr}
+/* 2.109.0 (F2) - a room activity with no code of its own: one column, no empty first column; a long text is a lead and bullets.
+   The column is as wide as its words and stands in the middle of the slide - at the left edge, with its lines at reading
+   width, the right half of the slide stayed empty (M16 a04, a07: compose WEAK, a cluster) */
+.slide[data-template^="task-launch."] .slide-body.activity.no-code{grid-template-columns:minmax(0,auto);justify-content:center}
 .slide[data-template^="task-launch."] .slide-body.activity.no-code .act-title{grid-column:1}
 .slide[data-template^="task-launch."] .slide-body.activity.no-code > svg{grid-column:1}
 .slide[data-template^="task-launch."] .slide-body.activity.no-code .act-lines{grid-column:1}
