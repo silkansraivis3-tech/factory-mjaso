@@ -704,11 +704,11 @@ def main():
                                         {"module": "2", "line": "FAIL M02 - compile (60 s)"}]})
         ls, ps = sc_run.get("labels", []), sc_run.get("prompts", {})
         authors = [x for x in ls if x.startswith("scenes:1:")]
-        check("3D TO PLACE: the scenes go to scene authors - four each, three at most at once - BEFORE the module's builder, "
+        check("3D TO PLACE: the scenes go to scene authors - three each, six at most at once - BEFORE the module's builder, "
               "none of them building; a module with none gets no author",
-              authors == ["scenes:1:s01", "scenes:1:s05", "scenes:1:s09"] and all(ls.index(a) < ls.index("build:1") for a in authors)
+              authors == ["scenes:1:s01", "scenes:1:s04", "scenes:1:s07"] and all(ls.index(a) < ls.index("build:1") for a in authors)
               and not any(x.startswith("scenes:2") for x in ls)
-              and "s05, s06, s07, s08" in ps.get("scenes:1:s05", "") and "NEVER run\nbuild_module.py" in ps.get("scenes:1:s01", "")
+              and "s04, s05, s06" in ps.get("scenes:1:s04", "") and "NEVER run\nbuild_module.py" in ps.get("scenes:1:s01", "")
               and "check_kit3d.py spec" in ps.get("scenes:1:s01", "") and "YOU MAY WRITE ONLY THOSE SPEC FILES" in ps.get("scenes:1:s01", ""),
               (ls, ps.get("scenes:1:s01", "")[:600]))
         check("... and the builder is told they were placed and to keep them",

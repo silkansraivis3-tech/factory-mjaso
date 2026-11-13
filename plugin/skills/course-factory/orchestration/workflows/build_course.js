@@ -1088,8 +1088,8 @@ things), place the 3D parts, fix what the build printed, and build again until m
 /* the 3D scenes Phase A left at their starter ("3D TO PLACE: s01 s03 ..." on its line) are placed by scene authors, at most
    SCENE_AUTHORS at once and SCENES_EACH scenes each, none building, BEFORE the module's builder starts: one builder with
    three builds found photographs and drew task pictures and left 19 scenes as starters (the 2.134.0 trial, M01) */
-const SCENE_AUTHORS = 3
-const SCENES_EACH = 4
+const SCENE_AUTHORS = 6
+const SCENES_EACH = 3
 const scenesOf = (m) => { const x = /3D TO PLACE:\s*([\w ]+)/.exec(lineOf(m)); return x ? x[1].trim().split(/\s+/) : [] }
 const KIT3D_DOCS = A.factory ? `${A.factory}/course-visuals/kit3d` : '<the course-visuals skill folder>/kit3d'
 const placeScene = (m, ids) => `PLACE ${ids.length} 3D SCENE(S) of module ${m.id}: ${ids.join(', ')} - nothing else.
