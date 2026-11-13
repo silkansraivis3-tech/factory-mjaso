@@ -25,6 +25,9 @@ Pinned:
     letters too (Latvian with no verb the lists know, Russian), a maker's name stays English; ratify never writes one
     into the architecture; a re-worded Sub-ILO already there in Latvian stops the check; reword writes it in English,
     refuses Latvian and a Main ILO; a re-expressed Sub-ILO with its English beside it is read in English;
+  * the programme's own words are never changed: the editor gets their English reading beside them ("intended_en") -
+    a kept Sub-ILO's and a Main ILO's "text_en", kept after a re-wording, none for an English programme or an added
+    Sub-ILO, and no part of the row's hash;
   * render writes the three documents as Word and HTML, the outcomes' words read from the architecture, never from the
     judgement file; the activities with the experts' status; a sign-off block; level 0 says "not taught";
   * the Stage 2 approval is refused until the documents are clean and written from the current files, and an edit to the
@@ -329,12 +332,37 @@ def main():
         check("reword writes the Sub-ILO in English, the programme's own words kept beside it",
               code == 0 and (s13["status"], s13["text"], s13["programme_text"]) == ("re-expressed", REVISED, out13)
               and s13["ratified"]["by"] == "Anna Liepa", (out, s13))
+        print("\n-- the programme's own words, with their English reading beside them")
+        got = {(m["n"], t["id"]): t for m in pr.view(c)["content"]["modules"] for t in m["topics"]}
+        check("a kept Sub-ILO: the programme's Latvian as intended, word for word, its English reading beside it",
+              (got[(1, "1.1")]["intended"], got[(1, "1.1")]["intended_en"]) == (tap.OUT11, tap.OUT11_EN), got[(1, "1.1")])
+        check("a Main ILO the same", (got[(3, "1")]["intended"], got[(3, "1")]["intended_en"]) == (tap.MAIN1, tap.MAIN1_EN),
+              got[(3, "1")])
+        check("a Sub-ILO the factory added is English already: no reading", got[(1, "1.1.b")]["intended_en"] == "",
+              got[(1, "1.1.b")])
+        check("a reading is no part of the row's hash: put right, it asks no answer again",
+              "intended_en" in got[(1, "1.1")] and pr._hash([got[(1, "1.1")][k] for k in (
+                  "intended", "revised", "asks", "now", "proposed", "activities", "changes_made")])
+              == pr.view(c)["items"]["1/1.1"])
+        pe = copy.deepcopy(tap.PROGRAMME)
+        pe.update(language="English", main_ilos={"1": tap.MAIN1_EN}, outcomes={"1.1": tap.OUT11_EN, "1.3": "Describe the gases"})
+        ae = copy.deepcopy(tap.ARCH)
+        ae["main_ilos"][0].update(text=tap.MAIN1_EN, text_en=tap.MAIN1_EN)
+        ae["modules"][0]["sub_ilos"][1]["programme_text"] = tap.OUT11_EN
+        ae["modules"][1]["sub_ilos"][0].pop("text_en")
+        en_course = tap.write_course(os.path.join(tmp, "english_programme"), pe, ae)
+        check("an English programme has no reading anywhere",
+              {t["intended_en"] for m in pr.view(en_course)["content"]["modules"] for t in m["topics"]} == {""})
         o = tap.write_course(os.path.join(tmp, "reading"), tap.PROGRAMME, copy.deepcopy(tap.ARCH))
         pr.ratify(o, 2, "1.3", REVISED, "Anna Liepa")
         o13 = json.load(io.open(pr.files(o)["arch"], encoding="utf-8"))["modules"][1]["sub_ilos"][0]
         check("a re-worded Sub-ILO no longer shows the English reading of the words it replaced; the reading is kept",
               "text_en" not in o13 and o13["programme_text_en"] == "Describe the physical properties of liquefied gases"
               and o13["text"] == REVISED, o13)
+        t = next(t for m in pr.view(o)["content"]["modules"] for t in m["topics"] if t["id"] == "1.3")
+        check("... and stays beside the programme's words: intended, its reading, revised",
+              (t["intended"], t["intended_en"], t["revised"])
+              == (out13, "Describe the physical properties of liquefied gases", REVISED), t)
         check("... and the experts read the programme's words as intended and the English as revised",
               (topic13()["intended"], topic13()["revised"]) == (out13, REVISED)
               and topic13()["revised_verb"].startswith("apply")

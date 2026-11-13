@@ -23,13 +23,17 @@ this up cold, including one with no memory of why any of it is the way it is.
   an expert's wording into the architecture by hand - English only, a Main ILO refused (L2), the row's own
   `revised_outcome` removed so the architecture is the one place it lives.
 - **`programme_text_en`.** `ratify` moves an original Sub-ILO's `text_en` (the English reading of the programme's words)
-  there: left as `text_en`, `ilo_map.english` and the documents showed it in place of the new wording. Nothing reads
-  `programme_text_en` yet; it is kept for an English reading beside the intended outcome.
-- **Not changed.** The intended outcome is the programme's accredited wording: `topic.intended` is sent as it is,
-  Latvian included (L2, L19 - "the programme stays in its own language ... on the review pages"). Whether the editor
-  shows an English reading beside it is the owner's decision. `ilo_map.english` still prefers `text_en` for a
-  re-expressed Sub-ILO; a course ratified before this version may carry a stale one (none known).
-- **Tests.** `test_pedagogy_review.py` 54 (11 new), `test_course_portal.py` 69 (6 new); `test_architecture_page.py`,
+  there: left as `text_en`, `ilo_map.english` and the documents showed it in place of the new wording.
+- **The intended outcome, with its English reading beside it.** It is the programme's accredited wording:
+  `topic.intended` is sent as it is, Latvian included (L2, L19 - "the programme stays in its own language ... on the
+  review pages"). The owner's decision of 2026-11-13: show an English reading beside it, never in place of it.
+  `view` sends `topic.intended_en` (`outcome_columns`): a kept Sub-ILO's or a Main ILO's `text_en`, a re-worded
+  one's `programme_text_en`; "" for an English programme and an added Sub-ILO. It is not in the row's hash, so a
+  reading put right makes a new version and asks no answer again. The training app's editor shows it under the
+  outcome (`prep.js`); the Word files do not yet. A course built before 2.104.0 has no `text_en`: Stage 2 asks.
+- **Left.** `ilo_map.english` still prefers `text_en` for a re-expressed Sub-ILO; a course ratified before this
+  version may carry a stale one (none known).
+- **Tests.** `test_pedagogy_review.py` 60 (17 new), `test_course_portal.py` 69 (6 new); `test_architecture_page.py`,
   `test_content_script.py`, `test_fix.py`, `test_factory_trial.py`, `test_bloom_map.py` unchanged and passing.
 
 ## 2.129.0 · Day sheets and the course on one page, for every instructor-led course (2026-11-12)

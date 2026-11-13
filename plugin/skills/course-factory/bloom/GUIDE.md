@@ -173,7 +173,8 @@ re-expressed.
 
 **A revised outcome is always in English (L19)** - whatever language the programme is in, and whatever language the
 expert's wording arrived in. The programme's own words are never translated in place: they stay beside it exactly as
-the programme has them. A wording that is not English is never taken into the architecture and never sent to the
+the programme has them, and the editor shows their English reading under them (the architecture's `text_en`, sent as
+`intended_en`). A wording that is not English is never taken into the architecture and never sent to the
 editor: `pull` keeps it as the expert's note, `check` stops, and you write the same outcome in English - what it is
 about, its subject and its standard unchanged, nothing added - with
 `pedagogy_review.py reword --module 4 --topic 4.1 --text "<the outcome, in English>" --by "<the expert>"`, then

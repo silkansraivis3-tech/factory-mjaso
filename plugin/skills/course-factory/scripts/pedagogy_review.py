@@ -31,7 +31,8 @@ WHAT IS READ, WHAT IS WRITTEN
                                                     the old course (OLD_COURSE_INVENTORY.md, its tests and exercises)
                                                     and bloom/GUIDE.md section 5
 The outcomes' words are never in pedagogy_review.json: they are read from the architecture, so a document can never
-change one. The documents are English only so far; the outcomes are shown in the programme's own words, and a
+change one. The documents are English only so far; the outcomes are shown in the programme's own words - in the
+editor with their English reading beside them ("intended_en", the architecture's "text_en"), never in place of them - and a
 revised outcome is written in English, as the course will show it (L19) - whatever language the programme is in and
 whatever language the expert's own wording arrived in: `check` stops on one that is not, `ratify` never writes one
 into the architecture, and `reword` is how the factory writes it in English.
@@ -105,17 +106,24 @@ def modules(prog, arch):
     """[{n, title, rows: [{id, text, asks}], active: [...]}] - every module but the final assessment, in order."""
     fa = str((arch.get("final_assessment") or {}).get("topic") or "")
     main = {str(i.get("id")): i.get("text", "") for i in arch.get("main_ilos", [])}
+    main_en = {str(i.get("id")): i.get("text_en") or "" for i in arch.get("main_ilos", [])}
     out = []
     for am in sorted(arch.get("modules", []), key=lambda m: int(m.get("module", 0))):
         if str(am.get("module")) == fa:
             continue
-        en = {str(s.get("id", "?")): s.get("text_en") or "" for s in am.get("sub_ilos") or [] if isinstance(s, dict)}
+        raw = {str(s.get("id", "?")): s for s in am.get("sub_ilos") or [] if isinstance(s, dict)}
+        en = {i: s.get("text_en") or "" for i, s in raw.items()}
+        # the English reading of the programme's own words: a kept Sub-ILO's "text_en", a re-worded one's "programme_text_en"
+        read = {i: (s.get("text_en") if s.get("status", "original") == "original" else s.get("programme_text_en")) or ""
+                for i, s in raw.items()}
         rows = [{"id": s["id"], "text": s["text"], "asks": s["level"], "main": False, "lang": s["lang"],
                  "programme_text": s.get("programme_text") or s["text"], "programme_lang": s.get("programme_lang") or s["lang"],
-                 "status": s.get("status"), "text_en": en.get(s["id"], "")} for s in bloom_map._sub_ilos(prog, arch, am)]
+                 "status": s.get("status"), "text_en": en.get(s["id"], ""), "programme_en": read.get(s["id"], "")}
+                for s in bloom_map._sub_ilos(prog, arch, am)]
         if not rows:
             rows = [{"id": i, "text": main.get(i, ""), "asks": bloom_map.ilo_level(main.get(i, ""))["level"], "main": True,
-                     "lang": "en", "programme_text": main.get(i, ""), "programme_lang": "en", "status": "original"}
+                     "lang": "en", "programme_text": main.get(i, ""), "programme_lang": "en", "status": "original",
+                     "programme_en": main_en.get(i, "")}
                     for i in (str(x) for x in am.get("main_ilos", []))]
         out.append({"n": int(am["module"]), "title": am.get("title", ""), "rows": rows,
                     "active": [a for a in (am.get("active_learning") or []) if isinstance(a, dict)]})
@@ -569,9 +577,13 @@ def verb_of(text, lang, lvl=None):
 def outcome_columns(r, new):
     """Intended learning outcome | existing verb | revised learning outcome | revised verb, as the experts read them.
     The intended outcome is the programme's words; a Sub-ILO may be re-worded (L2: proposed, ratified by the expert),
-    a Main ILO never. The revised outcome is English (L19): `check` stops the documents on one that is not."""
+    a Main ILO never. The revised outcome is English (L19): `check` stops the documents on one that is not.
+    "intended_en" is the English reading of a programme not in English, shown beside its words: "" when there is
+    none, or the words are English already. It is no part of a row's hash - a reading put right asks no answer again."""
     rw = revised_of(r, new)
+    reading = (r.get("programme_en") or "").strip()
     return {"main": r["main"], "intended": r["programme_text"],
+            "intended_en": reading if reading != (r["programme_text"] or "").strip() else "",
             "existing_verb": verb_of(r["programme_text"], r.get("programme_lang")),
             "revised": rw, "revised_verb": verb_of(rw, r.get("lang"), new.get("level")) if rw else "",
             "tla": new.get("how") or "not judged yet"}
