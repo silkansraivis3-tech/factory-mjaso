@@ -270,6 +270,9 @@ def _who(a):
     return (a.get("by_name") or a.get("by_email") or "an expert").strip()
 
 
+IN_ENGLISH = 'Re-word the outcome: "%s" (the course is in English - write this wording in English: pedagogy_review.py reword)'
+
+
 def pull_pedagogy(course, answers, ready):
     """The pedagogy's answers into pedagogy_review.json: (taken answer ids, taken document ids, log rows, said)."""
     f = pr.files(course)
@@ -277,6 +280,7 @@ def pull_pedagogy(course, answers, ready):
     if rev is None:
         return [], [], [], ["there is no pedagogy_review.json to write the answers into"]
     v = pr.view(course)
+    lang = (_load(f["prog"], {}) or {}).get("language")
     # the editor's row -> (where it is written, the log's place, what it is about)
     where_of = {"course": (rev, "2 · course · summaries", None), "upgrades": (rev, "2 · course · upgrades", "upgrades")}
     topic_of = {}            # the editor's topic row -> (module, Sub-ILO id, is a Main ILO)
@@ -297,6 +301,14 @@ def pull_pedagogy(course, answers, ready):
         if text and not main and pr.ratify(course, n, sid, text, who):
             return "; Sub-ILO re-worded: " + text
         return ""
+
+    def to_english(item, text, base):
+        """A Sub-ILO's new wording that is not in English is never taken as it is (L19): it becomes the expert's note,
+        and check stops until the factory has written it in English. "" when there is nothing of the kind."""
+        if not text or item not in topic_of or topic_of[item][2] or not pr.not_english(text, lang):
+            return ""
+        where_of[item][0]["expert_notes"].append(dict(base, said=IN_ENGLISH % text, done=""))
+        return "; to do - the Sub-ILO's new wording, written in English: " + text
     for a in answers:
         target = where_of.get(a["item"])
         if not target:
@@ -312,7 +324,12 @@ def pull_pedagogy(course, answers, ready):
         d = a.get("decision") or {}
         if a["verdict"] == "ok":
             row["expert_review"].append(dict(base, ok=True, **({"note": a["note"]} if a.get("note") else {})))
-            rw = reword(a["item"], ((row.get("proposed") or {}).get("revised_outcome") or "").strip(), _who(a)) if a["item"] in topic_of else ""
+            taken = ((row.get("proposed") or {}).get("revised_outcome") or "").strip() if a["item"] in topic_of else ""
+            rw = to_english(a["item"], taken, base)
+            if rw:
+                row["proposed"].pop("revised_outcome")
+            else:
+                rw = reword(a["item"], taken, _who(a)) if taken else ""
             if rw:
                 log.append((where, "Take proposed [%s, editor mode]" % _who(a), rw[2:]))
         elif a["verdict"] == "change":
@@ -329,7 +346,10 @@ def pull_pedagogy(course, answers, ready):
                 pr.carry_out(row, int(d["level"]), d.get("said") or "", _who(a), how=d.get("how") or "", why=d.get("why") or None)
                 what = "set with Claude to %s: %s" % (pr.level(int(d["level"])), d.get("how") or "")
                 rw = (d.get("revised_outcome") or "").strip()
-                if rw and not topic_of[a["item"]][2]:
+                owed = to_english(a["item"], rw, base)
+                if owed:
+                    what += owed
+                elif rw and not topic_of[a["item"]][2]:
                     row["proposed"]["revised_outcome"] = rw
                     what += reword(a["item"], rw, _who(a))
             row["expert_review"].append(dict(base, decision=d["choice"], level=row["proposed"]["level"]))

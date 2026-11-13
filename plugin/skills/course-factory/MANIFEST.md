@@ -7,6 +7,31 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.130.1 · Every revised outcome is in English (2026-11-13)
+
+- **Why.** The owner's rule: everything in the system is in English. On the staging course GAS BASIC 04/11 NEWEST
+  EDITION (pedagogy version 3) the experts read revised outcomes in Latvian. 2.102.0's `bloom/GUIDE.md` said to write
+  `revised_outcome` "in the programme's language"; 2.104.0 changed the guide and added `not_english`, but a wording could
+  still get through.
+- **The three doors, shut.** (1) `pedagogy_review.ratify` wrote whatever an expert took into the architecture - now it
+  refuses a wording that is not English, and `course_portal.py pull` (`to_english`) turns such a wording into the
+  expert's open note instead of a revised outcome. (2) A re-expressed Sub-ILO already in the architecture in the
+  programme's language was shown as the revised outcome with no check - `check` now stops on it. (3) `not_english` knew
+  a wording only by a lead verb of `knowledge/bloom.json` and only under a programme not in English - it now also
+  knows it by its letters (`OTHER_LETTERS`, Cyrillic); one word with such a letter stays English (a maker's name).
+- **`reword`.** `pedagogy_review.py reword --module --topic --text --by` (`record_reword`): the one way the factory writes
+  an expert's wording into the architecture by hand - English only, a Main ILO refused (L2), the row's own
+  `revised_outcome` removed so the architecture is the one place it lives.
+- **`programme_text_en`.** `ratify` moves an original Sub-ILO's `text_en` (the English reading of the programme's words)
+  there: left as `text_en`, `ilo_map.english` and the documents showed it in place of the new wording. Nothing reads
+  `programme_text_en` yet; it is kept for an English reading beside the intended outcome.
+- **Not changed.** The intended outcome is the programme's accredited wording: `topic.intended` is sent as it is,
+  Latvian included (L2, L19 - "the programme stays in its own language ... on the review pages"). Whether the editor
+  shows an English reading beside it is the owner's decision. `ilo_map.english` still prefers `text_en` for a
+  re-expressed Sub-ILO; a course ratified before this version may carry a stale one (none known).
+- **Tests.** `test_pedagogy_review.py` 54 (11 new), `test_course_portal.py` 69 (6 new); `test_architecture_page.py`,
+  `test_content_script.py`, `test_fix.py`, `test_factory_trial.py`, `test_bloom_map.py` unchanged and passing.
+
 ## 2.129.0 · Day sheets and the course on one page, for every instructor-led course (2026-11-12)
 
 - WHY: the Project Management practical pack's day task sheets and one-page overview were written by hand

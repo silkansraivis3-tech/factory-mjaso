@@ -21,6 +21,10 @@ Pinned:
   * the outcomes are the programme's: a proposal never re-words one ('revised_outcome' stops the check); an expert's
     decision may, in English - one in the programme's language (Latvian) stops the check (L19); the documents show the
     programme's own words beside it;
+  * every revised outcome is English, whatever the programme's language: a wording is known as not English by its
+    letters too (Latvian with no verb the lists know, Russian), a maker's name stays English; ratify never writes one
+    into the architecture; a re-worded Sub-ILO already there in Latvian stops the check; reword writes it in English,
+    refuses Latvian and a Main ILO; a re-expressed Sub-ILO with its English beside it is read in English;
   * render writes the three documents as Word and HTML, the outcomes' words read from the architecture, never from the
     judgement file; the activities with the experts' status; a sign-off block; level 0 says "not taught";
   * the Stage 2 approval is refused until the documents are clean and written from the current files, and an edit to the
@@ -47,6 +51,7 @@ import test_architecture_page as tap  # noqa: E402
 
 PASS, FAIL = [], []
 REVISED = "Apply the physical properties of liquefied gases to choose a safe cargo-handling step"
+REVISED_LV = "Pielietot zināšanas par sašķidrināto gāzu vielu fizikālajām īpašībām"
 
 
 def check(name, ok, detail=""):
@@ -280,6 +285,60 @@ def main():
                            capture_output=True, text=True, encoding="utf-8", errors="replace")
         check("make_architecture_page --approve is refused without the documents",
               p.returncode == 2 and "pedagogy documents" in p.stdout and "NOT recorded" in p.stdout, p.stdout[-400:])
+
+        print("\n-- every revised outcome is English (GAS BASIC 04/11: six were written in the programme's Latvian)")
+        check("not English by its letters: Latvian with no verb the lists know, and under a programme that says English",
+              pr.not_english("Kravas operāciju plāns uz gāzes tankkuģa") and pr.not_english(REVISED_LV, "en"))
+        check("not English: a Russian wording", pr.not_english("Применять знания о свойствах сжиженных газов"))
+        check("English stays English: a maker's name, a degree sign",
+              not pr.not_english("Operate the Wärtsilä reliquefaction plant at -162 °C", "Latvian")
+              and not pr.not_english(REVISED, "Latvian"))
+        e = tap.write_course(os.path.join(tmp, "english"), tap.PROGRAMME, copy.deepcopy(tap.ARCH))
+        complete(e)
+        fe = pr.files(e)
+        out13 = tap.PROGRAMME["outcomes"]["1.3"]
+
+        def sub13(**change):
+            a = json.load(io.open(fe["arch"], encoding="utf-8"))
+            if change:
+                a["modules"][1]["sub_ilos"][0].update(change)
+                io.open(fe["arch"], "w", encoding="utf-8").write(json.dumps(a, ensure_ascii=False))
+            return a["modules"][1]["sub_ilos"][0]
+
+        def topic13():
+            return next(t for m in pr.view(e)["content"]["modules"] for t in m["topics"] if t["id"] == "1.3")
+        check("ratify never writes a wording that is not English into the architecture",
+              pr.ratify(e, 2, "1.3", REVISED_LV, "Anna Liepa") is False and sub13()["status"] == "original", sub13())
+        sub13(status="re-expressed", programme_text=out13, text=REVISED_LV, text_en="")
+        check("a re-worded Sub-ILO already in the architecture in Latvian stops the check",
+              any("module 2, topic 1.3: the Sub-ILO as re-worded in the architecture is not in English" in p
+                  for p in pr.check(e)[0]), pr.check(e)[0])
+        sub13(text_en=REVISED)
+        check("... with its English beside it the experts read the English, the programme's own words as intended",
+              (topic13()["intended"], topic13()["revised"]) == (out13, REVISED)
+              and not any("not in English" in p for p in pr.check(e)[0]), (topic13(), pr.check(e)[0]))
+        sub13(text_en="")
+        code, out = run("reword", "--course", e, "--module", "2", "--topic", "1.3", "--text", REVISED_LV, "--by", "Anna Liepa")
+        check("reword refuses a wording that is not English", code == 2 and "not in English" in out
+              and sub13()["text"] == REVISED_LV, out)
+        code, out = run("reword", "--course", e, "--module", "3", "--topic", "1", "--text", "Operate the whole cargo plant",
+                        "--by", "Anna Liepa")
+        check("reword refuses a Main ILO (L2)", code == 2 and "never re-worded" in out, out)
+        code, out = run("reword", "--course", e, "--module", "2", "--topic", "1.3", "--text", REVISED, "--by", "Anna Liepa")
+        s13 = sub13()
+        check("reword writes the Sub-ILO in English, the programme's own words kept beside it",
+              code == 0 and (s13["status"], s13["text"], s13["programme_text"]) == ("re-expressed", REVISED, out13)
+              and s13["ratified"]["by"] == "Anna Liepa", (out, s13))
+        o = tap.write_course(os.path.join(tmp, "reading"), tap.PROGRAMME, copy.deepcopy(tap.ARCH))
+        pr.ratify(o, 2, "1.3", REVISED, "Anna Liepa")
+        o13 = json.load(io.open(pr.files(o)["arch"], encoding="utf-8"))["modules"][1]["sub_ilos"][0]
+        check("a re-worded Sub-ILO no longer shows the English reading of the words it replaced; the reading is kept",
+              "text_en" not in o13 and o13["programme_text_en"] == "Describe the physical properties of liquefied gases"
+              and o13["text"] == REVISED, o13)
+        check("... and the experts read the programme's words as intended and the English as revised",
+              (topic13()["intended"], topic13()["revised"]) == (out13, REVISED)
+              and topic13()["revised_verb"].startswith("apply")
+              and not any("not in English" in p for p in pr.check(e)[0]), (topic13(), pr.check(e)[0]))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

@@ -15,6 +15,9 @@ pulled answers are not pulled again). Pinned:
     its 'done' says what was changed; Ready -> pedagogy_review.json "ready", and render signs the documents with the
     expert's name; what was taken is acknowledged and not taken twice; an answer changed from "change" to OK takes
     its open note away;
+  * a Sub-ILO's new wording that arrives in the programme's language (a decision with Claude, or Take proposed on
+    a proposal an older factory wrote in it) is never taken as it is: the architecture keeps what it had, the
+    wording becomes the expert's note, check stops until pedagogy_review.py reword has written it in English;
   * the client knows only the staging project, and the key comes from the office PC, never from a course folder.
 """
 from __future__ import annotations
@@ -298,6 +301,49 @@ def main():
         t11 = {t["id"]: t for t in pr.view(c)["content"]["modules"][0]["topics"]}["1.1"]
         check("sent again, the topic shows the programme's words as intended and the ratified ones as revised",
               t11["intended"].startswith("Identificēt") and t11["revised"].startswith("Operate the cargo"), t11)
+
+        print("\n-- a new wording that arrives in the programme's language is written in English first")
+        lv_a, lv_13 = "Atšķirt sašķidrinātās gāzes tankkuģu tipus un analizēt to uzbūvi", tpr.REVISED_LV
+        rev = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))
+        rev["modules"]["1"]["rows"]["1.1.a"]["proposed"]["revised_outcome"] = lv_a      # a proposal of an older factory
+        io.open(pr.files(c)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
+        srv.answer("anna.liepa@novikontas.org", "1/1.1.a", "ok")
+        srv.answer("anna.liepa@novikontas.org", "2/1.3", "decision", decision={
+            "choice": "claude", "level": 3, "how": "Trainees choose the safe step for three cargoes from their properties.",
+            "why": "They handle these cargoes on board.", "said": "Lai pielieto.", "revised_outcome": lv_13})
+        out_of(cp.cmd_pull, c)
+        arch = json.load(io.open(pr.files(c)["arch"], encoding="utf-8"))
+        rev = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))
+        r1a, r13 = rev["modules"]["1"]["rows"]["1.1.a"], rev["modules"]["2"]["rows"]["1.3"]
+        s1a, s13 = arch["modules"][0]["sub_ilos"][1], arch["modules"][1]["sub_ilos"][0]
+        check("neither is taken as it is: the architecture keeps what it had, no row carries the Latvian as revised",
+              s1a["text"] == tap.SUB_NEW and s13.get("status", "original") == "original" and "text" not in s13
+              and "revised_outcome" not in r1a["proposed"] and "revised_outcome" not in r13["proposed"], (s1a, s13))
+        check("the decision's level and teaching are carried out all the same", r13["proposed"]["level"] == 3
+              and r13["proposed"]["how"].startswith("Trainees choose") and r13["proposed"]["expert"]["by"] == "Anna Liepa", r13)
+        probs = pr.check(c)[0]
+        check("each wording is the expert's note, and check stops until it is written in English",
+              any(lv_a in n["said"] and not n["done"] for n in r1a.get("expert_notes") or [])
+              and any(lv_13 in n["said"] and not n["done"] for n in r13.get("expert_notes") or [])
+              and any("module 1, topic 1.1.a" in p and lv_a in p for p in probs)
+              and any("module 2, topic 1.3" in p and lv_13 in p for p in probs), probs)
+        log = io.open(os.path.join(c, "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("... and FEEDBACK_LOG.md says what is still to do",
+              "written in English: " + lv_a in log and "written in English: " + lv_13 in log, log[-700:])
+        code, _ = out_of(cp.cmd_push_pedagogy, c)
+        check("push is refused meanwhile - nothing in Latvian reaches the editor as a revised outcome", code == 2)
+        pr.record_reword(c, 1, "1.1.a", "Identify the types of liquefied gas tankers on a general arrangement plan", "Anna Liepa")
+        pr.record_reword(c, 2, "1.3", tpr.REVISED, "Anna Liepa")
+        rev = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))
+        for n, i in (("1", "1.1.a"), ("2", "1.3")):
+            for note in rev["modules"][n]["rows"][i]["expert_notes"]:
+                note["done"] = note["done"] or "Written in English, the programme's own words beside it."
+        io.open(pr.files(c)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
+        topics = {t["id"]: t for m in pr.view(c)["content"]["modules"] for t in m["topics"]}
+        check("written in English with reword, the experts read English beside the programme's own words",
+              topics["1.3"]["revised"] == tpr.REVISED and topics["1.3"]["intended"].startswith("Aprakstīt")
+              and topics["1.1.a"]["revised"].startswith("Identify the types") and pr.check(c)[0] == [],
+              (pr.check(c)[0], topics["1.1.a"]["revised"]))
 
         print("\n-- the build after Ready, on the office PC")
         old_env = dict(os.environ)
