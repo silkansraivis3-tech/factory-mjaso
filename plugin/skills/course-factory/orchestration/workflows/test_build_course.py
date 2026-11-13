@@ -105,6 +105,7 @@ const agent = async (prompt, o) => {
              findings: [{ severity: 'POLISH', where: 's02', what: 'the photograph is cut through the valve' }] }
   if (o.label.startsWith('qa:')) return { module: o.label.slice(3), classification: 'OK', blocking: false, findings: [] }
   if (o.label.startsWith('fix:')) return 'PASS - fixed'
+  if (o.label.startsWith('slidephotos:')) return 'FAIL M0' + o.label.slice(12) + ' - audits 1280x800 (90 s)\nBUILDS 2'
   if (o.label.startsWith('read:')) return { modules: [] }
   if (o.label === 'phase-a:modules') return args._phase_a ? { modules: args._phase_a } : {}   // 2.73.0 Phase A's lines
   const b = /^build:(\w+)$/.exec(o.label)                   // a builder: PASS, or (args._stuck) stopped mid-build
@@ -820,11 +821,68 @@ def main():
         check("a run without first_pass keeps its fix lane (the real course build) and records no first pass",
               (run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_broken": ["1"]}).get("r") or {}).get("first_pass") is None
               and any(x.startswith("fix:") for x in run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_broken": ["1"]}).get("labels", [])))
+        focus_part(tmp, mods, two)
         brief_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
+
+
+def focus_part(tmp, mods, off):
+    """the factory trial's focus run (factory_trial.py run --focus): after Phase A a slide-photo pass and the walk of the
+    slides a module, then the papers - nothing else, and the result says what was skipped"""
+    line1 = "PHASE A CLEAN M01 - 2 picture slot(s) still hold Phase A's stand-ins | 3D TO PLACE: s05 s07 | TASK PICTURES: q02"
+    fo = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "focus": True, "final": True,
+                   "_scene": ["1", "2"], "_figs": ["1", "2"], "_broken": ["1"], "_badwalk": ["1"],
+                   "_phase_a": [{"module": "1", "line": line1}, {"module": "2", "line": "PASS M02 - figures, compile, audits (80 s)"}]})
+    lf, pf, rf = fo.get("labels", []), fo.get("prompts", {}), fo.get("r") or {}
+    check("focus: no scene author, task-picture author, builder, 3D check or review, figure shots or review, QA, fixer, "
+          "polish, final, assembly or cross-check is started",
+          "error" not in fo and not any(x.startswith(("scenes:", "taskpics:", "build:", "3d:", "review3d:", "figshots:", "reviewfig:",
+                                                      "fixfig:", "fix:", "fixbuild:", "qa:", "polish:", "walk:final",
+                                                      "assemble:", "crosscheck:")) for x in lf), fo.get("error") or lf)
+    check("... Phase A and the photo catalogue, ONE slide-photo pass for a module Phase A left work in (none for one it "
+          "finished), the walk judge after it, once, then the papers",
+          lf[:3] == ["gate:ilo-map+kb", "phase-a:modules", "photos:course"] and lf.count("slidephotos:1") == 1
+          and "slidephotos:2" not in lf and lf.count("walk:1") == 1 and lf.count("walk:2") == 1
+          and lf.index("walk:1") > lf.index("slidephotos:1") and lf[-1] == "papers:course"
+          and not any("+" in x for x in lf[1:]), lf)
+    sp = pf.get("slidephotos:1", "")
+    check("... the slide-photo pass: only the slides' photograph slots, of the slot's shape, recorded as seen; at most two "
+          "builds with no task page answered; 3D scenes, figures and task pages left as they are",
+          "--no-review" in sp and "AT MOST TWO build_module.py runs" in sp and "SLOT'S SHAPE" in sp and '"fits_slide"' in sp
+          and '"marks_seen"' in sp and "Leave every 3D scene at its starter" in sp and "PHASE A CLEAN M01" in sp
+          and "Never run walk_review.py" in sp and "ITS CODE IS NOT" in sp and "--init-build" in sp, sp[:3000])
+    w1, w2 = pf.get("walk:1", ""), pf.get("walk:2", "")
+    check("... the walk judge reviews the slides alone (--deck-only at prepare and verify), signed against the pass that "
+          "placed the photographs - or Phase A when it finished the module",
+          "FOCUS RUN - THE SLIDES ONLY" in w1 and 'prepare "C:/c" --module 1 --stale --deck-only' in w1
+          and 'verify "C:/c" --module 1 --deck-only' in w1 and '--built-by "slidephotos:1 (workflow slide-photo pass)"' in w1
+          and '--built-by "phase-a:modules (workflow Phase A, no builder)"' in w2, w1[:2500])
+    pp = pf.get("papers:course", "")
+    check("... the papers: additional_materials.py builds and checks each module's trainee and instructor papers",
+          'additional_materials.py "C:/c"' in pp and '--check' in pp and "sim_coverage.py practical" in pp, pp)
+    fp = (rf.get("first_pass") or {}).get("modules") or []
+    f1 = next((x for x in fp if x["module"] == "1"), {})
+    f2 = next((x for x in fp if x["module"] == "2"), {})
+    check("... the walk's fails are recorded as the first pass records them, never sent to a fixer; the pass's builds and "
+          "its build line are kept",
+          f1.get("findings_total") == 1 and f1.get("clean") is False and f1.get("builds") == 2
+          and f1.get("first_build", "").startswith("FAIL M01") and f1.get("open") == ["WALK s04: stop 3: the chart is still an empty axis"]
+          and f2.get("phase_a_clean") is True and f2.get("clean") is True, fp)
+    fx = rf.get("focus") or {}
+    check("... the result says FOCUS: the five checks, and the checks it skipped by name",
+          len(fx.get("checked") or []) == 5 and any("QA" == x for x in fx.get("skipped") or [])
+          and any("3D" in x for x in fx.get("skipped") or []) and any("task pages" in x for x in fx.get("skipped") or [])
+          and any("cross-check" in x for x in fx.get("skipped") or []) and "FOCUS" in rf.get("next", "")
+          and rf.get("assembly") is None and rf.get("cross") is None, rf)
+    lo = off.get("labels", [])
+    check("without focus nothing changes: builders, QA and the cross-check run, no slide-photo pass or papers agent, the walk "
+          "covers the task pages, and the result has no focus",
+          "build:1" in lo and "qa:1" in lo and "crosscheck:course" in lo and "assemble:course" in lo
+          and not any(x.startswith(("slidephotos:", "papers:")) for x in lo) and "--deck-only" not in off["prompts"].get("walk:1", "")
+          and "FOCUS RUN" not in off["prompts"].get("walk:1", "") and "focus" not in (off.get("r") or {}), lo)
 
 
 BRIEF = os.path.join(HERE, "brief.mjs")

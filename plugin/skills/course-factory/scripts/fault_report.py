@@ -23,7 +23,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 COMPILE = os.path.join(os.path.dirname(HERE), "compile", "scripts")
 KNOWLEDGE = "course-module-ui/knowledge/"
-KINDS = ("layout", "overflow_cut", "words", "blueprint", "3d", "highlight", "task_page", "script", "other")
+KINDS = ("layout", "overflow_cut", "words", "blueprint", "3d", "highlight", "task_page", "script", "papers", "other")
 CUT_KINDS = ("cut", "spill", "picture", "figure")
 DECISIONS = ("fix it in the factory", "leave it", "not a fault")
 
@@ -100,6 +100,34 @@ def rule_checks(deck, slides):
             out.append(_fault(sid, "words", "rule check: words against the budget of the slide's own shape",
                               "a slide in %s holds up to %d words %s, measured (%s)" % (bp_id, most["words"], most["what"], name), name,
                               "%d words in its text (the title apart, as measured) against %d in %s" % (use, most["words"], bp_id)))
+    return out
+
+
+def variety_faults(deck):
+    """[fault] each teaching slide that looks the same as the teaching slide before it (layout_plan.score's repeats - a
+    comparison may take the look before it on purpose and is none)"""
+    if COMPILE not in sys.path:
+        sys.path.insert(0, COMPILE)
+    import layout_plan as lp
+    items, shapes = lp.deck_shapes(io.open(deck, encoding="utf-8", errors="replace").read())
+    return [_fault(items[b]["id"], "blueprint", "rule check: the same look twice in a row",
+                   "never the same look twice in a row (L62): the deck's shapes are planned over the whole module",
+                   KNOWLEDGE + "layout-templates.json shapes.plan",
+                   "%s looks the same as %s before it: %s" % (items[b]["id"], items[a]["id"], shapes[b]))
+            for a, b in lp.score(items, shapes)["repeats"]]
+
+
+def paper_faults(row):
+    """[fault] a focus run's papers: each simulator or equipment exercise the architecture plans with no paper, and each
+    file a listed paper is missing (row: the scorecard's module row)"""
+    rule = "every simulator and equipment exercise has its trainee card and instructor sheet, HTML and PDF, in papers.json"
+    src = "course-factory/compile/scripts/additional_materials.py"
+    out = [_fault("", "papers", "papers check", rule, src, "%s is missing from instructor/papers/" % f)
+           for f in row.get("papers_missing") or []]
+    gap = (row.get("papers_planned") or 0) - (row.get("papers_listed") or 0)
+    if gap > 0:
+        out.append(_fault("", "papers", "papers check", rule, src, "%d exercise(s) planned in the architecture, %d paper(s) listed"
+                          % (row["papers_planned"], row.get("papers_listed") or 0)))
     return out
 
 
@@ -193,12 +221,13 @@ def stop_picture(course, mod, slide, stop=None, text=""):
     return None
 
 
-def collect(course, mods, decks):
+def collect(course, mods, decks, extra=None):
     """every fault of the modules: decks = {module: (deck path, scan_deck's slides, fit findings {size: rows} or None)};
-    each fault gets its module, its picture (the walk's, a path) and its place in the report"""
+    extra = {module: [fault]} found elsewhere (a focus run's papers and repeats); each fault gets its module, its picture (the
+    walk's, a path) and its place in the report"""
     out = []
     for mod in mods:
-        faults = []
+        faults = list((extra or {}).get(mod) or [])
         deck, slides, fit = decks.get(mod) or (None, None, None)
         if deck and slides:
             try:
@@ -222,8 +251,9 @@ def collect(course, mods, decks):
     return out
 
 
-def write(run_dir, faults):
-    """FAULTS.html, faults.json and faults/ in run_dir; -> the html path"""
+def write(run_dir, faults, focus=None):
+    """FAULTS.html, faults.json and faults/ in run_dir; -> the html path. focus: a focus run's {"points": [(check, faults)],
+    "skipped": [...]} - the page opens on them"""
     pics = os.path.join(run_dir, "faults")
     os.makedirs(pics, exist_ok=True)
     for i, f in enumerate(faults, 1):
@@ -239,11 +269,11 @@ def write(run_dir, faults):
         json.dump(faults, fh, indent=1, ensure_ascii=False)
     path = os.path.join(run_dir, "FAULTS.html")
     with io.open(path, "w", encoding="utf-8") as fh:
-        fh.write(render(faults))
+        fh.write(render(faults, focus))
     return path
 
 
-def render(faults):
+def render(faults, focus=None):
     e = html.escape
     body, last = [], None
     for f in sorted(faults, key=lambda x: (x["module"], x["slide"], x["id"])):
@@ -261,6 +291,12 @@ def render(faults):
     for f in faults:
         count[f["kind"]] = count.get(f["kind"], 0) + 1
     head = ", ".join("%s %d" % (k.replace("_", " "), n) for k, n in sorted(count.items())) or "none"
+    if focus:
+        body.insert(0, '<section class="focus"><h2>FOCUS RUN - five checks only, not a full trial</h2><table>%s</table>'
+                       '<p><b>Not checked in this run (skipped):</b></p><ul>%s</ul></section>' % (
+                           "".join("<tr><td>%s</td><td>%s fault(s)</td></tr>" % (e(t), "-" if n is None else n)
+                                   for t, n in focus.get("points") or []),
+                           "".join("<li>%s</li>" % e(x) for x in focus.get("skipped") or [])))
     return ('<!doctype html><html lang="en"><meta charset="utf-8"><title>Trial faults</title>'
             '<style>body{font:15px/1.45 system-ui,sans-serif;margin:24px auto;max-width:1100px;padding:0 16px;color:#16212e;background:#fff}'
             'h2{margin:28px 0 8px;border-bottom:1px solid #cfd6df}.f{display:flex;gap:16px;margin:12px 0;padding:12px;border:1px solid #cfd6df;'
