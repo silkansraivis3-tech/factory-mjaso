@@ -504,7 +504,7 @@ def faults_part(tmp):
 
     def titled(sid, tid, var, img, text, cls="slide"):
         return ('<section class="%s" id="%s" data-template="%s.v1" data-variant="%s"><h2 data-script-field="title">Chlorine ships '
-                'and LPG chemical ships</h2><div class="fill fig"><img src="../assets/img/%s"></div><p data-script-field="text">%s</p>'
+                'and LPG gas ships</h2><div class="fill fig"><img src="../assets/img/%s"></div><p data-script-field="text">%s</p>'
                 '</section>' % (cls, sid, tid, var, img, text))
     one = os.path.join(pres, "one.html")
     B = cs.LAYOUT_RULES["budgets"]

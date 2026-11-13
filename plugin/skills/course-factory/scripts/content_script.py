@@ -1267,7 +1267,7 @@ def theory_check(script):
         if room:
             add(s["id"], "text", FAIL, "t_no_shape", w=room[0], max=room[1], aspect=room[3], fits=", ".join(room[2][:4]) or "-",
                 pic=T(script, "t_pic_3d" if picture_of(s)["kind"] == "3d" else "t_pic_other"))
-            found[-1]["fix"] = T(script, "t_fix_no_shape", max=room[1])
+            found[-1]["fix"] = T(script, "t_fix_no_shape", max=room[1]) + long_title_fix(script, s)
         if s.get("kind") != "slide":
             continue
         w_slide = wc(s.get("title", ""), s.get("text", ""))
@@ -1286,7 +1286,7 @@ def theory_check(script):
         if room:                              # the layouts its picture's shape takes hold fewer words: split, never a misfit
             add(s["id"], "text", FAIL, "t_no_shape", w=room[0], max=room[1], aspect=room[3], fits=", ".join(room[2][:4]) or "-",
                 pic=T(script, "t_pic_3d" if picture_of(s)["kind"] == "3d" else "t_pic_other"))
-            found[-1]["fix"] = T(script, "t_fix_no_shape", max=room[1])
+            found[-1]["fix"] = T(script, "t_fix_no_shape", max=room[1]) + long_title_fix(script, s)
         if s.get("recap"):
             pass                              # L51: a recap is short on purpose - recap_findings checks its points
         elif w_floor < R["slide"]["min_words"]:
@@ -3937,11 +3937,12 @@ def _planner():
 
 def script_blueprint(s):
     """(its blueprint, its picture's family, why it keeps its own or None) of a teaching slide as the compiler builds it from
-    the script alone, before any build sheet (compile_module.shaped_template / auto_template, layout_plan.py)"""
+    the script alone, before any build sheet (compile_module.shaped_template / auto_template, layout_plan.py). A film's
+    slide shows its still, a photograph"""
     cm, lp = _planner()
     lines = lines_of(s.get("text"))
     vk = s.get("visual_kind") or "none"
-    fam = None if vk == "none" else "photo" if vk in ("photo", "annotated_photo", "photo_to_take") \
+    fam = None if vk == "none" else "photo" if vk in ("photo", "annotated_photo", "photo_to_take", "video_real") \
         else "3d" if (MEDIA["visual_kinds"].get(vk) or {}).get("family") == "3d" else "drawing"
     if fam == "photo" and len(picture_of(s)["items"]) > 1:         # several photographs, one a thing: shown as tiles
         fam = "tiles"
@@ -3975,6 +3976,15 @@ def shaped_blueprint(s):
     return (lp.fitting(fam, aspect, ((lp.LIB.get(own_bp) or {}).get("fits") or {}).get("group")) or [own_bp])[0]
 
 
+def long_title_fix(script, s):
+    """the fix's last sentence for a slide whose title wraps at 1024 x 768 - "" for a one-line title"""
+    _, lp = _planner()
+    title = s.get("title") or ""
+    if lp.title_lines(title) < 2:
+        return ""
+    return " " + T(script, "t_fix_long_title", n=len(title), chars=lp.LONG_TITLE["chars"])
+
+
 def no_shape(s):
     """(its words, the most a layout its picture takes holds, [those layouts], the picture's declared shape) of a teaching
     slide whose words no layout holds once its picture keeps the shape the script gives it ("picture" "aspect") - or None.
@@ -3995,11 +4005,12 @@ def no_shape(s):
     aspect, w = None if fam == "tiles" else aspect_of(said), wc(" ".join(lines))     # tiles: each photograph its own shape
     if not fam or kept(lp, own_bp, fam, aspect, fixed) or not group:
         return None
-    opts, _ = lp.options(own_bp, w, fam, aspect, 0, None, None, "", s.get("id", ""))
+    title = s.get("title") or ""
+    opts, _ = lp.options(own_bp, w, fam, aspect, 0, None, None, "", s.get("id", ""), title=title)
     if opts and not any(o.get("over") for o in opts):
         return None
     fit = lp.fitting(fam, aspect, group)
-    most = max([(lp.holds(b, fam) or {}).get("words", 0) for b in fit] or [0])
+    most = max([(lp.holds(b, fam, title) or {}).get("words", 0) for b in fit] or [0])
     return w, most, fit, said
 
 
@@ -4018,7 +4029,7 @@ def shape_line(script):
         tid, vk = own_bp.split(".")[0], s.get("visual_kind") or "none"
         aspect = aspect_of(picture_of(s)["aspect"])
         fixed = kept(lp, own_bp, fam, aspect, fixed)
-        opts, why = lp.options(own_bp, wc(" ".join(lines)), fam, aspect, 0, None, fixed, seed, s["id"])
+        opts, why = lp.options(own_bp, wc(" ".join(lines)), fam, aspect, 0, None, fixed, seed, s["id"], title=s.get("title") or "")
         items.append({"id": s["id"], "own": lp.MAP.get(own_bp) or "beside", "own_bp": own_bp, "options": opts, "why": why,
                       "fixed": fixed, "echo": lp.comparison(tid, vk, s.get("title"))})
     choice = lp.plan(items)

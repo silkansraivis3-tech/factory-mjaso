@@ -93,7 +93,8 @@ def rule_checks(deck, slides):
             continue
         s = by_id[sid]
         family = lp.slide_picture(block, mdir)[0]
-        most = lp.holds(bp_id, family) if family else None
+        title = re.sub(r"<[^>]+>", "", (re.search(r"<h2\b[^>]*>(.*?)</h2>", block, re.S) or [None, ""])[1])
+        most = lp.holds(bp_id, family, html.unescape(title).strip()) if family else None
         use = max(s["parts"].values(), default=0) if fits.get("group") == "parts" else s.get("text_words", s["seen_words"])
         if most and use > most["words"]:
             name = "layout-templates.json budgets.%s" % most["key"]
