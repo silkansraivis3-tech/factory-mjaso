@@ -292,7 +292,7 @@ def render(faults, focus=None):
         count[f["kind"]] = count.get(f["kind"], 0) + 1
     head = ", ".join("%s %d" % (k.replace("_", " "), n) for k, n in sorted(count.items())) or "none"
     if focus:
-        body.insert(0, '<section class="focus"><h2>FOCUS RUN - five checks only, not a full trial</h2><table>%s</table>'
+        body.insert(0, '<section class="focus"><h2>FOCUS RUN - these checks only, built once and judged once - not a full trial</h2><table>%s</table>'
                        '<p><b>Not checked in this run (skipped):</b></p><ul>%s</ul></section>' % (
                            "".join("<tr><td>%s</td><td>%s fault(s)</td></tr>" % (e(t), "-" if n is None else n)
                                    for t, n in focus.get("points") or []),

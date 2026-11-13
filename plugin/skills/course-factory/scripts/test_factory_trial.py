@@ -174,11 +174,12 @@ def main():
         last = sorted(os.listdir(os.path.join(home, "runs")))[-1]
         focus_prompt = io.open(os.path.join(home, "runs", last, "prompt.txt"), encoding="utf-8").read()
         fmark = ft.load(os.path.join(master, ft.MARKER))
-        check("--focus: the scripts as the first pass writes them, then the five checks alone - \"focus\": true in args.json, "
+        check("--focus: the scripts as the first pass writes them, then the focus checks alone - \"focus\": true in args.json, "
               "the marker and the run folder say FOCUS",
               code == 0 and "ONE rewrite round" in focus_prompt and "first_pass.json" in focus_prompt
               and '"first_pass": true and "focus": true' in focus_prompt and "FOCUS RUN" in focus_prompt
-              and "start only what it lists" in focus_prompt and '"builds": 3' not in focus_prompt
+              and "Start every agent brief.mjs lists at once" in focus_prompt and "3D" in focus_prompt
+              and "task pages" in focus_prompt and '"builds": 3' not in focus_prompt
               and fmark.get("focus") is True and fmark["first_pass"] is True and last.endswith("_focus"), (last, focus_prompt))
         shutil.rmtree(os.path.join(home, "runs", last))       # the runs below in the same minute read the last folder by name
         code, out = cli("run", "--home", home, "--modules", "1,4", "--dry-run", "--focus", "--full")
@@ -486,8 +487,8 @@ def main():
 
 
 def focus_scoring(tmp, oc, other, agents):
-    """a focus run's scorecard and fault page: the five checks first, what was skipped named, the papers and the slide walk
-    scored"""
+    """a focus run's scorecard and fault page: the focus checks first, what was skipped named; the papers, the slide walk, the
+    3D check and review and the task pages scored"""
     print("\n-- a focus run's scorecard (run --focus)")
     io.open(os.path.join(oc, "working_claude", "architecture.json"), "w", encoding="utf-8").write(json.dumps({
         "course": {"title": "T"}, "modules": [{"module": 1, "practicals": [
@@ -503,7 +504,26 @@ def focus_scoring(tmp, oc, other, agents):
     io.open(os.path.join(agents, "walk_1.json"), "w", encoding="utf-8").write(json.dumps({
         "walked": True, "ok": False, "state": "NOT DONE: walk review failing for M01 - open fails on s02, s06", "fails": [
             {"slide": "s02", "what": "stop 1: the photograph is cropped through the tank"},
-            {"slide": "s06", "what": "stop 2: the last line is cut at the bottom"}]}))
+            {"slide": "s06", "what": "stop 2: the last line is cut at the bottom"},
+            {"slide": "check.q2", "what": "picture 3: the tap area covers only the mast's cap"}]}))
+    io.open(os.path.join(agents, "3d_1.json"), "w", encoding="utf-8").write(json.dumps({
+        "has_scene": True, "ok": False, "shots": [], "scenes": [{"slide": "s05"}, {"slide": "s07"}]}))
+    io.open(os.path.join(agents, "review3d_1.json"), "w", encoding="utf-8").write(json.dumps({"findings": [
+        {"severity": "BROKEN", "where": "s05 s05_step1.png", "what": "the labels are a row of buttons"},
+        {"severity": "POLISH", "where": "s07", "what": "the camera could sit closer"}]}))
+    tasks = os.path.join(oc, "modules", "module01", "tasks")
+    os.makedirs(tasks)
+    for name in ("check", "self_check_1"):
+        io.open(os.path.join(tasks, name + ".html"), "w", encoding="utf-8").write("<html><body><p>%s</p></body></html>" % name)
+    pages = ft.task_pages_of(oc, 1)
+    sys.path.insert(0, ft.MEASURE)
+    import walk_review as wr
+    walk_dir = wr.walk_dir(oc, 1)
+    os.makedirs(walk_dir, exist_ok=True)
+    io.open(os.path.join(walk_dir, "tasks.json"), "w", encoding="utf-8").write(json.dumps({"pages": {
+        "check": {"fingerprint": wr.task_pages(os.path.join(oc, "modules", "module01"))["check"]["fingerprint"],
+                  "questions": [{"id": "q1"}, {"id": "q2"}]},
+        "self_check_1": {"fingerprint": "an older page", "questions": [{"id": "q1"}]}}}))
     row = ft.score_module(oc, 1, no_browser=True, focus=True)
     check("focus: the papers - two exercises planned, one listed with a file missing: two faults",
           row["papers_planned"] == 2 and row["papers_listed"] == 1 and row["papers_made"] == 0
@@ -514,17 +534,26 @@ def focus_scoring(tmp, oc, other, agents):
           and isinstance(row["look_repeats"], int) and isinstance(row["picture_shape_misfits"], int)
           and "cut_at_1280x720" in row and "slides_3d_lagging" not in row
           and row["focus_faults"]["pictures"] == row["picture_shape_misfits"] + row["pictures_pending"] + 1, row)
+    check("... the task pages: two, one answered by the build as it is now (the other's answers are of an older page); the "
+          "walk's fail on a question counts there, not on the slides; two faults",
+          pages == {"check": False, "self_check_1": False} and row["task_pages"] == 2 and row["task_pages_answered"] == 1
+          and row["task_walk_fails"] == 1 and row["focus_faults"]["task_pages"] == 2, row)
+    check("... the 3D scenes: two, the 3D check not ok, one BROKEN finding of the review (a POLISH line is none): two faults",
+          row["three_d_scenes"] == 2 and row["three_d_check_ok"] == "no" and row["three_d_broken"] == 1
+          and row["focus_faults"]["three_d"] == 2, row)
     card = {"plugin": "x", "started": "s", "modules": [row], "focus": ft.focus_summary([row])}
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         ft.show(card)
     out = buf.getvalue()
-    check("... the scorecard says FOCUS RUN, opens on the five checks with their faults, then names every check skipped - "
+    check("... the scorecard says FOCUS RUN, opens on the seven checks with their faults, then names every check skipped - "
           "and prints none of a full trial's module lines",
           out.startswith("FACTORY TRIAL (FOCUS RUN)") and "NOT a full trial" in out
           and out.index("1 the practical") < out.index("2 the slide style") < out.index("3 no slide text cut")
-          < out.index("4 the slides' pictures") < out.index("5 the fact check") < out.index("Not checked in this run")
-          and all(x in out for x in ft.FOCUS_SKIPPED) and "papers missing" in out and "interactive 3d share" not in out, out)
+          < out.index("4 the slides' pictures") < out.index("5 the fact check") < out.index("6 the 3D scenes")
+          < out.index("7 the trainee task pages") < out.index("Not checked in this run")
+          and all(x in out for x in ft.FOCUS_SKIPPED) and "papers missing" in out and "three d broken" in out
+          and "task pages answered" in out and "build says" not in out, out)
     full = io.StringIO()
     with contextlib.redirect_stdout(full):
         ft.show({"plugin": "x", "modules": [dict(row, module=1)]})
@@ -540,11 +569,12 @@ def focus_scoring(tmp, oc, other, agents):
     card = json.load(io.open(os.path.join(run, "scorecard.json"), encoding="utf-8"))
     page = io.open(os.path.join(run, "FAULTS.html"), encoding="utf-8").read()
     faults = json.load(io.open(os.path.join(run, "faults.json"), encoding="utf-8"))
-    check("report of a focus run: the scorecard carries FOCUS with its five checks, their faults and the skipped checks; "
+    check("report of a focus run: the scorecard carries FOCUS with its seven checks, their faults and the skipped checks; "
           "FAULTS.html opens on them and lists the papers as faults",
-          "FOCUS RUN" in out and len(card["focus"]["checked"]) == 5 and card["focus"]["faults"]["papers"] == 2
+          "FOCUS RUN" in out and len(card["focus"]["checked"]) == 7 and card["focus"]["faults"]["papers"] == 2
+          and card["focus"]["faults"]["three_d"] == 2 and card["focus"]["faults"]["task_pages"] == 2
           and card["focus"]["skipped"] == list(ft.FOCUS_SKIPPED)
-          and page.index("FOCUS RUN - five checks only") < page.index("<h2>Module 1") and "Not checked in this run" in page
+          and page.index("FOCUS RUN - these checks only") < page.index("<h2>Module 1") and "Not checked in this run" in page
           and sum(1 for f in faults if f["kind"] == "papers") == 2, (out[-1500:], page[:1500]))
 
 
