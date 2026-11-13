@@ -2384,7 +2384,8 @@ def fact_findings(course, script):
 
 def proof_findings(course, script):
     """MUST, in a course with a knowledge base: every claim of the script judged by the fact-checker (fact_check.py), and
-    none judged not found or partly still in it - the change list cuts or corrects them"""
+    none judged not found or partly still in it - the change list corrects them, a claim no source proves goes to the
+    writer once and then to the operator. A claim proved only on the internet is a note for the operator to look at"""
     if not course or str(script.get("module")).lower() == "final":
         return []
     import fact_check
@@ -2401,6 +2402,9 @@ def proof_findings(course, script):
     for sid, text, quote in st.get("cut_off", []):
         found.append({"where": place(script, sid), "screen": sid, "field": "", "level": NOTE, "rule": "c_cut_quote",
                       "detail": T(script, "c_cut_quote", text=text[:120], quote=quote[-80:]), "fix": ""})
+    for sid, text, url, quote in st.get("web", []):
+        found.append({"where": place(script, sid), "screen": sid, "field": "", "level": NOTE, "rule": "c_web",
+                      "detail": T(script, "c_web", text=text[:120], url=url, quote=quote[:160]), "fix": ""})
     return found
 
 
