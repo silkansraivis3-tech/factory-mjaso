@@ -363,7 +363,7 @@ detector display for a reading, the GA drawing for "where is it".
 ## 2 · Show it to the operator
 
 **First, taught before it is asked (L36, L71).** Once a module's script is written, the `task-coverage-checker` agent
-(one per module, in parallel, before the fact-checker so the lines it adds are proved too) reads each self-check and
+(one per module, in parallel, beside the fact-checker - a line it adds is proved on the fact-checker's next run) reads each self-check and
 module-check question and only the slides before it, and judges covered / partly / not covered: could the trainee
 answer it, or do it, from those slides alone? `scripts/task_cover.py` gives it the slides, refuses a quote they do not
 show (the notes alone are not enough), and turns its verdicts into a change list that adds the missing line to a slide
@@ -374,12 +374,23 @@ question changes. Once the module has
 verdicts, approval is refused while a question is unjudged, partly or not covered; the key-word check (`t_not_taught`)
 stays as the quick first filter.
 
-**Then, proved in the sources (L4).** Once a module's script is written, the `fact-checker` agent (one per module, in
-parallel) proves every claim in the course's knowledge base: `scripts/fact_check.py` finds the claims and proves what a
-source says word for word, the agent judges the rest found / partly / not found from the source passages only, and
-leaves a change list that cuts what no source says and corrects what it says otherwise - proposed with
+**Proved in the sources while you write (L4).** The moment a module's script is saved, its `fact-checker` agent starts
+(one per module, in the background - you go on with the next module) and proves every claim in the course's sources:
+`scripts/fact_check.py` finds the claims and searches each in the knowledge base, then the source files themselves, then
+the old course, recording where it searched and the closest passage, and proves what a source says word for word; the
+agent judges the rest found / partly / not found from those passages only, and searches the internet for what none of
+them says - a claim proved only there keeps its address and the words quoted, is marked a web source and listed for the
+operator (`c_web`). What a source says otherwise is corrected from the source, in a change list proposed with
 `content_script.py propose`, shown like any correction (an unattended build applies it itself, `fact_check.py fixes
---apply`, each change logged for the expert). A question's answer and the answer a slide reveals to the room's question
+--apply`, each change logged for the expert). What no source says is never cut first: it comes back to you once
+(`fact_check.py rewrites`, each line with where it was searched and the passages nearest to it) - rewrite it from what
+those passages say, or leave the line out, as `[{"screen", "field", "new"}]` with `fact_check.py rewrite <course>
+--module 1 --file <file> --by "<you>"` (only those lines, only in a draft not yet approved), and the fact-checker
+judges the new words. Still not proved after that one rewrite, it is the operator's question (`fact_check.py
+questions`): the sentence and its screen, where it was searched with the closest passage, why it is a problem (no
+source says it, or a source says something different - quoted), and *cut it* / *keep it* (they name the source) /
+*replace it* (their words) - asked in the chat, answered with `fact_check.py answer --by <their name>`. Unattended,
+nobody answers: `fixes --apply` cuts it and writes the question to `working_claude/fact_check/MNN.operator.json`. A question's answer and the answer a slide reveals to the room's question
 are never changed there - they are listed for the writer, so no question loses its answer. A cut or a correction on a
 slide a covered verdict cites voids that verdict: the apply names the questions to judge again (and a line one relied
 on that is gone), and approval waits for them. Approval is refused while a claim is not judged or one not proved is

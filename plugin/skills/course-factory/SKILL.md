@@ -68,7 +68,7 @@ bending or changing a law, or when a request seems to collide with one, read it 
 | **L1** | **The approved programme is law; minutes are its units.** An academic hour is what the programme says (never assume 60); each module's teaching time equals its allocated minutes exactly; what does not fit goes to the handout. `hours/scripts/check_hours.py` before believing any plan |
 | **L2** | **Main ILOs copied verbatim** — never edited, renumbered or improved. Sub-ILOs may be re-expressed, `PROVISIONAL` until ratified, never renumbered where a trainee sees them. The programme governs; the IMO model course guides |
 | **L3** | **Official hours never changed to fit a schedule**; no attendance, contact time or compliance record is ever made up |
-| **L4** | **No source, no maritime claim.** Never fill a gap from memory; a stated gap is a good answer. Every claim proved in the course's knowledge base by the `fact-checker` before approval (`fact_check.py`) |
+| **L4** | **No source, no maritime claim.** Never fill a gap from memory; a stated gap is a good answer. Every claim proved in the course's sources by the `fact-checker` before approval (`fact_check.py`) |
 | **L5** | **Theory delivered as active learning** — aim for 80 % learner-active minutes (Track B, `data-active`); the programme's theory/practice split (Track A, `data-track`, `check_balance.py`) never changes; theory is never removed; never reach the target by renaming screens |
 | **L6** | **Tablet-first, touch-first, offline** — targets ≥ 56 px, no hover-only control, nothing at class time needs a network |
 | **L7** | **Nothing is useless until you have grepped** its id, class, label and filename across both terminals, the course and every generated script |
@@ -237,10 +237,19 @@ score. Begin from the module's ILO map rows (`ilo_map.py show`), the old course'
 knowledge base (`kb_tool.py search`). Before scripts are written in parallel, `STANDARDS.md` gets the course's
 `## Ship profile`.
 
-- **Taught before asked (L36, L71):** one `task-coverage-checker` agent per module, before the `fact-checker`, judges
+- **Taught before asked (L36, L71):** one `task-coverage-checker` agent per module, beside the `fact-checker`, judges
   every question against the slides before it (`task_cover.py`); approval is refused while one is unjudged, partly or
-  not covered.
-- **Proved (L4):** one `fact-checker` agent per module; approval is refused while a claim is unjudged or unproved.
+  not covered. A line it adds is judged by the fact-checker's next run.
+- **Proved (L4), while you write:** the moment a module's script is saved, start its `fact-checker` agent in the
+  background (`run_in_background`) and go on writing the next module - never wait for it. It searches the knowledge
+  base, the source files, the old course, then the internet (a claim proved only there keeps its address and words and
+  is listed for the operator), and records where each claim was searched. What no source proves comes back to you once
+  (`fact_check.py rewrites`): rewrite those lines from the passages it gives, or leave a line out, with `fact_check.py
+  rewrite`, and start the fact-checker on the module again. What is still not proved is never cut silently:
+  `fact_check.py questions` gives each claim's sentence and screen, where it was searched with the closest passage, and
+  why it is a problem - ask the operator with AskUserQuestion (one claim at a time, or a module's together): *cut it* /
+  *keep it* (they name the source) / *replace it* (their words), then `fact_check.py answer ... --by <their name>`.
+  Approval is refused while a claim is unjudged or unproved.
 - **Checked:** the theory, slide-text, pictures-and-tasks and ILO-map checks head the review page; a must-fix blocks
   approval (`--despite-findings` only on the operator's word). Questions carry `"sub_ilo"`, and `"bloom"` + `"bloom_why"`
   when written above their task type's level.
@@ -287,9 +296,12 @@ A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobod
 - Never ask: a question goes to `working_claude/OPEN_EXPERT_QUESTIONS.md` with the choice made, and the build goes on.
 - A request to any site names the tool, never a person: no name, e-mail address or account in a request, a header or a
   URL - say so in every brief that sends a helper to download.
-- Each script, before approval: the `task-coverage-checker`, then the `fact-checker`, each ending with its own script's
-  `fixes --apply` (`task_cover.py`, `fact_check.py` - `content_script.py` has no `fixes`); a
-  question listed for the person goes to `OPEN_EXPERT_QUESTIONS.md`. When the fact-checker's apply says the task cover
+- Each script, before approval: the `fact-checker` (started the moment the script is saved, while the next is written)
+  and the `task-coverage-checker`, each ending with its own script's `fixes --apply` (`task_cover.py`, `fact_check.py` -
+  `content_script.py` has no `fixes`); what no source proves goes to the writer once (`fact_check.py rewrites` /
+  `rewrite`) and the fact-checker runs again; still not proved, `fixes --apply` cuts it and writes the operator's
+  question to `working_claude/fact_check/MNN.operator.json`. A question listed for the person goes to
+  `OPEN_EXPERT_QUESTIONS.md`, the fact-checker's included. When the fact-checker's apply says the task cover
   must be judged again (its cuts changed a slide a verdict cites), the `task-coverage-checker` runs on the module again.
 - No paid pictures. Free sources first — Wikimedia Commons (`course-visuals/scripts/commons.py`, never a helper's own
   fetcher), DVIDS, USCG, NOAA, the old course, the knowledge base (the `visual-sourcer`; small ones enlarged) — then Nano Banana in the Gemini app if a signed-in browser is there

@@ -429,6 +429,29 @@ def main():
         row = ft.score_module(oc, 1, no_browser=True)
         check("... a script approved at once and a build with nothing found at the first review: clean yes",
               row["first_pass_clean"] == "yes" and row["first_review_findings"] == "none" and row["script_approved_first_pass"] == "yes", row)
+        import fact_check as fc
+        fcc = os.path.join(tmp, "factq", "course")
+        kbq = os.path.join(tmp, "factq", "KB", "search_index")
+        os.makedirs(kbq)
+        io.open(os.path.join(kbq, "index.json"), "w", encoding="utf-8").write("{}")
+        os.makedirs(os.path.join(fcc, "working_claude", "fact_check"))
+        io.open(os.path.join(fcc, "working_claude", "kb_sources.json"), "w", encoding="utf-8").write(
+            json.dumps({"knowledge_base": os.path.dirname(kbq)}))
+        cs.save(cs.paths(fcc, 1)["script"], {"module": 1, "operator_language": "en", "screens": [
+            {"id": "s01", "kind": "slide", "title": "Methane", "text": "Methane is lighter than air at ambient temperature.", "minutes": 3}]})
+        (cid, sid, field, n, text), = fc.claims_of(cs.load(cs.paths(fcc, 1)["script"]))
+        fc.save_store(fcc, 1, {"module": "1", "claims": {cid: {"screen": sid, "field": field, "line": n, "text": text, "verdict": "found",
+                                                               "where": "web", "source": "https://example.org/methane", "quote": text}}})
+        io.open(fc.side_path(fcc, 1, "operator"), "w", encoding="utf-8").write(json.dumps([{
+            "id": "x", "screen": "s02", "sentence": "Ships painted blue load faster.", "why": "no source says it",
+            "searched": [{"where": "the knowledge base", "closest": "nothing near it"}], "done": "cut - an unattended build, nobody to ask"}]))
+        row = ft.score_module(fcc, 1, no_browser=True)
+        shown_out = io.StringIO()
+        with contextlib.redirect_stdout(shown_out):
+            ft.show({"plugin": "x", "modules": [dict(row, module=1)]})
+        check("the scorecard counts the claims proved only on the internet and the ones cut and put on the operator's list after "
+              "their rewrite - fewer on the list is better", row.get("claims_web") == 1 and row.get("claims_to_operator") == 1
+              and "claims to operator" in shown_out.getvalue() and "claims_to_operator" in ft.LOWER_IS_BETTER, row)
 
         class FakeFit:
             @staticmethod
@@ -653,6 +676,16 @@ def faults_part(tmp):
     kinds = sorted((f["slide"], f["kind"]) for f in judged)
     check("the judges' fails: the walk's (a task page apart), QA's BROKEN script finding; a POLISH line is no fault",
           kinds == [("s04", "overflow_cut"), ("s05", "script"), ("tasks/q2", "task_page")], kinds)
+    os.makedirs(os.path.join(course, "working_claude", "fact_check"), exist_ok=True)
+    io.open(os.path.join(course, "working_claude", "fact_check", "M01.operator.json"), "w", encoding="utf-8").write(json.dumps([{
+        "id": "c1", "screen": "s07", "sentence": "Ships painted blue load faster.", "why": "no source says it",
+        "searched": [{"where": "the knowledge base", "closest": "nothing near it"}, {"where": "the internet", "closest": "not searched"}],
+        "done": "cut - an unattended build, nobody to ask"}]))
+    ff = fr.fact_faults(course, 1)
+    check("a claim the fact check cut and put on the operator's list is a fault of the script: its sentence, where it was "
+          "searched, why", len(ff) == 1 and ff[0]["slide"] == "s07" and ff[0]["kind"] == "script" and ff[0]["found_by"] == "fact check"
+          and "Ships painted blue" in ff[0]["did"] and "the knowledge base - nothing near it" in ff[0]["did"]
+          and "no source says it" in ff[0]["did"], ff)
     run = os.path.join(tmp, "fr", "run")
     os.makedirs(run)
     allf = fr.collect(course, [1], {1: (deck, slides, {"1280x800": [["s04", 3, "cut", "the chart is cut"]]})})

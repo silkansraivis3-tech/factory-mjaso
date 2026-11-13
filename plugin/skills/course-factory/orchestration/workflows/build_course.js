@@ -324,10 +324,78 @@ on both) - script/GUIDE.md "Before writing".
 THE WORDS ARE TYPED ONCE (L29). Your module's content script is
 working_claude/script/M${two(m)}.json (course-factory script/GUIDE.md). Write it, make its
 review page and Word file, and STOP there - report "awaiting approval". The operator
-approves each script; nothing is built from words nobody approved.
+approves each script; nothing is built from words nobody approved. Do not run the
+fact-checker and do not wait for it: the workflow starts it on your module the moment you
+report, while the other modules are still being written.
 
 Report "awaiting approval", every honesty marker with its source, the planned Track A
 buckets and Track B ratio, and what you moved to the handout.`
+
+/* the FACT CHECK of a draft module starts the moment its script is saved - beside the writers still writing the other
+   modules - on the fact-checker agent. Per module, not in parts: a script is one file saved whole, and a check of a half-
+   written one would judge lines its writer is still changing. A claim no source proves (the knowledge base, the source
+   files, the old course, the internet) goes back to that module's writer ONCE; the fact-checker judges the new words, and
+   what is still not proved is the operator's question in the chat - never cut silently */
+const FC = `${DIR || SCRIPTS}/scripts/fact_check.py`
+const FACTS_SCHEMA = {
+  type: 'object',
+  properties: {
+    claims: { type: 'number', description: 'the claims of the script (status)' },
+    not_proved: { type: 'number', description: 'claims judged not found that no source gave other words for' },
+    rewrite: { type: 'number', description: 'how many claims fact_check.py rewrites sent to the writer (0 when it sent none)' },
+    web: { type: 'array', items: { type: 'string' }, description: 'each claim proved only on the internet: "<screen>: <claim> - <address>"' },
+    questions: {
+      type: 'array',
+      description: 'fact_check.py questions, one entry per claim it printed',
+      items: { type: 'object', properties: { id: { type: 'string' }, screen: { type: 'string' }, sentence: { type: 'string' },
+        searched: { type: 'string', description: 'where it was searched, each with the closest passage' }, why: { type: 'string' } } },
+    },
+    changes: { type: 'string', description: 'the path of the change list fixes wrote (corrections from a source), or empty' },
+  },
+  required: ['claims', 'rewrite', 'questions'],
+}
+const facts = (m, again) => `CHECK THE FACTS of module ${m.id} - ${again
+  ? 'AGAIN: its writer has rewritten the claims no source proved; judge the new words'
+  : 'its writer saved its content script a moment ago, and the other modules are still being written beside you'}.
+Course: ${A.course}. Your agent instructions are your job, with F = python "${FC}" and <n> = ${m.id}.
+Search the knowledge base, the source files and the old course (prepare, next, search), then the internet for what none
+of them says; record every verdict with judge. Then:
+${again
+  ? `  F questions "${A.course}" --module ${m.id} - what is still not proved after its one rewrite. Bring each back in
+  "questions" as it printed it. Never run rewrites again here, and never cut a claim yourself: the operator decides.`
+  : `  F rewrites "${A.course}" --module ${m.id} - the claims no source proves go to the writer once; "rewrite" is how
+  many it sent (0: none), "questions" what F questions prints (normally nothing yet).`}
+  F fixes "${A.course}" --module ${m.id} (never --apply: the operator sees the corrections first), then F status.
+Your answer is the JSON the schema asks for.`
+const rewriteScript = (m) => `Invoke ${SKILL} and follow it. REWRITE THE CLAIMS NO SOURCE PROVES in module ${m.id}'s
+content script - nothing else.
+
+${brief(m)}
+
+The fact-checker found claims in working_claude/script/M${two(m)}.json that the knowledge base, the source files, the old
+course and the internet do not prove. Each is in working_claude/fact_check/M${two(m)}.rewrite.json with where it was
+searched and the passages nearest to it. For each: rewrite the line from what those passages say (the sense the slide
+needs, never a fact from memory), or leave the line out when no source says anything near it. Write each field's new
+words as a JSON list [{"screen", "field", "new"}] in working_claude/scratch/ and run
+  python "${FC}" rewrite "${A.course}" --module ${m.id} --file <that file> --by "rewrite:${m.id} (workflow script writer)"
+It changes only those lines; a line you leave as it was goes to the operator as a question. Then make the review page
+and Word file again (content_script.py render) and report "rewritten" with how many lines you changed.`
+async function checkFacts(m) {
+  const first = await agent(facts(m, false), { label: `facts:${m.id}`, phase: 'Verify', schema: FACTS_SCHEMA,
+                                                 agentType: 'course-factory:fact-checker' })
+  if (!first) {
+    log(`module ${m.id}: the fact-checker brought back nothing - its approval waits for a fact check`)
+    return { checked: false, questions: [], web: [] }
+  }
+  if (!first.rewrite) return { checked: true, claims: first.claims, rewritten: 0, web: first.web || [], questions: first.questions || [] }
+  log(`module ${m.id}: ${first.rewrite} claim(s) no source proves - back to the writer once`)
+  await agent(rewriteScript(m), { label: `rewrite:${m.id}`, phase: 'Build' })
+  const again = await agent(facts(m, true), { label: `facts:${m.id}+re`, phase: 'Verify', schema: FACTS_SCHEMA,
+                                                agentType: 'course-factory:fact-checker' })
+  if (!again) log(`module ${m.id}: the fact-checker brought back nothing after the rewrite - its approval waits for a fact check`)
+  return { checked: !!again, claims: (again || first).claims, rewritten: first.rewrite,
+           web: (first.web || []).concat((again && again.web) || []), questions: (again && again.questions) || [] }
+}
 
 /* 2.73.0 - the course's ONE photo-sourcing pass (chem advanced, 2026-10-27: one photo agent per script, each searching the
    same old-course and knowledge-base pictures). The catalogue (scripts/photo_catalogue.py) already holds every picture the
@@ -1286,8 +1354,10 @@ async function focusModule(m) {
 async function oneModule(m) {
   if (!APPROVED.has(String(m.id))) {
     await agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' })
+    const checked = await checkFacts(m)
     /* 2.73.0 - its photographs: the course's ONE photo pass after every script of this run is written (photos:drafts) */
-    return { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
+    return { module: String(m.id), classification: 'AWAITING APPROVAL - script written and fact-checked, nothing built', blocking: false,
+             findings: [], facts: checked }
   }
   if (FOCUS) return focusModule(m)
   /* 2.73.0 - Phase A finished it (PASS / MODULE CLEAN): no builder, straight to the judges; else the builder's brief is its needs file */
@@ -1544,6 +1614,8 @@ return {
   assembly,
   cross,
   blocking: blocking.map((q) => q.module),
+  /* the claims of each draft no source proved, after its one rewrite: the operator answers them in the chat */
+  fact_questions: results.filter((q) => q && q.facts && q.facts.questions.length).map((q) => ({ module: q.module, questions: q.facts.questions })),
   /* each built module's walk review as it stands, the final's too; not_passed: the portal refuses the course's upload */
   walk: { reviewed: WALKS.length, not_passed: WALKS.filter((w) => !w.ok) },
   /* first_pass: what the first build and its one look found, module by module - recorded, never fixed */
@@ -1571,5 +1643,10 @@ return {
         + 'reviewed again (walk_review.py reopen) - each module\'s for_aleksis (the final\'s: final_walk.for_aleksis) lists '
         + 'the slide, the stop and the command. Running this workflow again sends no walk fail of a module at its second '
         + 'round to a fixer, and a walk judge that brought back nothing is not retried: walk that module by hand.'
+      : '')
+    + (results.some((q) => q && q.facts && q.facts.questions.length)
+      ? ' FACT QUESTIONS (fact_questions): claims no source proves, still after their one rewrite - ask the operator in the chat '
+        + '(AskUserQuestion), each with its sentence and screen, where it was searched with the closest passage and why it is a '
+        + 'problem: cut it, keep it (they name the source) or replace it with their words; then fact_check.py answer.'
       : ''),
 }

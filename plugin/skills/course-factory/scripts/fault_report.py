@@ -5,10 +5,11 @@
 
 One entry per fault, by module and slide or task page: the picture of that slide, the rule that applies (quoted short, with
 its file), what the build did (a measured fact), the kind, which check found it, and an empty field for the owner's decision.
-Two sources: the rule checks this script runs on the built deck itself (a picture's shape against the box of the blueprint it
-landed in, the words of its text against that blueprint's measured budget - the compiler's, the layout plan's and the
-script check's own rules, layout_plan.py -, slides the fit gate found cut) and what the judges of the run found
-(the walk review, QA, the 3D and figure reviews). Nothing here changes a course or the factory.
+Three sources: the rule checks this script runs on the built deck itself (a picture's shape against the box of the blueprint
+it landed in, the words of its text against that blueprint's measured budget - the compiler's, the layout plan's and the
+script check's own rules, layout_plan.py -, slides the fit gate found cut), what the judges of the run found (the walk
+review, QA, the 3D and figure reviews), and the claims no source proved after their rewrite, which the unattended build cut
+and put on the operator's list (fact_check.py). Nothing here changes a course or the factory.
 """
 from __future__ import annotations
 
@@ -203,6 +204,19 @@ def judge_faults(course, mod):
     return out
 
 
+def fact_faults(course, mod):
+    """[fault] the claims no source proved after their one rewrite, which the unattended build cut and put on the operator's
+    list (fact_check.py, working_claude/fact_check/MNN.operator.json): the sentence, where it was searched, why"""
+    rows = _json(os.path.join(course, "working_claude", "fact_check", "M%02d.operator.json" % int(mod))) or []
+    return [_fault(q.get("screen", ""), "script", "fact check",
+                   "every claim is proved in a source the course holds (L4) - the knowledge base, the source files, the old course, "
+                   "or the internet, marked", "course-factory/scripts/fact_check.py",
+                   "\"%s\" - %s; searched: %s; %s" % (q.get("sentence", ""), q.get("why", ""),
+                                                   "; ".join("%s - %s" % (x.get("where"), x.get("closest")) for x in q.get("searched") or []),
+                                                   q.get("done", "")))
+            for q in rows if isinstance(q, dict)]
+
+
 def stop_picture(course, mod, slide, stop=None, text=""):
     """the walk's picture of a slide (or a task page) at the stop it names - the first stop when none: the path, or None"""
     root = os.path.join(course, "working_claude", "_build", "walk", "M%02d" % int(mod))
@@ -238,6 +252,7 @@ def collect(course, mods, decks, extra=None):
         misses = _json(os.path.join(course, "working_claude", "_build", "M%02d_fit_misses.json" % int(mod)))
         faults += fit_faults(fit, misses if isinstance(misses, list) else None)
         faults += judge_faults(course, mod)
+        faults += fact_faults(course, mod)
         seen = set()
         for f in faults:
             key = (f["slide"], f["kind"], f["did"][:80])

@@ -90,7 +90,8 @@ export async function step(args) {
       fs.writeFileSync(brief, briefText(prompt, o, answer))
       fs.writeFileSync(started, new Date().toISOString() + '\n')
     }
-    pending.push({ label: o.label, model: o.model || 'the session\'s', effort: o.effort || '-', brief, answer, bad: !!a.bad, running })
+    pending.push({ label: o.label, model: o.model || 'the session\'s', effort: o.effort || '-', type: o.agentType || null, brief, answer,
+                   bad: !!a.bad, running })
     return new Promise(() => {})
   }
   const pipeline = (items, ...stages) => Promise.all(items.map(async (x) => { let r = x; for (const s of stages) r = await s(r); return r }))
@@ -180,7 +181,7 @@ function main(argv) {
     const start = pending.filter((p) => !p.running), wait = pending.filter((p) => p.running)
     console.log(`START ${start.length} agent(s) now, side by side - each with "Read <its brief>: it is your whole brief." as its prompt:`)
     for (const p of start) {
-      console.log(`  ${p.label}  model ${p.model}, effort ${p.effort}${p.bad ? '  (its answer file is not JSON - run it again)' : ''}`)
+      console.log(`  ${p.label}  ${p.type ? `the ${p.type} agent, ` : ''}model ${p.model}, effort ${p.effort}${p.bad ? '  (its answer file is not JSON - run it again)' : ''}`)
       console.log(`      brief  ${p.brief}\n      answer ${p.answer}`)
     }
     if (wait.length) console.log(`RUNNING, no answer yet: ${wait.map((p) => p.label).join(', ')}`)

@@ -52,7 +52,8 @@ trial's. Modules given by hand that build no practical work in a course that has
             (course-module-ui knowledge/blueprints/, layout-templates.json), or a picture slot with no picture or a placeholder;
             picture spaces still holding a placeholder; % of the teaching slides with interactive 3D (L67, counted as the
             course package counts it); the most words the room sees at once on one slide, and the slides over 120; claims
-            not proved in the sources (fact_check.py); old-course findings (order, slides left out, thinner theory); Bloom
+            not proved in the sources, proved only on the internet, and cut and put on the operator's list after their
+            rewrite (fact_check.py); old-course findings (order, slides left out, thinner theory); Bloom
             lifts of more than one level; must-fix findings left in the script; how many slide templates and the longest
             run of one; how many shapes the eye sees (layout-templates.json "shapes": a picture left or right is one,
             beside), the longest run of one shape and the share of beside; the basic tasks of each self-check and the self-checks off their mix (t_sc_mix); simulator and
@@ -337,6 +338,7 @@ OUTPUTS = {
                                                 "reader_report.md", "instructor_led.json", "simulators.json",
                                                 "model_course_syllabus.json")],
     "script": ["working_claude/script/MNN.json", "working_claude/fact_check/MNN.json", "working_claude/fact_check/MNN.changes.json",
+               "working_claude/fact_check/MNN.operator.json", "working_claude/retrieval/fact_check_web_MNN.md",
                "working_claude/task_cover/MNN.json", "working_claude/task_cover/MNN.changes.json",
                "to_review/MNN_SCRIPT.docx", "to_review/MNN_SCRIPT_REVIEW.html", "to_review/MNN_INSTRUCTOR_NOTES.md"],
 }
@@ -979,6 +981,7 @@ def score_module(course, m, no_browser=False, found=None, focus=False):
         if fact_check.course_kbs(course):
             st = fact_check.status(course, m, script)
             row["claims"], row["claims_unproven"], row["claims_unchecked"] = st["claims"], len(st["unproven"]), len(st["unchecked"])
+            row["claims_web"], row["claims_to_operator"] = len(st["web"]), st["to_operator"]
         old = cs.old_course_findings(course, script)
         for rule in ("o_moved", "o_dropped", "o_thinner"):
             row[rule.replace("o_", "old_")] = sum(1 for f in old if f["rule"] == rule)
@@ -1138,7 +1141,8 @@ def focus_summary(rows):
     return {"checked": [t for _, t, _ in FOCUS_POINTS], "faults": faults, "skipped": list(FOCUS_SKIPPED)}
 
 
-LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped",
+LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "claims_unproven", "claims_unchecked",
+                   "claims_to_operator", "old_moved", "old_dropped",
                    "old_thinner", "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row", "same_look_in_a_row",
                    "beside_share", "build_minutes", "script_rewrite_rounds", "must_fixes_first_check", "builds_used", "first_review_findings_total",
                    "off_blueprint_slides", "pictures_pending", "max_words_slide", "slides_over_120_words", "self_checks_off_mix",
@@ -1148,7 +1152,7 @@ LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_laggin
 BANDS = {"interactive_3d_share": (int(round(100 * cs.MEDIA["three_d"]["min_share"])), int(round(100 * cs.MEDIA["three_d"]["max_share"])))}
 SHOWN = ("built", "passed", "build_says", "build_minutes", "cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "off_blueprint_slides",
          "pictures_pending", "interactive_3d_share", "max_words_slide", "slides_over_120_words", "claims", "claims_unproven",
-         "claims_unchecked", "old_moved", "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates",
+         "claims_unchecked", "claims_web", "claims_to_operator", "old_moved", "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates",
          "same_template_in_a_row", "look_shapes", "same_look_in_a_row", "beside_share", "self_check_basic_tasks", "self_checks_off_mix",
          "practical_kind", "simulator_exercises", "simulator_drafts_pending", "script_rewrite_rounds", "must_fixes_first_check",
          "script_approved_first_pass", "builds_used", "first_build_verdict", "first_review_findings", "first_review_findings_total",

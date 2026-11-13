@@ -31,7 +31,7 @@ const args = JSON.parse(process.argv[3])
 const labels = [], opts = {}, prompts = {}
 let figActive = 0, figMax = 0                              // 2.72.7: figure fixers at once
 let building = 0, most = 0                                // builds at once (2.65.0: the pool), when args._slow
-const agent = async (prompt, o) => {
+const agent0 = async (prompt, o) => {
   labels.push(o.label)
   if (args._slow && /^(build|fix):/.test(o.label)) {
     most = Math.max(most, ++building)
@@ -117,7 +117,26 @@ const agent = async (prompt, o) => {
     : (args._pkgfail || []).indexOf(b[1]) >= 0 ? 'FAIL M0' + b[1] + ' - course package (60 s)' : 'PASS M0' + b[1] + ' - figures ... (40 s)'
       + ((args._time || {})[b[1]] ? '\nTIME M0' + b[1] + ': ' + args._time[b[1]] + ' min from its starter build sheet to its first PASS - x' : '')
   if (/^build:\w+\+\d+$/.test(o.label)) return 'PASS - carried on'
+  if (/^facts:/.test(o.label)) {                            // the fact-checker: claims sent to the writer (_notfound), still unproved
+    const [fm, ftag] = o.label.slice(6).split('+')          // after the rewrite (_unproven), nothing back (_nofacts)
+    if ((args._nofacts || []).indexOf(fm) >= 0) return null
+    if (ftag) return { claims: 12, rewrite: 0, web: [], questions: (args._unproven || []).indexOf(fm) >= 0
+      ? [{ id: 'c8a8077e54', screen: 's04', sentence: 'Ships painted blue load faster in the winter season.',
+           searched: 'the knowledge base - nothing near it; the source files - Manual.txt part 1: "..."', why: 'no source says it' }] : [] }
+    return { claims: 12, rewrite: (args._notfound || []).indexOf(fm) >= 0 ? 2 : 0,
+             web: ['s03: Methane is lighter than air - https://example.org/methane'], questions: [] }
+  }
   return {}
+}
+const events = [], types = {}                              // each agent's start and end, in order; its agent type
+const agent = async (prompt, o) => {
+  events.push('start ' + o.label)
+  types[o.label] = o.agentType || null
+  const r = agent0(prompt, o)
+  if (args._slowscript && args._slowscript[o.label]) await new Promise((go) => setTimeout(go, 20 * args._slowscript[o.label]))
+  const v = await r
+  events.push('end ' + o.label)
+  return v
 }
 const pipeline = (items, ...stages) => Promise.all(items.map(async (x) => { let r = x; for (const s of stages) r = await s(r); return r }))
 const parallel = (fs_) => Promise.all(fs_.map((f) => f()))
@@ -125,7 +144,7 @@ const phase = () => {}
 const log = () => {}
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 new AsyncFunction('args', 'agent', 'pipeline', 'parallel', 'phase', 'log', src)(args, agent, pipeline, parallel, phase, log)
-  .then((r) => console.log(JSON.stringify({ labels, opts, prompts, r, figMax, most })))
+  .then((r) => console.log(JSON.stringify({ labels, opts, prompts, r, figMax, most, events, types })))
   .catch((e) => { console.log(JSON.stringify({ error: String(e && e.stack || e) })); process.exit(1) })
 """
 
@@ -288,6 +307,49 @@ def walk_part(tmp, mods, clean, qa_broken, all_broken):
     nofin = run(tmp, dict(base))
     check("... no final asked for: no judge for it", "walk:final" not in nofin.get("labels", [])
           and (nofin.get("r") or {}).get("final_walk") is None, nofin.get("labels"))
+
+
+def fact_part(tmp, mods):
+    """the fact check of a draft starts the moment its script is saved, beside the writers still writing; a claim no source
+    proves goes back to its writer once, then to the operator's question"""
+    base = {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "factory": "C:/f/skills", "_approved": []}
+    one = run(tmp, dict(base, _slowscript={"script:2": 5}))
+    ev, pr, ty, lb = one.get("events", []), one.get("prompts", {}), one.get("types", {}), one.get("labels", [])
+    check("the FACT CHECK of module 1 starts the moment its script is saved - before module 2's script is written",
+          "start facts:1" in ev and "end script:2" in ev and ev.index("end script:1") < ev.index("start facts:1") < ev.index("end script:2")
+          and ev.index("start facts:2") > ev.index("end script:2"), ev)
+    f1 = pr.get("facts:1", "")
+    check("... on the fact-checker agent, which searches the knowledge base, the source files, the old course, then the internet, "
+          "and sends what no source proves to the writer (rewrites) - nothing applied unasked",
+          ty.get("facts:1") == "course-factory:fact-checker" and "python \"C:/f/skills/course-factory/scripts/fact_check.py\"" in f1
+          and all(w in f1 for w in ("the source files and the old course", "then the internet", "rewrites \"C:/c\" --module 1",
+                                    "still being written beside you", "never --apply"))
+          and "do not wait for it: the workflow starts it on your module the moment you" in pr.get("script:1", ""), f1)
+    check("... a module whose claims are all proved goes to no rewrite, and its result says it was fact-checked, with what was "
+          "proved only on the internet", not any(x.startswith("rewrite:") for x in lb)
+          and all((q or {}).get("facts", {}).get("checked") and (q or {}).get("facts", {}).get("web") for q in one.get("r", {}).get("qa", []))
+          and one.get("r", {}).get("fact_questions") == [] and "FACT QUESTIONS" not in one.get("r", {}).get("next", ""), one.get("r"))
+    nf = run(tmp, dict(base, _notfound=["1"], _unproven=["1"]))
+    ln, pn, rn = nf.get("labels", []), nf.get("prompts", {}), nf.get("r") or {}
+    rw = pn.get("rewrite:1", "")
+    check("a claim no source proves goes back to ITS writer once, for those lines only, and the fact-checker judges the new "
+          "words - before anything can be cut", ln.count("rewrite:1") == 1 and ln.index("facts:1") < ln.index("rewrite:1") < ln.index("facts:1+re")
+          and not any(x.startswith(("rewrite:2", "facts:2+")) for x in ln)
+          and all(w in rw for w in ("working_claude/fact_check/M01.rewrite.json", "fact_check.py\" rewrite \"C:/c\" --module 1",
+                                    "--by \"rewrite:1 (workflow script writer)\"", "never a fact from memory", "leave the line out"))
+          and "--apply" not in rw and nf.get("types", {}).get("facts:1+re") == "course-factory:fact-checker"
+          and "questions \"C:/c\" --module 1" in pn.get("facts:1+re", "") and "never cut a claim yourself" in pn.get("facts:1+re", ""), (ln, rw))
+    fq = rn.get("fact_questions") or []
+    check("... still not proved after that rewrite: the operator's question - the sentence, its screen, where it was searched "
+          "with the closest passage and why - in the run's answer, to be asked in the chat with cut / keep / replace",
+          [x.get("module") for x in fq] == ["1"] and fq[0]["questions"][0]["sentence"].startswith("Ships painted blue")
+          and fq[0]["questions"][0]["screen"] == "s04" and fq[0]["questions"][0]["searched"] and fq[0]["questions"][0]["why"]
+          and "FACT QUESTIONS" in rn.get("next", "") and "AskUserQuestion" in rn.get("next", "")
+          and all(w in rn.get("next", "") for w in ("cut it", "keep it", "replace it")), (fq, rn.get("next")))
+    lost = run(tmp, dict(base, _nofacts=["2"]))
+    q2 = [q for q in (lost.get("r") or {}).get("qa", []) if q and q.get("module") == "2"]
+    check("... a fact-checker that brought back nothing leaves the module not checked (its approval waits for the check)",
+          q2 and q2[0]["facts"]["checked"] is False and not any(x.startswith("rewrite:2") for x in lost.get("labels", [])), q2)
 
 
 def main():
@@ -635,6 +697,7 @@ def main():
               and "--again <label>" in auto and "result.json" in auto
               and "A simulator task (L66) is never accepted" in auto, auto)
         walk_part(tmp, mods, two, six, allx)
+        fact_part(tmp, mods)
         many = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_figs": ["1"], "_manyfigs": ["1"],
                          "factory": "C:/f/skills"})
         lm = many.get("labels", [])
