@@ -139,8 +139,13 @@ def main():
         look = [x for sc_ in r.get("scenes") or [] for x in sc_.get("shots") or []]
         check("--slides: a look at only the scenes named, in its own folder - the reviewer's pictures of the whole module stay",
               [x.get("slide") for x in r.get("scenes") or []] == ["s10"] and look
-              and all(os.sep + "M02_3d_look" + os.sep in os.path.normpath(p) for p in look)
+              and all(os.sep + "M02_3d_look_s10" + os.sep in os.path.normpath(p) for p in look)
               and sorted(os.listdir(os.path.join(two, "working_claude", "review", "M02_3d"))) == whole and whole, (out[-600:], whole))
+        rf = sc.running_files
+        check("... each look has its own record by its slides: an author never joins another author's look nor prints its "
+              "answer (the factory trial: three runs printed another module's slides, its scenes never seen drawn)",
+              rf(two, 2, "s09") != rf(two, 2, "s10") and rf(two, 2, "s10,s09") == rf(two, 2, "s09, s10")
+              and rf(two, 2, "s09") != rf(two, 2, None), (rf(two, 2, "s09"), rf(two, 2, "s10")))
         code, out = run(two, "--module", "2", "--slides", "s04", "--no-perf")
         check("... a slide with no scene: nothing to check, said with the slide", code == 2 and "on s04" in out, out)
         bad = json.load(io.open(tank, encoding="utf-8"))

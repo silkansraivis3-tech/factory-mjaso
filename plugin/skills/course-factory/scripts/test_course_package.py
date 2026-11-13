@@ -177,6 +177,13 @@ def main():
         check("a build's working page (_audit_<pid>_WxH.html) is left out of the package and the importer's copy - not a "
               "problem, not a note (the IGF Advanced builds side by side: the importer read one as it was removed, ENOENT)",
               code == 0 and "_audit_" not in out, out[-600:])
+        tasks_dir = os.path.join(os.path.dirname(deck_dir), "tasks")
+        os.makedirs(tasks_dir, exist_ok=True)
+        io.open(os.path.join(tasks_dir, "__studio_q04_1024x768_shot.html"), "w", encoding="utf-8").write("<p>shot</p>")
+        code, out = run(tr)
+        check("... and the studio's shot of a task page (__studio_<screen>_<size>_<mode>.html) - never read as a task page, "
+              "so one removed meanwhile never crashes the check (the factory trial: FileNotFoundError on module04's shot)",
+              code == 0 and "__studio_" not in out, out[-600:])
 
         print("\n-- a task page whose reporting lives in the shared task file (gb_task.js)")
         sh = os.path.join(tmp, "shared", "modules")

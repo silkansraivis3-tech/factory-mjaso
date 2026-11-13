@@ -609,6 +609,34 @@ def rewrites(course, module):
     return out
 
 
+def bare(line):
+    return re.sub(r"^\s*[-*•]\s*", "", line).strip()
+
+
+def spliced(script, change, sent):
+    """the field as it stands with only the lines sent for a rewrite replaced by the writer's new words - the writer gives
+    the new line, not the whole field, so the field's other lines stay. New words that already hold every other line are
+    the whole field and go in as they are"""
+    s = cs.screen_of(script, change["screen"]) or {}
+    new = change.get("new")
+    new_lines = [str(x) for x in new] if isinstance(new, list) else cs.lines_of(cs.as_text(new))
+    sent_n = {norm(t) for t in sent}
+    lines = field_lines(s, change["field"])
+    others = [x for x in lines if norm(bare(x)) not in sent_n]
+    kept = {norm(bare(y)) for y in new_lines}
+    if not others or all(norm(bare(x)) in kept for x in others):
+        return new
+    out, placed = [], False
+    for x in lines:
+        if norm(bare(x)) not in sent_n:
+            out.append(x)
+        elif not placed:
+            lead = x[:len(x) - len(bare(x))] if x.endswith(bare(x)) else ""
+            out.extend(lead + bare(y) for y in new_lines)
+            placed = True
+    return out if isinstance(s.get(change["field"]), list) else "\n".join(out)
+
+
 def apply_rewrite(course, module, changes, by=None):
     """the writer's new words for the lines sent to it - only those lines, only in a draft nobody has approved; every line
     sent is then rewritten once (one left as it was stays as it was). -> (changes applied, [problems])"""
@@ -623,6 +651,9 @@ def apply_rewrite(course, module, changes, by=None):
     if not isinstance(changes, list) or any(not isinstance(c, dict) or (c.get("screen"), c.get("field")) not in open_ for c in changes):
         return 0, ["only the lines sent for a rewrite change here - a list of {screen, field, new} for: %s"
                    % ", ".join("%s %s" % x for x in sorted(open_))]
+    sent = [e for e in st["rewrite"].values() if not e.get("done")]
+    changes = [dict(c, new=spliced(script, c, [e["text"] for e in sent if (e["screen"], e["field"]) == (c["screen"], c["field"])]))
+               for c in changes]
     try:
         ch, work = cs.build_changes(script, changes)
     except cs.Stop as e:

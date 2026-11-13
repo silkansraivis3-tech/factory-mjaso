@@ -146,6 +146,12 @@ lane, `trace` and `region` on charts, and the minified copy modules ship (`min/k
 changing the kit - `test_minify_engines.py` fails a stale copy).
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
+## 2.137.1 · Each 3D look its own, Commons files keep their extension (2026-11-13)
+
+- `kit3d/scripts/scene3d_check.py --slides`: the record, the answer and the pictures go by the slides looked at (`review/MNN_3d_look_<slides>/`) - six scene authors at once each get their own answer.
+- `scripts/commons.py` `file_name`: a picture extension from the address's path or the file's title, never the address's query.
+Tests: test_scene3d_check, test_commons.
+
 ## 2.135.0 · The whole model in its box, off the controls (2026-11-12)
 
 `kit3d/kit3d.js`: `viewFor` makes a step's frame a close-up only when it comes three times nearer than the whole model, `reserve` keeps the model off the corner controls, `fit` fills an off-centre room; SPEC.md. Fixtures `row_band`, `long_row`; test_kit3d.
@@ -164,7 +170,7 @@ Not yet: a light-page review, gallery cards per part, and the layout chooser tha
 
 ## 2.131.0 · A fixer's quick look at its 3D scenes (2026-11-11)
 
-- `kit3d/scripts/scene3d_check.py --slides <ids> --no-perf`: shoots only the scenes a fixer changed into `review/MNN_3d_look/`, never the reviewer's pictures.
+- `kit3d/scripts/scene3d_check.py --slides <ids> --no-perf`: shoots only the scenes a fixer changed into `review/MNN_3d_look_<slides>/`, never the reviewer's pictures nor another look's.
 
 ## 2.130.0 · 2D steps on the deck's lines, the answer after the figure, labels inside their box, a scene's own frames judged (2026-11-11)
 

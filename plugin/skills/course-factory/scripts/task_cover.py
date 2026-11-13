@@ -183,7 +183,7 @@ def judge(course, module, verdicts):
         missing = (v.get("missing") or "").strip()
         add = v.get("add") if isinstance(v.get("add"), dict) else None
         change = (v.get("question") or "").strip()
-        row = {"hash": h, "verdict": verdict, "by": "task-coverage-checker"}
+        row = {"hash": h, "verdict": verdict, "by": "task-coverage-checker", "asked": stamp(now[qid][3], [])}
         if verdict == "covered":
             if not cited or any(x not in ids for x in cited):
                 probs.append("%s: covered cites the slides before the question that teach it - one of %s" % (qid, ", ".join(ids) or "none"))
@@ -236,8 +236,17 @@ def fixes(course, module):
     now = current(script)
     adds, asks = {}, []
     for qid, row in st["questions"].items():
-        if qid not in now or not holds(row, now[qid]) or row.get("verdict") == "covered":
+        if qid not in now or row.get("verdict") == "covered":
             continue
+        if not holds(row, now[qid]):
+            # a slide before the question was reworded since (the fact check's rewrite): the theory to add still stands
+            # while the question is as it was judged, its slide is still before it and the line is not on it yet
+            _, _, slides, q = now[qid]
+            add = row.get("add") or {}
+            on = [s for s in slides if s["id"] == add.get("slide")]
+            if not on or row.get("asked", stamp(q, [])) != stamp(q, []) or quote_on(add["line"], on):
+                continue
+            row = {"add": add}
         if row.get("add"):
             lines = adds.setdefault(row["add"]["slide"], [])
             if row["add"]["line"] not in lines:

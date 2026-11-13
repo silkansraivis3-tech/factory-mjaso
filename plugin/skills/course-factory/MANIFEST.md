@@ -7,6 +7,13 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.137.1 · Five tool faults of the fast trial (2026-11-13)
+
+- `scripts/fact_check.py` `spliced`: a rewrite replaces only the lines sent, the field's other lines stay.
+- `scripts/task_cover.py` `fixes`: the theory to add stands while the question is as judged, its slide is still before it and the line is not on it yet - a reworded slide before it no longer drops it (verdicts record `asked`).
+- `scripts/check_course_package.py` `TRANSIENT`: the studio's shots and its folder are working files, never read as task pages; a page removed while the check runs is passed over.
+Tests: test_fact_check, test_task_cover, test_course_package.
+
 ## 2.137.0 · A fast trial, the fact check beside the writer, simulator exercises planned (2026-11-13)
 
 - `scripts/factory_trial.py` `run --focus` and `scripts/fault_report.py` (seven checks, the skipped list); `orchestration/workflows/build_course.js` the focus module (authors at once, one build, judges at once, `papers:course`), the fact check per module as its script lands (`facts:N`, `rewrite:N`), scene authors six at once; `scripts/fact_check.py` sources in order (knowledge base, source files, old course, internet), `rewrites`, `rewrite`, `questions`, `answer`, the unattended operator list; `agents/fact-checker.md`; `scripts/sim_coverage.py` `planned`, `scripts/make_architecture_page.py` `p_sim_unplanned`, `scripts/course_gate.py` `sim_note`, `content_script.py` `sim_no_paper` and the title in `no_shape`; `scripts/additional_materials.py` simulator papers; `compile/scripts/layout_plan.py` `title_lines`. Tests: test_factory_trial, test_build_course, test_fact_check, test_sim_coverage, test_architecture_page, test_content_script, test_additional_materials, test_layout_plan.

@@ -112,7 +112,7 @@ SCRIPT2 = {"module": 2, "title": "Gas safety", "operator_language": "en", "statu
     {"id": "s01", "kind": "slide", "title": "Relief valves", "text": "Relief valves of a Type C tank lift at 18 bar gauge.", "minutes": 3},
     {"id": "s02", "kind": "slide", "title": "ESD", "text": "The ESD push buttons are tested before every cargo operation.", "minutes": 3},
     {"id": "s03", "kind": "slide", "title": "Methane", "text": "Methane is lighter than air at ambient temperature.", "minutes": 3},
-    {"id": "s04", "kind": "slide", "title": "Loading", "text": "Ships painted blue load faster in the winter months.", "minutes": 3},
+    {"id": "s04", "kind": "slide", "title": "Loading", "text": "Discuss in pairs what slows loading.\nShips painted blue load faster in the winter months.", "minutes": 3},
     {"id": "s05", "kind": "slide", "title": "Ammonia", "text": "Ammonia has an exposure limit of 50 ppm over eight hours.", "minutes": 3}]}
 
 
@@ -180,6 +180,9 @@ def flow(c):
                                 "script:2 (writer)")
     check("... its new words go into the draft; a line it could not rewrite from a source stays as it was",
           n == 1 and not probs and cs.load(cs.paths(c, 2)["script"])["screens"][3]["text"].endswith("winter season."), probs)
+    check("... in place of the line sent: the writer gives the new line, and the field's other lines stay",
+          cs.load(cs.paths(c, 2)["script"])["screens"][3]["text"]
+          == "Discuss in pairs what slows loading.\nShips painted blue load faster in the winter season.")
     st, new, _ = fc.prepare(c, 2)
     blue2 = next(cid for cid, r in st["claims"].items() if r["screen"] == "s04")
     check("... and the rewritten line is checked again", new == 1 and not st["claims"][blue2].get("verdict"), st["claims"][blue2])
@@ -211,7 +214,7 @@ def flow(c):
     code, said = fc.answer(c, 2, q4["id"], replace="Loading rates depend on the terminal and the cargo plant.", by="Test Operator")
     sc = cs.load(cs.paths(c, 2)["script"])
     check("replace: the operator's own words take the line's place, proved as theirs; nothing is left to ask",
-          code == 0 and sc["screens"][3]["text"] == "Loading rates depend on the terminal and the cargo plant."
+          code == 0 and sc["screens"][3]["text"].split(chr(10)) == ["Discuss in pairs what slows loading.", "Loading rates depend on the terminal and the cargo plant."]
           and not fc.questions(c, 2) and not [x for x in cs.proof_findings(c, sc) if x["rule"] in ("c_unproven", "c_unchecked")],
           (said, sc["screens"][3], cs.proof_findings(c, sc)))
 

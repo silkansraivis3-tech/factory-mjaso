@@ -4,8 +4,9 @@
   scene3d_check.py <course> --module 2 [--out <folder>] [--size 720x450] [--no-perf]
   scene3d_check.py <course> --module 2 --slides s05,s07 --no-perf     a look at the scenes you changed, in a minute
 
---slides checks and photographs only those slides' scenes, into working_claude\\review\\MNN_3d_look\\ - never the
-reviewer's pictures - beside a check of the whole module, never waiting for it. A fixer looks at a scene it changed this
+--slides checks and photographs only those slides' scenes, into working_claude\\review\\MNN_3d_look_<slides>\\ - never
+the reviewer's pictures, never another look's - beside a check of the whole module, never waiting for it; authors looking
+at different slides at once each get their own answer. A fixer looks at a scene it changed this
 way, not with a screenshot script of its own (a trial's fixers wrote three).
 
 WHY (the 3D kit, 2.64.0 - "the 3D is shit compared to the handmade"): a builder judged its own scene, and the 2.63.2
@@ -247,7 +248,7 @@ def check(course, module, out=None, size=(720, 450), perf=True, only=None):
     parts = os.path.join(mdir, "assets", "kit3d_parts.js")
     parts = parts if os.path.isfile(parts) else None
     deck = os.path.join(mdir, "presentation", "index.html")
-    out = out or workspace.claude_path(course, "review", mid + ("_3d_look" if only else "_3d"))
+    out = out or workspace.claude_path(course, "review", mid + (look_key(only) if only else "_3d"))
     shutil.rmtree(out, ignore_errors=True)
     os.makedirs(out, exist_ok=True)
     res = {sid: {"slide": sid, "spec": sp, "problems": []} for sid, sp in specs}
@@ -320,10 +321,18 @@ def report(r):
     return "\n".join(lines)
 
 
-def running_files(course, module, look=False):
+def look_key(slides):
+    """a look's own name, by the slides it looks at: two authors looking at different slides at once never join each
+    other's check nor overwrite each other's pictures"""
+    names = slides if isinstance(slides, list) else [x.strip() for x in str(slides).split(",") if x.strip()]
+    return ("_3d_look_" + "-".join(sorted(re.sub(r"\W+", "", x) for x in names)))[:90]
+
+
+def running_files(course, module, look=None):
     """(its record, its answer) in working_claude\\review - where the check that said STILL CHECKING is found again; a
-    look at some slides (--slides) has its own, so it never waits for the whole module's check"""
-    mid = "M%02d" % int(module) + ("_3d_look" if look else "_3d")
+    look at some slides (--slides) has its own, by those slides, so it never waits for the whole module's check nor for
+    another author's look"""
+    mid = "M%02d" % int(module) + (look_key(look) if look else "_3d")
     return workspace.claude_path(course, "review", mid + "_running.json"), workspace.claude_path(course, "review", mid + "_answer.txt")
 
 
@@ -341,7 +350,7 @@ def entry(argv=None):
     known, _ = ap.parse_known_args(argv)
     try:
         m = int(known.module)
-        rec_path, ans_path = running_files(workspace.work_folder(known.course, create=False), m, bool(known.slides))
+        rec_path, ans_path = running_files(workspace.work_folder(known.course, create=False), m, known.slides)
     except Exception:                                    # noqa: BLE001 - main says what is wrong with the course or module
         return main([a for a in argv if a != "--wait"])
     import browser_slots

@@ -289,9 +289,10 @@ def run_importer(folder):
 # build printed "not a module" and the importer's "duplicate or disallowed file paths", and builders spent turns on it)
 SYNC = re.compile(r"^(?:\.tmp\.drive.*|desktop\.ini|thumbs\.db|\.ds_store)$", re.I)
 # a build's own working files, there only while another module's checks run beside this one (run_audits.py's page beside
-# the deck, the drawing check's folder): read by the importer as they were removed, they failed the package ("ENOENT:
-# ...\_audit_41564_1040x863.html", the IGF Advanced builds run side by side) - left out, never a note
-TRANSIENT = re.compile(r"^(?:_audit_\d+(?:_\d+x\d+)?\.html?|__audit_out)$", re.I)
+# the deck, the drawing check's folder, the studio's shots of a task page): read as they were removed, they failed the
+# package ("ENOENT: ...\_audit_41564_1040x863.html"; "FileNotFoundError: ...\tasks\__studio_q04_1024x768_shot.html") -
+# left out, never a note
+TRANSIENT = re.compile(r"^(?:_audit_\d+(?:_\d+x\d+)?\.html?|__audit_out|__studio_[\w-]+\.html?|__studio_out)$", re.I)
 
 
 def transient_items(folder):
@@ -528,6 +529,8 @@ def check(folder):
         for dp, _, fn in os.walk(md):
             for f in fn:
                 p = os.path.join(dp, f)
+                if TRANSIENT.match(f) or not os.path.isfile(p):
+                    continue
                 if f.lower().endswith((".glb", ".gltf")) and os.path.getsize(p) > 5 * 1048576:
                     notes.append("%s is %.1f MB - compress it without visible loss (gltf-transform: meshopt, KTX2)" % (rel(p), os.path.getsize(p) / 1048576.0))
                 if not f.lower().endswith((".js", ".html", ".htm")) or THREE_LIB.match(f):
@@ -562,7 +565,7 @@ def check(folder):
                 continue
             for f in sorted(os.listdir(d)):
                 p = os.path.join(d, f)
-                if not f.lower().endswith(".html") or INSTRUCTOR_ONLY.search(rel(p)):
+                if not f.lower().endswith(".html") or INSTRUCTOR_ONLY.search(rel(p)) or TRANSIENT.match(f) or not os.path.isfile(p):
                     continue
                 if rel(p) not in opened:
                     probs.append("%s is opened by no slide - add data-task-href on its slide" % rel(p))
@@ -631,9 +634,11 @@ def check(folder):
         # ---- every page and style of the module: inside the module, present, offline, no trainee link to instructor files
         for dp, _, fn in os.walk(md):
             for f in fn:
-                if not f.lower().endswith((".html", ".htm", ".css", ".svg")):
+                if not f.lower().endswith((".html", ".htm", ".css", ".svg")) or TRANSIENT.match(f):
                     continue
                 p = os.path.join(dp, f)
+                if not os.path.isfile(p):
+                    continue
                 pg = parse(p) if f.lower().endswith((".html", ".htm", ".svg")) else None
                 text = read(p)
                 refs = ([v for _, _, v in pg.refs] + [u for c in pg.css for u in CSS_URL.findall(c)]) if pg else CSS_URL.findall(text)

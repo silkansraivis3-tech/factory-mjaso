@@ -150,6 +150,15 @@ def main():
         code, lines = commons.get("File:Nowhere.jpg", folder)
         check("a file Commons does not hold is said", code == 1 and "is not a file on Wikimedia Commons" in lines[0], lines)
         plugin = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
+        utm = {"file": "File:Gas tanker in Forth.jpg",
+               "url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Gas_tanker_in_Forth.jpg"
+                      "?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"}
+        check("the saved file keeps its picture extension when the address carries a query (the factory trial saved "
+              "\".org&utm_campaign=...\" files)",
+              commons.file_name(utm) == "gas_tanker_in_forth.jpg" and commons.file_name(utm, "s04_tanker") == "s04_tanker.jpg"
+              and commons.file_name(utm, "s04_tanker.png") == "s04_tanker.png"
+              and commons.file_name(utm, "lng.carrier_v2") == "lng.carrier_v2.jpg",
+              [commons.file_name(utm), commons.file_name(utm, "s04_tanker"), commons.file_name(utm, "lng.carrier_v2")])
         briefs = {p: io.open(os.path.join(plugin, *p.split("/")), encoding="utf-8").read() for p in (
             "agents/visual-sourcer.md", "skills/course-factory/SKILL.md", "skills/course-visuals/source/GUIDE.md",
             "skills/course-factory/compile/BUILDER_CARD.md", "skills/course-factory/orchestration/workflows/build_course.js")}

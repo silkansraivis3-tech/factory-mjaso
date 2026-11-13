@@ -151,10 +151,17 @@ def info(file_title):
     return candidate(pages[0]) if pages and not pages[0].get("missing") and pages[0].get("imageinfo") else None
 
 
+PICTURE_EXT = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".tif", ".tiff", ".svg")
+
+
 def file_name(c, name=None):
+    """the saved file's name with a picture extension - from the address's path, never its query (Commons adds
+    "?utm_source=commons.wikimedia.org&utm_campaign=..." to its addresses), else from the file's title, else .jpg"""
     base = name or re.sub(r"[^a-z0-9]+", "_", re.sub(r"^File:", "", c["file"], flags=re.I).rsplit(".", 1)[0].lower()).strip("_")[:60]
-    ext = os.path.splitext(c["url"] or c["file"])[1].lower() or ".jpg"
-    return base if os.path.splitext(base)[1] else base + ext
+    if os.path.splitext(base)[1].lower() in PICTURE_EXT:
+        return base
+    found = [os.path.splitext(x)[1].lower() for x in (urllib.parse.urlparse(c.get("url") or "").path, c.get("file") or "")]
+    return base + next((x for x in found if x in PICTURE_EXT), ".jpg")
 
 
 def get(file_title, folder, name=None, found_for=""):

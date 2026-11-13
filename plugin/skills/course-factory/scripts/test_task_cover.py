@@ -166,6 +166,13 @@ def main():
         check("a question is never changed by fixes, only listed for the person", changes == [] and asks == [("q02", "spaceships",
               "ask about tanks instead")], (changes, asks))
         tc.judge(c, 1, [{"id": "q02", "verdict": "partly", "missing": "what a truss is", "add": {"slide": "s02", "line": "A truss is a frame."}}])
+        reworded = cs.load(cs.paths(c, 1)["script"])
+        reworded["screens"][0]["text"] += "\nA diesel engine needs no spark."
+        cs.save(cs.paths(c, 1)["script"], reworded)
+        changes, _ = tc.fixes(c, 1)
+        check("a slide before the question reworded after the verdict (the fact check's rewrite) keeps the theory to add - "
+              "the factory trial's apply changed nothing with four lines in its list",
+              [x["screen"] for x in changes] == ["s02"] and changes[0]["new"].endswith("A truss is a frame."), changes)
         check("attended, fixes --apply is refused: the operator sees the changes first", tc.main(["fixes", c, "--module", "1", "--apply"]) == 2)
         os.environ["NOVIKONTAS_AUTO_BUILD"] = "1"
         try:
