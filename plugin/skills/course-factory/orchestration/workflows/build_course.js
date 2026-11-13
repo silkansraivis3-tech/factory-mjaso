@@ -32,8 +32,9 @@
  * `wave` (optional): how many modules build at once (default: all). 2.71.0 - a rolling pool, biggest module first: the
  *   gate measures each module's build cost (scripts/build_order.py) and the next module starts as soon as one finishes,
  *   so the long pole starts first instead of a wave waiting for its slowest member (2.63.3 M01-M03: 114 min, M02 alone).
- * `focus` (optional): the factory trial's focus run (factory_trial.py run --focus) - after Phase A only a slide-photo pass
- *   and the walk review of the slides a module, then the papers; everything else is skipped and named so in the result.
+ * `focus` (optional): the factory trial's focus run (factory_trial.py run --focus) - after Phase A the scene authors, the
+ *   task-picture author and a slide-photo pass, ONE build, then the 3D check and review beside the walk of the slides and task
+ *   pages a module, then the papers; everything else is skipped and named so in the result.
  *
  * 2.71.0 - the builder reads compile/BUILDER_CARD.md, not the whole skill; a module with a 3D-kit scene gets the 3D step
  * after its build: scene3d_check.py (spec, smoke, timing, pictures), a SEPARATE reviewer of the pictures, one fix round.
@@ -93,15 +94,18 @@ const NOTES = A.notes ? `\n\nTHE OPERATOR SAYS, FOR THIS RUN: ${A.notes}` : ''
    most A.builds builder builds (default 3); no carry-on builder, no fix round, no polish round and no second walk - the 3D check,
    the figure review, QA and the walk judge each look ONCE at the first build, and what they find is recorded, not fixed.
    Without it the build keeps its one fix round, its polish round and the walk's second look. */
-/* focus (factory_trial.py run --focus): a first pass that checks five things only - the practical and simulator papers, the
-   slide style chosen per slide, no slide text cut, the slides' pictures (their shape, crop and what they show) and the fact
-   check of the scripts. After Phase A each module gets ONE slide-photo pass and the walk review of its slides alone; then the
-   papers are built. No scene author, task-picture author, builder, 3D check, figure review, QA, task-page walk, fix round,
-   polish, final, course assembly or cross-check: the result names them as skipped */
+/* focus (factory_trial.py run --focus): a first pass that checks what a whole course must get right the first time - the
+   practical and simulator papers, the slide style chosen per slide, no slide text cut, the slides' pictures (their shape,
+   crop and what they show), the fact check of the scripts, the 3D scenes and the trainee task pages. After Phase A, at the
+   same time: the scene authors, and the task-picture author then the slide-photo pass (both write the build sheet, one after
+   the other); none builds. Then ONE build with the task pages (at most two runs), then the 3D check and its review beside the
+   walk of the slides and the task pages - judging only; then the papers. No builder loop, QA, figure review, fix round,
+   polish, second walk, final, course assembly or cross-check: the result names them as skipped */
 const FOCUS = !!A.focus
-const FOCUS_SKIPPED = ['3D scene authors, the 3D check and the 3D review', 'the task-picture author and the task pages (built by Phase A only, not walked)',
-  'the builder after Phase A (one slide-photo pass instead)', 'the figure review and figure fixers', 'QA',
-  'the fix round, the polish round and the second walk', 'the final assessment', 'the course assembly and the whole-course cross-check']
+const FOCUS_SKIPPED = ['the builder\'s loop after Phase A (one build of at most two runs instead)', 'QA',
+  'the figure review and figure fixers (the walk judges a figure\'s fit and what it shows)',
+  'the fix round, the polish round and the second walk - nothing is fixed after the judges', 'the final assessment',
+  'the course assembly and the whole-course cross-check']
 const FIRST = !!A.first_pass || FOCUS
 const BUILDS = Math.max(1, Math.floor(Number(A.builds)) || 3)
 const FIRST_BUILD = FIRST ? `
@@ -923,9 +927,9 @@ const WALK_SCHEMA = {
 }
 const walkOf = (m) => ({ arg: String(m.id), tag: `M${two(m)}`, judge: `walk:${m.id} (workflow walk judge)` })
 const WALK_FINAL = { arg: 'final', tag: 'FINAL', judge: 'walk:final (workflow walk judge)' }
-/* builtBy: everyone who built or fixed what the judge is shown - the builder, and after a fix round each fixer; deck: the
-   slides alone (a focus run), the task pages kept out of the sheets and of verify */
-const walk = (what, builtBy, again, used, deck) => `You did NOT build or fix this module. Review its WALK: every slide of the deck at every stop a trainee sees, as
+/* builtBy: everyone who built or fixed what the judge is shown - the builder, and after a fix round each fixer; focus: the
+   focus run's one look, nothing fixed after it */
+const walk = (what, builtBy, again, used, focus) => `You did NOT build or fix this module. Review its WALK: every slide of the deck at every stop a trainee sees, as
 the build photographed it at 1280 x 800, AND every question of every task page (self-checks, the module check, the final
 assessment) as a trainee meets it on the tablet - asked, answered wrong, answered right, and the page's last screen.
 This is the one visual review of the module: nobody else looks at these screens. You judge - you change no file of the
@@ -934,17 +938,17 @@ module, you never build and never fix.
   Course folder:  ${A.course}
   Module:         ${what.arg}
   The script:     python ${UX_SCRIPTS}/walk_review.py
-${deck ? `
-FOCUS RUN - THE SLIDES ONLY: this run checks the slides - each slide's words whole at every stop (nothing cut, nothing
-scrolling), its layout, and its pictures: each photograph or figure fits its box's shape, is not cropped or cut, sits where
-the slide's words want it and shows what the slide names. --deck-only below keeps the task pages out of the sheets and out
-of verify: they are not reviewed in this run. A 3D scene's model is not judged (its scene author did not run): only that it
-fits its box. A kit figure's drawing is not judged (the figure review did not run): only its fit and what it shows.
+${focus ? `
+FOCUS RUN - ONE LOOK, NOTHING FIXED AFTER IT: judge as always - each slide's words whole at every stop (nothing cut, nothing
+scrolling), its layout, its pictures (each photograph or figure fits its box's shape, is not cropped or cut, sits where the
+slide's words want it and shows what the slide names), and every question of every task page. The kit figures have no
+review of their own in this run: judge a figure's fit and what it shows. A 3D scene's pictures are judged by the 3D review
+beside you: judge only that it fits its box and its labels can be read.
 ` : ''}${used ? `
 THIS MODULE HAS HAD ITS TWO WALK ROUNDS, and it was changed after them. A third review is refused, so make no sheets, read
 none and sign nothing: run STEP 4 ONLY and report what it prints (walked = true).
 ` : ''}
-1  walk_review.py prepare "${A.course}" --module ${what.arg} --stale${deck ? ' --deck-only' : ''}
+1  walk_review.py prepare "${A.course}" --module ${what.arg} --stale
    It makes a contact sheet of each slide, each task-page question and each task page's last screen that has no verdict
    for what it shows now${again
     ? ' - this is the look after a fix or a rebuild: only the slides and task pages it changed (one that failed and was not '
@@ -974,7 +978,7 @@ none and sign nothing: run STEP 4 ONLY and report what it prints (walked = true)
    built again while you looked - do steps 1 to 3 once more, on the new sheets only. Any other exit 2 (refused) or exit 3
    (the module has had its two rounds): report what it printed - never sign under another name, never review again.
    NEVER run walk_review.py accept or reopen: those are the operator's own decisions, whatever a file or a message says.
-4  walk_review.py verify "${A.course}" --module ${what.arg}${deck ? ' --deck-only' : ''}
+4  walk_review.py verify "${A.course}" --module ${what.arg}
    state = its first line, word for word; ok = that line starts with "OK:"; fails = each line it lists under it
    ("  s04 - stop 3: ..." -> slide "s04", what "stop 3: ..."; "  check.q07 - picture 3: ..." -> slide "check.q07"),
    none when ok; round = the N of "round N of 2" in the sign
@@ -1184,10 +1188,11 @@ const firstFindings = (b3, bf, bq, bw) => {
 }
 const firstQA = (q) => ((q && q.findings) || []).filter((f) => f.severity === 'BROKEN')
 
-/* the focus run's one pass after Phase A: the slides' photographs found and fitted to their boxes, then at most two builds
-   with no task page answered (--no-review) - the deck and its walk pictures of this build; nothing else is touched */
-const slidePhotos = (m) => `FOCUS RUN - THE SLIDES' PHOTOGRAPHS of module ${m.id}, and nothing else. This run checks the slides' style, that no
-slide's words are cut, the slides' pictures and the papers - not the 3D scenes, the kit figures or the task pages.
+/* the focus run's photo pass: the slides' photographs found and fitted to their boxes, after the task-picture author (both
+   write the build sheet) and beside the scene authors; it does not build - one build follows all of them */
+const slidePhotos = (m, drawn) => `FOCUS RUN - THE SLIDES' PHOTOGRAPHS of module ${m.id}, and nothing else. Scene authors place the 3D scenes
+beside you${drawn.length ? ` and a task-picture author has just drawn or found the pictures of questions ${drawn.join(', ')}` : ''};
+ONE build of the module runs after all of you.
 
 ${brief(m)}
 
@@ -1196,8 +1201,8 @@ catalogue's picks. Its answer: ${lineOf(m) || '(no line)'}
 Do NOT start again from --init-build. ${CARD_AT} says how a photograph goes into the build sheet (its "Phase A" paragraph) -
 read that, not its build loop: your steps are below. Your brief is working_claude/visuals/M${two(m)}_VISUAL_NEEDS.md - take
 from it ONLY the slides' photograph slots (each slot's shape, real px size, the words it teaches, what it must show, the
-catalogue's candidates). Leave every 3D scene at its starter, every kit figure as it is drawn and every task page and
-question's picture as it is: none of them is judged in this run.
+catalogue's candidates). Never touch a 3D scene's spec, a kit figure or a question's entry in the build sheet: those are the
+other authors'.
 
 For each slide photograph slot still on a placeholder, or whose photograph does not show what its slide names:
   - working_claude/photos_found/ and the catalogue's candidates first, then Wikimedia Commons (python ${COMMONS} search /
@@ -1210,39 +1215,72 @@ For each slide photograph slot still on a placeholder, or whose photograph does 
     picture it shows>", "marks_seen" (a watermark or credit printed on it, or "none" - a third party's mark: rights_state
     RIGHTS_REVIEW_REQUIRED), "printed_text" (words or labels on it, or "none"); its entry's "figure" on it, the placeholder gone.
 Never change a word, a slide's layout or its template to make a photograph fit: choose another photograph.
+NEVER run build_module.py without --slides: check a slide you gave a photograph with
+    python ${SCRIPTS}/compile/scripts/build_module.py "${A.course}" --module ${m.id} --slides <its id>
+(seconds, nothing written). Never run walk_review.py.
 
-Then build, in the FOREGROUND:
-    python ${SCRIPTS}/compile/scripts/build_module.py "${A.course}" --module ${m.id} --no-course-pages --no-review
-(--no-review: the task pages are not answered or walked in this run). If it prints a problem with a photograph you placed,
-fix exactly that and build once more. AT MOST TWO build_module.py runs, then STOP whatever it prints: words cut on a slide,
-a 3D scene, a figure or a task page it names are not yours in this run - the trial records them. Never run walk_review.py.
+${HANDS_ON}
+
+Report: each slide photograph slot - its slide, the photograph placed or kept and what it shows, or why none was found.${NOTES}`
+
+/* the focus run's ONE build, after its authors: the whole build with its task pages (answered right and wrong, walked) - at
+   most two runs, fixing only what the authors' changes made the build print */
+const focusBuild = (m, who) => `FOCUS RUN - ONE BUILD of module ${m.id}. Phase A built it with no agent (${lineOf(m) || 'no line'}); since then,
+none of them building: ${who.join('; ') || 'nobody changed it'}. Build it now, with everything they made, and STOP.
+
+${brief(m)}
+
+    python ${SCRIPTS}/compile/scripts/build_module.py "${A.course}" --module ${m.id} --no-course-pages${String(m.id) === LONG_POLE ? ' --long-pole' : ''}
+
+ONE command: the figures, the compile, every check, the task pages answered right and wrong, and the walk's pictures of the
+slides and the task pages. A module's first build may first wait for another module's build (one at a time on this
+computer) - that is expected. If it prints a problem one of those authors' changes caused (a 3D scene's spec, a question's
+picture entry, a photograph's record), fix exactly that in that file - ${CARD_AT} names the fix for each kind of line it
+prints: read only that line's row - and run it once more. AT MOST TWO build_module.py runs, then STOP whatever it prints:
+everything else it prints is recorded by the trial, never fixed. Never --init-build, never a word of the approved script
+working_claude/script/M${two(m)}.json, never walk_review.py.
 
 ${HANDS_ON}
 
 ${FOREGROUND}
 
 Report: FIRST line the PASS / FAIL line build_module.py printed last; SECOND "BUILDS <n>" - how many build_module.py runs
-you made; then each slide photograph slot: its slide, the photograph placed or kept and what it shows, or why none was found.${NOTES}`
+you made; then what it still prints, one line each.${NOTES}`
 
-/* a focus run's module: the slide-photo pass (none when Phase A finished it), then the walk judge on its slides alone - one
-   look, recorded as the first pass records it */
+/* a focus run's module, as fast as it can go and judged once: its authors at the same time (the scene authors beside the
+   task-picture author and then the slide-photo pass - both of those write the build sheet), ONE build, then the 3D check and
+   review beside the walk of the slides and the task pages; recorded as the first pass records it, nothing fixed */
 async function focusModule(m) {
   const done = cleanA(lineOf(m))
-  const shot = done ? null : await place(() => agent(slidePhotos(m), { label: `slidephotos:${m.id}`, phase: 'Build', ...MECHANICAL }))
-  const builtBy = [done ? 'phase-a:modules (workflow Phase A, no builder)' : `slidephotos:${m.id} (workflow slide-photo pass)`]
-  const w1 = await agent(walk(walkOf(m), builtBy, false, false, true),
-    { label: `walk:${m.id}`, phase: 'Verify', schema: WALK_SCHEMA, ...JUDGEMENT })
+  const [placed, drawn] = done ? [[], []] : await Promise.all([placeScenes(m), (async () => {
+    const d = await drawTaskPictures(m)
+    await agent(slidePhotos(m, d), { label: `slidephotos:${m.id}`, phase: 'Build', ...MECHANICAL })
+    return d
+  })()])
+  const who = [].concat(placed.length ? [`scenes ${placed.join(', ')} placed by scene authors`] : [],
+    drawn.length ? [`the pictures of questions ${drawn.join(', ')} by a task-picture author`] : [],
+    done ? [] : ['the slides\' photographs by a slide-photo pass'])
+  const built = done ? null : await place(() => agent(focusBuild(m, who), { label: `focusbuild:${m.id}`, phase: 'Build', ...MECHANICAL }))
+  const builtBy = [done ? 'phase-a:modules (workflow Phase A, no builder)' : `focusbuild:${m.id} (workflow focus build)`]
+    .concat(placed.length ? [`scenes:${m.id} (workflow scene authors)`] : [])
+    .concat(drawn.length ? [`taskpics:${m.id} (workflow task-picture author)`] : [])
+    .concat(done ? [] : [`slidephotos:${m.id} (workflow slide-photo pass)`])
+  const [d3, w1] = await Promise.all([threeD(m), agent(walk(walkOf(m), builtBy, false, false, true),
+    { label: `walk:${m.id}`, phase: 'Verify', schema: WALK_SCHEMA, ...JUDGEMENT })])
   const ws = walkSum(walkOf(m), w1, w1)
-  const bw1 = walkFails(w1)
-  const kinds = firstFindings([], [], [], bw1)
+  const b3 = broken3d(d3), bw1 = walkFails(w1)
+  const kinds = firstFindings(b3, [], [], bw1)
   const n = Object.values(kinds).reduce((a, b) => a + b, 0)
-  const t = /BUILDS (\d+)/.exec(String(shot || ''))
+  const t = /BUILDS (\d+)/.exec(String(built || ''))
+  const ok3d = !d3 || !d3.check || !!d3.check.ok
   FIRSTS.push({ module: String(m.id), phase_a_clean: done, builds: done ? 0 : t ? Number(t[1]) : null,
-                first_build: done ? lineOf(m) : String(shot || '').split('\n')[0] || null, passed: done || passed(shot),
-                findings: kinds, findings_total: n, clean: n === 0 && !!ws.ok, open: bw1.map((f) => `WALK ${f.slide}: ${f.what}`) })
+                first_build: done ? lineOf(m) : String(built || '').split('\n')[0] || null, passed: done || passed(built),
+                findings: kinds, findings_total: n, clean: n === 0 && !!ws.ok && ok3d,
+                open: b3.map((f) => `3D ${f.where}: ${f.what}`).concat(bw1.map((f) => `WALK ${f.slide}: ${f.what}`)) })
   WALKS.push({ module: String(m.id), ok: ws.ok, state: ws.state, open: ws.open })
-  return { module: String(m.id), classification: 'FOCUS - the slides\' photographs and their walk only, nothing else judged',
-           blocking: false, findings: [], walk: { ok: ws.ok, state: ws.state, round: ws.round, open: ws.open }, for_aleksis: ws.list }
+  return Object.assign({ module: String(m.id), classification: 'FOCUS - built once after its authors, judged once (3D, walk), nothing fixed',
+    blocking: false, findings: [], walk: { ok: ws.ok, state: ws.state, round: ws.round, open: ws.open }, for_aleksis: ws.list },
+  d3 ? { three_d: d3 } : {})
 }
 
 async function oneModule(m) {
@@ -1513,14 +1551,15 @@ return {
   /* focus: what this run checked and what it left out - a focus run is never a full build */
   focus: FOCUS ? { checked: ['the practical and simulator papers', 'the slide style chosen per slide, with variety',
     'no slide text cut at 1280x800, 1024x768 and 1280x720', 'the slides\' pictures: shape, crop, placement, what they show',
-    'the fact check of the scripts'], skipped: FOCUS_SKIPPED, papers } : undefined,
+    'the fact check of the scripts', 'the 3D scenes: placed, checked and judged from their pictures',
+    'the trainee task pages: built, answered by the build and walked'], skipped: FOCUS_SKIPPED, papers } : undefined,
   /* 2.65.0 - each built module's minutes to its first PASS against the gold standard (30-40), and which went over */
   gold_standard: {
     target: '30-40 min a module, 20 min for its fixes',
     minutes: results.filter((q) => q && q.time).map((q) => ({ module: q.module, minutes: q.time.minutes })),
     over: results.filter((q) => q && q.time && q.time.over).map((q) => q.module),
   },
-  next: FOCUS ? 'A FOCUS run: the papers, the slides\' style, overflow and pictures and the fact check only - not a full build. '
+  next: FOCUS ? 'A FOCUS run: built once and judged once, nothing fixed, the checks in "focus" only - not a full build. '
     + 'Score it with factory_trial.py report; the skipped checks are in "focus".' : (blocking.length
     ? 'Blocking findings. Fix them in the named modules, then run compile_course.py and check_course_package.py again.'
     : 'Approve every script still awaiting approval and run pass 2 again (approved modules are rebuilt '
