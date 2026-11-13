@@ -1508,6 +1508,32 @@ def track_findings(course, script):
                          ap="%g" % alloc[1], ids=theory), "fix": ""}]
 
 
+def sim_paper_findings(course, script):
+    """MUST - every simulator exercise the architecture plans for the module ("practicals", L28 / L66) is a practical on paper
+    in the script: activity screens that name the simulator, one paper each (one "paper", or a screen of its own), which the
+    build prints as the trainee card and the instructor sheet"""
+    if not course or str(script.get("module")).lower() == "final":
+        return []
+    try:
+        arch = load(workspace.claude_path(course, "architecture.json"))
+    except (OSError, ValueError):
+        return []
+    mod = next((m for m in arch.get("modules") or [] if str(m.get("module")) == str(script.get("module"))), {})
+    planned = [p for p in mod.get("practicals") or [] if isinstance(p, dict)
+               and SIMULATOR.search(" ".join(str(p.get(k) or "") for k in ("task", "equipment", "place")))]
+    papers = {}
+    for s in script.get("screens", []):
+        if s.get("kind") == "activity":
+            key = str(s.get("paper") or "").strip() or s["id"]
+            papers[key] = papers.get(key) or bool(SIMULATOR.search(" ".join(str(s.get(k) or "") for k in ("title", "text", "paper"))))
+    have = sum(1 for v in papers.values() if v)
+    if have >= len(planned):
+        return []
+    names = "; ".join(re.split(r"\s\(|:", str(p.get("task") or ""), maxsplit=1)[0].strip() for p in planned)
+    return [{"where": T(script, "s_the_module"), "screen": "", "field": "", "level": FAIL, "rule": "sim_no_paper",
+             "detail": T(script, "sim_no_paper", n=len(planned), names=names, have=have), "fix": ""}]
+
+
 def said_words(s, vocab, but=(), fields=("title", "text", "visual")):
     """the words of vocab a slide's title, text or planned picture names - whole words, any case, each once; words
     inside one of the phrases in but ("room temperature") are not counted. fields narrows where to look."""
@@ -2647,7 +2673,7 @@ def all_findings(script, course=None):
     th, _ = theory_findings(script)
     return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script) \
         + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script) \
-        + task_cover_findings(course, script) + tablet_findings(course, script) + track_findings(course, script)
+        + task_cover_findings(course, script) + tablet_findings(course, script) + track_findings(course, script)         + sim_paper_findings(course, script)
 
 
 # the words that send the trainees to their own tablet: "on your tablet", "every trainee tablet", "vote on the tablet"

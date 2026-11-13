@@ -133,17 +133,20 @@ def problems(course, module=None):
 
 
 def sim_note(course):
-    """L66, said loud and never a stop: an advanced course whose simulator coverage map is not complete"""
+    """L66, said loud and never a stop: an advanced course whose simulator coverage map is not complete; and (L28) a course
+    whose IMO model course marks topics for a simulator that no simulator exercise of the architecture plans"""
     sys.path.insert(0, os.path.join(HERE, "..", "coverage", "scripts"))
     import sim_coverage
     n = sim_coverage.needed(course)
-    if not n["needed"]:
-        return None
-    probs = sim_coverage.check(course)[0]
-    if not probs:
-        return None
-    return ("Simulators (L66): %s, and its simulator coverage map is not complete - %d thing(s) to do; the first: %s\n"
-            "  Run: coverage/scripts/sim_coverage.py check <course> (coverage/SIMULATORS.md)." % (n["why"], len(probs), probs[0]))
+    out = []
+    probs = sim_coverage.check(course)[0] if n["needed"] else []
+    if probs:
+        out.append("Simulators (L66): %s, and its simulator coverage map is not complete - %d thing(s) to do; the first: %s\n"
+                   "  Run: coverage/scripts/sim_coverage.py check <course> (coverage/SIMULATORS.md)." % (n["why"], len(probs), probs[0]))
+    left = sim_coverage.plan_problems(sim_coverage.model_course_plan(course, n), n)
+    if left:
+        out.append("Simulator exercises (L28): %s\n  Run: coverage/scripts/sim_coverage.py planned <course>." % left[0])
+    return "\n".join(out) or None
 
 
 def stop_message(module, probs, what="started"):

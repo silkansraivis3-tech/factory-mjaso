@@ -1453,6 +1453,25 @@ def main():
               [(f["rule"], f["level"]) for f in ft] == [("tr_split", cs.FAIL)] and "theory 23 / practice 0" in ft[0]["detail"]
               and "theory 13 / practice 10" in ft[0]["detail"] and "t01" in ft[0]["detail"], ft)
         check("... and approval stops on it", any(f["rule"] == "tr_split" for f in cs.blocking(cs.all_findings(tk, ct))))
+        arch = cs.load(ap)
+        arch["modules"][0]["practicals"] = [{"task": "Cargo plant layout on the LPG cargo handling simulator", "minutes": 20,
+                                             "equipment": "LPG cargo handling simulator", "track": "theory", "model_course": ["1.2"]},
+                                            {"task": "Tank types on the cutaway model", "equipment": "tank cutaway model"}]
+        cs.save(ap, arch)
+        fp = cs.sim_paper_findings(ct, tk)
+        check("a simulator exercise the architecture plans and the script does not write on paper is a must-fix (a model "
+              "course's simulator topics planned and never printed)",
+              [(f["rule"], f["level"]) for f in fp] == [("sim_no_paper", cs.FAIL)] and "Cargo plant layout" in fp[0]["detail"]
+              and "cutaway" not in fp[0]["detail"], fp)
+        check("... and approval stops on it", any(f["rule"] == "sim_no_paper" for f in cs.blocking(cs.all_findings(tk, ct))))
+        sp = copy.deepcopy(SCRIPT)
+        sp["screens"][-1:-1] = [
+            {"id": "a01", "kind": "activity", "minutes": 3, "track": "theory", "paper": "Cargo plant layout", "paper_part": "brief",
+             "title": "To the LPG simulator", "text": "We now go to the LPG cargo handling simulator, room K2 - 20 minutes."},
+            {"id": "a02", "kind": "activity", "minutes": 17, "track": "theory", "paper": "Cargo plant layout",
+             "title": "Trace the cargo lines", "text": "1. Open the cargo mimic.\n2. Trace the liquid line from the manifold to tank 1."}]
+        check("... the practical's screens with one \"paper\" are its paper - nothing to say", cs.sim_paper_findings(ct, sp) == [],
+              cs.sim_paper_findings(ct, sp))
         nomap = new_course(tmp, "nomapfind", gate=False)
         check("without an ILO map the check adds nothing (the gate stops the module instead)", cs.ilo_findings(nomap, bad) == [])
         cb2 = new_course(tmp, "ilobad", script=bad)

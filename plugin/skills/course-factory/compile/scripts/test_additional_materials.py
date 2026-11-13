@@ -192,6 +192,56 @@ def practical_on_paper(tmp):
           bad(screens=[dict(HANDOVER, text="We go to the simulator.\n1. Line up the station.\n2. Start the transfer.")]))
 
 
+SIM_GROUP = [
+    {"id": "s01", "kind": "activity", "sub_ilo": ["1.1"], "paper": "Cargo plant layout", "paper_part": "brief", "track": "theory",
+     "title": "To the LPG simulator", "text": "We now go to the LPG cargo handling simulator, room K2 - 20 minutes.",
+     "notes": "- Load the cargo plant layout exercise before the class arrives.", "minutes": 3},
+    {"id": "s02", "kind": "activity", "sub_ilo": ["1.1"], "paper": "Cargo plant layout", "track": "theory",
+     "title": "Trace the cargo lines", "text": "1. Open the cargo mimic (LCHS LPG manual p12).\n2. Trace the liquid line from the "
+     "manifold to tank 1.", "notes": "- Check every pair traces the vapour return too.", "minutes": 14},
+    {"id": "s03", "kind": "activity", "sub_ilo": ["1.1"], "paper": "Cargo plant layout", "paper_part": "debrief", "track": "theory",
+     "title": "Debrief", "text": "Which valves did you pass?", "notes": "- Close with the ESD valves.", "minutes": 3}]
+
+
+def model_course_simulator(tmp):
+    """a simulator exercise the architecture plans from the model course is printed like any practical: its screens are its
+    paper; a room activity before it is never taken for it, and one left unwritten is said"""
+    print("\n-- a simulator exercise planned from the model course, on paper")
+    c = course(os.path.join(tmp, "mcsim"))
+    wc = os.path.join(c, "working_claude")
+    arch = cs.load(os.path.join(wc, "architecture.json"))
+    arch["modules"][0]["practicals"] = [{"task": "Cargo plant layout on the LPG cargo handling simulator", "track": "theory",
+                                         "equipment": "LPG cargo handling simulator", "place": "K2", "model_course": ["1.2"]}]
+    cs.save(os.path.join(wc, "architecture.json"), arch)
+    sp = os.path.join(wc, "script", "M01.json")
+
+    def build(screens):
+        s = cs.load(sp)
+        s["screens"] = t.SCREENS[:4] + screens + t.SCREENS[4:]
+        s["approved_hash"] = cs.content_hash(s)
+        cs.save(sp, s)
+        return run(TOOL, c, "--no-pdf")
+    code, out = build([ROOM] + SIM_GROUP)
+    papers = os.path.join(c, "modules", "module01", "instructor", "papers")
+    listing = json.loads(read(papers, "papers.json")) if os.path.isfile(os.path.join(papers, "papers.json")) else {}
+    stem = "M01_S01-S03_cargo_plant_layout"
+    check("its screens are one simulator paper - trainee card and instructor sheet on the instructor's tablet, listed in "
+          "papers.json with their HTML and PDF; the room activity before it is not taken for the simulator's",
+          listing == {"papers": [{"id": "S01-S03", "title": "Cargo plant layout", "kind": "simulator",
+                                  "trainee": {"html": stem + "_TRAINEE.html", "pdf": stem + "_TRAINEE.pdf"},
+                                  "instructor": {"html": stem + "_INSTRUCTOR.html", "pdf": stem + "_INSTRUCTOR.pdf"}}]}
+          and "Trace the liquid line" in read(papers, stem + "_TRAINEE.html")
+          and "Load the cargo plant layout" in read(papers, stem + "_INSTRUCTOR.html")
+          and "simulator exercise(s)" not in out, (listing, out[-600:]))
+    code, out = build([ROOM])
+    check("... a simulator exercise the architecture plans and the script leaves out is said - nothing would print its papers",
+          "M01: the architecture plans 1 simulator exercise(s) (Cargo plant layout on the LPG cargo handling simulator) and the "
+          "script has 0 on paper" in out, out[-800:])
+    code, out = build([dict(HANDOVER, exercise="4.1", title="Exercise 4.1 - cargo plant layout on the simulator")])
+    check("... and a simulator screen naming an exercise whose approved form is not there - its paper would be the handover alone",
+          "names exercise 4.1 and no approved form" in out, out[-800:])
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="additional_materials_")
     try:
@@ -457,6 +507,7 @@ def main():
               and "the programme is in Latvian and Main ILO 2, Sub-ILO 1.1 have no English rendering" in out, (code, out[-600:]))
 
         practical_on_paper(tmp)
+        model_course_simulator(tmp)
 
         s = cs.load(os.path.join(c, "working_claude", "script", "M01.json"))
         s["screens"] = [x for x in s["screens"] if x["id"] != "a02"]

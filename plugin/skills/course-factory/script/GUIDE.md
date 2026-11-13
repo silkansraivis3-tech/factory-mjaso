@@ -252,6 +252,11 @@ tablets (L35), and the script says which screen is where:
   `"paper"` is a paper of its own. Write the trainees' steps as they will read them on the card ("1. Connect the
   probe ..."); the screen's notes are the instructor's for that part. The check fails screens of one practical with
   another screen between them, a `"paper_part"` that is none of the three, and a practical with no part for the trainees.
+- **Every simulator exercise the architecture plans for the module is on paper** (`"practicals"`, L28 / L66). With no
+  approved exercise form, it is a practical on paper as above: its screens carry one `"paper"`, the brief says which
+  simulator, where and for how long, the trainees' steps come from the simulator's manual with its pages, and
+  `"track": "theory"` where its minutes come from the theory. The check fails a planned simulator exercise with no
+  screen that names the simulator.
 - **A simulator exercise's screen is only the handover.** Its paper is its approved exercise form (`"exercise": "<no>"`,
   written from the simulator's manual and the model course - `coverage/SIMULATORS.md`); the screen says where the class
   goes, for how long and that the instructor hands out the papers - three lines at most, no steps: "We now go to the

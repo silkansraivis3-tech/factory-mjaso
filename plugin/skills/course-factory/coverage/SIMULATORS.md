@@ -32,10 +32,15 @@ the file is added there (a factory change), so the next course finds it.
 **A course L66 does not cover still gets its model course's simulator exercises.** `simulators.json` →
 `model_courses` holds what an IMO model course itself marks for a simulator and for real equipment, with its pages (MC
 1.04: the topics marked (*), Part D Appendix 2's three exercises). For such a course `needed` and `practical` print them:
-Stage 2 plans those topics as simulator exercises in `architecture.json` `"practicals"` - inside the theory minutes
-(`"track": "theory"`) where the programme gives them no practice hours (L28: every simulator of the model course is
-assumed available) - each written on paper from the simulator's manual and the model course, its activity screen in
-the deck where the class goes to it. Both name the manuals found in the course's own `source_files` / `old_course`; with none, the factory
+Stage 2 plans those topics as simulator exercises in `architecture.json` `"practicals"` - each practical naming the
+simulator and the topics it trains, `"model_course": ["2.1", "2.4"]`, inside the theory minutes (`"track": "theory"`)
+where the programme gives them no practice hours (L28: every simulator of the model course is assumed available).
+`sim_coverage.py planned <course>` says which topic no simulator practical names, and the module that holds it; the
+Stage 2 page cannot be approved while one is left (`make_architecture_page.py`). Each is written on paper from the
+simulator's manual and the model course: in the script, its activity screens with one `"paper"` - the brief, the
+trainees' steps with the manual's pages, the debrief (`script/GUIDE.md`) - printed as the trainee card and the
+instructor sheet like every practical; the script check fails a planned simulator exercise with no paper, and the
+build says one. Both name the manuals found in the course's own `source_files` / `old_course`; with none, the factory
 asks for the manual (unattended: `OPEN_EXPERT_QUESTIONS.md`) and never writes a simulator procedure without it. A
 course with no practice minutes, no practical and no simulator topic gets no paper exercise and no activity screen for one,
 and `practical` says so.

@@ -211,7 +211,9 @@ Corrections arrive in the operator's words ("too much text on screen 4"): act on
    HTML, PDF): judge each topic in `pedagogy_review.json` by `bloom/GUIDE.md` §5, `pedagogy_review.py check` and
    `render`; the experts answer in the training app's editor (`course_portal.py create`, `push --pedagogy`, `pull`).
 2. **Simulators (L66), unasked.** `coverage/scripts/sim_coverage.py needed <course>`; where needed, the maps and GAP
-   drafts from `coverage/SIMULATORS.md`, and `sim_coverage.py check` passes before "next".
+   drafts from `coverage/SIMULATORS.md`, and `sim_coverage.py check` passes before "next". Every topic the IMO model
+   course marks for a simulator gets a simulator practical that names it (L28, `sim_coverage.py planned`) - the page
+   is not approved without.
 3. **One page:** `python scripts/make_architecture_page.py --course <course> --check`, then without `--check`. It
    shows: modules one per topic with minutes and the total against the programme (L1, L34) · the two tablets (L35) ·
    Main ILOs verbatim, with `text_en` when the programme is not English (L2, L19) · Sub-ILOs kept / re-expressed /

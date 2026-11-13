@@ -49,6 +49,7 @@ MAIN1_EN = "Contribute to safe cargo operations on liquefied gas tankers"
 OUT11_EN = "Identify the types of liquefied gas tankers and describe their construction"
 SUB_NEW = "Identify the cargo containment system of a liquefied gas tanker from its general arrangement plan"
 
+SIM_TOPICS = ["1.2", "2.1", "2.2", "2.3", "2.4", "2.5"]      # what MC 1.04 marks for a simulator (simulators.json)
 PROGRAMME = {
     "source": "Programma X, Rev. 1", "academic_hour_min": 40, "language": "Latvian",
     "topics": {
@@ -71,6 +72,8 @@ ARCH = {
                        "why": "Lai to varētu apgūt praktiski, pie rasējuma"},
                       {"id": "1.1.b", "status": "added", "text": "Recognise the tank type from a photograph", "why": "Operatora lūgums"}],
          "active_learning": [{"where": "tank types", "instead_of": "lecture", "technique": "predict-then-reveal"}],
+         "practicals": [{"task": "Cargo plant layout on the LPG cargo handling simulator", "equipment": "LPG cargo handling simulator",
+                         "place": "simulator room", "minutes": 20, "track": "theory", "model_course": SIM_TOPICS}],
          "media": [{"kind": "photo", "what": "an LNG carrier alongside"}, {"kind": "model_3d", "what": "the four tank types in a hull section"},
                    {"kind": "photo_to_take", "what": "the manifold of the training rig"}],
          "self_checks": [{"questions": 4, "after": "after 1.1", "mechanics": ["single_choice", "categorise"]},
@@ -390,6 +393,37 @@ def main():
         nn = write_course(os.path.join(tmp, "noilo"), PROGRAMME, na)
         code, out = run("--course", nn, "--approve", "--by", "Anna")
         check("... nor while a teaching module has nothing in the ILO map", code == 2 and LV["p_no_ilo_row"].format(m=3) in out, out)
+
+        print("\n-- L28: what the model course marks for a simulator is planned on a simulator")
+        ns = copy.deepcopy(ARCH)
+        ns["modules"][0].pop("practicals")
+        sc = write_course(os.path.join(tmp, "nosim"), PROGRAMME, ns)
+        os.makedirs(os.path.join(sc, "working_claude"))
+        io.open(os.path.join(sc, "working_claude", "model_course_syllabus.json"), "w", encoding="utf-8").write(json.dumps({"items_by_topic": {
+            "1": [{"id": "1.2", "requirement": "General arrangement and construction"}, {"id": "1.2.1", "requirement": "x"}],
+            "2": [{"id": x, "requirement": "x"} for x in ("2.1", "2.1.3", "2.2", "2.3", "2.4", "2.5")],
+            "3": [{"id": "12.1", "requirement": "Tanker fire organization"}]}}))
+        code, out = run("--course", sc, "--check")
+        check("caught: the model course marks topics for a simulator and the architecture plans none - said for the module "
+              "that holds them, with the field to write", code == 1 and "Module 1 holds" in out
+              and "(1.2 General arrangement and construction)" in out and "Module 2 holds" in out
+              and '"model_course": ["2.1", "2.2", "2.3", "2.4", "2.5"]' in out, out)
+        code, out = run("--course", sc, "--approve", "--by", "Anna")
+        check("... and the page cannot be approved while one is unplanned", code == 2 and "NOT recorded" in out
+              and EN["p_sim_unplanned"].split(":")[0] in out, out)
+
+        def sim_check(m1, m2):
+            ns["modules"][0]["practicals"], ns["modules"][1]["practicals"] = m1, m2
+            io.open(os.path.join(sc, "architecture.json"), "w", encoding="utf-8").write(json.dumps(ns, ensure_ascii=False))
+            return run("--course", sc, "--check")
+        sim2 = {"task": "Loading and ESD on the LPG cargo simulator", "equipment": "LPG cargo handling simulator", "minutes": 30,
+                "track": "theory", "model_course": ["2.1", "2.2", "2.3", "2.4", "2.5"]}
+        code, out = sim_check([{"task": "Tank types on the cutaway model", "equipment": "tank cutaway model on the bench",
+                                "model_course": ["1.2"]}], [sim2])
+        check("... a simulator practical that names its topics plans them; an equipment practical naming one does not",
+              code == 1 and "Module 2 holds" not in out and "Module 1 holds" in out, out)
+        code, out = sim_check([], [sim2, dict(sim2, task="Cargo plant layout on the LPG simulator", model_course=["1.2.1"])])
+        check("... and a simulator practical in another module, naming an item under the topic, plans it too", code == 0, out)
 
         print("\n-- one file that opens anywhere")
         check("the page fetches nothing from the internet", not re.search(r"""(src|href)\s*=\s*["']?https?:""", page) and "@import" not in page)
