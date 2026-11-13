@@ -7,6 +7,10 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.137.0 · A fast trial, the fact check beside the writer, simulator exercises planned (2026-11-13)
+
+- `scripts/factory_trial.py` `run --focus` and `scripts/fault_report.py` (seven checks, the skipped list); `orchestration/workflows/build_course.js` the focus module (authors at once, one build, judges at once, `papers:course`), the fact check per module as its script lands (`facts:N`, `rewrite:N`), scene authors six at once; `scripts/fact_check.py` sources in order (knowledge base, source files, old course, internet), `rewrites`, `rewrite`, `questions`, `answer`, the unattended operator list; `agents/fact-checker.md`; `scripts/sim_coverage.py` `planned`, `scripts/make_architecture_page.py` `p_sim_unplanned`, `scripts/course_gate.py` `sim_note`, `content_script.py` `sim_no_paper` and the title in `no_shape`; `scripts/additional_materials.py` simulator papers; `compile/scripts/layout_plan.py` `title_lines`. Tests: test_factory_trial, test_build_course, test_fact_check, test_sim_coverage, test_architecture_page, test_content_script, test_additional_materials, test_layout_plan.
+
 ## 2.136.0 · Task pictures before the builder, a removed picture comes back, no folder deleted (2026-11-13)
 
 - `compile/scripts/phase_a.py` "TASK PICTURES"; `orchestration/workflows/build_course.js` the task-picture author (`drawTaskPictures`) and NEVER DELETE A FOLDER in every brief that changes a module; `compile/scripts/build_module.py` `starter_blanks` names `--fill-slots` and `no_figure`; `scripts/content_script.py` `given_away`. Tests: test_phase_a, test_build_course, test_build_module, test_content_script.

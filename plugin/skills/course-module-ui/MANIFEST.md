@@ -103,6 +103,10 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## A two-line title takes room from the band — 2.137.0 (2026-11-13)
+
+`knowledge/layout-templates.json` "long_title": a title over 35 characters stands on two lines at 1024 x 768 (49 px more), and every band budget shrinks by it (65 words become 53); measured on the 2.135.0 trial's s11 and s20.
+
 ## A lit point never splits at a column break — 2.135.0 (2026-11-12)
 
 `templates/gb_layouts.css`: each point of a two-column list (fig-top, fig-bottom, a figure-top stage's words) is one box that cannot split, so the lit line's frame never leaves an empty edge at the foot of the first column; `course-module-ux/measure/scripts/fit_probe.js` names a frame split at a column break (fixture `deck_columns.html`, test_fit_gate).
