@@ -4,7 +4,7 @@
 
     factory_trial.py setup  --from <course master folder> [--modules 1,16] [--home <folder>]
     factory_trial.py setup  --reuse <an earlier trial's home or run> [--from ...] [--plugin-dir <plugin folder>] [--dry-run]
-    factory_trial.py run    [--modules 1,4] [--plugin-dir <plugin folder>] [--fresh] [--dry-run] [--home <folder>]
+    factory_trial.py run    [--modules 1,4] [--plugin-dir <plugin folder>] [--fresh] [--full | --focus] [--dry-run] [--home <folder>]
     factory_trial.py report [--run <runs\\folder>] [--course <trial course>] [--against <scorecard.json>] [--no-browser] [--home <folder>]
     factory_trial.py compare <scorecard.json before> <scorecard.json now>
     factory_trial.py status [--home <folder>]
@@ -37,6 +37,12 @@ trial's. Modules given by hand that build no practical work in a course that has
           the stage's own checks with this factory: the gate (course_gate.py) for Stage 1-2, approval for a script (no
           must-fix, its claims proved, its questions covered - content_script.approval_blockers). Anything else, and
           --fresh, runs the stage. The prompt, the marker and the scorecard say which stage was reused and why.
+          FOCUS (--focus): five checks only, for when a whole course must later build right without being redone - the
+          practical and simulator papers, the slide style chosen per slide with variety, no slide text cut at 1280 x 800,
+          1024 x 768 and 1280 x 720, the slides' pictures (their box's shape, their crop, what they show) and the fact check.
+          The scripts as above, Phase A, ONE slide-photo pass a module, the walk review of its slides alone, the papers - no
+          3D, task pages, builder, figure review, QA, fix round, assembly or cross-check. Its run folder ends _focus; its
+          scorecard and FAULTS.html open on the five checks and name what was skipped, and it is set beside the last focus run.
   report  the scorecard of each trial module, and what changed since the last trial:
             built, passed (its last build said PASS or MODULE CLEAN) and that build's verdict; minutes to its first PASS
             (the build's clock, cf_timing.py); slides cut or pictures cropped at 1280 x 800 and at 1024 x 768, every Next
@@ -112,17 +118,27 @@ Use the course-factory skill and build it by its "Auto build" rules (SKILL.md), 
 - This folder and the factory are as said here and in SKILL.md: list no folders and read no factory script's source (its
   --help says how to run it).
 End with one line: TRIAL DONE, or TRIAL STOPPED: <why>."""
-FIRST_PASS = """- THIS TRIAL MEASURES THE FACTORY'S FIRST PASS: what it makes by itself, not what helpers can repair. Nothing loops.
+FIRST_SCRIPTS = """- THIS TRIAL MEASURES THE FACTORY'S FIRST PASS: what it makes by itself, not what helpers can repair. Nothing loops.
   Scripts: the writer writes each script once; the task-coverage-checker, the fact-checker and the approval check run once
   (`content_script.py status` lists the must-fixes). At most ONE rewrite round to clear the must-fixes, then the checks once
   more. Then approve it as it stands (`approve --by "Factory trial"`), or - when must-fixes are still open - approve it with
   `--despite-findings` (the build goes on, so the build stage is measured too) and record it as not approvable on the first
   pass. Write `working_claude/first_pass.json` as you go: {"scripts": {"<module number>": {"rewrite_rounds": 0 or 1,
-  "must_fixes_first_check": <count at the first check>, "approved_clean": true/false, "open_must_fixes": ["<where: what>", ...]}}}.
+  "must_fixes_first_check": <count at the first check>, "approved_clean": true/false, "open_must_fixes": ["<where: what>", ...]}}}."""
+FIRST_BUILD = """
   Build: in args.json for brief.mjs set "first_pass": true and "builds": 3. Each module gets Phase A and at most 3 builder
   builds, no carry-on builder, no fix round, no polish round and no second walk - the 3D check, QA and the walk review run
   once on that build and their findings are recorded in result.json, not fixed. Fix nothing yourself after the build:
   a module that is not clean is the result. Report it as it is."""
+FIRST_PASS = FIRST_SCRIPTS + FIRST_BUILD
+FOCUS_BUILD = """
+  Build: THIS IS A FOCUS RUN (--focus) - in args.json for brief.mjs set "first_pass": true and "focus": true. It checks five
+  things only: the practical and simulator papers, the slide style chosen per slide with variety, no slide text cut at
+  1280x800, 1024x768 and 1280x720, the slides' pictures (their box's shape, their crop, what they show) and the fact check of
+  the scripts. After Phase A each module gets ONE slide-photo pass and the walk review of its slides; then the papers are
+  built. No scene author, task-picture author, builder, 3D check, figure review, QA, task-page walk, fix round, polish,
+  course assembly or cross-check - brief.mjs lists none of them: start only what it lists. Fix nothing yourself after the
+  build. Report it as it is."""
 FULL_RUN = """- This is the full trial (--full): the build keeps its fix round, its polish round and the walk's second look, as a real
   course build does."""
 FRESH = """- Stage 1 and Stage 2 cover the whole programme as usual. Only modules {modules} get a content script, the fact-checker,
@@ -644,9 +660,10 @@ def reuse_into(kept, course, plan, plugin_dir=None):
     return plan
 
 
-def flow_prompt(full=False):
-    """the prompt's lines on how far the run goes: the first pass alone, or the full build with its fix round"""
-    return FULL_RUN if full else FIRST_PASS
+def flow_prompt(full=False, focus=False):
+    """the prompt's lines on how far the run goes: the first pass alone, its five focus checks, or the full build with its
+    fix round"""
+    return FIRST_SCRIPTS + FOCUS_BUILD if focus else FULL_RUN if full else FIRST_PASS
 
 
 def stages_prompt(plan, modules):
@@ -678,9 +695,10 @@ def reuse_lines(plan):
     return out
 
 
-def prepare_run(home, cfg, modules, plugin_dir=None, fresh=False, full=False):
+def prepare_run(home, cfg, modules, plugin_dir=None, fresh=False, full=False, focus=False):
     """the new trial course: -> (master folder, run folder, prompt). The last run's stages are kept first (snapshot), then
-    taken where nothing they depend on changed (decide, reuse_into)"""
+    taken where nothing they depend on changed (decide, reuse_into). focus: the five checks alone - marked in the marker and
+    in the run folder's name"""
     master = os.path.join(home, "run", TITLE)
     last = load(os.path.join(master, MARKER))
     if isinstance(last, dict):
@@ -690,6 +708,8 @@ def prepare_run(home, cfg, modules, plugin_dir=None, fresh=False, full=False):
     os.makedirs(os.path.join(course, "working_claude"))
     mark = {"trial": True, "modules": modules, "from": cfg["from"], "plugin": plugin_version(plugin_dir),
             "started": datetime.now().strftime("%Y-%m-%d %H:%M"), "factory": factory_record(plugin_dir), "first_pass": not full}
+    if focus:
+        mark["focus"] = True
     save(os.path.join(master, MARKER), mark)
     for name in ("source_files", "old_course"):
         link(cfg["inputs"][name], os.path.join(master, name))
@@ -701,9 +721,10 @@ def prepare_run(home, cfg, modules, plugin_dir=None, fresh=False, full=False):
     plan = reuse_into(kept, course, decide(kept, modules, plugin_dir, fresh), plugin_dir)
     mark["reused"] = plan
     save(os.path.join(master, MARKER), mark)
-    run_dir = os.path.join(home, "runs", datetime.now().strftime("%Y%m%d-%H%M") + "_" + plugin_version(plugin_dir))
+    run_dir = os.path.join(home, "runs", datetime.now().strftime("%Y%m%d-%H%M") + "_" + plugin_version(plugin_dir)
+                           + ("_focus" if focus else ""))
     os.makedirs(run_dir, exist_ok=True)
-    prompt = TRIAL_PROMPT.format(stages=stages_prompt(plan, modules), flow=flow_prompt(full))
+    prompt = TRIAL_PROMPT.format(stages=stages_prompt(plan, modules), flow=flow_prompt(full, focus))
     io.open(os.path.join(run_dir, "prompt.txt"), "w", encoding="utf-8").write(prompt)
     return master, run_dir, prompt
 
@@ -752,9 +773,9 @@ def measured(fn, *args):
 CUT_KINDS = ("cut", "spill", "picture", "figure")      # fit_gate.py's findings of something shown in part
 
 
-def fit_found(deck, no_browser):
-    """{size: [[slide, step, kind, what]]} - every finding of fit_gate.py at the tablets' 1280 x 800 and at 1024 x 768, every
-    Next pressed; {} when nothing could be measured"""
+def fit_found(deck, no_browser, sizes=FIT_SIZES):
+    """{size: [[slide, step, kind, what]]} - every finding of fit_gate.py at the tablets' 1280 x 800 and at 1024 x 768 (a
+    focus run: and 1280 x 720), every Next pressed; {} when nothing could be measured"""
     if no_browser or not os.path.isfile(deck):
         return {}
     sys.path.insert(0, os.path.join(PLUGIN, "skills", "course-module-ux", "measure", "scripts"))
@@ -762,7 +783,7 @@ def fit_found(deck, no_browser):
     import tempfile
     import fit_gate
     out = os.path.join(tempfile.mkdtemp(prefix="trial_fit_"), "fit.json")
-    args = [deck] + [x for size in FIT_SIZES for x in ("--viewport", size)] + ["--json", out]
+    args = [deck] + [x for size in sizes for x in ("--viewport", size)] + ["--json", out]
     try:
         with contextlib.redirect_stdout(io.StringIO()):
             code = fit_gate.main(args)
@@ -772,12 +793,12 @@ def fit_found(deck, no_browser):
     return found if isinstance(found, dict) else {}
 
 
-def fit_slides(deck, no_browser, found=None):
+def fit_slides(deck, no_browser, found=None, sizes=FIT_SIZES):
     """{size: slides with words cut or a picture cropped at that size} from fit_found; {} when nothing could be measured. Only
     what is cut or cropped counts: the gate's other findings (a drawing that never changes, lines walked twice) are not a
     cut slide"""
-    found = fit_found(deck, no_browser) if found is None else found
-    return {size: len({x[0] for x in found.get(size) or [] if x[2] in CUT_KINDS}) for size in FIT_SIZES if size in found}
+    found = fit_found(deck, no_browser, sizes) if found is None else found
+    return {size: len({x[0] for x in found.get(size) or [] if x[2] in CUT_KINDS}) for size in sizes if size in found}
 
 
 def build_verdict(course, mid):
@@ -927,7 +948,7 @@ def first_pass_row(course, m):
     return row
 
 
-def score_module(course, m, no_browser=False, found=None):
+def score_module(course, m, no_browser=False, found=None, focus=False):
     mid = cs.mid(m)
     row = {"module": m}
     sp = cs.paths(course, m)["script"]
@@ -937,9 +958,12 @@ def score_module(course, m, no_browser=False, found=None):
     row["build_says"], row["passed"] = measured(build_verdict, course, mid) or ("", None)
     row["build_says"] = row["build_says"][:90]
     row["build_minutes"] = measured(build_minutes, course, mid)
-    fit = measured(fit_slides, deck, no_browser, found) or {}
+    fit = measured(fit_slides, deck, no_browser, found, FOCUS_SIZES if focus else FIT_SIZES) or {}
     row["cut_or_cropped_slides"], row["cut_at_1024x768"] = fit.get("1280x800"), fit.get("1024x768")
-    row["slides_3d_lagging"] = measured(perf_slides, deck, no_browser)
+    if focus:
+        row["cut_at_1280x720"] = fit.get("1280x720")
+    else:                                               # a focus run's 3D is Phase A's starters: not measured
+        row["slides_3d_lagging"] = measured(perf_slides, deck, no_browser)
     slides = measured(scan_deck, deck) if row["built"] else None
     off = measured(off_blueprint, slides) if slides else None
     row["off_blueprint_slides"] = None if off is None else len(off)
@@ -980,6 +1004,9 @@ def score_module(course, m, no_browser=False, found=None):
     row["practical_kind"] = ((measured(sim_cov().practical, course) or {}).get("modules", {}).get(m) or {}).get("kind") or "none"
     row["simulator_exercises"] = sum(1 for _, _, fs in os.walk(sim) for f in fs if re.match(r"%s_A\d+.*_TRAINEE\.pdf$" % mid, f))
     row["simulator_drafts_pending"] = measured(lambda: sum(1 for p in sim_pending(course) if p["module"] == m))
+    if focus:
+        row.update(focus_row(course, m, deck if row["built"] else None))
+        row["focus_faults"] = focus_faults(row)
     return row
 
 
@@ -989,11 +1016,99 @@ def sim_pending(course):
     return sim_cov().pending(course)
 
 
+# ------------------------------------------------------------------ the focus run (run --focus): five checks, the rest skipped
+FOCUS_SIZES = FIT_SIZES + ("1280x720",)
+FOCUS_POINTS = (
+    ("papers", "1 the practical and simulator papers (trainee + instructor, HTML + PDF, papers.json)",
+     ("practical_kind", "papers_planned", "papers_listed", "papers_made", "papers_missing")),
+    ("style", "2 the slide style chosen per slide, with variety",
+     ("templates", "same_template_in_a_row", "look_shapes", "same_look_in_a_row", "look_repeats", "beside_share",
+      "off_blueprint_slides")),
+    ("overflow", "3 no slide text cut or scrolling - 1280x800, 1024x768 and 1280x720, every Next",
+     ("cut_or_cropped_slides", "cut_at_1024x768", "cut_at_1280x720")),
+    ("pictures", "4 the slides' pictures: their box's shape, not cropped, showing what the slide names",
+     ("picture_shape_misfits", "pictures_pending", "walk_picture_fails", "walk_fails", "walk_says")),
+    ("facts", "5 the fact check of the scripts",
+     ("claims", "claims_unproven", "claims_unchecked", "script_rewrite_rounds", "must_fixes_first_check")),
+)
+FOCUS_SKIPPED = ("3D: no scene author, 3D check or 3D review - the scenes stay at Phase A's starters, not judged or timed",
+                 "task pages: no task-picture author; not answered, graded or walked after Phase A",
+                 "the builder after Phase A - one slide-photo pass instead; nothing fixed, no fix or polish round",
+                 "the kit figures' review and fixers", "QA (the words, the teaching, the outcomes)",
+                 "the final assessment, the course assembly and the whole-course cross-check")
+PICTURE_WORDS = re.compile(r"(?i)\b(photo\w*|pictures?|images?|figures?|drawings?|crop\w*|scenes?|model)\b")
+
+
+def papers_of(course, m):
+    """the module's practical and simulator papers: planned (the architecture's simulator and equipment practicals), listed
+    in instructor/papers/papers.json, made whole (all four files there) and the files missing"""
+    planned = [p for p in ((sim_cov().practical(course)["modules"].get(m) or {}).get("practicals") or [])
+               if p["kind"] in ("simulator", "equipment")]
+    folder = os.path.join(module_dir(course, m), "instructor", "papers")
+    listed = (load(os.path.join(folder, "papers.json")) or {}).get("papers")
+    missing = ["papers.json"] if listed is None and planned else []
+    made = 0
+    for p in listed or []:
+        files = [(p.get(who) or {}).get(ext) for who in ("trainee", "instructor") for ext in ("html", "pdf")]
+        gone = [f or "%s %s" % (p.get("id", "?"), n) for f, n in zip(files, ("trainee html", "trainee pdf", "instructor html",
+                                                                               "instructor pdf"))
+                if not f or not os.path.isfile(os.path.join(folder, f))]
+        missing += gone
+        made += not gone
+    return {"papers_planned": len(planned), "papers_listed": len(listed or []), "papers_made": made, "papers_missing": missing}
+
+
+def walk_of(course, m):
+    """the walk judge's answer for the module's slides: (its fails, its state) - (None, None) when it brought back none"""
+    w = load(os.path.join(workspace.claude_path(course, "_build"), "agents", "walk_%s.json" % m))
+    if not isinstance(w, dict):
+        return None, None
+    return [f for f in w.get("fails") or [] if isinstance(f, dict)], str(w.get("state") or "")
+
+
+def focus_row(course, m, deck):
+    """a focus run's own numbers of one module: its papers, the same look twice in a row, the pictures outside their box's
+    shape and the walk judge's fails"""
+    row = measured(papers_of, course, m) or {"papers_planned": None, "papers_made": None, "papers_missing": []}
+    page = io.open(deck, encoding="utf-8").read() if deck else None
+    row["look_repeats"] = measured(lambda: len(layout_plan.score(*layout_plan.deck_shapes(page))["repeats"])) if page else None
+    row["picture_shape_misfits"] = measured(lambda: len({x["slide"] for x in layout_plan.picture_misfits(
+        page, os.path.dirname(os.path.dirname(deck)))})) if page else None
+    fails, state = walk_of(course, m)
+    row["walk_fails"] = None if fails is None else len(fails)
+    row["walk_picture_fails"] = None if fails is None else sum(1 for f in fails if PICTURE_WORDS.search(str(f.get("what"))))
+    row["walk_says"] = (state or "no walk review")[:90]
+    return row
+
+
+def focus_faults(row):
+    """{point: the faults of one module on it, or None when none of it could be measured}"""
+    def total(*keys):
+        got = [row.get(k) for k in keys if isinstance(row.get(k), int)]
+        return sum(got) if got else None
+    papers = None if row.get("papers_planned") is None else \
+        max(row["papers_planned"], row.get("papers_listed") or 0) - (row.get("papers_made") or 0)
+    return {"papers": papers, "style": total("look_repeats", "off_blueprint_slides"),
+            "overflow": total("cut_or_cropped_slides", "cut_at_1024x768", "cut_at_1280x720"),
+            "pictures": total("picture_shape_misfits", "pictures_pending", "walk_picture_fails"),
+            "facts": total("claims_unproven", "claims_unchecked")}
+
+
+def focus_summary(rows):
+    """the scorecard's focus block: the five checks with their faults over the modules, and the checks skipped"""
+    faults = {}
+    for key, _, _ in FOCUS_POINTS:
+        got = [(r.get("focus_faults") or {}).get(key) for r in rows]
+        faults[key] = sum(x for x in got if isinstance(x, int)) if any(isinstance(x, int) for x in got) else None
+    return {"checked": [t for _, t, _ in FOCUS_POINTS], "faults": faults, "skipped": list(FOCUS_SKIPPED)}
+
+
 LOWER_IS_BETTER = ("cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped",
                    "old_thinner", "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row", "same_look_in_a_row",
                    "beside_share", "build_minutes", "script_rewrite_rounds", "must_fixes_first_check", "builds_used", "first_review_findings_total",
                    "off_blueprint_slides", "pictures_pending", "max_words_slide", "slides_over_120_words", "self_checks_off_mix",
-                   "simulator_drafts_pending")
+                   "simulator_drafts_pending", "cut_at_1280x720", "look_repeats", "picture_shape_misfits", "walk_fails",
+                   "walk_picture_fails")
 # a number that is best inside a band: closer to it is better (L67: 60-80 % of the teaching slides with interactive 3D)
 BANDS = {"interactive_3d_share": (int(round(100 * cs.MEDIA["three_d"]["min_share"])), int(round(100 * cs.MEDIA["three_d"]["max_share"])))}
 SHOWN = ("built", "passed", "build_says", "build_minutes", "cut_or_cropped_slides", "cut_at_1024x768", "slides_3d_lagging", "off_blueprint_slides",
@@ -1036,29 +1151,46 @@ def shown(v):
 def show(card, before=None):
     """the scorecard module by module, beside the one before when there is one, then what moved; -> exit code (1 when a
     number got worse)"""
-    print("FACTORY TRIAL - course-factory %s, started %s" % (card.get("plugin"), card.get("started")))
+    focus = card.get("focus")
+    print("FACTORY TRIAL%s - course-factory %s, started %s" % (" (FOCUS RUN)" if focus else "", card.get("plugin"), card.get("started")))
     stop = card.get("stopped")
     if stop:
         print("STOPPED: %s - the run ended before the factory finished; a module that did not pass is unfinished, not failed" % stop)
+    old = {r["module"]: r for r in (before or {}).get("modules", [])}
+    words = (str, list) if focus else str
+
+    def line(k, r, b):
+        if k not in r and k not in (b or {}):
+            return
+        if before is None:
+            print("  %-24s %s" % (k.replace("_", " "), shown(r.get(k))))
+        elif isinstance(r.get(k), words) or isinstance((b or {}).get(k), words):
+            print("  %-24s now:    %s\n  %-24s before: %s" % (k.replace("_", " "), shown(r.get(k)), "", shown((b or {}).get(k))))
+        else:
+            print("  %-24s %-16s %s" % (k.replace("_", " "), shown((b or {}).get(k)), shown(r.get(k))))
+    if focus:
+        print("FOCUS RUN - these five checks only. It is NOT a full trial: the modules were not built whole, and what it skipped "
+              "was not checked at all.")
+        if before:
+            print("  %-24s %-16s %s" % ("", "before %s" % before.get("plugin"), "now %s" % card.get("plugin")))
+        for key, title, keys in FOCUS_POINTS:
+            print("\n%s - faults: %s" % (title, shown((focus.get("faults") or {}).get(key))))
+            for r in card.get("modules", []):
+                print(" Module %d - faults: %s" % (r["module"], shown((r.get("focus_faults") or {}).get(key))))
+                for k in keys:
+                    line(k, r, old.get(r["module"]))
+        print("\nNot checked in this run (skipped):\n" + "\n".join("  - " + x for x in focus.get("skipped") or []))
     if card.get("reused"):
         print("Taken from the last trial, or run again:\n" + "\n".join(reuse_lines(card["reused"])))
     if card.get("practical"):
         print("Practical work in the course:\n" + "\n".join("  " + x for x in card["practical"]))
-    old = {r["module"]: r for r in (before or {}).get("modules", [])}
-    if before:
+    if before and not focus:
         print("  %-24s %-16s %s" % ("", "before %s" % before.get("plugin"), "now %s" % card.get("plugin")))
-    for r in card.get("modules", []):
+    for r in [] if focus else card.get("modules", []):
         b = old.get(r["module"])
         print("\nModule %d%s" % (r["module"], " - stopped: %s, unfinished" % stop if stop and not r.get("passed") else ""))
         for k in SHOWN:
-            if k not in r and k not in (b or {}):
-                continue
-            if before is None:
-                print("  %-24s %s" % (k.replace("_", " "), shown(r.get(k))))
-            elif isinstance(r.get(k), str) or isinstance((b or {}).get(k), str):
-                print("  %-24s now:    %s\n  %-24s before: %s" % (k.replace("_", " "), shown(r.get(k)), "", shown((b or {}).get(k))))
-            else:
-                print("  %-24s %-16s %s" % (k.replace("_", " "), shown((b or {}).get(k)), shown(r.get(k))))
+            line(k, r, b)
     moved = compare(card, before)
     if before:
         print("\nSince course-factory %s%s:" % (before.get("plugin"), " (this run stopped on its %s - a number that got worse may "
@@ -1084,14 +1216,22 @@ def course_to_score(folder):
     return course, mark
 
 
-def fault_report_of(course, mods, run_dir, found):
-    """FAULTS.html, faults.json and the pictures beside the scorecard (fault_report.py); -> the html path"""
+def fault_report_of(course, mods, run_dir, found, card=None):
+    """FAULTS.html, faults.json and the pictures beside the scorecard (fault_report.py); -> the html path. card: a focus run's
+    scorecard - its papers and the same look twice in a row are faults too, and the page opens on the five checks"""
     import fault_report
-    decks = {}
+    decks, extra = {}, {}
     for m in mods:
         deck = os.path.join(module_dir(course, m), "presentation", "index.html")
         decks[m] = (deck, measured(scan_deck, deck) if os.path.isfile(deck) else None, found.get(m))
-    return fault_report.write(run_dir, fault_report.collect(course, mods, decks))
+        if card:
+            row = next((r for r in card.get("modules") or [] if r["module"] == m), {})
+            extra[m] = fault_report.paper_faults(row) + ((measured(fault_report.variety_faults, deck) or [])
+                                                          if os.path.isfile(deck) else [])
+    focus = None
+    if card:
+        focus = dict(card["focus"], points=[(t, (card["focus"].get("faults") or {}).get(k)) for k, t, _ in FOCUS_POINTS])
+    return fault_report.write(run_dir, fault_report.collect(course, mods, decks, extra), focus)
 
 
 def report(home, run_dir=None, no_browser=False, course=None, against=None, faults=False):
@@ -1114,10 +1254,14 @@ def report(home, run_dir=None, no_browser=False, course=None, against=None, faul
     if against and not isinstance(load(against), dict):
         print("Stopped - %s is not a scorecard.json" % against)
         return 2
-    found = {m: measured(fit_found, os.path.join(module_dir(course, m), "presentation", "index.html"), no_browser) or {}
+    focus = bool(mark.get("focus"))
+    found = {m: measured(fit_found, os.path.join(module_dir(course, m), "presentation", "index.html"), no_browser,
+                         FOCUS_SIZES if focus else FIT_SIZES) or {}
              for m in mark.get("modules") or []}
     card = {"plugin": mark.get("plugin"), "started": mark.get("started"), "scored": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "course": course, "modules": [score_module(course, m, no_browser, found[m]) for m in mark.get("modules") or []]}
+            "course": course, "modules": [score_module(course, m, no_browser, found[m], focus) for m in mark.get("modules") or []]}
+    if focus:
+        card["focus"] = focus_summary(card["modules"])
     if mark.get("reused"):
         card["reused"] = mark["reused"]
     card["practical"] = measured(lambda: sim_cov().practical_lines(sim_cov().practical(course)))
@@ -1131,12 +1275,14 @@ def report(home, run_dir=None, no_browser=False, course=None, against=None, faul
     for d in reversed(runs if not against else []):
         p = os.path.join(home, "runs", d, "scorecard.json")
         if os.path.abspath(os.path.join(home, "runs", d)) != os.path.abspath(run_dir) and os.path.isfile(p):
+            if bool((load(p) or {}).get("focus")) != focus:       # a focus run beside a focus run, a full one beside a full one
+                continue
             before = load(p)
             break
     code = show(card, before)
     print("\n    %s" % (os.path.join(run_dir, "scorecard.json") if run_dir else "not saved - --run <folder> keeps it"))
     if run_dir and (faults or mark.get("first_pass")):
-        page = measured(fault_report_of, course, mark.get("modules") or [], run_dir, found)
+        page = measured(fault_report_of, course, mark.get("modules") or [], run_dir, found, card if focus else None)
         print("    faults for the owner: %s" % (page or "could not be written"))
     return code
 
@@ -1211,6 +1357,8 @@ def main(argv=None):
     ap.add_argument("--fresh", action="store_true")
     ap.add_argument("--faults", action="store_true", help="report: also write the fault report (a first-pass trial always does)")
     ap.add_argument("--full", action="store_true", help="the full build with its fix round, not the first pass alone")
+    ap.add_argument("--focus", action="store_true", help="run: five checks only - the papers, the slide style, overflow, the "
+                                                         "slides' pictures and the fact check; everything else skipped")
     a = ap.parse_args(argv)
     home = home_of(a.home)
     if a.cmd == "setup":
@@ -1239,8 +1387,11 @@ def main(argv=None):
     if not mods:
         print("Stopped - --modules like 1,4")
         return 2
+    if a.focus and a.full:
+        print("Stopped - --focus and --full are two different runs: the five checks, or the whole build with its fix round")
+        return 2
     try:
-        master, run_dir, prompt = prepare_run(home, cfg, mods, a.plugin_dir, a.fresh, a.full)
+        master, run_dir, prompt = prepare_run(home, cfg, mods, a.plugin_dir, a.fresh, a.full, a.focus)
     except OSError as err:
         print("Stopped - %s" % err)
         return 2

@@ -168,6 +168,21 @@ def main():
         full_prompt = io.open(os.path.join(home, "runs", sorted(os.listdir(os.path.join(home, "runs")))[-1], "prompt.txt"), encoding="utf-8").read()
         check("... --full keeps today's build, with its fix round", code == 0 and "full trial" in full_prompt
               and "FIRST PASS" not in full_prompt and ft.load(os.path.join(master, ft.MARKER))["first_pass"] is False, full_prompt)
+        check("... and the default and --full prompts and markers say nothing of a focus run",
+              "FOCUS RUN" not in prompt and "FOCUS RUN" not in full_prompt and "focus" not in ft.load(os.path.join(master, ft.MARKER)))
+        code, out = cli("run", "--home", home, "--modules", "1,4", "--dry-run", "--focus")
+        last = sorted(os.listdir(os.path.join(home, "runs")))[-1]
+        focus_prompt = io.open(os.path.join(home, "runs", last, "prompt.txt"), encoding="utf-8").read()
+        fmark = ft.load(os.path.join(master, ft.MARKER))
+        check("--focus: the scripts as the first pass writes them, then the five checks alone - \"focus\": true in args.json, "
+              "the marker and the run folder say FOCUS",
+              code == 0 and "ONE rewrite round" in focus_prompt and "first_pass.json" in focus_prompt
+              and '"first_pass": true and "focus": true' in focus_prompt and "FOCUS RUN" in focus_prompt
+              and "start only what it lists" in focus_prompt and '"builds": 3' not in focus_prompt
+              and fmark.get("focus") is True and fmark["first_pass"] is True and last.endswith("_focus"), (last, focus_prompt))
+        shutil.rmtree(os.path.join(home, "runs", last))       # the runs below in the same minute read the last folder by name
+        code, out = cli("run", "--home", home, "--modules", "1,4", "--dry-run", "--focus", "--full")
+        check("... --focus with --full is refused: two different runs", code == 2 and "--focus and --full" in out, out)
         cli("run", "--home", home, "--modules", "1,4", "--dry-run")
         io.open(os.path.join(master, "course", "working_claude", "left_over.txt"), "w").write("x")
         code, out = cli("run", "--home", home, "--dry-run")
@@ -455,6 +470,7 @@ def main():
               and (1, "build_minutes", 45, 30, "better") in moved, moved)
         moved = ft.compare({"modules": [{"module": 1, "interactive_3d_share": 75}]}, {"modules": [{"module": 1, "interactive_3d_share": 70}]})
         check("... and inside the band neither", moved == [(1, "interactive_3d_share", 70, 75, "-")], moved)
+        focus_scoring(tmp, oc, other, agents)
         reuse_part(tmp, src)
         faults_part(tmp)
     finally:
@@ -467,6 +483,69 @@ def main():
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0
+
+
+def focus_scoring(tmp, oc, other, agents):
+    """a focus run's scorecard and fault page: the five checks first, what was skipped named, the papers and the slide walk
+    scored"""
+    print("\n-- a focus run's scorecard (run --focus)")
+    io.open(os.path.join(oc, "working_claude", "architecture.json"), "w", encoding="utf-8").write(json.dumps({
+        "course": {"title": "T"}, "modules": [{"module": 1, "practicals": [
+            {"task": "Loading on the LPG cargo handling simulator", "equipment": "LCHS"},
+            {"task": "Portable gas detectors: bump test", "equipment": "portable gas detectors"}]}]}))
+    papers = os.path.join(oc, "modules", "module01", "instructor", "papers")
+    os.makedirs(papers)
+    io.open(os.path.join(papers, "papers.json"), "w", encoding="utf-8").write(json.dumps({"papers": [
+        {"id": "M01.A01", "title": "Loading", "kind": "simulator", "trainee": {"html": "A01_TRAINEE.html", "pdf": "A01_TRAINEE.pdf"},
+         "instructor": {"html": "A01_INSTRUCTOR.html", "pdf": "A01_INSTRUCTOR.pdf"}}]}))
+    for f in ("A01_TRAINEE.html", "A01_TRAINEE.pdf", "A01_INSTRUCTOR.html"):
+        io.open(os.path.join(papers, f), "w").write("x")
+    io.open(os.path.join(agents, "walk_1.json"), "w", encoding="utf-8").write(json.dumps({
+        "walked": True, "ok": False, "state": "NOT DONE: walk review failing for M01 - open fails on s02, s06", "fails": [
+            {"slide": "s02", "what": "stop 1: the photograph is cropped through the tank"},
+            {"slide": "s06", "what": "stop 2: the last line is cut at the bottom"}]}))
+    row = ft.score_module(oc, 1, no_browser=True, focus=True)
+    check("focus: the papers - two exercises planned, one listed with a file missing: two faults",
+          row["papers_planned"] == 2 and row["papers_listed"] == 1 and row["papers_made"] == 0
+          and row["papers_missing"] == ["A01_INSTRUCTOR.pdf"] and row["focus_faults"]["papers"] == 2, row)
+    check("... the slide walk's fails, those about a picture counted on the pictures; the same look twice in a row and the "
+          "pictures outside their box measured; 1280x720 asked of the fit gate; no 3D lag measured (Phase A's starters)",
+          row["walk_fails"] == 2 and row["walk_picture_fails"] == 1 and row["walk_says"].startswith("NOT DONE")
+          and isinstance(row["look_repeats"], int) and isinstance(row["picture_shape_misfits"], int)
+          and "cut_at_1280x720" in row and "slides_3d_lagging" not in row
+          and row["focus_faults"]["pictures"] == row["picture_shape_misfits"] + row["pictures_pending"] + 1, row)
+    card = {"plugin": "x", "started": "s", "modules": [row], "focus": ft.focus_summary([row])}
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        ft.show(card)
+    out = buf.getvalue()
+    check("... the scorecard says FOCUS RUN, opens on the five checks with their faults, then names every check skipped - "
+          "and prints none of a full trial's module lines",
+          out.startswith("FACTORY TRIAL (FOCUS RUN)") and "NOT a full trial" in out
+          and out.index("1 the practical") < out.index("2 the slide style") < out.index("3 no slide text cut")
+          < out.index("4 the slides' pictures") < out.index("5 the fact check") < out.index("Not checked in this run")
+          and all(x in out for x in ft.FOCUS_SKIPPED) and "papers missing" in out and "interactive 3d share" not in out, out)
+    full = io.StringIO()
+    with contextlib.redirect_stdout(full):
+        ft.show({"plugin": "x", "modules": [dict(row, module=1)]})
+    check("... a scorecard without focus prints no focus lines", "FOCUS" not in full.getvalue() and "Not checked" not in full.getvalue())
+    mark = os.path.join(other, ft.MARKER)
+    kept = io.open(mark, encoding="utf-8").read()
+    io.open(mark, "w", encoding="utf-8").write(json.dumps(dict(json.loads(kept), focus=True, first_pass=True)))
+    run = os.path.join(tmp, "focus scored")
+    try:
+        code, out = cli("report", "--course", oc, "--no-browser", "--run", run)
+    finally:
+        io.open(mark, "w", encoding="utf-8").write(kept)
+    card = json.load(io.open(os.path.join(run, "scorecard.json"), encoding="utf-8"))
+    page = io.open(os.path.join(run, "FAULTS.html"), encoding="utf-8").read()
+    faults = json.load(io.open(os.path.join(run, "faults.json"), encoding="utf-8"))
+    check("report of a focus run: the scorecard carries FOCUS with its five checks, their faults and the skipped checks; "
+          "FAULTS.html opens on them and lists the papers as faults",
+          "FOCUS RUN" in out and len(card["focus"]["checked"]) == 5 and card["focus"]["faults"]["papers"] == 2
+          and card["focus"]["skipped"] == list(ft.FOCUS_SKIPPED)
+          and page.index("FOCUS RUN - five checks only") < page.index("<h2>Module 1") and "Not checked in this run" in page
+          and sum(1 for f in faults if f["kind"] == "papers") == 2, (out[-1500:], page[:1500]))
 
 
 def faults_part(tmp):

@@ -613,6 +613,9 @@ def tasks_part(tmp):
     problems = course_portal.walk_problems(course)
     check("... and the upload is refused for it", len(problems) == 1 and "incomplete for M01" in problems[0]
           and "task page check" in problems[0], problems)
+    code_d, out_d = quiet("verify", course, "--module", "1", "--deck-only")
+    check("... --deck-only (a factory trial's focus run): the deck's slides alone, no task page - reviewed whole, they pass",
+          code_d == 0 and out_d.startswith("OK:") and wr.deck_slides(course, 1) == list(ALL),(out_d, wr.deck_slides(course, 1)))
     rc, lines = wr.sign(course, 1, reviewer(tmp, {"check": True}))
     check("... a page with no picture cannot be signed", rc == 2 and "no contact sheet was made for task page check" in lines[0], lines)
 

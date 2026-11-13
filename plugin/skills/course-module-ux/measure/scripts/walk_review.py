@@ -3,9 +3,9 @@
 """walk_review - "walk it like a trainee": the deck's stops and the task pages' questions looked at together, by an AI
 reviewer, before a module is done.
 
-    python walk_review.py prepare <course> --module N [--slides s03,s07,<task page>] [--stale]
+    python walk_review.py prepare <course> --module N [--slides s03,s07,<task page>] [--stale] [--deck-only]
     python walk_review.py sign    <course> --module N --review reviewer.json --built-by "<who built it>" [--built-by "<who fixed it>"]
-    python walk_review.py verify  <course> --module N
+    python walk_review.py verify  <course> --module N [--deck-only]
     python walk_review.py accept  <course> --module N --by "<operator>" --why "<why it can ship>" [--slides s04]
     python walk_review.py reopen  <course> --module N --by "<operator>"
 
@@ -931,6 +931,12 @@ def how_run(env=None, tty=None):
     return "typed in a terminal" if tty and not any(env.get(k) for k in AGENT_ENV) else "run by a session or a script"
 
 
+def deck_slides(course, module, names=None):
+    """the deck's slides of the names (none given: every slide of the deck) - never a task page or one of its questions"""
+    d = Deck(course, module)
+    return [s for s in (names or d.ids or d.walked + d.unshot) if not d.is_task(s)] or None
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("cmd", choices=("prepare", "sign", "verify", "accept", "reopen"))
@@ -943,8 +949,12 @@ def main(argv=None):
                                                          "the reviewer must be someone else")
     ap.add_argument("--by", help="accept / reopen: the operator")
     ap.add_argument("--why", help="accept: why the fails can ship")
+    ap.add_argument("--deck-only", action="store_true", help="prepare / verify: the deck's slides alone, no task page (a factory "
+                                                             "trial's focus run)")
     o = ap.parse_args(argv)
     slides = [x for x in (o.slides or "").split(",") if x.strip()] or None
+    if o.deck_only and o.cmd in ("prepare", "verify"):
+        slides = deck_slides(o.course, o.module, slides)
     # the accept and the reopen are the operator's own: the factory cannot tell who runs them, so it records how
     how = how_run()
     if o.cmd == "prepare":
