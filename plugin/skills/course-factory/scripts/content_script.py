@@ -1267,7 +1267,7 @@ def theory_check(script):
         if room:
             add(s["id"], "text", FAIL, "t_no_shape", w=room[0], max=room[1], aspect=room[3], fits=", ".join(room[2][:4]) or "-",
                 pic=T(script, "t_pic_3d" if picture_of(s)["kind"] == "3d" else "t_pic_other"))
-            found[-1]["fix"] = T(script, "t_fix_no_shape", max=room[1])
+            found[-1]["fix"] = T(script, "t_fix_no_shape", max=room[1]) + long_title_fix(script, s)
         if s.get("kind") != "slide":
             continue
         w_slide = wc(s.get("title", ""), s.get("text", ""))
@@ -1286,7 +1286,7 @@ def theory_check(script):
         if room:                              # the layouts its picture's shape takes hold fewer words: split, never a misfit
             add(s["id"], "text", FAIL, "t_no_shape", w=room[0], max=room[1], aspect=room[3], fits=", ".join(room[2][:4]) or "-",
                 pic=T(script, "t_pic_3d" if picture_of(s)["kind"] == "3d" else "t_pic_other"))
-            found[-1]["fix"] = T(script, "t_fix_no_shape", max=room[1])
+            found[-1]["fix"] = T(script, "t_fix_no_shape", max=room[1]) + long_title_fix(script, s)
         if s.get("recap"):
             pass                              # L51: a recap is short on purpose - recap_findings checks its points
         elif w_floor < R["slide"]["min_words"]:
@@ -1506,6 +1506,32 @@ def track_findings(course, script):
     return [{"where": T(script, "s_the_module"), "screen": "", "field": "minutes", "level": FAIL, "rule": "tr_split",
              "detail": T(script, "tr_split", t="%g" % got["theory"], p="%g" % got["practice"], at="%g" % alloc[0],
                          ap="%g" % alloc[1], ids=theory), "fix": ""}]
+
+
+def sim_paper_findings(course, script):
+    """MUST - every simulator exercise the architecture plans for the module ("practicals", L28 / L66) is a practical on paper
+    in the script: activity screens that name the simulator, one paper each (one "paper", or a screen of its own), which the
+    build prints as the trainee card and the instructor sheet"""
+    if not course or str(script.get("module")).lower() == "final":
+        return []
+    try:
+        arch = load(workspace.claude_path(course, "architecture.json"))
+    except (OSError, ValueError):
+        return []
+    mod = next((m for m in arch.get("modules") or [] if str(m.get("module")) == str(script.get("module"))), {})
+    planned = [p for p in mod.get("practicals") or [] if isinstance(p, dict)
+               and SIMULATOR.search(" ".join(str(p.get(k) or "") for k in ("task", "equipment", "place")))]
+    papers = {}
+    for s in script.get("screens", []):
+        if s.get("kind") == "activity":
+            key = str(s.get("paper") or "").strip() or s["id"]
+            papers[key] = papers.get(key) or bool(SIMULATOR.search(" ".join(str(s.get(k) or "") for k in ("title", "text", "paper"))))
+    have = sum(1 for v in papers.values() if v)
+    if have >= len(planned):
+        return []
+    names = "; ".join(re.split(r"\s\(|:", str(p.get("task") or ""), maxsplit=1)[0].strip() for p in planned)
+    return [{"where": T(script, "s_the_module"), "screen": "", "field": "", "level": FAIL, "rule": "sim_no_paper",
+             "detail": T(script, "sim_no_paper", n=len(planned), names=names, have=have), "fix": ""}]
 
 
 def said_words(s, vocab, but=(), fields=("title", "text", "visual")):
@@ -2651,7 +2677,7 @@ def all_findings(script, course=None):
     th, _ = theory_findings(script)
     return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script) \
         + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script) \
-        + task_cover_findings(course, script) + tablet_findings(course, script) + track_findings(course, script)
+        + task_cover_findings(course, script) + tablet_findings(course, script) + track_findings(course, script)         + sim_paper_findings(course, script)
 
 
 # the words that send the trainees to their own tablet: "on your tablet", "every trainee tablet", "vote on the tablet"
@@ -3915,11 +3941,12 @@ def _planner():
 
 def script_blueprint(s):
     """(its blueprint, its picture's family, why it keeps its own or None) of a teaching slide as the compiler builds it from
-    the script alone, before any build sheet (compile_module.shaped_template / auto_template, layout_plan.py)"""
+    the script alone, before any build sheet (compile_module.shaped_template / auto_template, layout_plan.py). A film's
+    slide shows its still, a photograph"""
     cm, lp = _planner()
     lines = lines_of(s.get("text"))
     vk = s.get("visual_kind") or "none"
-    fam = None if vk == "none" else "photo" if vk in ("photo", "annotated_photo", "photo_to_take") \
+    fam = None if vk == "none" else "photo" if vk in ("photo", "annotated_photo", "photo_to_take", "video_real") \
         else "3d" if (MEDIA["visual_kinds"].get(vk) or {}).get("family") == "3d" else "drawing"
     if fam == "photo" and len(picture_of(s)["items"]) > 1:         # several photographs, one a thing: shown as tiles
         fam = "tiles"
@@ -3953,6 +3980,15 @@ def shaped_blueprint(s):
     return (lp.fitting(fam, aspect, ((lp.LIB.get(own_bp) or {}).get("fits") or {}).get("group")) or [own_bp])[0]
 
 
+def long_title_fix(script, s):
+    """the fix's last sentence for a slide whose title wraps at 1024 x 768 - "" for a one-line title"""
+    _, lp = _planner()
+    title = s.get("title") or ""
+    if lp.title_lines(title) < 2:
+        return ""
+    return " " + T(script, "t_fix_long_title", n=len(title), chars=lp.LONG_TITLE["chars"])
+
+
 def no_shape(s):
     """(its words, the most a layout its picture takes holds, [those layouts], the picture's declared shape) of a teaching
     slide whose words no layout holds once its picture keeps the shape the script gives it ("picture" "aspect") - or None.
@@ -3973,11 +4009,12 @@ def no_shape(s):
     aspect, w = None if fam == "tiles" else aspect_of(said), wc(" ".join(lines))     # tiles: each photograph its own shape
     if not fam or kept(lp, own_bp, fam, aspect, fixed) or not group:
         return None
-    opts, _ = lp.options(own_bp, w, fam, aspect, 0, None, None, "", s.get("id", ""))
+    title = s.get("title") or ""
+    opts, _ = lp.options(own_bp, w, fam, aspect, 0, None, None, "", s.get("id", ""), title=title)
     if opts and not any(o.get("over") for o in opts):
         return None
     fit = lp.fitting(fam, aspect, group)
-    most = max([(lp.holds(b, fam) or {}).get("words", 0) for b in fit] or [0])
+    most = max([(lp.holds(b, fam, title) or {}).get("words", 0) for b in fit] or [0])
     return w, most, fit, said
 
 
@@ -3996,7 +4033,7 @@ def shape_line(script):
         tid, vk = own_bp.split(".")[0], s.get("visual_kind") or "none"
         aspect = aspect_of(picture_of(s)["aspect"])
         fixed = kept(lp, own_bp, fam, aspect, fixed)
-        opts, why = lp.options(own_bp, wc(" ".join(lines)), fam, aspect, 0, None, fixed, seed, s["id"])
+        opts, why = lp.options(own_bp, wc(" ".join(lines)), fam, aspect, 0, None, fixed, seed, s["id"], title=s.get("title") or "")
         items.append({"id": s["id"], "own": lp.MAP.get(own_bp) or "beside", "own_bp": own_bp, "options": opts, "why": why,
                       "fixed": fixed, "echo": lp.comparison(tid, vk, s.get("title"))})
     choice = lp.plan(items)

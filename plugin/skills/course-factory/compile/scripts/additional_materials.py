@@ -265,18 +265,35 @@ def classify(text, override=None):
 
 
 def match_practicals(acts, practicals):
-    """{activity id: practical} - first by an exercise number both name (9.1), then in order"""
+    """{activity id: practical} - the screens of one practical (the same "paper", one after another) take one practical:
+    first by an exercise number both name (9.1), then in order - a simulator practical only to screens that name a
+    simulator, so a room activity of the module is never printed as the simulator's paper"""
     nums = lambda t: set(re.findall(r"\b\d+\.\d+\b", t or ""))
-    out, left = {}, list(practicals)
+    on_sim = lambda p: bool(SIM_WORDS.search(" ".join(str(p.get(k) or "") for k in ("task", "equipment", "place"))))
+    units = []
     for s in acts:
-        hit = next((p for p in left if nums(s.get("title")) & nums(p.get("task"))), None)
+        name = str(s.get("paper") or "").strip()
+        if name and units and units[-1][0] == name:
+            units[-1][1].append(s)
+        else:
+            units.append((name, [s]))
+    got, left = {}, list(practicals)
+    for i, (_, ss) in enumerate(units):
+        hit = next((p for p in left if nums(" ".join(str(s.get("title") or "") for s in ss)) & nums(p.get("task"))), None)
         if hit:
-            out[s["id"]] = hit
+            got[i] = hit
             left.remove(hit)
-    for s in acts:
-        if s["id"] not in out and left:
-            out[s["id"]] = left.pop(0)
-    return out
+    for i, (_, ss) in enumerate(units):
+        if i in got or not left:
+            continue
+        if SIM_WORDS.search(" ".join(str(s.get(k) or "") for s in ss for k in ("title", "text", "paper"))):
+            hit = next((p for p in left if on_sim(p)), left[0])
+        else:
+            hit = next((p for p in left if not on_sim(p)), None)
+        if hit:
+            got[i] = hit
+            left.remove(hit)
+    return {s["id"]: got[i] for i, (_, ss) in enumerate(units) if i in got for s in ss}
 
 
 def tasks_of(m, sheet):
@@ -1099,6 +1116,9 @@ def plan(course, infos, title, probs):
                      % (prog.get("language"), ", ".join(no_en), "has" if len(no_en) == 1 else "have"))
     mods = modules_of(course, arch, infos, probs)
     il_data = il.load(course)
+    # a simulator draft the course director has not accepted is pending (L66): its screen holds its minutes, no paper yet
+    drafts = {str(x.get("draft") or "").strip() for x in load_or(workspace.claude_path(course, "SIM_COVERAGE.json"), {})
+              .get("proposed_tasks") or [] if not (x.get("accepted_by") or "").strip()} - {""}
     for m in mods:
         m["hour"] = float(prog.get("academic_hour_min") or 45)
         m["tasks"] = tasks_of(m, sheet)
@@ -1115,6 +1135,18 @@ def plan(course, infos, title, probs):
             if (p.get("equipment") or p.get("equipment_en")) and not cf.english_equipment(p)[0]:
                 probs.append("%s %s: its practical's equipment is in the programme's language only - the papers name the "
                              "programme's codes; write \"equipment_en\" beside it in architecture.json" % (m["mid"], t["code"]))
+            no = next((str(p["slide"].get("exercise") or "").strip() for p in t["parts"] if p["slide"].get("exercise")), "")
+            if t["where"] == "simulator" and no and not t.get("form") and no not in drafts:
+                probs.append("%s %s: names exercise %s and no approved form of it is in working_claude\\exercises\\%s\\content\\ - "
+                             "its paper would be the handover screen alone; write its steps on its screens (script/GUIDE.md) or "
+                             "its form" % (m["mid"], t["code"], no, m["mid"]))
+        sims = [p for p in m["practicals"] if classify(" ".join(str(p.get(k) or "") for k in ("task", "equipment", "place")))
+                == "simulator"]
+        have = [t for t in m["tasks"] if t["where"] == "simulator"]
+        if len(have) < len(sims):
+            probs.append("%s: the architecture plans %d simulator exercise(s) (%s) and the script has %d on paper - no trainee "
+                         "card or instructor sheet is printed for the rest; write each as a practical on paper (script/GUIDE.md)"
+                         % (m["mid"], len(sims), "; ".join(str(p.get("task") or "")[:60] for p in sims), len(have)))
     final = sum(float(x.get("hours") or 0) for x in plan_j.get("outside_modules") or []) * float(prog.get("academic_hour_min") or 45)
     days = days_of(mods, prog, sheet, final, probs) if mods else []
     v = cm.plugin_version()

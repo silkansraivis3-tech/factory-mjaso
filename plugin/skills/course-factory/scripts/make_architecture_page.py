@@ -341,6 +341,10 @@ def gate_of(course, prog, arch):
         n = ilo_map.mkey(am.get("module"))
         if isinstance(n, int) and str(n) != fa and ilo_map.mname(n) not in have:
             problems.append(("p_no_ilo_row", {"m": n}))
+    if course:                                          # L28 - the model course's simulator topics, each on a simulator
+        sys.path.insert(0, os.path.join(SKILL, "coverage", "scripts"))
+        import sim_coverage
+        problems += [("p_sim_unplanned", {"x": x}) for x in sim_coverage.planned(course)[0]]
     return {"rows": rows, "owed": owed, "kb": kb, "approved": ok, "hash": h,
             "fresh": bool(ok) and ok["ilo_map_hash"] == h, "problems": problems}
 

@@ -216,6 +216,36 @@ def main():
         lines = sim_coverage.practical_lines(sim_coverage.practical(gas))
         check("without a simulator manual in the sources the factory asks for it and never writes a procedure without it",
               any(x.startswith("No simulator manual in the sources") and "never write a simulator procedure" in x for x in lines), lines)
+        check("... and while no simulator exercise plans what the model course marks, it is said as not planned yet",
+              any(x.startswith("Not planned yet: IMO Model Course 1.04 marks 1.2 General arrangement") for x in lines), lines)
+        write(os.path.join(gw, "model_course_syllabus.json"), {"items_by_topic": {
+            "1": [{"id": "1.2", "requirement": "General arrangement and construction"}, {"id": "1.2.1", "requirement": "x"},
+                  {"id": "2.1", "requirement": "Piping systems and valves"}, {"id": "2.2.4", "requirement": "x"}, {"id": "2.3"},
+                  {"id": "2.4"}, {"id": "2.5"}],
+            "16": [{"id": "12.1", "requirement": "Tanker fire organization"}, {"id": "12.5"}]}})
+        probs, plan = sim_coverage.planned(gas)
+        check("planned: the module that holds each simulator topic, from the transcribed syllabus - never 12.1 for 2.1",
+              [(x["no"], x["module"], x["by"]) for x in plan] == [(n, 1, []) for n in ("1.2", "2.1", "2.2", "2.3", "2.4", "2.5")]
+              and len(probs) == 1 and probs[0].startswith("Module 1 holds") and "L28" in probs[0], (plan, probs))
+        note = course_gate.sim_note(gas)
+        check("... course_gate says it on every module start, never a stop", note and "Simulator exercises (L28)" in note
+              and "planned <course>" in note, note)
+        arch = json.load(io.open(os.path.join(gw, "architecture.json"), encoding="utf-8"))
+        arch["modules"].append({"module": 1, "practicals": [
+            {"task": "Cargo plant layout and loading on the LPG cargo handling simulator", "equipment": "LPG simulator",
+             "place": "simulator room", "minutes": 40, "track": "theory", "model_course": "1.2, 2.1, 2.2, 2.3"},
+            {"task": "Emergency shutdown during loading", "equipment": "LPG cargo handling simulator", "model_course": ["2.4"]}]})
+        write(os.path.join(gw, "architecture.json"), arch)
+        probs, plan = sim_coverage.planned(gas)
+        check("... a simulator practical naming its topics plans them; the one left is said",
+              [x["no"] for x in plan if x["by"]] == ["1.2", "2.1", "2.2", "2.3", "2.4"] and len(probs) == 1
+              and '"model_course": ["2.5"]' in probs[0], probs)
+        arch["modules"][-1]["practicals"][1]["model_course"].append("2.5")
+        write(os.path.join(gw, "architecture.json"), arch)
+        p = sim_coverage.practical(gas)
+        check("... with all planned nothing is said, and module 1 is a simulator module inside its theory minutes",
+              sim_coverage.planned(gas)[0] == [] and course_gate.sim_note(gas) is None and p["modules"][1]["kind"] == "simulator"
+              and not any(x.startswith("Not planned yet") for x in sim_coverage.practical_lines(p)), p["modules"].get(1))
         cat = {s["code"]: s for s in sim_coverage.catalogue()["simulators"]}
         write(os.path.join(tmp, "gas", "source_files", "Simulator - LCHS 5000 VLCC Tanker and Crude Oil Terminal - Trainee Manual.pdf"), "x")
         check("the oil and chemical simulators whose manuals are in the sources are catalogued (VLCC 105 p, PROD 82 p, CHEM 109 p), "

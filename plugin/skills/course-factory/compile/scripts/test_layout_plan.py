@@ -234,8 +234,58 @@ def main():
     check("the plan's note names a slide over every shape its picture takes, and asks to split it",
           any("s08" in x and "%d words over" % (81 - lp.BUDGETS["under_top_row"]) in x and "split" in x for x in n), n)
 
+    long_title(cs)
     print("\n%d passed, %d failed" % (len(PASSED), len(FAILS)))
     return 1 if FAILS else 0
+
+
+# the gas trial's M01 s11 and s20: under or over a picture band at 1024 x 768 their words were cut 29 and 65 px - the
+# words within the band's budget, the title on two lines
+S11 = {"id": "s11", "kind": "slide", "title": "The IGC Code - one standard for gas tankers", "visual_kind": "video_real",
+       "layout": "visual_wide", "picture": {"kind": "photo", "aspect": "16:9", "shows": "Film still: gas carriers at sea"},
+       "visual": "A short clip from the old course film - gas carriers at sea and alongside.", "minutes": 1,
+       "text": "The IGC Code is the international standard for the safe carriage of liquefied gases in bulk by sea.\n"
+               "From the products carried, it sets the design and construction of the ship and the equipment it carries, to "
+               "minimise the risk to the ship, its crew and the environment.\nWhat a gas tanker looks like on deck follows from it."}
+S20 = {"id": "s20", "kind": "slide", "title": "Integral, membrane and semi-membrane tanks", "visual_kind": "model_3d",
+       "layout": "split", "picture": {"kind": "3d", "aspect": "4:3", "shows": "Three hull sections"}, "minutes": 2,
+       "visual": "3D hull sections, turnable: an integral tank, a membrane tank, a semi-membrane tank.",
+       "text": "Integral - part of the hull, stressed by the same loads; design pressure normally below 0.25 bar; not normally "
+               "allowed for cargo below -10 °C.\nMembrane - not self-supporting: a thin gastight layer supported through "
+               "insulation by the inner hull.\nSemi-membrane - flat parts supported by the hull, rounded edges that take "
+               "expansion and contraction.\nMembrane and semi-membrane need a complete secondary barrier."}
+S20_ASPECT = 1.96          # its scene's home view: three hull sections in a row (kit3d_aspect of the built spec)
+
+
+def long_title(cs):
+    print("\n-- a title on two lines at 1024 x 768 takes its line from the words under or over a band")
+    one, two = "Independent tanks - Type A, B and C", "Keeping gas out of the accommodation"
+    check("a title of up to 35 characters stands on one line at 1024 x 768, of 36 on two (measured on the trial's M01 deck)",
+          (lp.title_lines(one), lp.title_lines(two), lp.title_lines(S11["title"]), lp.title_lines("")) == (1, 2, 2, 1))
+    band = lp.holds("explain-figure.figure-top", "photo", S11["title"])
+    check("under a two-line title a band holds 53 words, not 65; beside a picture the measured budget stands",
+          band["words"] == 53 and lp.holds("explain-figure.figure-top", "photo", one)["words"] == lp.BUDGETS["under_top_row"]
+          and lp.holds("long-explanation.model", "3d", S20["title"])["words"] == lp.BUDGETS["beside_3d"]
+          and lp.holds("reference-table.figure-top", "drawing", S20["title"])["rows"] == 3, band)
+    w11, w20 = cs.wc(" ".join(cs.lines_of(S11["text"]))), cs.wc(" ".join(cs.lines_of(S20["text"])))
+    o20, why20 = lp.options("long-explanation.figure-top", w20, "3d", S20_ASPECT, 14, None, None, "c|M01", "s20", title=S20["title"])
+    check("s20 (64 words, a wide 3D scene, a 42-character title): planned beside, where its words fit - never in a band",
+          o20 and {o["shape"] for o in o20} == {"beside"} and not any(o.get("over") for o in o20)
+          and "top" in why20 and "53" in why20["top"], (o20, why20))
+    o, _ = lp.options("long-explanation.figure-top", w20, "3d", S20_ASPECT, 14, None, None, "c|M01", "s20", title="Membrane tanks")
+    check("... under a one-line title its band fits as before", {"top", "bottom"} <= {x["shape"] for x in o}, o)
+    o11, _ = lp.options("explain-figure.figure-right", w11, "photo", 16 / 9.0, 0, None, None, "c|M01", "s11", title=S11["title"])
+    check("s11 (59 words, a 16:9 photograph, a 43-character title): no shape its photograph takes holds them - every option "
+          "is over, so the plan says it and the fit gate is not the first to find it",
+          o11 and all(x.get("over") for x in o11), o11)
+    plan = lp.plan([{"id": "s11", "own": "beside", "own_bp": "explain-figure.figure-right", "options": o11, "why": {}},
+                    {"id": "s20", "own": "beside", "own_bp": "long-explanation.figure-top", "options": o20, "why": why20}])
+    check("... and s20's plan is beside", lp.shapes_of(plan).get(1) == "beside", lp.shapes_of(plan))
+    found = [f for f in cs.theory_findings({"module": 1, "screens": [S11, S20]})[0] if f["rule"] == "t_no_shape"]
+    check("the script check makes s11 a must-fix before approval - split it, or a title of one line gives the words their "
+          "room; s20 fits beside, nothing to say",
+          [(f["screen"], f["level"]) for f in found] == [("s11", cs.FAIL)] and "title of up to 35 characters" in found[0]["fix"]
+          and "53" in found[0]["fix"], found)
 
 
 if __name__ == "__main__":

@@ -15,7 +15,8 @@ blueprint does not take (picture_fit), the slide's own blueprint and one its bui
 refuses a deck with one (picture_misfits, the fault report's own check). A slide whose build sheet names its template,
 variant or layout keeps it while its picture fits; so does a slide that fits one blueprint only. Words are never cut or
 moved: a slide's text is counted against each blueprint's measured budget (holds - the script check's and the fault
-report's count too), and when no blueprint its picture fits holds them, the plan takes the one over by least and the
+report's count too) under its own title - a title on two lines at 1024 x 768 takes its line from the words under or over
+a band (under_title) - and when no blueprint its picture fits holds them, the plan takes the one over by least and the
 script check asks to split the slide.
 
     python layout_plan.py <deck index.html | module folder>     the deck's shape line, its longest run and its beside share
@@ -42,6 +43,7 @@ SH = LT["shapes"]
 ORDER, PLAN = SH["order"], SH["plan"]
 BAND_TEMPLATES = tuple(SH["band_templates"])
 BUDGETS = LT["budgets"]
+LONG_TITLE = LT["long_title"]
 DENSE_WORDS = LT["dense"]["words"]
 COMPARISON = re.compile(r"(?i)\b(compar\w*|versus|vs\.?|before\s*(?:and|/|&)\s*after)(?!\w)")
 SECTION = re.compile(r"<section\b([^>]*)>", re.S)
@@ -223,9 +225,35 @@ def figure_aspect(fig):
 
 
 # ------------------------------------------------------------------ what a slide fits
-def budget(key):
-    """a blueprint's budget: a number, or a key of layout-templates.json "budgets" (measured)"""
-    return key if isinstance(key, (int, float)) else BUDGETS.get(key)
+def budget(key, title=""):
+    """a blueprint's budget: a number, or a key of layout-templates.json "budgets" (measured) - under the slide's title
+    (under_title)"""
+    return under_title(key if isinstance(key, (int, float)) else BUDGETS.get(key), key, title)
+
+
+def title_lines(title):
+    """the lines the slide's title takes at 1024 x 768, the binding size: its words wrapped at long_title "chars" a line"""
+    n, run = 1, -1
+    for w in str(title or "").split():
+        if run >= 0 and run + 1 + len(w) > LONG_TITLE["chars"]:
+            n, run = n + 1, len(w)
+        else:
+            run += 1 + len(w)
+    return n
+
+
+def under_title(most, key, title=""):
+    """a budget as it stands under the slide's title. Every budget was measured under a one-line title; under a title that
+    wraps at 1024 x 768 the words under or over a band across the slide lose the whole line - the band keeps its least
+    height - so their budget (words, and a table's rows) shrinks by that share of their room (layout-templates.json
+    "long_title"). Beside a picture and on the stage the measured budgets held under a two-line title"""
+    if most is None or key not in LONG_TITLE["band_budgets"] or title_lines(title) < 2:
+        return most
+    room = float(LONG_TITLE["body"] - LONG_TITLE["band"])
+    k = (room - LONG_TITLE["px"] * (title_lines(title) - 1)) / room
+    if isinstance(most, dict):
+        return dict(most, words=int(most["words"] * k), rows=max(1, int(most["rows"] * k)))
+    return int(most * k)
 
 
 def band_budget(variant, family):
@@ -259,13 +287,14 @@ BUDGET_SAID = {"beside_picture": "beside a picture", "beside_3d": "beside a 3D s
                "part_band": "in a part over or under a band", "stage": "under a picture that is the slide"}
 
 
-def holds(bp, family):
+def holds(bp, family, title=""):
     """{"words", "rows", "key", "what"} - the words (and a table's rows) blueprint bp holds with this kind of picture: its
     measured budget (fits.budget -> layout-templates.json "budgets"), the one budget the layout plan, the script check and the
-    fault report count a slide's text against (its title apart: every budget was measured under a one-line title). None when
-    the blueprint has no budget for it"""
+    fault report count a slide's text against (its title apart: every budget was measured under a one-line title, and a
+    title that wraps at 1024 x 768 takes its line from the words under or over a band - under_title). None when the
+    blueprint has no budget for it"""
     key = ((LIB.get(bp) or {}).get("fits") or {}).get("budget", {}).get(family)
-    most = budget(key) if key is not None else None
+    most = budget(key, title) if key is not None else None
     if most is None:
         return None
     if isinstance(most, dict):
@@ -309,7 +338,7 @@ def jitter(seed, *keys):
     return int(h[:12], 16) / float(16 ** 12)
 
 
-def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None, fixed=None, seed="", sid="", rows=0):
+def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None, fixed=None, seed="", sid="", rows=0, title=""):
     """([{"bp", "shape", "cost"}], {shape: why not}) - the blueprints a teaching slide built as own_bp fits, cheapest first:
     every blueprint of its group (blueprints/*.json "fits") that takes its picture (family: photo, tiles, drawing, 3d) and
     whose box suits the picture's shape (aspect, None while it is not drawn yet) - a hard rule, its own blueprint too -,
@@ -318,7 +347,8 @@ def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None,
     check asks to split such a slide, and the fit gate measures it. [] when no blueprint of its group takes the picture. The
     cost: 0 a fit, 3 a picture still to be drawn, and a seeded fraction that settles near-equal fits. fixed: why the slide
     keeps its own blueprint - while its picture fits it. rows: the rows of a table slide - a table's budget (budgets
-    "table_...") is rows and words, and it must fit both"""
+    "table_...") is rows and words, and it must fit both. title: the slide's title - one that wraps at 1024 x 768 leaves the
+    words under or over a band less room (under_title)"""
     own = LIB.get(own_bp) or {}
     own_shape = own.get("shape") or "beside"
     group = (own.get("fits") or {}).get("group")
@@ -338,7 +368,7 @@ def options(own_bp, words=0, family=None, aspect=None, names=0, part_words=None,
             continue
         shape, no, stage = b.get("shape"), None, 0
         w = part_words if part_words is not None and group == "parts" else words
-        most = budget((f.get("budget") or {}).get(family))
+        most = budget((f.get("budget") or {}).get(family), title)
         lo, hi = f.get("words") or [0, 999]
         pic = picture_fit(bid, family, aspect)
         table = isinstance(most, dict)

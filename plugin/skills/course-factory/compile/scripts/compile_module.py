@@ -2962,7 +2962,7 @@ def plan_item(s, b, tid, variant, comp, fig, is_photo, lines, mdir, own_comp, wa
     names = (layout_fit.names_shown(fig) if family in ("drawing", "3d") else 0) + len(b.get("spots") or [])
     opts, why = layout_plan.options(own_bp, cs.wc(" ".join(lines)), family, aspect, names,
                                     top_words(tid, lines, b) if tid == "content-in-parts" else None, fixed, seed, s["id"],
-                                    len([x for x in lines if " | " in x]) if tid == "reference-table" else 0)
+                                    len([x for x in lines if " | " in x]) if tid == "reference-table" else 0, s.get("title") or "")
     out = [k[0] for k in measured_out(avoid, s, b) if k[1] == ground]
     if any(o["shape"] not in out for o in opts):
         for o in [o for o in opts if o["shape"] in out]:
