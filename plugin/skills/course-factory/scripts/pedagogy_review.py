@@ -7,6 +7,8 @@
     pedagogy_review.py render --course <course> [--no-pdf]  write the three documents into to_review\\pedagogy\\
     pedagogy_review.py expert --course <course> --module 4 --topic 4.1 --level 4 --said "<their words>" --by "<name>"
                                                             an expert's decision on a topic's level, carried out as it is
+    pedagogy_review.py reword --course <course> --module 4 --topic 4.1 --text "<the outcome, in English>" --by "<name>"
+                                                            an expert's new wording of a Sub-ILO, written in English
 
 WHY THIS EXISTS
 The course experts decide how a course is taught. Before a single module is built they get, topic by topic and module
@@ -29,8 +31,11 @@ WHAT IS READ, WHAT IS WRITTEN
                                                     the old course (OLD_COURSE_INVENTORY.md, its tests and exercises)
                                                     and bloom/GUIDE.md section 5
 The outcomes' words are never in pedagogy_review.json: they are read from the architecture, so a document can never
-change one. The documents are English only so far; the outcomes are shown in the programme's own words, and a
-revised outcome is written in English, as the course will show it (L19).
+change one. The documents are English only so far; the outcomes are shown in the programme's own words - in the
+editor with their English reading beside them ("intended_en", the architecture's "text_en"), never in place of them - and a
+revised outcome is written in English, as the course will show it (L19) - whatever language the programme is in and
+whatever language the expert's own wording arrived in: `check` stops on one that is not, `ratify` never writes one
+into the architecture, and `reword` is how the factory writes it in English.
 
 Standard library only (the PDF is printed by the same hidden browser as the additional materials).
 """
@@ -101,25 +106,52 @@ def modules(prog, arch):
     """[{n, title, rows: [{id, text, asks}], active: [...]}] - every module but the final assessment, in order."""
     fa = str((arch.get("final_assessment") or {}).get("topic") or "")
     main = {str(i.get("id")): i.get("text", "") for i in arch.get("main_ilos", [])}
+    main_en = {str(i.get("id")): i.get("text_en") or "" for i in arch.get("main_ilos", [])}
     out = []
     for am in sorted(arch.get("modules", []), key=lambda m: int(m.get("module", 0))):
         if str(am.get("module")) == fa:
             continue
+        raw = {str(s.get("id", "?")): s for s in am.get("sub_ilos") or [] if isinstance(s, dict)}
+        en = {i: s.get("text_en") or "" for i, s in raw.items()}
+        # the English reading of the programme's own words: a kept Sub-ILO's "text_en", a re-worded one's "programme_text_en"
+        read = {i: (s.get("text_en") if s.get("status", "original") == "original" else s.get("programme_text_en")) or ""
+                for i, s in raw.items()}
         rows = [{"id": s["id"], "text": s["text"], "asks": s["level"], "main": False, "lang": s["lang"],
                  "programme_text": s.get("programme_text") or s["text"], "programme_lang": s.get("programme_lang") or s["lang"],
-                 "status": s.get("status")} for s in bloom_map._sub_ilos(prog, arch, am)]
+                 "status": s.get("status"), "text_en": en.get(s["id"], ""), "programme_en": read.get(s["id"], "")}
+                for s in bloom_map._sub_ilos(prog, arch, am)]
         if not rows:
             rows = [{"id": i, "text": main.get(i, ""), "asks": bloom_map.ilo_level(main.get(i, ""))["level"], "main": True,
-                     "lang": "en", "programme_text": main.get(i, ""), "programme_lang": "en", "status": "original"}
+                     "lang": "en", "programme_text": main.get(i, ""), "programme_lang": "en", "status": "original",
+                     "programme_en": main_en.get(i, "")}
                     for i in (str(x) for x in am.get("main_ilos", []))]
         out.append({"n": int(am["module"]), "title": am.get("title", ""), "rows": rows,
                     "active": [a for a in (am.get("active_learning") or []) if isinstance(a, dict)]})
     return out
 
 
-def not_english(text, lang):
-    """True when the words lead with a verb of the programme's language and none of English - not written in English"""
-    return lang != "en" and bool(bloom_map.ilo_level(text, lang)["verb"]) and not bloom_map.ilo_level(text, "en")["verb"]
+OTHER_LETTERS = re.compile("[āčēģīķļņšūžąęėįųõäöüæøå]")       # Latvian, Lithuanian, Estonian, Norwegian - not English
+
+
+def not_english(text, lang=None):
+    """True when the words are not written in English: Cyrillic letters, two or more words with a letter English does
+    not have (one may be a maker's name), or a lead verb of the programme's language and none of English"""
+    low = (text or "").lower()
+    if re.search("[\u0400-\u04ff]", low) or sum(1 for w in low.split() if OTHER_LETTERS.search(w)) >= 2:
+        return True
+    return lang not in (None, "en") and bool(bloom_map.ilo_level(text, lang)["verb"]) \
+        and not bloom_map.ilo_level(text, "en")["verb"]
+
+
+def revised_of(r, new):
+    """A Sub-ILO's new wording as the course shows it: the expert's decision, else the architecture's re-expressed
+    words - their English written beside them ("text_en") where they are still in the programme's language.
+    "" for a Main ILO and for an outcome not re-worded."""
+    if r["main"]:
+        return ""
+    own = r.get("status") == "re-expressed" and r["text"] != r["programme_text"]
+    text = (r.get("text_en") or r["text"]) if own and not_english(r["text"], r["programme_lang"]) else r["text"]
+    return (new.get("revised_outcome") or "").strip() or (text if own else "")
 
 
 def decision(now, new, asks):
@@ -245,6 +277,10 @@ def check(course):
             elif rw and not_english(rw, r["programme_lang"]):
                 probs.append("%s: 'revised_outcome' is in the programme's language - write it in English, as the course will "
                              "show it; the programme's own words stay beside it (L19)" % where)
+            elif not rw and not_english(revised_of(r, new), r["programme_lang"]):
+                # a wording taken into the architecture while the factory still wrote it in the programme's language
+                probs.append("%s: the Sub-ILO as re-worded in the architecture is not in English - write the same outcome in "
+                             "English (pedagogy_review.py reword); the programme's own words stay beside it (L19)" % where)
     for n, m in mods.items():
         for i in (m or {}).get("rows") or {}:
             if (str(n), i) not in known:
@@ -541,10 +577,13 @@ def verb_of(text, lang, lvl=None):
 def outcome_columns(r, new):
     """Intended learning outcome | existing verb | revised learning outcome | revised verb, as the experts read them.
     The intended outcome is the programme's words; a Sub-ILO may be re-worded (L2: proposed, ratified by the expert),
-    a Main ILO never."""
-    rw = "" if r["main"] else ((new.get("revised_outcome") or "").strip()
-                               or (r["text"] if r.get("status") == "re-expressed" and r["text"] != r["programme_text"] else ""))
+    a Main ILO never. The revised outcome is English (L19): `check` stops the documents on one that is not.
+    "intended_en" is the English reading of a programme not in English, shown beside its words: "" when there is
+    none, or the words are English already. It is no part of a row's hash - a reading put right asks no answer again."""
+    rw = revised_of(r, new)
+    reading = (r.get("programme_en") or "").strip()
     return {"main": r["main"], "intended": r["programme_text"],
+            "intended_en": reading if reading != (r["programme_text"] or "").strip() else "",
             "existing_verb": verb_of(r["programme_text"], r.get("programme_lang")),
             "revised": rw, "revised_verb": verb_of(rw, r.get("lang"), new.get("level")) if rw else "",
             "tla": new.get("how") or "not judged yet"}
@@ -552,10 +591,14 @@ def outcome_columns(r, new):
 
 def ratify(course, module, sub_id, text, by):
     """A Sub-ILO's new wording, taken by an expert: written into the architecture as re-expressed, the programme's own
-    words kept beside it (L2). False when the row is a Main ILO or not in the architecture."""
+    words kept beside it (L2), their English reading too ("programme_text_en" - "text_en" would be shown in place of
+    the new wording). False when the row is a Main ILO or not in the architecture, and when the wording is not in
+    English (L19): the architecture never takes one in another language."""
     from datetime import date
     f = files(course)
     arch = _load(f["arch"])
+    if not_english(text, (_load(f["prog"], {}) or {}).get("language")):
+        return False
     for am in (arch or {}).get("modules", []):
         if str(am.get("module")) != str(module):
             continue
@@ -564,6 +607,9 @@ def ratify(course, module, sub_id, text, by):
                 if not s.get("programme_text") and s.get("status", "original") == "original":
                     prog = _load(f["prog"], {}) or {}
                     s["programme_text"] = (prog.get("outcomes") or {}).get(str(sub_id)) or s.get("text") or ""
+                en = s.pop("text_en", "")
+                if en and s.get("status", "original") == "original":
+                    s["programme_text_en"] = en
                 s.update(status="re-expressed", text=text.strip(), ratified={"by": by, "on": date.today().isoformat()})
                 _save(f["arch"], arch)
                 return True
@@ -600,14 +646,45 @@ def record_expert(course, module, topic, lvl, said, by):
     return 0
 
 
+def record_reword(course, module, topic, text, by):
+    """An expert's new wording of a Sub-ILO, written in English into the architecture as re-expressed - how a wording
+    that came in the programme's language, or was taken while the factory still wrote one, is carried out."""
+    f = files(course)
+    rev = _load(f["review"])
+    row = ((rev or {}).get("modules", {}).get(str(module), {}).get("rows", {}) or {}).get(str(topic))
+    if not row:
+        print("Stopped - module %s has no topic %s in %s." % (module, topic, f["review"]))
+        return 2
+    if not (text.strip() and by.strip()):
+        print("Stopped - nothing was recorded: the outcome's new wording (--text) and the expert who asked for it (--by) "
+              "are needed.")
+        return 2
+    if not_english(text, (_load(f["prog"], {}) or {}).get("language")):
+        print("Stopped - nothing was recorded: the wording is not in English. Every course is in English (L19): write "
+              "the same outcome in English - what it is about, its subject and its standard unchanged.")
+        return 2
+    if not ratify(course, module, topic, text, by):
+        print("Stopped - nothing was recorded: module %s, topic %s is not a Sub-ILO of the architecture. A Main ILO is "
+              "never re-worded (L2)." % (module, topic))
+        return 2
+    (row.get("proposed") or {}).pop("revised_outcome", None)
+    _save(f["review"], rev)
+    print("Recorded: module %s, topic %s now reads \"%s\" (%s); the programme's own words stay beside it. Then render."
+          % (module, topic, text.strip(), by.strip()))
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("draft", "check", "render", "expert"):
+    for name in ("draft", "check", "render", "expert", "reword"):
         s = sub.add_parser(name)
         s.add_argument("--course", required=True)
         if name == "render":
             s.add_argument("--no-pdf", action="store_true")
+        if name == "reword":
+            for a in ("--module", "--topic", "--text", "--by"):
+                s.add_argument(a, required=True)
         if name == "expert":
             for a in ("--module", "--topic", "--said", "--by"):
                 s.add_argument(a, required=True)
@@ -618,6 +695,8 @@ def main(argv=None):
         return draft(course)
     if x.cmd == "expert":
         return record_expert(course, x.module, x.topic, x.level, x.said, x.by)
+    if x.cmd == "reword":
+        return record_reword(course, x.module, x.topic, x.text, x.by)
     if x.cmd == "render":
         return render(course, pdf=not x.no_pdf)
     probs, notes = check(course)

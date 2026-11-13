@@ -165,5 +165,21 @@ FEEDBACK_LOG.md, and Ready into `ready`. Carry out every note and write in its `
 `check` stops until each one has it, and the editor shows it to the expert - then `render` (it signs the documents
 with the Ready) and `push` again: the rows not changed keep their answers.
 
-**The outcomes stay the programme's.** The documents never propose a re-worded outcome: `revised_outcome` in a proposal stops `check`. Only an expert who says the outcome should read differently re-words a Sub-ILO - recorded as their decision (`pedagogy_review.py expert`), in English (L19; one in the programme's language stops `check`), its subject and standard unchanged, the programme's own words beside it. A Main ILO is never re-worded (L2). The expert's Take proposed, or a decision with Claude that re-words it, ratifies it into the architecture as re-expressed. After Ready the course is built by L70 (SKILL.md *Auto build*). An expert who cannot use the editor still
+**The outcomes stay the programme's.** The documents never propose a re-worded outcome: `revised_outcome` in a
+proposal stops `check`. Only an expert who says the outcome should read differently re-words a Sub-ILO - recorded as
+their decision, its subject and standard unchanged, the programme's own words beside it. A Main ILO is never re-worded
+(L2). The expert's Take proposed, or a decision with Claude that re-words it, ratifies it into the architecture as
+re-expressed.
+
+**A revised outcome is always in English (L19)** - whatever language the programme is in, and whatever language the
+expert's wording arrived in. The programme's own words are never translated in place: they stay beside it exactly as
+the programme has them, and the editor shows their English reading under them (the architecture's `text_en`, sent as
+`intended_en`). A wording that is not English is never taken into the architecture and never sent to the
+editor: `pull` keeps it as the expert's note, `check` stops, and you write the same outcome in English - what it is
+about, its subject and its standard unchanged, nothing added - with
+`pedagogy_review.py reword --module 4 --topic 4.1 --text "<the outcome, in English>" --by "<the expert>"`, then
+write in the note's `done` what you wrote. The same command records a re-wording an expert gave on paper, and puts
+right a Sub-ILO an older factory re-worded in the programme's language (`check` names each one).
+
+After Ready the course is built by L70 (SKILL.md *Auto build*). An expert who cannot use the editor still
 gets the Word files and signs them.
