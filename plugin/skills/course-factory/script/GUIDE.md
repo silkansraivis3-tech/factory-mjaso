@@ -93,6 +93,14 @@ trainee does the thing on a real case - builds the Gantt, prepares the budget, c
 `assessment_map.json` assigns to it in this module. Slides explain it and questions check it; neither practises it. A
 module without one is a must-fix (`i_not_practised`), and the admin's ILO map shows the row as "Slides only".
 
+**No script before its sources (L74, 2.133.0).** Before a module's script is written, `scripts/kb_coverage.py check
+<course> --module N` (also inside `course_gate.py --module N`) searches the knowledge base for every Sub-ILO with the
+programme's sub-topic wording - the programme, study plan and expert brief left out, since they only name the subject.
+A sub-topic with no passage is a gap, and the gate stops: add sources for it to the course material folder and run
+`kb_tool.py build` again, or record the operator's own answer (`kb_coverage.py accept <course> --module N --ids 2.4
+--why "..." --by "..."`). Never write the script first and look for sources afterwards: Information Technology
+(2026-11-16) did, and about 200 claims had nothing to stand on.
+
 ## 1 · Write the script
 
 `<course>/working_claude/script/M01.json` — the whole lesson **in the order it is taught**. It runs on two

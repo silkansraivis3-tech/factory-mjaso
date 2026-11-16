@@ -129,6 +129,11 @@ def problems(course, module=None):
                        "page again and have it approved." % module)
     if kb_decision(course) is None:
         out.append(kb_problem(course))
+    elif module is not None and arch and m is not None:      # L74 (2.133.0): the knowledge base covers what the module teaches
+        import kb_coverage
+        p = kb_coverage.problem(course, module)
+        if p:
+            out.append(p)
     return out
 
 
