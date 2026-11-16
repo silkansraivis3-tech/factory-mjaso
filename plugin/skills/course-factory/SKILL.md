@@ -136,6 +136,7 @@ bending or changing a law, or when a request seems to collide with one, read it 
 | **L69** | **The experts get the pedagogy first** — Bloom now, Bloom proposed and the activities, before any script (`pedagogy_review.py`, `bloom/GUIDE.md` §5) |
 | **L70** | **Built after the expert's Ready** — the office PC builds unattended; see *Auto build* |
 | **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done - and (2.118.0) not done without the **walk review**: an AI reviewer who did not build it looks at the contact sheet of every slide's stops as a trainee does (`walk_review.py`, `compile/GUIDE.md` 2i; the whole-course workflow's walk judge runs it; two rounds, then the operator accepts on record or has it fixed) |
+| **L72** | **Every finished course goes into the Course Libraries, with all its material** — `scripts/finished_course.py <course>` writes `Course Libraries\Finished courses\<Course name>\`: `trainee\` (only what a trainee sees or uses - give this to the trainee side), `complete\` (everything delivered, instructor material included), `00_READ_ME.md`; run again after every release or fix |
 
 ## The course remembers — L32
 
@@ -317,3 +318,11 @@ the one check for its kind of change (`fix/GUIDE.md` §4). Read every output (L1
 Then write `templates/factory-notes.md` into the course folder: what was made, every marker with its source, the
 achieved ratio, what moved to the handout and why, and a last section of **feedback on this skill** — written during
 the run, never left for a human.
+
+**A finished course goes into the Course Libraries (L72).** When the course is finished - and again after every release
+or fix - run `scripts/finished_course.py <course folder> --name "<Course name>"`. It copies the delivered `modules\`
+and `additional-materials\` to `Course Libraries\Finished courses\<Course name>\` (`--to`, else
+`NOVIKONTAS_COURSE_LIBRARIES`, else the libraries' default places): `trainee\` holds only what a trainee sees or uses
+(decks, handouts, self-checks, module checks without keys, day sheets, project pack, pre-brief cards), `complete\` holds
+everything, instructor material included. Anyone building the trainee side gets the `trainee\` folder. A new kind of
+instructor file must be added to the script's rules, never sorted by hand.

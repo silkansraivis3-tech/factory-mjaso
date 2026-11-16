@@ -279,3 +279,8 @@ Advanced - 332 items of MC 7.14, 69 COVERED, 43 PARTLY, 18 GAP (fire the biggest
 **Built out in:** now
 
 **Kept, lifted one level, seen whole** - a course rebuilt from an old one keeps its order and its explanations (`moved_why`, `dropped_old`, at least 60 % of the old words); one Bloom level a course, more only by the expert; outcomes never re-worded by the factory; a question asks only what the slides showed; every value from a source the course holds, every claim proved by the `fact-checker` agent; one photograph, one thing (`picture.items`, `place --seen`); the build walks every Next in a browser and stops on anything cut (`fit_gate.py`); a Ready over unanswered rows approves nothing
+
+## L72
+**Built out in:** 2.131.0
+
+**Every finished course goes into the Course Libraries, with all its material** - Aleksis Vejs, 2026-11-16: "put this in the factory that all finished courses need to go into G:\My Drive\Course Libraries with all the material needed" (asked while handing the Project Management trainee material to the developer of the trainee-side system). `scripts/finished_course.py` writes `Course Libraries\Finished courses\<Course name>\` - not a library (it is not in `LIBRARIES.json`), one folder per course: `trainee\` only what a trainee sees or uses (the deck counts: it is projected to the class), `complete\` everything delivered, `00_READ_ME.md`. Both are made again on every run, so the folder always matches the latest release. The trainee rules reuse the classroom importer's own instructor-only pattern (`check_course_package.py`) plus the additional materials' instructor files (debrief cards, task cards with instructor notes, the ACP, assessment forms, model files, keys); an answer key or review page in `trainee\` stops the run

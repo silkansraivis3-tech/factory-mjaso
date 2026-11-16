@@ -706,6 +706,7 @@ course-factory/
 ├── scripts/workspace.py                 the work folder: course\ beside the operator's material (L40, 2.19.0)
 ├── scripts/check_course_package.py, test_course_package.py   the course folder to the classroom's rules + its own importer (L45, 2.21.0)
 ├── scripts/check_module_folder.py       kept as a short way in: runs check_course_package.py (2.21.0)
+├── scripts/finished_course.py, test_finished_course.py   a finished course into Course Libraries\Finished courses\: trainee\ + complete\ (L72, 2.131.0)
 ├── knowledge/classroom-system.json      the classroom system's own course-folder rules (L45, 2.21.0)
 ├── scripts/picture_briefs.py, test_picture_briefs.py   generated pictures: places, the person's description, cost (L47, 2.24.0)
 ├── scripts/exercises.py                 a module's practical exercise forms; its slide proposed from the TRAINEE form (2.63.2)
