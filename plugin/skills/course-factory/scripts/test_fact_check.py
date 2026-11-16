@@ -221,6 +221,25 @@ def main():
               and not os.path.isfile(cs.paths(c, 1)["pending"]), after["screens"][0])
         check("... and every finding is said in Latvian and Russian too",
               all(cs.LABELS[lang].get(k) for lang in ("lv", "ru") for k in ("c_unchecked", "c_unproven")))
+
+        print("\n-- a fix identical to the current line is no correction (2.133.1)")
+        work = cs.load(cs.paths(c, 1)["script"])
+        line = "Type C tanks are always painted bright orange."
+        work["screens"][0]["text"] += "\n" + line
+        cs.save(cs.paths(c, 1)["script"], work)
+        st, _, _ = fc.prepare(c, 1)
+        same = next(cid for cid, r in st["claims"].items() if r["text"] == line)
+        notes = []
+        done, probs = fc.judge(c, 1, [{"id": same, "verdict": "partly", "quote": "designed for about 18 bar gauge",
+                                       "source": "Guide.pdf p.40", "fix": line}], notes=notes)
+        check("judge records the verdict and says the fix repeats the line", done == 1 and not probs and notes and "no correction" in notes[0], (probs, notes))
+        changes, asks = fc.fixes(c, 1)
+        row = fc.load_store(c, 1)["claims"][same]
+        check("fixes does not turn it into 'found / corrected from the source' - the agent's verdict stays",
+              row["verdict"] == "partly" and row.get("by") == "fact-checker", row)
+        check("... no change is proposed for it, and the line is still unproven",
+              not any(line in str(x.get("new")) for x in changes)
+              and any(t == line for _, t, _ in fc.status(c, 1)["unproven"]), (changes, fc.status(c, 1)["unproven"]))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

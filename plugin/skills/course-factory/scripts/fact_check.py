@@ -247,9 +247,9 @@ def quote_in(quote, texts):
     return len(q) >= 10 and any(q in norm(t).replace(" ", "") for t in texts)
 
 
-def judge(course, module, verdicts, index=None):
+def judge(course, module, verdicts, index=None, notes=None):
     """-> (recorded, [problems]) - a verdict whose quote no source passage holds is refused, so nothing is proved from
-    memory"""
+    memory. A fix equal to the line's own words is no correction: the verdict stands (said in `notes`, if given)"""
     st = load_store(course, module)
     probs, done = [], 0
     for v in verdicts if isinstance(verdicts, list) else []:
@@ -283,10 +283,19 @@ def judge(course, module, verdicts, index=None):
                 if not quote_in(quote, texts):
                     probs.append("%s: the quote is not in the sources word for word - copy it from a passage (or search again)" % cid)
                     continue
+        if verdict != "found" and same_words(fix, row.get("text")):
+            if notes is not None:
+                notes.append("%s: the fix is the script's own line, word for word - that is no correction; the verdict %s is kept, "
+                             "the line is still unproven (cut it or give the source's different words)" % (cid, verdict))
         row.update(verdict=verdict, quote=quote, source=(v.get("source") or "").strip(), fix=fix, by="fact-checker")
         done += 1
     save_store(course, module, st)
     return done, probs
+
+
+def same_words(fix, text):
+    """a fix that only repeats the line it is meant to correct (spacing, case, a leading bullet aside)"""
+    return bool(fix) and fix.lower() != "cut" and norm(re.sub(r"^\s*[-*•]\s*", "", fix)) == norm(re.sub(r"^\s*[-*•]\s*", "", text or ""))
 
 
 def fixes(course, module):
@@ -309,6 +318,8 @@ def fixes(course, module):
         lines = field_lines(s, field)
         for r in rows:
             i = r["line"] - 1
+            if same_words(r["fix"], r["text"]):
+                continue               # not a correction: the row keeps the agent's verdict, never "corrected from the source"
             if 0 <= i < len(lines) and norm(re.sub(r"^\s*[-*•]\s*", "", lines[i])) == norm(r["text"]):
                 lines[i] = None if r["fix"].lower() == "cut" else (("- " if lines[i].lstrip().startswith("-") else "") + r["fix"])
                 if lines[i] is not None:          # the corrected words come from the source's quote: proved with it
@@ -387,8 +398,9 @@ def main(argv=None):
         except (OSError, ValueError, TypeError) as err:
             print("Stopped - --file is a JSON list of {id, verdict, quote, source, fix} (not_a_claim: {id, verdict, why}): %s" % err)
             return 2
-        done, probs = judge(course, a.module, verdicts)
-        print("Recorded %d verdict(s).%s" % (done, "".join("\n  refused: " + p for p in probs)))
+        notes = []
+        done, probs = judge(course, a.module, verdicts, notes=notes)
+        print("Recorded %d verdict(s).%s%s" % (done, "".join("\n  refused: " + p for p in probs), "".join("\n  note: " + n for n in notes)))
         return 1 if probs else 0
     if a.cmd == "fixes":
         changes, asks = fixes(course, a.module)

@@ -3118,6 +3118,11 @@ def write_pending(p, script, changes, notes, source, proposed_by=NOT_STATED):
             "source": source, "proposed_by": proposed_by or NOT_STATED, "made": datetime.now().isoformat(timespec="seconds"),
             "base_hash": content_hash(script), "changes": changes, "notes": notes}
     save(p["pending"], pend)
+    show_pending(script, changes, notes)
+    return 0
+
+
+def show_pending(script, changes, notes):
     print("What I understood - nothing has been changed yet:\n")
     for ch in changes:
         print("  - " + describe(script, ch))
@@ -3127,7 +3132,6 @@ def write_pending(p, script, changes, notes, source, proposed_by=NOT_STATED):
         print("\n  " + approval_note(script, changes))
     print("\nShow this list to the operator. Only when they confirm:  content_script.py apply <course> --module %s --confirmed"
           % script.get("module"))
-    return 0
 
 
 def cmd_read(course, module, docx, pdf):
@@ -3135,6 +3139,12 @@ def cmd_read(course, module, docx, pdf):
     script = load(p["script"])
     changes, notes = [], []
     p["docx"] = docx or workspace.review_path(course, os.path.basename(p["docx"]), for_reading=True)
+    if not os.path.isfile(p["docx"]) and not pdf and os.path.isfile(p["pending"]):
+        # no file to read: this is a look at what waits (e.g. a proposal from `propose`), never a reason to drop it
+        pend = load(p["pending"])
+        print("No Word or PDF file was given - showing the proposal that is already waiting (left in place; only `discard` removes it).\n")
+        show_pending(script, pend.get("changes") or [], pend.get("notes") or [])
+        return 0
     if os.path.isfile(p["docx"]):
         got = read_docx(p["docx"], docx_labels(course, script))
         expected = {}

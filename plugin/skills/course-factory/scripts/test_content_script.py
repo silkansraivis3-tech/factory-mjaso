@@ -392,6 +392,24 @@ def main():
         check("the boxes carry the course language", 'w:lang w:val="en"' in doc)
         code, out = cs_run("read", c, "--module", "1")
         check("an untouched Word file reads back as nothing changed", code == 0 and "nothing" in out and not os.path.exists(p["pending"]), out)
+        # 2.133.1: `read` with no Word/PDF file used to say "nothing is waiting" and delete a proposal made by `propose`
+        chg_path = os.path.join(os.path.dirname(p["script"]), "read_keeps.changes.json")
+        io.open(chg_path, "w", encoding="utf-8").write(json.dumps([{"screen": "s01", "field": "title", "new": "A title proposed in chat"}]))
+        code, out = cs_run("propose", c, "--module", "1", "--changes", chg_path)
+        waiting = io.open(p["pending"], encoding="utf-8").read() if os.path.isfile(p["pending"]) else None
+        moved = p["docx"] + ".hidden"
+        if os.path.isfile(p["docx"]):
+            os.replace(p["docx"], moved)
+        try:
+            code, out = cs_run("read", c, "--module", "1")
+        finally:
+            if os.path.isfile(moved):
+                os.replace(moved, p["docx"])
+        check("read with no file shows the waiting proposal and leaves it in place (it used to delete it)",
+              code == 0 and waiting and "A title proposed in chat" in out and os.path.isfile(p["pending"])
+              and io.open(p["pending"], encoding="utf-8").read() == waiting, out)
+        cs_run("discard", c, "--module", "1")
+        check("... only discard removes it", not os.path.isfile(p["pending"]))
 
         print("\n-- enough theory before every task (L36)")
         check("the example module is clean", rules_of(SCRIPT) == [], rules_of(SCRIPT))
