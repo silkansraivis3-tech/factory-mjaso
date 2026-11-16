@@ -111,6 +111,8 @@ def main():
               r12["practical"] == [{"id": "EX1", "title": "Walk the tank deck", "module": "M01"}]
               and r21["practical"] == [{"id": "EX2", "title": "ESD drill", "module": "M02", "place": "simulator"}], (r12["practical"], r21["practical"]))
         check("final: the final bank's questions counted per Sub-ILO (a double tag counts for both)", r11["final"] == 2 and r12["final"] == 1, (r11.get("final"), r12.get("final")))
+        check("2.132.0 level: the Bloom level each Sub-ILO's verb asks for (Explain 2, Identify 1, Name 1)",
+              (r11.get("level"), r12.get("level"), r21.get("level")) == (2, 1, 1), (r11.get("level"), r12.get("level"), r21.get("level")))
         check("an empty column is left out of a row, not written as []", "practical" not in r11 and "final" not in r21 and "taught" not in r21, r21)
         code, out = run(TOOL, c)
         check("the report names a tag no row owns, and what is taught or checked nowhere",

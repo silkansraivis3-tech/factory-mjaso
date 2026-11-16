@@ -2116,6 +2116,39 @@ def sub_ilos_of(s):
     return [str(x).strip() for x in (v if isinstance(v, list) else [v]) if x not in (None, "") and str(x).strip()]
 
 
+# 2.132.0 (Aigars Kluga, course expert, 2026-11-16, on the Project Management ILO map: "if the outcome has an action
+# verb - 'perform' and the like - it cannot be taught from slides; something else is needed"). 14 of the 16 Sub-ILOs of
+# Project Management 1.0.2 ("Build a Gantt schedule", "Prepare a budget") were met by slides and quiz questions alone.
+# A Sub-ILO whose verb asks the trainee to DO something (Apply or higher) is practised only where the trainee does it:
+# an activity screen tagged to it, or an exercise assessment_map.json assigns to it. A question checks; it is not practice.
+def practised_sub_ilos(course, script):
+    """The Sub-ILOs this module practises: its activity screens' tags, and the exercises assessment_map.json gives it."""
+    out = {t for s in script.get("screens", []) if s.get("kind") == "activity" for t in sub_ilos_of(s)}
+    num = lambda m: [int(x) for x in re.findall(r"\d+", str(m or ""))][:1]     # 2, "2", "M02", "Module_02" -> [2]
+    mine = num(script.get("module"))
+    for e in (_course_json(course, "assessment_map.json").get("exercises") or []) if course and mine else []:
+        if isinstance(e, dict) and num(e.get("module")) == mine:
+            out |= {str(x).strip() for x in (e.get("sub_ilos") or [])}
+    return out
+
+
+def doing_level(row, script):
+    """{"level", "verb"} when the Sub-ILO asks for Apply or higher - a level written on the row ("bloom") wins over
+    its verb; None for Remember / Understand, or a verb not in the list."""
+    lvl, verb = row.get("bloom"), ""
+    if not lvl:
+        text = row.get("sub_ilo", "")
+        info = bloom_map.ilo_level(text, course_lang(script))
+        if not info["level"] and course_lang(script) != "en":
+            info = bloom_map.ilo_level(text, "en")
+        lvl, verb = info["level"], info["verb"]
+    try:
+        lvl = int(lvl)
+    except (TypeError, ValueError):
+        return None
+    return {"level": lvl, "verb": verb or "-"} if lvl >= bloom_map.B["apply_level"] else None
+
+
 def ilo_findings(course, script):
     """2.42.0 (owner, 2026-10-16) - the module against its rows of the ILO map, and its sources. Every Sub-ILO it
     owes taught on a slide and checked by a question; every question naming its Sub-ILO; the sources listed.
@@ -2150,12 +2183,18 @@ def ilo_findings(course, script):
         return found
     taught = {t for s in screens if s.get("kind") in ("slide", "activity") for t in sub_ilos_of(s)}
     checked = {t for s in qs for t in sub_ilos_of(s)}
+    practised = practised_sub_ilos(course, script)
     for r in rows:
         sid = str(r.get("sub_ilo_id"))
         if sid not in ilo_map.leaves(rows):
             continue
         if sid not in taught:
             add("", "sub_ilo", "i_not_taught", s=sid, text=short(r.get("sub_ilo", ""), 90))
+        elif sid not in practised:
+            lv = doing_level(r, script)
+            if lv:
+                add("", "sub_ilo", "i_not_practised", s=sid, verb=lv["verb"], level=bloom_map.level_name(lv["level"]),
+                    text=short(r.get("sub_ilo", ""), 90))
         if sid not in checked:
             add("", "sub_ilo", "i_not_checked", s=sid)
             continue

@@ -83,6 +83,7 @@
     "i_unknown_sub": "\"sub_ilo\": \"{s}\" is not a Sub-ILO of this module in the ILO map (it has: {known}).",
     "i_not_taught": "Sub-ILO {s} is taught on no slide - mark the slide(s) that teach it with \"sub_ilo\": \"{s}\". ({text})",
     "i_not_checked": "Sub-ILO {s} is checked by no question - a self-check or the module check needs a question with \"sub_ilo\": \"{s}\".",
+    "i_not_practised": "Sub-ILO {s} asks the trainee to do something (\"{verb}\" - {level}), and only slides and questions serve it. A skill is not taught from a slide: add an activity screen (\"kind\": \"activity\", \"sub_ilo\": \"{s}\") where the trainee does it on a real case, or name the exercise that does in assessment_map.json. ({text})",
     "i_clause_not_checked": "Sub-ILO {s}: \"{clause}\" - none of its {n} question(s) asks about this part. A note: add a question on it, or say it is covered; whether this ever blocks is the owner's decision.",
     "no_programme_wording": "— new, not in the programme —",
     "active_title": "Theory taught as activity",

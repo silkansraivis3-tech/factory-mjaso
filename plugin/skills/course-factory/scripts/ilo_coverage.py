@@ -16,10 +16,11 @@ every build, so a course carries its map without anyone running it.
     {"kind": "ilo-coverage", "version": 1, "course", "built", "approved", "final_rule", "main": [...],
      "modules": [...], "rows": [{main, id, text, status, programme, module, module_title,
                                  taught: [{slide, title, module}], checked: [{set, kind, module, q: [...]}],
-                                 practical: [{id, title, module, place?}], final: N, whole?, exam?}]}
+                                 practical: [{id, title, module, place?}], final: N, level?, whole?, exam?}]}
 
 A port of tools/ilo-coverage.mjs of the training app (the format is the admin panel's), kept line for line so the two
-write the same file. Exit 0 written; 1 no ILO map or no modules folder; 2 usage.
+write the same file - except "level" (2.132.0: the Bloom level the Sub-ILO's verb asks for, 1-6), which needs the
+factory's verb list; the admin reads the verb itself when a file has none. Exit 0 written; 1 no ILO map or no modules folder; 2 usage.
 """
 from __future__ import annotations
 
@@ -33,6 +34,7 @@ from datetime import datetime, timezone
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import workspace  # noqa: E402
+import bloom_map  # noqa: E402  - the level each Sub-ILO's verb asks for (2.132.0)
 
 OUT_REL = os.path.join("_course_shell", "ilo_coverage.json")
 
@@ -106,6 +108,7 @@ def build(root, out=None):
     assess = load(os.path.join(work, "assessment_map.json")) if has(os.path.join(work, "assessment_map.json")) else {}
 
     # What each module owes, in the factory's order.
+    lang = bloom_map.lang_code(get_dict(arch, "course").get("course_language") or "English")
     rows = []
     for r in map_.get("rows") or []:
         row = {
@@ -120,6 +123,12 @@ def build(root, out=None):
             row["note_taught"] = r["where_taught"]
         if r.get("assessed"):
             row["note_assessed"] = r["assessed"]
+        # 2.132.0 - the Bloom level the Sub-ILO asks for (a level written on the row wins over its verb). The admin
+        # marks a Sub-ILO at Apply or higher that no exercise practises: a skill is not taught from slides alone.
+        lvl = r.get("bloom") or bloom_map.ilo_level(row["text"], lang)["level"] \
+            or (bloom_map.ilo_level(row["text"], "en")["level"] if lang != "en" else None)
+        if lvl:
+            row["level"] = int(lvl)
         rows.append(row)
 
     def row_of(module, id_):

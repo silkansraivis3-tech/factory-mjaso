@@ -28,10 +28,10 @@
     "en": {
       "1": ["define", "list", "name", "state", "recall", "recognise", "recognize", "identify", "label", "locate", "memorise", "memorize", "repeat"],
       "2": ["describe", "explain", "outline", "summarise", "summarize", "classify", "compare", "interpret", "discuss", "illustrate", "exemplify", "paraphrase", "translate"],
-      "3": ["apply", "use", "operate", "carry out", "perform", "demonstrate", "calculate", "measure", "execute", "implement", "conduct", "handle", "prepare", "adjust", "follow", "complete", "solve", "estimate", "plot", "respond", "maintain", "start up", "shut down"],
+      "3": ["apply", "use", "operate", "carry out", "perform", "demonstrate", "calculate", "measure", "execute", "implement", "conduct", "handle", "prepare", "adjust", "follow", "complete", "solve", "estimate", "plot", "respond", "maintain", "start up", "shut down", "make", "set up", "track", "monitor", "present", "assign", "record", "fill in"],
       "4": ["analyse", "analyze", "diagnose", "troubleshoot", "differentiate", "distinguish", "examine", "investigate", "deduce", "infer", "attribute", "break down", "trace"],
       "5": ["evaluate", "assess", "judge", "justify", "critique", "prioritise", "prioritize", "recommend", "defend", "argue", "appraise", "decide"],
-      "6": ["design", "plan", "develop", "create", "compose", "construct", "devise", "formulate", "produce", "propose", "draft"]
+      "6": ["design", "plan", "develop", "create", "compose", "construct", "devise", "formulate", "produce", "propose", "draft", "build", "draw up"]
     },
     "lv": {
       "1": ["definē", "uzskait", "nosauc", "nosauk", "atpazī", "identificē", "atcer", "norād", "iegaumē"],

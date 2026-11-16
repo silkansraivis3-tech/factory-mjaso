@@ -85,6 +85,14 @@ words its practical's cards are drafted from - approved with the script; a simul
 screens of one format, or three practice moments of one format - `a_one_direction`) or a team, real-time or hands-on
 Sub-ILO has no activity of its kind (`a_type_unserved`); `"formats_why"` at the top of the script keeps both a note.
 
+**A doing outcome is practised, not only shown (L73, 2.132.0).** Aigars Kluga, on the Project Management ILO map: an
+outcome with an action verb - "perform" and the like - cannot be taught from slides; something else is needed. Every
+Sub-ILO whose verb asks for Apply or higher (build, make, prepare, perform, plan, present ... - `knowledge/bloom.json`, or
+`"bloom"` written on its row) gets at least one activity screen tagged to it (`"kind": "activity"`, `"sub_ilo"`) where the
+trainee does the thing on a real case - builds the Gantt, prepares the budget, carries out the procedure - or an exercise
+`assessment_map.json` assigns to it in this module. Slides explain it and questions check it; neither practises it. A
+module without one is a must-fix (`i_not_practised`), and the admin's ILO map shows the row as "Slides only".
+
 ## 1 · Write the script
 
 `<course>/working_claude/script/M01.json` — the whole lesson **in the order it is taught**. It runs on two

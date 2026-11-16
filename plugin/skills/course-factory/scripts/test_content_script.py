@@ -1175,6 +1175,41 @@ def main():
         screen(tags, "s01")["sub_ilo"] = ["1.1", "1.2"]
         screen(tags, "s03")["sub_ilo"] = "1.1"
         check("a slide may teach two Sub-ILOs (a list)", cs.ilo_findings(cl, tags) == [], cs.ilo_findings(cl, tags))
+
+        print("\n-- 2.132.0: a Sub-ILO that asks the trainee to DO something is practised, not only shown on slides")
+        cd = new_course(tmp, "ilodoing")
+        mp = ilo_map.path(cd)
+        imap = cs.load(mp)
+        for r in imap["rows"]:
+            if str(r.get("sub_ilo_id")) == "1.2":
+                r["sub_ilo"] = "Build a Gantt schedule with dependencies and find the critical path."
+        cs.save(mp, imap)
+        fd = cs.ilo_findings(cd, SCRIPT)
+        check("slides and questions only: a must-fix naming the verb and its level",
+              [f["rule"] for f in fd] == ["i_not_practised"] and fd[0]["level"] == cs.FAIL
+              and '"build"' in fd[0]["detail"] and "Create" in fd[0]["detail"] and "1.2" in fd[0]["detail"], fd)
+        check("'build' and 'make' are read as doing verbs (they were missing from the list)",
+              cs.bloom_map.ilo_level("Build a Gantt schedule", "en")["level"] == 6
+              and cs.bloom_map.ilo_level("Make a resource plan", "en")["level"] == 3)
+        withact = copy.deepcopy(SCRIPT)
+        withact["screens"].append({"id": "a01", "kind": "activity", "title": "Build the dry-dock Gantt", "text": "x",
+                                   "notes": "- n", "minutes": 40, "sub_ilo": "1.2"})
+        check("an activity screen tagged to it clears it", cs.ilo_findings(cd, withact) == [], cs.ilo_findings(cd, withact))
+        cs.save(os.path.join(cd, "working_claude", "assessment_map.json"),
+                {"exercises": [{"id": "EX1", "module": "M01", "title": "Gantt exercise", "sub_ilos": ["1.2"]}]})
+        check("... and so does an exercise assessment_map.json gives this module", cs.ilo_findings(cd, SCRIPT) == [],
+              cs.ilo_findings(cd, SCRIPT))
+        cs.save(os.path.join(cd, "working_claude", "assessment_map.json"),
+                {"exercises": [{"id": "EX1", "module": 2, "title": "Gantt exercise", "sub_ilos": ["1.2"]}]})
+        check("... but not one another module owns", [f["rule"] for f in cs.ilo_findings(cd, SCRIPT)] == ["i_not_practised"])
+        for r in imap["rows"]:
+            if str(r.get("sub_ilo_id")) == "1.2":
+                r["bloom"] = 2
+        cs.save(mp, imap)
+        check("a level written on the row ('bloom': 2) wins over the verb", cs.ilo_findings(cd, SCRIPT) == [],
+              cs.ilo_findings(cd, SCRIPT))
+        check("the example's own Explain / Identify Sub-ILOs owe no practice (nothing found above)",
+              cs.ilo_findings(cl, SCRIPT) == [])
         # 2.52.0 (IGF M01 1.b: "explain the operating modes and who on board is involved" - 'who' taught, never asked)
         check("a Sub-ILO is cut into its parts only before a verb or who/what/where - a list of objects stays one part",
               cs.clauses("Explain the main operating modes of an IGF ship - gas mode, fuel-oil mode, bunkering - and who on board "

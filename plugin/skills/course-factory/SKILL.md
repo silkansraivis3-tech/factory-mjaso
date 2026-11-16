@@ -137,6 +137,7 @@ bending or changing a law, or when a request seems to collide with one, read it 
 | **L70** | **Built after the expert's Ready** — the office PC builds unattended; see *Auto build* |
 | **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done - and (2.118.0) not done without the **walk review**: an AI reviewer who did not build it looks at the contact sheet of every slide's stops as a trainee does (`walk_review.py`, `compile/GUIDE.md` 2i; the whole-course workflow's walk judge runs it; two rounds, then the operator accepts on record or has it fixed) |
 | **L72** | **Every finished course goes into the Course Libraries, with all its material** — `scripts/finished_course.py <course>` writes `Course Libraries\Finished courses\<Course name>\`: `trainee\` (only what a trainee sees or uses - give this to the trainee side), `complete\` (everything delivered, instructor material included), `00_READ_ME.md`; run again after every release or fix |
+| **L73** | **A doing outcome is practised, not only shown** — a Sub-ILO whose verb asks for Apply or higher (build, prepare, perform, plan ...) needs an activity screen tagged to it or an exercise in `assessment_map.json` where the trainee does it; slides and questions alone are a must-fix (`i_not_practised`, `content_script.py`); the admin's ILO map marks it "Slides only" |
 
 ## The course remembers — L32
 
