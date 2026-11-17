@@ -34,6 +34,9 @@
     var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     Array.prototype.forEach.call(svg.querySelectorAll(SHAPES), function (el) {
       if (el.closest(NOT_DRAWN) || el.closest("[clip-path]")) { return; }
+      /* 2.135.1 - a passing effect (the 2D kit's ring where something just changed) is never part of the drawing: counted,
+         it widened the frame while it grew and the whole drawing shrank and sprang back */
+      if (el.closest(".k2-pulse, [data-fit-skip]")) { return; }
       var bb, m, r;
       try { bb = el.getBBox(); m = el.getScreenCTM(); r = svg.getScreenCTM(); } catch (e) { return; }
       if (!bb || (!bb.width && !bb.height) || !m || !r) { return; }

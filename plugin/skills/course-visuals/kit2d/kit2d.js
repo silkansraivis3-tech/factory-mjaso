@@ -1222,7 +1222,11 @@
     var sp = new Spring(f.target(p.show, 1)), moving = false, wasLit = f.target(p.lit, 0);
     f.solid(function () { return { x: x - w / 2 - 12, y: y - h / 2 - 16, x2: x + w / 2 + 12, y2: y + h / 2 + 16 }; });
     return {
-      onStep: function (n, instant) { var l = f.target(p.lit, 0); if (!instant && l > 0.5 && wasLit < 0.5) { f.pulse(x, y, { delay: 250, r: Math.max(w, h) * 0.7 }); } wasLit = l; },
+      /* 2.135.1 - a lit box no longer sends out a ring: sized to the box (70 % of its longest side) it grew far past a wide
+         box and past the drawing's edge, and the deck's fit (gb_fit.js) widened the frame to hold it, so the whole drawing
+         shrank and sprang back on every lit step (Aleksis, IT course M01 s11 / s15: "who approved this?? it looks so bad").
+         The box brightens and takes its outline - that is the mark. */
+      onStep: function (n, instant) { wasLit = f.target(p.lit, 0); },
       draw: function (dt, snap) {
         moving = sp.go(f.target(p.show, 1), dt, snap);
         var sh = clamp(f.get(p.show, 1), 0, 1), sc = 0.7 + 0.3 * Math.max(0, sp.x);

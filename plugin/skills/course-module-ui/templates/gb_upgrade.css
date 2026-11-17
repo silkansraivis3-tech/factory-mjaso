@@ -480,7 +480,7 @@
    stood in the left half) */
 .slide[data-template^="worked-example."][data-variant="text-only"] .lt-split > .copy{max-width:none;width:100%}
 .slide[data-template^="worked-example."][data-variant="text-only"] .lt-work li > div{display:flex;justify-content:space-between;align-items:baseline;gap:1.2em}
-.slide[data-template^="worked-example."][data-variant="text-only"] .lt-work li > div > span{margin-top:0;max-width:42%;text-align:right;font-size:var(--lt-fs);font-weight:700}
+.slide[data-template^="worked-example."][data-variant="text-only"] .lt-work li > div > span:not(.ans){margin-top:0;max-width:42%;text-align:right;font-size:var(--lt-fs);font-weight:700}
 .lt-work{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:min(1.4vmin,11px)}
 .lt-work li{display:grid;grid-template-columns:min(4.4vmin,35px) 1fr;gap:min(1.6vmin,13px);align-items:start;padding:min(1.6vmin,13px) min(2vmin,16px);border-radius:min(1.4vmin,11px);
   border:1.5px solid var(--up-a8316721922);opacity:.45;transition:opacity .4s,background .4s,border-color .4s,transform .4s;cursor:pointer}
@@ -494,6 +494,10 @@
 .lt-work li.you .ask{color:var(--lt-blue);font-weight:700}
 .lt-work li.you .ans{display:none}
 .slide[data-last] .lt-work li.you .ans{display:block;color:var(--lt-white);font-weight:600;animation:lt-rise .5s both}
+/* 2.135.1 - the room's answer is plain words across its whole row: the answer-card look of gb_compose.css (.ans: a
+   framed card with a blue bar on its left) and a worked example's right-aligned value column are not for it (IT course
+   M04 s07: the answer sat in a narrow, right-aligned box with a blue left bar) */
+.lt-work li .ans{flex:1 1 auto;width:auto;max-width:none;margin:0;padding:0;border:0;border-radius:0;background:none;text-align:left;box-shadow:none}
 .slide[data-last] .lt-work li.you .ask{display:none}
 .slide[data-last] .lt-work li.you{opacity:1;border-style:solid;border-color:var(--up-4fd6a0);background:var(--up-a7921416012)}
 /* beside a picture the answer opens over the foot of it, and the question stays where it was: the steps above keep their
