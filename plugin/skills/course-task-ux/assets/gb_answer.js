@@ -909,7 +909,17 @@
       /* the same for sorting into bins: the board is taller than the screen once checked (PM M01 q05) */
       var cg = q.mech === 'spot_the_error' ? $('.cg', q.sec) : q.mech === 'categorise' ? $('.tray', q.sec) : null;
       if (cg && cg.parentNode === q.sec && q.why.parentNode === q.sec) { q.sec.insertBefore(q.why, cg); add(q.why, 'above'); }
-      if (q.parts.length > 1) { settle(q.why, q.parts[q.k].el); } else { bring(q.why, null); }
+      /* 2.134.1 - a sorting board's tray is empty once every card is placed: it folds away after Check, so its room goes
+         to the groups (IT course walk: the last group sat under the Next bar on every sort-into-groups page) */
+      var tray = q.mech === 'categorise' ? $('.tray', q.sec) : null;
+      if (tray && !$('.chip', tray)) { add(tray, 'spent'); }
+      if (q.parts.length > 1) { settle(q.why, q.parts[q.k].el); }
+      else if (has(q.why, 'above')) {
+        /* the verdict above the board: scroll down as far as keeps the verdict under the top bar, so as much of the board
+           as fits - its last group or line too, where it fits - sits above the dock, not under it */
+        var end = q.mech === 'categorise' ? $('.grps', q.sec) : cg;
+        bring(end || q.why, q.why);
+      } else { bring(q.why, null); }
     }
   }
   /* bring an element into the band between the top bar and the dock (2.46.0). The top bar is sticky: scrollIntoView

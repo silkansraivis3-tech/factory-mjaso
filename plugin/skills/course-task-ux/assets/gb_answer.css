@@ -140,6 +140,10 @@ html{scroll-padding-top:var(--state-h);scroll-padding-bottom:var(--dock-h)}
   .scr[data-mech="categorise"]:not([data-pic]).on>.grps:has(.grp:nth-child(3)){grid-template-columns:1fr 1fr}
   .scr[data-mech="categorise"]:not([data-pic]) .grp .zone{min-height:80px}
 }
+/* 2.134.1 - after Check the empty card tray folds away (gb_answer.js verdict) and the groups take its room, so the last
+   group is not left under the Next bar */
+.scr .tray.spent{display:none}
+.scr[data-mech="categorise"].on:has(>.tray.spent)>.grps{grid-column:1/-1}
 /* compare: a picture over each column's choice */
 .cmpfig{margin:0 0 8px}
 .cmpfig .ga{--gaw:100%}
