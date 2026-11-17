@@ -143,7 +143,16 @@
       return 'url(#' + id + ')';
     },
     /* one soft shadow under a solid: a fill that fades, never a blur */
-    shadow: function (cx, cy, rx, ry) { return el('ellipse', { cx: cx, cy: cy, rx: rx, ry: ry, fill: this.url('shadow') }, this.L.bg); },
+    /* 2.136.1 - a floor shadow is a soft blur under a thing, not a shape: a name or label may sit on it (the drawing audit
+       failed every person whose name lies on its own shadow - IT course M01 s15, M03 s11 / s15, M04 s13, M06 s17) */
+    shadow: function (cx, cy, rx, ry) { return el('ellipse', { cx: cx, cy: cy, rx: rx, ry: ry, fill: this.url('shadow'), 'data-may-overlap': '' }, this.L.bg); },
+    /* 2.136.1 - the area a part fills, for the drawing audit's EMPTY check (data-kit-fills): a ring, a sorting board, a
+       comparison table or a pyramid is one thing across its area, but the audit counts a large shape by its outline only,
+       so every one of them read as empty inside and failed where plain boxes passed (IT course, 2026-11-17). Invisible. */
+    fills: function (x, y, w, h) {
+      return el('rect', { x: x, y: y, width: Math.max(0, w), height: Math.max(0, h), fill: 'none', 'pointer-events': 'none',
+                          'data-kit-fills': '', 'data-may-overlap': '' }, this.L.back);
+    },
 
     /* ---- values */
     get: function (ref, dflt) {
@@ -989,6 +998,7 @@
     var gap = 0.045, tip = Math.min(0.17, seg * 0.2), a00 = -Math.PI / 2;
     function P(a, rr) { return [cx + rr * Math.cos(a), cy + rr * Math.sin(a)]; }
     var g = el('g', {}, f.L.hero), items;
+    f.fills(cx - R - B / 2, cy - R - B / 2, 2 * R + B, 2 * R + B);
     el('circle', { cx: cx, cy: cy, r: R - B / 2 - 14, 'class': 'k2-hub-disc' }, f.L.back);
     items = St.map(function (st, j) {
       var a0 = a00 + j * seg + gap, a1 = a00 + (j + 1) * seg - gap, ro = R + B / 2, ri = R - B / 2, cat = st.cat || (j % 5) + 1, big = a1 - a0 > Math.PI ? 1 : 0;
@@ -1130,6 +1140,7 @@
      heat: true, items: [{name, r: "@r1", c: "@c1", dx, dy, show}]} - r and c count from 0 at the top left */
   define('matrix', function (f, p) {
     var Rw = p.rows || [], Cl = p.cols || [], x0 = p.x, y0 = p.y, W = p.w, H = p.h, cw = W / Cl.length, ch = H / Rw.length, g = el('g', {}, f.L.back);
+    f.fills(x0, y0, W, H);
     Rw.forEach(function (rl, r) {
       Cl.forEach(function (cl, c) {
         var sc = ((Rw.length - 1 - r) / Math.max(1, Rw.length - 1) + c / Math.max(1, Cl.length - 1)) / 2;
@@ -1368,6 +1379,7 @@
      {x, y, w, h, levels: [{name, cat}], at: "@k" (levels shown, from the top), pick: "@p", top: text, bottom: text} */
   define('pyramid', function (f, p) {
     var Lv = p.levels || [], n = Lv.length, x0 = p.x, y0 = p.y, W = p.w, H = p.h, gap = 8, bh = (H - gap * (n - 1)) / n, cx = x0 + W / 2;
+    f.fills(x0, y0, W, H);
     function half(yy) { return (yy - y0) / H * W / 2; }
     var bands = Lv.map(function (lv, i) {
       var ya = y0 + i * (bh + gap), yb = ya + bh, a = half(ya), b = half(yb), cat = lv.cat || (i % 5) + 1;
@@ -1474,6 +1486,8 @@
     function clock(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return (m < 600 ? '0' : '') + Math.floor(m / 60) + ':' + (m % 60 < 10 ? '0' : '') + m % 60; }
     var x0 = p.x, y0 = p.y, W = p.w, t0 = p.start, t1 = p.end, E = p.events || [], g = el('g', {}, f.L.back), t, ticks = [];
     function X(tt) { return x0 + (tt - t0) / (t1 - t0) * W; }
+    var reach = (p.stem || 92) * 0.75;               /* 2.136.1 - the band the stems and their words fill, either side of the line */
+    f.fills(x0, y0 - reach, W, 2 * reach);
     el('rect', { x: x0 - 6, y: y0 - 5, width: W + 12, height: 10, rx: 5, 'class': 'k2-outline' }, g);
     el('rect', { x: x0 - 4, y: y0 - 3, width: W + 8, height: 6, rx: 3, fill: f.url('metalv') }, g);
     var done = el('rect', { x: x0 - 4, y: y0 - 3, height: 6, rx: 3, 'class': 'k2-done-line' }, g);
@@ -1538,6 +1552,7 @@
      [text, text], marks: [1, 0] (1 a tick, 0 a cross, null none)}], at: "@r" (rows shown)} */
   define('compare', function (f, p) {
     var C = p.cols || [], R = p.rows || [], x0 = p.x, y0 = p.y, W = p.w, H = p.h, nc = C.length, cw = (W - 16 * (nc - 1)) / nc, hh = 58;
+    f.fills(x0, y0, W, H);
     var rh = Math.min(p.rowH || 96, (H - hh - 12) / Math.max(1, R.length));
     C.forEach(function (c, j) {
       var x = x0 + j * (cw + 16), hg = el('g', {}, f.L.hero), cat = c.cat || j * 2 + 1;
