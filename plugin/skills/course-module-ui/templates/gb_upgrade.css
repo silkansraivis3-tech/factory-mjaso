@@ -496,9 +496,11 @@
 .slide[data-last] .lt-work li.you .ans{display:block;color:var(--lt-white);font-weight:600;animation:lt-rise .5s both}
 .slide[data-last] .lt-work li.you .ask{display:none}
 .slide[data-last] .lt-work li.you{opacity:1;border-style:solid;border-color:var(--up-4fd6a0);background:var(--up-a7921416012)}
-/* beside a picture the answer opens over it, and the question stays where it was: the steps above keep their room */
+/* beside a picture the answer opens over the foot of it, and the question stays where it was: the steps above keep their
+   room; the band is only as tall as the answer's words (up to the whole picture), so the trainee still sees the picture
+   the answer is about (2.133.2) */
 .lt-split > .fig:has(> .lt-ans-over){position:relative}
-.lt-ans-over{position:absolute;inset:0;z-index:3;display:none;flex-direction:column;justify-content:center;gap:.6em;overflow:hidden;
+.lt-ans-over{position:absolute;inset:auto 0 0 0;max-height:100%;z-index:3;display:none;flex-direction:column;justify-content:center;gap:.6em;overflow:hidden;
   padding:min(3.4vmin,27px) min(3.6vmin,29px);border-radius:inherit;background:linear-gradient(var(--up-a7921416012),var(--up-a7921416012)),var(--lt-navy);
   border:2px solid var(--up-4fd6a0);color:var(--lt-white);font-size:var(--lt-fs);font-weight:600;line-height:1.38}
 .lt-ans-over p{margin:0}
@@ -550,10 +552,11 @@
 .lt-why{display:none;gap:min(1.6vmin,13px);align-items:flex-start;padding:min(1.8vmin,14px) min(2.2vmin,18px);border-radius:min(1.6vmin,13px);background:var(--lt-white);
   border:1.5px solid var(--lt-line);box-shadow:0 14px 30px -16px var(--up-a10369945)}
 .lt-why.cur{display:flex;animation:lt-rise .5s both}
-/* beside a picture, why opens over the picture's column - the whole column is its room */
+/* beside a picture, why opens over the foot of the picture's column - only as tall as its words (up to the whole column),
+   so the picture stays in sight above it (2.133.2: a full cover hid the picture for every stop the why was open) */
 .lt-split > .fig:has(> .lt-why){position:relative}
-.lt-split > .fig > .lt-why{position:absolute;inset:0;z-index:3;flex-direction:column;justify-content:center;overflow:hidden;
-  padding:min(3.4vmin,27px) min(3.6vmin,29px);border-radius:inherit;box-shadow:none}
+.lt-split > .fig > .lt-why{position:absolute;inset:auto 0 0 0;max-height:100%;z-index:3;flex-direction:column;justify-content:center;overflow:hidden;
+  padding:min(3.4vmin,27px) min(3.6vmin,29px);border-radius:inherit;box-shadow:0 -10px 24px -14px var(--up-a10369945)}
 .lt-why .stamp{flex:none;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--lt-white);background:var(--up-d04439);padding:.4em .7em;border-radius:8px;transform:rotate(-4deg);
   font-size:clamp(13px,1.9vmin,21px);animation:lt-stamp .45s cubic-bezier(.2,.8,.3,1.4) both}
 .lt-why p{margin:0;font-size:var(--lt-fs);line-height:1.4;color:var(--lt-steel)}.lt-why p b{color:var(--lt-navy)}

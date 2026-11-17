@@ -118,12 +118,19 @@
        line (its stop) replays its step. Only a slide with a question (li.you): other stop slides keep kit.js's own step hook. Complete at the last stop,
        so kit.js's own step hook (which would step the figure on after the stops and light line 1 again) has nothing left to do. */
     function (s) {
-      var host = q('[data-kit]', s);
+      var host = q('[data-kit]', s) || q('[data-kit2d]', s);   /* kit.js (host.__kit) or the 2D kit (host.__k2, 2.133.2) */
       var ask = !!q('li.you', s);       /* the last two stops are the question and the answer */
       if (!host || !ask) { return null; }
       var at = -1, total = 0;
+      var fig = function () {
+        if (host.__kit) { return host.__kit; }
+        var f2 = host.__k2;
+        if (!f2 || f2 === 'bad') { return null; }
+        f2.onStep = null;               /* the stops light the lines here, not the 2D kit's own deck hook */
+        return f2;
+      };
       var want = function (k, n) {
-        var f = host.__kit, st = f && f.spec && f.spec.steps || [], seen = ask ? n - 2 : n, last = k >= n - 1, c = 0, i, top;
+        var f = fig(), st = f && f.spec && f.spec.steps || [], seen = ask ? n - 2 : n, last = k >= n - 1, c = 0, i, top;
         if (!f) { return -1; }
         for (i = 0; i < st.length && !last; i++) {
           top = st[i].line == null ? 0 : Math.max.apply(Math, [].concat(st[i].line).map(Number));
@@ -135,7 +142,8 @@
       var run = function (k, n) {
         var c = want(k, n);
         at = k; total = n;
-        if (c >= 0) { host.__kit.go(c); }
+        var f = fig();
+        if (c >= 0 && f) { if (f.go) { f.go(c); } else { f.goStep(c); } }
       };
       s.__figSync = function () { if (at >= 0) { run(at, total); } };
       return run;
