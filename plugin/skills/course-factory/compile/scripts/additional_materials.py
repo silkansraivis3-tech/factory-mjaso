@@ -941,6 +941,10 @@ def plan(course, infos, title, probs):
     # recorded runs' assessment forms - in the modules folder, beside _course_shell, never in additional-materials
     import classroom_files as cf                      # here, not at the top: it reads this file's helpers only through the build
     out += cf.files(course, title, infos, mods, il.load(course), il)
+    # 2.134.0 - project work, only for a course that has it (working_claude\project_work.json): each team's project card
+    # as PDF and Word, and classroom\projects.json for the app's Draw projects / Create trainee folders
+    import project_work as pw
+    out += pw.files(course, title, root, to_html, probs)
     if mods:
         out.append((os.path.join(root, "INDEX.html"), "html", to_html(W["index"], index_blocks(title, root, out, mods))))
     return out, mods, days

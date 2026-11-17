@@ -7,6 +7,21 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.134.0 · Project work arrives with the course (2026-11-17)
+
+- `scripts/project_work.py` (`init` / `check` / `link` / `approve`): a course's project cards in
+  `working_claude\project_work.json`. Only a course that has that file has project work; every other course writes and
+  checks nothing (L75).
+- `compile/scripts/additional_materials.py` `plan()` adds `project_work.files()`: each card as PDF and Word in
+  `additional-materials\project-cards\`, DRAFT until approved, and once approved `modules\classroom\projects.json` -
+  the training app's `course_project_work` (migration 039) on publish (`course-extras.mjs`), read by the group page's
+  Projects tab (Draw projects, Create trainee folders).
+- The rules are the app's `readProjectWork` (admin/classroom/shared/project-work.mjs), ported; `classroom_files.folder_problems`
+  runs `project_work.package_problems`, so `check_course_package.py` names a broken projects.json. Proof: the app's own
+  validator accepts the factory's file (checked by hand with node on 2026-11-17).
+- An approval covers the cards' words (a hash); a Drive link added later does not undo it. With every card linked and no
+  layout of the course's own, the factory gives one folder holding the team's card.
+
 ## 2.129.0 · Day sheets and the course on one page, for every instructor-led course (2026-11-12)
 
 - WHY: the Project Management practical pack's day task sheets and one-page overview were written by hand

@@ -139,6 +139,7 @@ bending or changing a law, or when a request seems to collide with one, read it 
 | **L72** | **Every finished course goes into the Course Libraries, with all its material** — `scripts/finished_course.py <course>` writes `Course Libraries\Finished courses\<Course name>\`: `trainee\` (only what a trainee sees or uses - give this to the trainee side), `complete\` (everything delivered, instructor material included), `00_READ_ME.md`; run again after every release or fix |
 | **L73** | **A doing outcome is practised, not only shown** — a Sub-ILO whose verb asks for Apply or higher (build, prepare, perform, plan ...) needs an activity screen tagged to it or an exercise in `assessment_map.json` where the trainee does it; slides and questions alone are a must-fix (`i_not_practised`, `content_script.py`); the admin's ILO map marks it "Slides only" |
 | **L74** | **No script before its sources** — every Sub-ILO of a module has a passage in the knowledge base, the programme, study plan and brief left out (they only name it), before its script is written; a gap stops `course_gate.py --module N` until sources are added and the knowledge base built again, or the operator accepts it in their words (`kb_coverage.py check` / `accept --why --by`) |
+| **L75** | **Project work arrives with the course - only where the course has it** — a course whose teams draw project cards gets `working_claude\project_work.json` at Stage 2 (`project_work.py init`); its approved cards ship as Word / PDF and as the package's `classroom\projects.json`, so the tablet app's group page draws the projects and makes the trainee folders; a course with no project work gets no file and no check (Aleksis, 2026-11-17: "remember not all courses have these projects") |
 
 ## The course remembers — L32
 
@@ -230,6 +231,14 @@ Corrections arrive in the operator's words ("too much text on screen 4"): act on
    knowledge-base decision is missing, a module has nothing in the map, or a proposal waits. A later Sub-ILO change
    stops new modules until it is approved again. **No module before the map (L59):** `content_script.py` and
    `compile_module.py --init-build` exit 2, and `course_gate.py <course>` says what is missing.
+6. **Project work (L75) - only when the course has it:** a project module where teams draw cards (Project Management,
+   Information Technology: D1-D4 deck, E1-E4 engine, at most 3 teams a card). Then `scripts/project_work.py init <course>
+   --departments Deck,Engine [--codes D1-D4,E1-E4] [--max 3]`; write each card (title, situation, task, data,
+   deliverables) from the brief and the knowledge base with the module's script; the operator approves
+   (`project_work.py approve --by`), uploads the Word cards to Drive and the links are recorded (`link`). Every build
+   then writes the cards to `additional-materials\project-cards\` and `modules\classroom\projects.json`, so the imported
+   course arrives with its projects: the instructor adds the trainees, presses Draw projects and Create trainee folders.
+   A course with no project work has no `project_work.json` and gets none of this - never make one up.
 
 ## Stage 3 — the content script, approved before any HTML (L29)
 

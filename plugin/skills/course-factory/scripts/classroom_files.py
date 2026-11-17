@@ -406,6 +406,8 @@ def folder_problems(folder, module_codes):
         seen.add(code)
         for p in definition_problems(d)[:4]:
             probs.append("%s: %s" % (path, p))
+    import project_work                                # 2.134.0 - classroom\projects.json, only a course with project work has one
+    probs += project_work.package_problems(folder)
     return probs
 
 
