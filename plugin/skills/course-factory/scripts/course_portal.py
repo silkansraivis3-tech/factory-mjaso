@@ -90,7 +90,7 @@ import workspace  # noqa: E402
 STAGING = "https://mgkhdbkxfaldfxyvfqrl.supabase.co"
 ANON = ("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1na2hkYmt4ZmFsZGZ4eXZmcXJsIiwicm9sZSI6"
         "ImFub24iLCJpYXQiOjE3OTE3ODAyNDgsImV4cCI6MjEwNzM1NjI0OH0.IqohHiLweNG19tDhHxSslhcp__oCgEiTmLJ0BXJEiow")
-EDITOR = "https://novikontas-staging.vercel.app/classroom/editor/prep.html?course=%s"
+EDITOR = "https://novikontas-staging.pages.dev/classroom/editor/prep.html?course=%s"
 FILE = "portal.json"
 
 
@@ -138,21 +138,29 @@ def factory_key():
     return k
 
 
+PASSING = (502, 503, 504, 520, 521, 522, 523, 524)     # a gateway's passing error: the same call is sent again
+TRIES, WAIT = 3, 5
+
+
 def _http(action, payload):
     body = json.dumps(dict(payload, action=action), ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(STAGING + "/functions/v1/course-prep", data=body, method="POST", headers={
         "Content-Type": "application/json", "apikey": ANON, "Authorization": "Bearer " + ANON, "x-factory-key": factory_key()})
-    try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            return json.loads(r.read().decode("utf-8") or "{}")
-    except urllib.error.HTTPError as e:
+    for n in range(1, TRIES + 1):
         try:
-            data = json.loads(e.read().decode("utf-8") or "{}")
-        except ValueError:
-            data = {}
-        raise PortalError(data.get("error") or "HTTP %d" % e.code, e.code, data)
-    except urllib.error.URLError as e:
-        raise PortalError("No connection to the staging training app: %s" % e.reason)
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return json.loads(r.read().decode("utf-8") or "{}")
+        except urllib.error.HTTPError as e:
+            if e.code in PASSING and n < TRIES:
+                time.sleep(WAIT * n)
+                continue
+            try:
+                data = json.loads(e.read().decode("utf-8") or "{}")
+            except ValueError:
+                data = {}
+            raise PortalError(data.get("error") or "HTTP %d" % e.code, e.code, data)
+        except urllib.error.URLError as e:
+            raise PortalError("No connection to the staging training app: %s" % e.reason)
 
 
 CALL = _http          # the tests put a stand-in server here
@@ -236,9 +244,11 @@ def cmd_push_pedagogy(course):
         for x in probs[:20]:
             print("  - " + x)
         return 2
+    pr.log_done(course)
     v = pr.view(course)
     register(p["course_id"], course)
-    r = call("push", course_id=p["course_id"], kind="pedagogy", content=v["content"], items=v["items"], fingerprint=v["fingerprint"])
+    r = call("push", course_id=p["course_id"], kind="pedagogy", content=v["content"], items=v["items"], fingerprint=v["fingerprint"],
+             carried=carried(course, v))
     if r.get("unchanged"):
         print("Nothing new: the editor already has these words (version %d)." % r["document"]["version"])
     else:
@@ -248,8 +258,19 @@ def cmd_push_pedagogy(course):
     return 0
 
 
+def carried(course, v):
+    """[{id, item}] - the answers the factory carried out (a Take proposed, a Keep as now, a decision with Claude) on
+    rows whose words are still what carrying them out made them: the editor keeps each as the row's answer on the new
+    version, so the expert is not asked again what they decided. A row the factory changed since is asked again."""
+    rev = pr._load(pr.files(course)["review"], {}) or {}
+    return [{"id": i, "item": c["item"]} for i, c in sorted((rev.get("carried") or {}).items())
+            if isinstance(c, dict) and v["items"].get(c.get("item")) == c.get("hash")]
+
+
 # ------------------------------------------------------------------ pull
 def _feedback(course, rows):
+    """The rows into FEEDBACK_LOG.md: (where, said, what[, the note it logs - its "log" becomes the row's number, so
+    the row says when the note is done]). False when there is no log."""
     fb = workspace.claude_path(course, "FEEDBACK_LOG.md")
     if not rows or not os.path.isfile(fb):
         return False
@@ -257,8 +278,11 @@ def _feedback(course, rows):
     nums = [int(l.split("|")[1]) for l in text.splitlines() if l.strip().startswith("|") and l.split("|")[1].strip().isdigit()]
     n = max(nums or [0])
     out = []
-    for where, said, what in rows:
+    for row in rows:
+        where, said, what = row[:3]
         n += 1
+        if len(row) > 3 and row[3] is not None:
+            row[3]["log"] = n
         out.append("| %d | %s | %s | %s | %s | no |" % (n, date.today().isoformat(), where, said.replace("|", "/").replace("\n", " "),
                                                     what.replace("|", "/")))
     with io.open(fb, "a", encoding="utf-8", newline="\n") as f:
@@ -274,7 +298,10 @@ IN_ENGLISH = 'Re-word the outcome: "%s" (the course is in English - write this w
 
 
 def pull_pedagogy(course, answers, ready):
-    """The pedagogy's answers into pedagogy_review.json: (taken answer ids, taken document ids, log rows, said)."""
+    """The pedagogy's answers into pedagogy_review.json, the architecture and FEEDBACK_LOG.md: (taken answer ids, taken
+    document ids, log rows, said). An OK keeps the row's proposed activities (the module's own, on the module's
+    activities row), Keep as now strikes the topic's, a decision with Claude keeps the teaching agreed and strikes
+    the rest (L49 step 3)."""
     f = pr.files(course)
     rev = _load(f["review"])
     if rev is None:
@@ -294,22 +321,43 @@ def pull_pedagogy(course, answers, ready):
                 where_of[t["item"]] = (rows[t["id"]], "2 · M%02d · %s" % (m["n"], t["id"]), None)
                 topic_of[t["item"]] = (m["n"], t["id"], t["main"])
     took, docs, log, said = [], [], [], []
+    english = []                # the notes of wordings owed in English, each logged with the row of the answer that owes it
 
     def reword(item, text, who):
-        """A Sub-ILO's new wording the expert took: ratified into the architecture (L2); a Main ILO is never re-worded."""
+        """A Sub-ILO's new wording the expert took: ratified into the architecture (L2); a Main ILO is never re-worded.
+        A wording the architecture already has is not ratified, nor logged, again."""
         n, sid, main = topic_of[item]
+        arch = pr._load(f["arch"], {}) or {}
+        have = next((s for am in arch.get("modules", []) if str(am.get("module")) == str(n)
+                     for s in am.get("sub_ilos") or [] if isinstance(s, dict) and str(s.get("id")) == str(sid)), {})
+        if have.get("status") == "re-expressed" and pr._same(have.get("text"), text):
+            return ""
         if text and not main and pr.ratify(course, n, sid, text, who):
             return "; Sub-ILO re-worded: " + text
         return ""
+
+    def activities(item, how, who, said, add=None):
+        """The row's activities as the expert answered: "; activities ..." for the log, "" when none changed."""
+        if item in topic_of:
+            n, sid, _ = topic_of[item]
+            got = pr.settle_activities(course, n, sid, how, who, said, add)
+        elif item.startswith("act/") and item.endswith("/module"):
+            got = pr.settle_activities(course, item.split("/")[1], None, how, who, said)
+        else:
+            return ""
+        return "; activities " + ", ".join("%s %s" % (i, w) for i, w in got) if got else ""
 
     def to_english(item, text, base):
         """A Sub-ILO's new wording that is not in English is never taken as it is (L19): it becomes the expert's note,
         and check stops until the factory has written it in English. "" when there is nothing of the kind."""
         if not text or item not in topic_of or topic_of[item][2] or not pr.not_english(text, lang):
             return ""
-        where_of[item][0]["expert_notes"].append(dict(base, said=IN_ENGLISH % text, done=""))
+        if base is not None:
+            english.append(dict(base, said=IN_ENGLISH % text, done=""))
+            where_of[item][0]["expert_notes"].append(english[-1])
         return "; to do - the Sub-ILO's new wording, written in English: " + text
     for a in answers:
+        del english[:]
         target = where_of.get(a["item"])
         if not target:
             said.append("%s answered %s, which is not a row of the documents any more - left in the editor" % (_who(a), a["item"]))
@@ -330,21 +378,29 @@ def pull_pedagogy(course, answers, ready):
                 row["proposed"].pop("revised_outcome")
             else:
                 rw = reword(a["item"], taken, _who(a)) if taken else ""
+                if taken and not to_english(a["item"], taken, None) and not topic_of[a["item"]][2]:
+                    row["proposed"].pop("revised_outcome", None)      # in the architecture now: shown from there
+            rw += activities(a["item"], "approved", _who(a), "Take proposed [editor mode]")
             if rw:
-                log.append((where, "Take proposed [%s, editor mode]" % _who(a), rw[2:]))
+                log.append([where, "Take proposed [%s, editor mode]" % _who(a), rw[2:], english[0] if english else None])
         elif a["verdict"] == "change":
-            row["expert_notes"].append(dict(base, said=(a.get("note") or "") + older, done=""))
-            log.append((where, "%s [%s, editor mode]" % (a.get("note") or "", _who(a)), "to do"))
+            note = dict(base, said=(a.get("note") or "") + older, done="")
+            row["expert_notes"].append(note)
+            log.append([where, "%s [%s, editor mode]" % (a.get("note") or "", _who(a)), "to do", note])
         elif a["verdict"] == "decision" and about is None and row is not rev and d.get("choice") in ("keep", "claude"):
             now = row.get("now") or {}
             if d["choice"] == "keep":
                 lvl = now.get("level") if isinstance(now.get("level"), int) and now.get("level") >= 1 else d.get("level")
                 pr.carry_out(row, lvl, d.get("said") or "Keep it as the old course teaches it.", _who(a),
-                             how="Kept as the old course teaches it: " + (now.get("how") or ""))
+                             how="Kept as the old course teaches it: " + (now.get("how") or ""), kept=True)
                 what = "kept as the old course, at %s" % pr.level(lvl)
+                what += activities(a["item"], "struck", _who(a), "Keep as now [editor mode]")
             else:
                 pr.carry_out(row, int(d["level"]), d.get("said") or "", _who(a), how=d.get("how") or "", why=d.get("why") or None)
                 what = "set with Claude to %s: %s" % (pr.level(int(d["level"])), d.get("how") or "")
+                if (d.get("how") or "").strip():
+                    what += activities(a["item"], "approved", _who(a), d.get("said") or "Decided with Claude [editor mode]",
+                                       add=d["how"].strip())
                 rw = (d.get("revised_outcome") or "").strip()
                 owed = to_english(a["item"], rw, base)
                 if owed:
@@ -353,14 +409,15 @@ def pull_pedagogy(course, answers, ready):
                     row["proposed"]["revised_outcome"] = rw
                     what += reword(a["item"], rw, _who(a))
             row["expert_review"].append(dict(base, decision=d["choice"], level=row["proposed"]["level"]))
-            log.append((where, "%s [%s, editor mode]" % (d.get("said") or "", _who(a)), what + older))
+            log.append([where, "%s [%s, editor mode]" % (d.get("said") or "", _who(a)), what + older, english[0] if english else None])
         else:
             said.append("%s: an answer of a kind this version cannot take in (%s) - left in the editor" % (where, a["verdict"]))
             continue
         # "take it / keep it, with a note on what to fix": the note is carried out like any other
         if a["verdict"] in ("ok", "decision") and (a.get("note") or "").strip():
-            row["expert_notes"].append(dict(base, said=a["note"].strip() + older, done=""))
-            log.append((where, "%s [%s, editor mode]" % (a["note"].strip(), _who(a)), "to do"))
+            note = dict(base, said=a["note"].strip() + older, done="")
+            row["expert_notes"].append(note)
+            log.append([where, "%s [%s, editor mode]" % (a["note"].strip(), _who(a)), "to do", note])
         for k in ("expert_review", "expert_notes"):
             if not row[k]:
                 del row[k]
@@ -373,6 +430,14 @@ def pull_pedagogy(course, answers, ready):
         log.append(("2 · pedagogy · Ready", "Ready - signed %s [editor mode]" % rev["ready"]["by"],
                     "%d change(s) to carry out" % changes if changes else "nothing to change"))
         docs.append(d["id"])
+    _feedback(course, log)
+    _save(f["review"], rev)
+    # what carrying the answers out made of each row: while the row stays so, the answer stands on the next version
+    v2 = pr.view(course)
+    done = rev.setdefault("carried", {})
+    for a in answers:
+        if a["id"] in took and a["verdict"] in ("ok", "decision") and a["item"] in v2["items"]:
+            done[a["id"]] = {"item": a["item"], "hash": v2["items"][a["item"]]}
     _save(f["review"], rev)
     return took, docs, log, said
 
@@ -386,7 +451,7 @@ def cmd_pull(course):
     ready = [d for d in r.get("ready") or [] if d["kind"] == "pedagogy"]
     took, docs, log, said = pull_pedagogy(course, answers, ready)
     later = len(r.get("answers") or []) - len(answers) + len(r.get("ready") or []) - len(ready)
-    logged = _feedback(course, log)
+    logged = os.path.isfile(workspace.claude_path(course, "FEEDBACK_LOG.md"))
     if took or docs:
         call("ack", course_id=p["course_id"], answer_ids=took, document_ids=docs, read_at=r.get("read_at"))
     kinds = [a["verdict"] if a["verdict"] != "decision" else (a.get("decision") or {}).get("choice") for a in answers if a["id"] in took]
@@ -442,8 +507,10 @@ def cmd_remove(course, yes):
 AUTO_PROMPT = """You are the NOVIKONTAS course factory, running unattended on the office PC (auto build, SKILL.md "Auto build").
 The course in this folder - "{title}" ({course_id}) - was answered in the training app's editor, and {expert} pressed
 Ready on its pedagogy. Their answers are already in working_claude (pedagogy_review.json, architecture.json,
-FEEDBACK_LOG.md). Use the course-factory skill and build the whole course now, by its "Auto build" rules: carry out every
-expert note and write its done, render the pedagogy documents, approve Stage 2 and every module's content script with
+FEEDBACK_LOG.md); a row they left unanswered goes ahead as proposed. Use the course-factory skill and build the whole
+course now, by its "Auto build" rules: carry out every expert note and write its done, render the pedagogy documents,
+write every module's script to the level and teaching each topic was decided at (pedagogy_review.py decided - copied
+into the script's "decided" block), approve Stage 2 and every module's content script with
 --by "{expert} (Ready in editor)", build every module, compile COURSE.html and run the factory's checks, fixing what they
 find. Nobody is there to answer: never stop to ask - write the question in working_claude/OPEN_EXPERT_QUESTIONS.md and
 carry on with the factory's best choice. Generate no paid pictures or videos. Fill the picture spaces from the free

@@ -161,9 +161,15 @@ their name and surname; what they leave unanswered goes ahead as proposed. `pull
 level and teaching) and a Claude decision (its level, how and why) as the expert's decision, past every rule above;
 writes an OK into the row's `expert_review`, a note into its `expert_notes` (the module's for its own activities, the
 whole course's for the summaries and upgrades; `about` says when it is about the activities or upgrades) and
-FEEDBACK_LOG.md, and Ready into `ready`. Carry out every note and write in its `done` what was changed -
-`check` stops until each one has it, and the editor shows it to the expert - then `render` (it signs the documents
-with the Ready) and `push` again: the rows not changed keep their answers.
+FEEDBACK_LOG.md, and Ready into `ready`. An OK keeps the row's proposed activities in `architecture.json` (the
+module's own, on its activities row), Keep as now strikes the topic's and keeps no reason the proposal gave for a
+higher level, a decision with Claude keeps the teaching agreed as the topic's activity and strikes the others - the
+Stage 2 approval does not wait for them again. Carry out every note and write in its `done` what was changed -
+`check` stops until each one has it, the editor shows it to the expert, and `render` and `push` mark its row of
+FEEDBACK_LOG.md done - then `render` (it signs the documents with the Ready) and `push` again: the rows not changed
+keep their answers, and so does every row whose words changed only because the factory carried out the expert's own
+answer on it (`push` sends those answers with the new version) - the expert is not asked again what they decided.
+The level and teaching of every topic is what the course is built to (`pedagogy_review.py decided`).
 
 **The outcomes stay the programme's.** The documents never propose a re-worded outcome: `revised_outcome` in a
 proposal stops `check`. Only an expert who says the outcome should read differently re-words a Sub-ILO - recorded as

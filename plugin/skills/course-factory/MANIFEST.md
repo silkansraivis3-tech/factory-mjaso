@@ -7,6 +7,45 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.138.0 · The course is built to what the expert decided (2026-11-17)
+
+- **Why.** A QA run on staging (2026-11-16) answered a test course in the editor every way an expert can. Every answer
+  was recorded, but nothing held the build to them: no build step read the decided level or `how`; `script/GUIDE.md`
+  aimed the tasks at the outcome verb's level, pushing a topic the expert kept at Remember back to Understand; a Main
+  ILO's decided level lived nowhere the build looked. The unattended build also refused every script when one topic
+  was unanswered, while the editor tells the expert unanswered goes ahead as proposed (the owner: the editor is right).
+- **What the build is held to.** `pedagogy_review.decided(course, module)`: each topic's `proposed` level and `how`, with
+  the expert's name when it is their own decision; Main ILO rows included (questions tag them by id, as the ILO map
+  does for a module without Sub-ILOs). `decided --module N` prints the block. The script carries it as `"decided"`
+  (`{topic: {level, how, screens}}`), copied word for word. `content_script.decision_findings` (in `all_findings`,
+  FAIL): `d_not_taken`, `d_changed` (the decision moved after the copy), `d_no_screen` (no named screen tagged to the
+  topic), `d_below` (the topic's questions never reach the level; Create counts at Evaluate), `d_above` (a question above
+  an expert's own decision - only theirs: a proposal's level is a floor, as the guide's lift above Remember allows).
+  `bloom_of` passes the decided levels to `bloom_map.module_map(decided=...)`. Every new approval is checked; a script
+  approved before keeps its approval until it is approved again.
+- **Unanswered goes ahead as proposed.** `unattended_signer` needs the expert's Ready by name only; the GAS BASIC lesson
+  (a Ready over 0 of 124 rows approved every script) is now covered by the scripts being held to the proposal they
+  approved. `approve` prints the rows that went ahead as proposed.
+- **The answers reach the architecture.** `pedagogy_review.settle_activities` writes an expert's answer as
+  `active_plan.py decide` writes the operator's: OK keeps the row's proposed lines (`act/N/module` the module's own),
+  Keep as now strikes the topic's, a decision with Claude keeps the agreed teaching (a new `A<m>.<n>` line taking the
+  replaced line's technique and minutes, or the line that already says it) and strikes the rest. Keep as now writes
+  `KEPT_WHY` and `expert.kept`, and `proposed_why` shows it without "On board:" - the lift's reason is gone.
+- **Asked once.** A row's hash changes when the factory carries out the expert's own answer on it, so the editor asked
+  them again ("Your decision needed"). Pull now records each carried answer with the row hash it produced
+  (`pedagogy_review.json` `carried`); `push` sends those still matching (`course_portal.carried`), and the course-prep
+  function moves them onto the new version. A row the factory changed itself afterwards is asked again.
+- **Smaller.** Notes remember their FEEDBACK_LOG.md row (`log`); `log_done` (render, push) marks it done. A Take
+  proposed on a wording already ratified neither ratifies nor logs it again, and the row's `revised_outcome` goes once
+  it is in the architecture. `EDITOR` is novikontas-staging.pages.dev. `_http` retries 502-504 and 520-524 (three
+  tries, 5 s then 10 s).
+- **Left.** Whether the built slides carry the decided teaching is checked through the screens the script names, not
+  by reading their words. A course whose scripts were approved before this version is not re-checked until a script
+  is approved again.
+- **Tests.** `test_content_script.py` 300 (10 new), `test_course_portal.py` 88 (19 new), `test_pedagogy_review.py` 65
+  (5 new); `test_fix.py`, `test_factory_trial.py`, `test_bloom_map.py`, `test_active_plan.py`,
+  `test_architecture_page.py` unchanged and passing.
+
 ## 2.130.1 · Every revised outcome is in English (2026-11-13)
 
 - **Why.** The owner's rule: everything in the system is in English. On the staging course GAS BASIC 04/11 NEWEST

@@ -9,6 +9,8 @@
                                                             an expert's decision on a topic's level, carried out as it is
     pedagogy_review.py reword --course <course> --module 4 --topic 4.1 --text "<the outcome, in English>" --by "<name>"
                                                             an expert's new wording of a Sub-ILO, written in English
+    pedagogy_review.py decided --course <course> --module 4  the level and teaching each topic of a module is built to -
+                                                            the "decided" block its content script copies (script/GUIDE.md)
 
 WHY THIS EXISTS
 The course experts decide how a course is taught. Before a single module is built they get, topic by topic and module
@@ -36,6 +38,13 @@ editor with their English reading beside them ("intended_en", the architecture's
 revised outcome is written in English, as the course will show it (L19) - whatever language the programme is in and
 whatever language the expert's own wording arrived in: `check` stops on one that is not, `ratify` never writes one
 into the architecture, and `reword` is how the factory writes it in English.
+
+WHAT THE BUILD IS HELD TO
+Each topic's proposed level and teaching ("proposed": level, how) is what the course is built to once the experts have
+seen it: the factory's proposal as the expert took it or left it unanswered (it goes ahead as proposed), or the
+expert's own decision carried out in its place. `decided` gives them, module by module; the content script copies them
+into its "decided" block with the screens that carry each one out, and content_script.py refuses a script whose tasks
+do not reach a topic's level - or go above an expert's own decision.
 
 Standard library only (the PDF is printed by the same hidden browser as the additional materials).
 """
@@ -365,7 +374,7 @@ def proposed_why(r, now, new):
     ex = new.get("expert") or {}
     met = decision(now, new, r["asks"]) == "kept" and r["asks"] and (now.get("level") or 0) >= r["asks"]
     return ((["Kept because the old course already reaches what the outcome asks (%s)." % level(r["asks"])] if met else [])
-            + ["On board: " + (new.get("why") or "-")]
+            + ([new.get("why") or KEPT_WHY] if ex.get("kept") else ["On board: " + (new.get("why") or "-")])
             + (["Not higher because: " + new["limit"]] if _filled(new.get("limit")) else [])
             + (["Above the outcome: " + new["above_why"]] if _filled(new.get("above_why")) else [])
             + (["The expert (%s, %s): %s" % (ex.get("by", ""), ex.get("on", ""), ex.get("said", ""))] if ex else []))
@@ -478,6 +487,7 @@ def render(course, pdf=True):
         written += [base + ".docx", base + ".html"]
         if exe and am.print_pdf(exe, base + ".html", base + ".pdf"):
             written.append(base + ".pdf")
+    log_done(course)
     probs, notes = check(course)
     with io.open(os.path.join(f["out"], "fingerprint.txt"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write((fingerprint(course) if not probs else "") + "\n")
@@ -616,15 +626,22 @@ def ratify(course, module, sub_id, text, by):
     return False
 
 
-def carry_out(row, lvl, said, by, how="", why=None):
+def carry_out(row, lvl, said, by, how="", why=None, kept=False):
     """An expert's decision on one topic, carried out as it is: their level, their words, and the 'how' they agreed to
-    (empty, for the factory to write, when they gave none)."""
+    (empty, for the factory to write, when they gave none). kept: the expert kept it as the old course teaches it -
+    'why' is then that, never the reason the proposal gave for a higher level."""
     from datetime import date
     new = row.setdefault("proposed", {})
     new.update(level=lvl, how=how, limit="", above_why="", expert={"by": by.strip(), "on": date.today().isoformat(), "said": said.strip()})
     new.pop("revised_outcome", None)
-    if why:
+    if kept:
+        new["expert"]["kept"] = True
+        new["why"] = KEPT_WHY
+    elif why:
         new["why"] = why
+
+
+KEPT_WHY = "Kept as the old course teaches it: the expert's decision."
 
 
 def record_expert(course, module, topic, lvl, said, by):
@@ -674,12 +691,144 @@ def record_reword(course, module, topic, text, by):
     return 0
 
 
+# ------------------------------------------------------------------ what the build is held to
+def decided(course, module):
+    """[{id, main, level, how, by}] - each topic of a module as the course is built to it: the proposal, as the expert
+    took it or left it unanswered (it goes ahead as proposed), or the expert's own decision ("by" names them, else "").
+    A topic not judged yet is left out; [] for a course without the experts' documents."""
+    f = files(course)
+    arch = _load(f["arch"])
+    if not arch:
+        return []
+    rev = _load(f["review"], {}) or {}
+    want = str(module).upper().lstrip("M").lstrip("0") or "0"
+    for m in modules(_load(f["prog"], {}) or {}, arch):
+        if str(m["n"]) != want:
+            continue
+        rows = ((rev.get("modules") or {}).get(str(m["n"])) or {}).get("rows") or {}
+        out = []
+        for r in m["rows"]:
+            new = (rows.get(r["id"]) or {}).get("proposed") or {}
+            if isinstance(new.get("level"), int) and 1 <= new["level"] <= 6:
+                out.append({"id": r["id"], "main": r["main"], "level": new["level"], "how": (new.get("how") or "").strip(),
+                            "by": ((new.get("expert") or {}).get("by") or "").strip()})
+        return out
+    return []
+
+
+def decided_block(course, module):
+    """The "decided" block a module's content script carries: each topic's level and teaching, word for word, and the
+    screens that carry it out (left empty here, for the writer to name)."""
+    return {d["id"]: {"level": d["level"], "how": d["how"], "screens": []} for d in decided(course, module)}
+
+
+def cmd_decided(course, module):
+    rows = decided(course, module)
+    if not rows:
+        print("Nothing decided for module %s: the course has no judged topic rows for it (pedagogy_review.json)." % module)
+        return 0
+    print("Module %s is built to these levels and this teaching - the experts saw them. Copy the block into the content "
+          "script as \"decided\" and name in \"screens\" the slides, activities and tasks that carry each one out:" % module)
+    for d in rows:
+        print("  %s%s: %s - %s%s" % (d["id"], " (Main ILO)" if d["main"] else "", level(d["level"]), d["how"] or "(no teaching written)",
+                                     "  [the expert's decision, %s]" % d["by"] if d["by"] else ""))
+    print(json.dumps({"decided": decided_block(course, module)}, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _same(a, b):
+    return " ".join(str(a or "").split()).lower() == " ".join(str(b or "").split()).lower()
+
+
+def settle_activities(course, module, topic, how, by, said, add=None):
+    """An expert's answer on a topic's activities (topic None: the module's own), written into the architecture as
+    active_plan.py decide writes the operator's (L49 step 3): how "approved" keeps every one still proposed, "struck"
+    strikes every one not struck yet. add: the teaching agreed with Claude - kept in place of the topic's other lines,
+    as a line of its own when none says the same. [(id, what)] - each line whose status changed."""
+    from datetime import date
+    f = files(course)
+    arch = _load(f["arch"])
+    am = next((m for m in (arch or {}).get("modules", []) if str(m.get("module")) == str(module)), None)
+    if am is None:
+        return []
+    lines = [x for x in am.get("active_learning") or [] if isinstance(x, dict)]
+    ids = {r["id"] for m in modules(_load(f["prog"], {}) or {}, arch) if str(m["n"]) == str(module) for r in m["rows"]}
+    mine = [x for x in lines if (str(x.get("subtopic")) == str(topic) if topic is not None else str(x.get("subtopic")) not in ids)]
+    stamp = {"decided_on": date.today().isoformat(), "decided_said": said, "decided_by": by}
+    changed = []
+
+    def put(x, st):
+        if (x.get("status") or "approved") == st:
+            return
+        x.update(status=st, **stamp)
+        changed.append((x.get("id") or "-", ("kept - " if st == "approved" else "struck - ") + (x.get("does") or x.get("where") or "")))
+
+    if add:
+        same = next((x for x in mine if _same(x.get("does"), add)), None)
+        if same is None:
+            base = next((x for x in mine if x.get("status") != "struck"), None) or {}
+            nums = [int(str(x.get("id")).rsplit(".", 1)[-1]) for x in lines if str(x.get("id", "")).rsplit(".", 1)[-1].isdigit()]
+            same = {"id": "A%s.%d" % (module, max(nums or [0]) + 1), "subtopic": topic, "technique": base.get("technique") or "plain",
+                    "status": "proposed", "does": add, "minutes": base.get("minutes") or 0,
+                    "instead_of": base.get("instead_of") or "-", "needs": base.get("needs") or "",
+                    "agreed": "with Claude in editor mode"}
+            if same["technique"] == "plain":
+                same["why"] = "The teaching the expert agreed with Claude in editor mode."
+            am.setdefault("active_learning", []).append(same)
+        for x in mine:
+            if x is not same:
+                put(x, "struck")
+        put(same, "approved")
+    else:
+        for x in mine:
+            if (how == "approved" and x.get("status") == "proposed") or (how == "struck" and x.get("status") != "struck"):
+                put(x, how)
+    if changed:
+        _save(f["arch"], arch)
+    return changed
+
+
+def notes_of(rev):
+    """Every expert note of the documents: the whole course's, each module's, each topic row's."""
+    out = list((rev or {}).get("expert_notes") or [])
+    for m in ((rev or {}).get("modules") or {}).values():
+        out += (m or {}).get("expert_notes") or []
+        for x in ((m or {}).get("rows") or {}).values():
+            out += (x or {}).get("expert_notes") or []
+    return [n for n in out if isinstance(n, dict)]
+
+
+def log_done(course):
+    """FEEDBACK_LOG.md learns that an expert's note is done: the row that logged it "to do" when it was pulled (the
+    note's "log", the row's number) says what the factory changed. The number of rows put right."""
+    fb = workspace.claude_path(course, "FEEDBACK_LOG.md")
+    done = {int(n["log"]): " ".join(n["done"].split()) for n in notes_of(_load(files(course)["review"], {}))
+            if str(n.get("log", "")).isdigit() and _filled(n.get("done"))}
+    if not done or not os.path.isfile(fb):
+        return 0
+    lines, n = io.open(fb, encoding="utf-8").read().split("\n"), 0
+    for i, line in enumerate(lines):
+        cells = line.split("|")
+        if len(cells) < 7 or not cells[1].strip().isdigit() or int(cells[1]) not in done or "to do" not in cells[5]:
+            continue
+        w, d = cells[5].strip(), done[int(cells[1])].replace("|", "/")
+        cells[5] = " %s " % ("done: " + d if w == "to do" else w.replace("to do", "was to do", 1) + " - done: " + d)
+        lines[i] = "|".join(cells)
+        n += 1
+    if n:
+        with io.open(fb, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write("\n".join(lines))
+    return n
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("draft", "check", "render", "expert", "reword"):
+    for name in ("draft", "check", "render", "expert", "reword", "decided"):
         s = sub.add_parser(name)
         s.add_argument("--course", required=True)
+        if name == "decided":
+            s.add_argument("--module", required=True)
         if name == "render":
             s.add_argument("--no-pdf", action="store_true")
         if name == "reword":
@@ -697,6 +846,8 @@ def main(argv=None):
         return record_expert(course, x.module, x.topic, x.level, x.said, x.by)
     if x.cmd == "reword":
         return record_reword(course, x.module, x.topic, x.text, x.by)
+    if x.cmd == "decided":
+        return cmd_decided(course, x.module)
     if x.cmd == "render":
         return render(course, pdf=not x.no_pdf)
     probs, notes = check(course)

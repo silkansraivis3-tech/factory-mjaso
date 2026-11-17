@@ -44,6 +44,16 @@ Then, before the first screen is written, read — in this order, and only these
 5. **The knowledge base — only through `kb/scripts/kb_tool.py search`** (several phrasings: the other
    names, the abbreviation, the older term). Never open a whole `document.md`. A declined knowledge base
    (the Stage 2 page says so) means the source files themselves, searched the same narrow way.
+6. **The level and teaching each topic is built to** - `python scripts/pedagogy_review.py decided --course <course>
+   --module 4`: what the experts saw for every topic (Main ILO too, in a module without Sub-ILOs) - the proposal they
+   took, or left unanswered (it goes ahead as proposed), or their own decision (Keep as now, Fix with Claude). Copy
+   the block it prints into the script as `"decided"`, word for word, and name in each topic's `"screens"` the
+   slides, activities and tasks that carry its teaching out (each with that topic's `"sub_ilo"`). The module is
+   written to those: its questions on a topic reach the level decided, and a topic an expert decided themselves is
+   asked at no higher level than they decided - kept at *Remember* stays *Remember*. `content_script.py` holds the
+   script to it (`decision_findings`, must-fix): a topic missing from `"decided"`, a decision changed since it was
+   copied, no screen named, questions below the level, or above an expert's own. A course without the experts'
+   documents has nothing here.
 
 While writing:
 
@@ -194,7 +204,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   question since 2.42.0, §0), and - only when
   it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
   The review page then shows every question below its Sub-ILO and how the tablet would lift it.
-  Aim the tasks at the Sub-ILO's level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`).
+  Aim the tasks at the level the topic is built to (`"decided"`, §0 step 6) - not at the level the outcome's verb
+  names: the experts may have kept a topic lower or set it higher. Where nothing is decided, aim at the Sub-ILO's
+  level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`); never above an expert's own decision.
 - **Enough theory (L36, `knowledge/theory-rules.json`).** A slide carries the teaching itself - the facts,
   numbers, names and reasons its Sub-ILO needs - not a headline (50-150 words, title included); the notes
   carry what the instructor explains, adds or asks beyond it (30 words or more); the module's slides and
@@ -403,7 +415,9 @@ factory has no switch around it, by design. So:
 - **The one exception is the build after the expert's Ready (L70)**: the expert's Ready, signed with their
   name in the training app's editor, is their own act, so that run approves with `--by "<their name> (Ready in
   editor)"` - the name `pedagogy_review.json` has from the pull, and no other (`approve` refuses any other
-  name while `NOVIKONTAS_AUTO_BUILD=1` is set, and any name when nobody pressed Ready).
+  name while `NOVIKONTAS_AUTO_BUILD=1` is set, and any name when nobody pressed Ready). A topic the expert left
+  unanswered goes ahead as proposed, as the editor tells them beside Ready: the script is held to that proposal
+  (`"decided"`), and `approve` says which rows went ahead so.
 - **The operator approves in their own session**, after reading the review page or the Word file:
   `content_script.py approve <course> --module N --by "<their name>"` (they may ask an agent in that
   same session to run it, having just said yes there). The compiler then builds the real module.

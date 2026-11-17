@@ -267,9 +267,11 @@ def course_map(prog, arch, lang=None):
 
 
 # ------------------------------------------------------------------ the tasks of one module
-def module_map(script, arch_module=None, prog=None, arch=None, mech=None, where=None):
+def module_map(script, arch_module=None, prog=None, arch=None, mech=None, where=None, decided=None):
     """Stage 3: every question's level, the module's share at Apply or higher, every gap and how to lift it.
-    mech(q) -> the question's mechanic; where(id) -> where it is, in words (content_script passes both)."""
+    mech(q) -> the question's mechanic; where(id) -> where it is, in words (content_script passes both).
+    decided: {Sub-ILO: level} - the level the experts saw each topic built to (pedagogy_review.py decided); it is
+    the level the tasks aim at, in place of the one the outcome's verb names."""
     lang = script.get("operator_language", "en")
     mech = mech or (lambda q: q.get("mechanic") or "single_choice")
     where = where or (lambda sid: sid)
@@ -293,6 +295,7 @@ def module_map(script, arch_module=None, prog=None, arch=None, mech=None, where=
                                       "ids": ", ".join(where(r["id"]) for r in low[:4]) + (" …" if len(low) > 4 else ""),
                                       "how": lift_text(APPLY, lang)}))
     subs = _sub_ilos(prog, arch or {}, arch_module or {}) if arch_module else []
+    subs = [dict(s, level=(decided or {})[s["id"]]) if s["id"] in (decided or {}) else s for s in subs]
     by_id = {s["id"]: s for s in subs}
     parents = parent_ids(arch_module or {})
     for r in rows:
