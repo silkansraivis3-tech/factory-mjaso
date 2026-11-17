@@ -71,6 +71,8 @@ def main_of(r):
     # main_ilo_ids is the MODULE's list. A module that owes two outcomes (["1", "3"]) numbers its Sub-ILOs after
     # the outcome each serves (1.1, 3.1), so a Sub-ILO goes under its own; the first is only the fallback.
     ids = [js_str(i) for i in (r.get("main_ilo_ids") or []) if i]
+    if js_str(r.get("main_ilo_id") or "") in ids:   # 2.135.0 - the Sub-ILO says which of its module's outcomes it serves
+        return js_str(r["main_ilo_id"])
     own = js_str(r.get("sub_ilo_id") or "").split(".")[0]
     if own in ids:
         return own

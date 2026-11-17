@@ -69,7 +69,7 @@ import workspace  # noqa: E402
 
 FILE = "ilo_map.json"
 CORE = ("module", "module_title", "topic", "main_ilo_ids", "main_ilo", "sub_ilo_id", "sub_ilo_status", "sub_ilo", "programme_wording",
-        "topic_en", "main_ilo_en", "sub_ilo_en")
+        "topic_en", "main_ilo_en", "sub_ilo_en", "main_ilo_id")
 EN_OF = {"topic_en": "topic", "main_ilo_en": "main_ilo", "sub_ilo_en": "sub_ilo"}
 
 
@@ -202,6 +202,11 @@ def derive(prog, arch, syllabus=None):
                    "topic_en": en["topic"].get(n, ""), "main_ilo_en": main_en, "sub_ilo_en": en["sub"].get((n, sid), "")}
             if s.get("model_course"):
                 row["model_course"] = list(s["model_course"]) if isinstance(s["model_course"], list) else [s["model_course"]]
+            # 2.135.0 - a module that owes two Main ILOs (a programme topic tied to two outcomes) numbers its Sub-ILOs by
+            # the topic (3.1 ... 3.9); the Sub-ILO's own "main_ilo" in architecture.json says which outcome it serves
+            # (IT course: 3.9 the fault diagnosis serves ILO 4, not 3), without renumbering it (L2)
+            if str(s.get("main_ilo") or "").strip() in mids:
+                row["main_ilo_id"] = str(s["main_ilo"]).strip()
             rows.append(row)
         if not am.get("sub_ilos"):                   # no Sub-ILO of its own: the module answers to its Main ILO (as bloom_map does)
             for i in mids:
@@ -212,6 +217,19 @@ def derive(prog, arch, syllabus=None):
         if syllabus:
             items = (syllabus.get("items_by_topic") or {}).get(str(n)) or []
             owed[M] = [str(i.get("id")) for i in items if i.get("id")]
+    # 2.135.0 - a final module that owes a Main ILO of its own (a project: "plan, prepare and defend a project") answers
+    # to it on the map like a module with no Sub-ILO; an exam-only final owes none and gets no row (IT course: ILO 9 had
+    # no row, so the map showed it untaught)
+    fmains = [str(x) for x in ((arch.get("final_assessment") or {}).get("main_ilos") or []) if mains.get(str(x))]
+    if fmains and fa:
+        fn = mkey(fa)
+        M = mname(fn) if isinstance(fn, int) else "FINAL"
+        t = topics.get(str(fn)) or {}
+        for i in fmains:
+            rows.append({"module": M, "module_title": t.get("title", ""), "topic": t.get("title", ""), "main_ilo_ids": fmains,
+                         "main_ilo": mains.get(i, ""), "sub_ilo_id": i, "sub_ilo_status": "main", "sub_ilo": mains.get(i, ""),
+                         "programme_wording": mains.get(i, ""), "topic_en": en["topic"].get(fn, ""),
+                         "main_ilo_en": en["main"].get(i, ""), "sub_ilo_en": en["main"].get(i, "")})
     return rows, owed
 
 
@@ -439,6 +457,16 @@ def main(argv=None):
         if d:
             print("The ILO map is out of date - it does not say what architecture.json says for: %s.\n"
                   "  Make the Stage 2 page again (or ilo_map.py build) and show it to the operator." % ", ".join("%s %s" % x for x in d[:12]))
+            return 1
+        # 2.135.0 - a Main ILO a module owes that none of its rows serves shows untaught on the admin's ILO map
+        import ilo_coverage
+        served = {(r.get("module"), ilo_coverage.main_of(r)) for r in m.get("rows", []) if isinstance(r, dict)}
+        unserved = sorted({(r.get("module"), str(i)) for r in m.get("rows", []) if isinstance(r, dict)
+                           for i in r.get("main_ilo_ids") or [] if (r.get("module"), str(i)) not in served})
+        if unserved:
+            print("The ILO map matches architecture.json, but no Sub-ILO serves: %s. Give the Sub-ILO that serves it "
+                  "\"main_ilo\": \"<id>\" in architecture.json (ilo_map.py build) - the admin's ILO map shows the outcome "
+                  "untaught until then." % ", ".join("%s ILO %s" % x for x in unserved))
             return 1
         print("The ILO map matches architecture.json - %d row(s)." % len(m.get("rows", [])))
         return 0

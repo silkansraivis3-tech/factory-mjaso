@@ -143,6 +143,27 @@ def main():
         except Exception as ex:                   # TypeError: '<' not supported between 'str' and 'int' - before 2.49.4
             got, err = None, "%s: %s" % (type(ex).__name__, ex)
         check("a module row \"final\" beside numbered modules derives the map, no TypeError", err is None, err)
+
+        print("\n-- 2.135.0: a module owing two Main ILOs, and a project final with an outcome of its own (IT course)")
+        import ilo_coverage
+        prog = {"main_ilos": {"3": "Understand networks", "4": "Find network faults", "9": "Plan and defend a project"},
+                "topics": {"3": {"title": "Networks"}, "7": {"title": "Course project"}}}
+        arch = {"final_assessment": {"topic": "7", "main_ilos": ["9"]},
+                "modules": [{"module": 3, "main_ilos": ["3", "4"], "sub_ilos": [
+                    {"id": "3.1", "status": "added", "text": "Name the devices"},
+                    {"id": "3.9", "status": "added", "text": "Find a network fault", "main_ilo": "4"}]},
+                            {"module": 7, "main_ilos": ["9"], "sub_ilos": []}]}
+        rows, _ = ilo_map.derive(prog, arch)
+        by = {(r["module"], r["sub_ilo_id"]): r for r in rows}
+        check("a Sub-ILO's own \"main_ilo\" names the outcome it serves", ilo_coverage.main_of(by[("M03", "3.9")]) == "4"
+              and ilo_coverage.main_of(by[("M03", "3.1")]) == "3", [(k, ilo_coverage.main_of(v)) for k, v in by.items()])
+        check("the project final gets a row for its own Main ILO", ("M07", "9") in by and by[("M07", "9")]["sub_ilo_status"] == "main", sorted(by))
+        arch["modules"][0]["sub_ilos"][1]["main_ilo"] = "8"
+        rows, _ = ilo_map.derive(prog, arch)
+        check("a \"main_ilo\" the module does not owe is ignored", not any(r.get("main_ilo_id") for r in rows))
+        arch["final_assessment"] = {"topic": "7"}
+        rows, _ = ilo_map.derive(prog, arch)
+        check("an exam-only final owes no outcome and gets no row", not any(r["module"] == "M07" for r in rows))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n" + "=" * 72)
