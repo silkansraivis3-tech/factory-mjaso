@@ -64,6 +64,31 @@ it until it is gone. Alone: `KIT2D.mount(element, spec)` returns the figure
 A part's value is a number, `"@name"` (a state) or `"id.key"` (what another part works out: `"V.flow"`, `"P.y"`).
 Steps, sliders, toggles and drags all write the same states, so they never fight.
 
+## Choosing the drawing - boxes are the last resort (2.136.0)
+
+A trainee reads boxes in a column, a staircase or two rows as the same drawing (Aleksis on the IT course: "so many the
+same elements ... no way to make them more interesting and understandable?"). Pick the part that shows the idea:
+
+| The slide's idea | Draw it as |
+|---|---|
+| place / sort things into named groups ("Govern, Identify ... or Recover", "IT, OT or IoT") | `matrix` sorting board: the items in the first column, the reveal moves each into its group |
+| numbers, a rise or a fall, a comparison of amounts | `chart` + `curve` + `point`, or `bars` |
+| dates, a history, a road map, a day's order | `events` |
+| two or three things side by side, for and against, before and after | `compare` (ticks and crosses where the words say yes / no) |
+| something going round (a loop, a review cycle, the six functions) | `cycle` |
+| levels, a hierarchy, rules above rules | `pyramid` |
+| who says or does what (a master, shore support, a phishing e-mail, a vendor) | `person` with a speech bubble, `callout` |
+| a computer's parts, ports, memory, storage | `motherboard` (hero) |
+| radar, ARPA, AIS targets, GNSS spoofing on a screen | `radar_ppi` (hero) |
+| data, an attack or a fault travelling from one place to another | boxes with arrows AND a `token` that travels them, one hop per step |
+| a schedule, a plan with dependencies | `gantt` |
+
+Boxes and arrows only for a real flow - and then it moves (a token, arrows drawing in), never a static list of words in
+boxes. The compile treats every box layout as one family: two box drawings closer than 3 slides fail
+(`kit2d_variety`, `KIT2D_BOXES_APART`), as two drawings of the same part closer than 5 do. The starter
+(`kit2d_candidates`) proposes the sorting board, the travelling flow and people speaking from the slide's own words.
+Every part is drawn at arrival, dim (0.55-0.7); the step that names it brightens it, the earlier ones stay at 0.8.
+
 ## Parts
 
 **Graphs**

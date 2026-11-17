@@ -214,11 +214,44 @@ def track_part():
           "gauge, a scale no step moves (IGF Advanced M03 s08)", not still, eng["parts"])
 
 
+def variety():
+    print("\n-- 2.136.0: more kinds from the words; box layouts are one family")
+    sc = {"screens": []}
+    sort = {"id": "s07", "title": "Your turn: place the measures", "visual_kind": "interactive_diagram",
+            "ask": "Place each measure under Govern, Identify, Protect, Detect, Respond or Recover.",
+            "text": "1 A list of all systems.\n2 A login and MFA.\n3 Monitoring.\n4 Reporting.\n5 Restore from backup."}
+    c = cm.kit2d_candidates(sc, sort)
+    check("a slide that asks to place its lines into named groups starts as a sorting board",
+          c and c[0][1] == "matrix" and c[0][3]()["parts"][0]["cols"] == ["Govern", "Identify", "Protect", "Detect", "Respond", "Recover"],
+          [(x[0], x[1]) for x in c])
+    check("... and the answer's columns are left to _todo, never guessed", "_todo" in c[0][3]())
+    flow = {"id": "s14", "title": "Engine data to shore", "visual_kind": "flow_animation",
+            "text": "Sensors send readings to the AMS.\nThe AMS passes them to the server.\nThe server sends a report via the satellite link.\nAshore the office reads it."}
+    c = cm.kit2d_candidates(sc, flow)
+    check("lines that say where something goes start as a flow a token travels", c and c[0][0] == 68 and
+          any(p.get("type") == "token" for p in c[0][3]()["parts"]), [(x[0], x[1]) for x in c])
+    roles = {"id": "s13", "title": "Who does what", "visual_kind": "interactive_diagram",
+             "text": "Master: decides to isolate the PC.\nShore IT support: checks the logs.\nChief engineer: keeps the plant running."}
+    c = cm.kit2d_candidates(sc, roles)
+    check("'Role: what they do' lines start as people speaking", c and c[0][1] == "person", [(x[0], x[1]) for x in c])
+    plain = {"id": "s05", "title": "Five devices", "visual_kind": "interactive_diagram",
+             "text": "Switch - joins devices.\nRouter - joins networks.\nFirewall - filters traffic."}
+    body = [x for x in cm.kit2d_candidates(sc, plain) if x[1].startswith("process:")][0][3]()
+    check("a box drawing draws every box at arrival, dim (the blank check judges the arrival)",
+          all(v == 0.55 for k, v in body["state"].items() if k.startswith("n")), body["state"])
+    check("box layouts are one family; other looks are their own",
+          cm.kit2d_family("process:stair") == cm.kit2d_family("process:column") == "boxes" and cm.kit2d_family("matrix") == "matrix")
+    spec = cm.starter_kit2d(sc, plain, ["boxes"])
+    check("with a box drawing just before, the starter picks another kind when the words make one, else boxes",
+          spec is not None, spec and spec.get("_look"))
+
+
 def main():
     canvas()
     by_words()
     track_part()
     studio_part()
+    variety()
     print("\n%d failure(s)" % len(FAILS) if FAILS else "\nALL PASS")
     return 1 if FAILS else 0
 

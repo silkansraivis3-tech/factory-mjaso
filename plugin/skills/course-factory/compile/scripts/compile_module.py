@@ -4440,6 +4440,25 @@ KIT2D_KIND_WORDS = {"bars": "bars of the slide's own numbers", "events": "a time
                     "process:rows": "a process in two rows", "process:column": "a process down the page",
                     "process:stair": "a process stepping down", "process:free": "boxes and arrows"}
 KIT2D_DETAIL = ("node", "arrow", "token", "callout", "curve", "point", "span")
+# 2.136.0 (Aleksis on the IT course: "there are so many the same elements ... no way to make them more interesting and
+# understandable?" - "fix the factory so it gives more diverse, more understandable visuals"). Boxes laid out in a column,
+# a staircase or two rows read as the same drawing to a trainee: they are one family for variety, and a module never has
+# two box drawings closer than KIT2D_BOXES_APART slides. The starter also reads more kinds from the words: a sorting
+# board when the slide asks to place things into named groups, a flow a token runs along when the lines say where
+# something goes, people speaking when the lines are "Role: what they say".
+KIT2D_BOXES_APART = 3
+KIT2D_SORT = re.compile(r"((?:[A-Z][\w/()-]*(?: [A-Za-z][\w/()-]*)?, ){1,6}[A-Z][\w/()-]*(?: [A-Za-z][\w/()-]*)?,? (?:or|and) "
+                        r"[A-Z][\w/()-]*(?: [A-Za-z][\w/()-]*)?)")
+KIT2D_SORT_ASK = re.compile(r"(?i)\b(place|sort|classify|put|match|mark|which|under|into)\b")
+KIT2D_FLOW = re.compile(r"(?i)(→|->|\bthen\b|\bpass(es)?\b|\bsends?\b|\bvia\b|\bthrough\b|\bgoes?\b|\bflows?\b|\bfrom\b.+\bto\b)")
+KIT2D_ROLE = re.compile(r"(?i)^(the )?(master|captain|chief (?:officer|engineer)|officer|engineer|cadet|crew|rating|pilot|operator|"
+                        r"superintendent|company|shore|instructor|trainee|agent|vendor|technician|it support|dpa|cso|sso|"
+                        r"navigator|watchkeeper|bosun|electrician|eto)\b[^:]{0,30}:\s*\S")
+
+
+def kit2d_family(look):
+    """boxes laid out any way are one family to the eye; every other look is its own"""
+    return "boxes" if str(look or "").startswith("process:") else look
 
 
 def kit2d_items(lines):
@@ -4529,7 +4548,9 @@ def kit2d_process(items, lines, W, H, how):
         pos = [(20 + gap * (i + 0.5), 70 + (H - 140) * i / float(n - 1)) for i in range(n)]
     parts, state, steps = [], {}, []
     for i, (t, rest) in enumerate(its):
-        state["n%d" % (i + 1)] = state["l%d" % (i + 1)] = 0
+        # 2.136.0 - every box is drawn at arrival, dim (a box hidden until its step left the arrival frame blank, and the
+        # build's blank check judges the arrival); its step brightens it, the boxes before it stay at 0.8
+        state["n%d" % (i + 1)], state["l%d" % (i + 1)] = 0.55, 0
         parts.append({"id": "N%d" % (i + 1), "type": "node", "x": round(pos[i][0]), "y": round(pos[i][1]), "w": round(bw), "h": bh,
                       "text": t, "show": "@n%d" % (i + 1), "lit": "@l%d" % (i + 1), "cat": i % 5 + 1})
     for i in range(1, n):
@@ -4541,7 +4562,7 @@ def kit2d_process(items, lines, W, H, how):
     for i in range(n):
         st = {"n%d" % (i + 1): 1, "l%d" % (i + 1): 1}
         if i:
-            st.update({"a%d" % i: 1, "l%d" % i: 0})
+            st.update({"a%d" % i: 1, "l%d" % i: 0, "n%d" % i: 0.8})
         steps.append({"title": lines[i], "set": st, "line": i + 1, "after": {"n%d" % (i + 1): 300} if i else {}})
     return {"state": state, "rates": {"a%d" % i: 4 for i in range(1, n)}, "parts": parts, "steps": steps}
 
@@ -4634,6 +4655,44 @@ def kit2d_candidates(script, s):
                        "items": [{"name": t, "r": 1, "c": 1, "show": "@show", "dy": (i - len(items) / 2.0) * 30} for i, (t, _) in enumerate(items[:5])]}],
             "steps": [{"title": lines[0], "set": {"show": 1}, "line": 1}],
             "_todo": "the rows, the columns and where each item stands, from the course's sources (SPEC.md: matrix)"}))
+    # 2.136.0 - a sorting board: the slide asks to place its lines into groups it names ("Govern, Identify, Protect ... or
+    # Recover"); the items sit in the first column, and the reveal moves each into its group (the answer's columns are left
+    # to "_todo" - never guessed)
+    ask = " ".join([s.get("ask") or "", s.get("title") or ""])
+    grp = KIT2D_SORT.search(ask) if KIT2D_SORT_ASK.search(ask) else None
+    cats = [c.strip() for c in re.split(r",\s*|\s+(?:or|and)\s+", grp.group(1)) if c.strip()] if grp else []
+    if 3 <= len(cats) <= 6 and 3 <= n <= 8:
+        out.append((84, "matrix", "the slide asks to place each line into a group it names", lambda: {
+            "state": dict(("c%d" % (i + 1), 0) for i in range(min(n, 8))), "rates": dict(("c%d" % (i + 1), 3) for i in range(min(n, 8))),
+            "parts": [{"id": "M", "type": "matrix", "x": 210, "y": 30, "w": W - 250, "h": H - 110, "heat": False,
+                       "rows": [t[:28] for t, _ in items[:8]], "cols": cats,
+                       "items": [{"n": i + 1, "r": i, "c": "@c%d" % (i + 1), "cat": i % 5 + 1} for i in range(min(n, 8))]}],
+            "steps": [{"title": lines[i], "set": {}, "line": i + 1} for i in range(min(n, 8))],
+            "_todo": "the reveal step: each item's group (its column, 0 = %s) from the slide's answer - the last step sets c1 ... c%d"
+                     % (cats[0], min(n, 8))}))
+    # 2.136.0 - a flow a token runs along: the lines say where something goes (from, to, then, passes, sends, via), so the
+    # trainee sees it travel box to box instead of reading a list of boxes
+    flows = sum(1 for x in lines if KIT2D_FLOW.search(x))
+    if 3 <= n <= 6 and flows * 2 >= n:
+        def flow():
+            body = kit2d_process(items, lines, W, H, "row" if n <= 4 else "rows")
+            body["parts"].append({"type": "token", "route": ["A%d" % i for i in range(1, n)], "at": "@t"})
+            body["state"]["t"], body["rates"]["t"] = 0, 1.4
+            for i, st in enumerate(body["steps"]):
+                st["set"]["t"] = i
+            return body
+        out.append((68, "process:row" if n <= 4 else "process:rows", "the lines say where something goes - a token travels it", flow))
+    # 2.136.0 - people speaking without quotes: "Master: ...", "Shore IT support: ..."
+    roles = [KIT2D_ROLE.match(x) for x in lines]
+    if 2 <= n <= 4 and all(roles) and not all(says):
+        xs = [W * (i + 0.5) / n for i in range(n)]
+        out.append((72, "person", "each line is what someone on board or ashore says or does", lambda: dict(
+            {"state": dict(("s%d" % (i + 1), 0.55) for i in range(n)),
+             "parts": [{"type": "person", "x": round(xs[i]), "y": H - 90, "scale": 1.1, "name": items[i][0][:30], "cat": i + 1,
+                        "say": items[i][1] or lines[i], "sayShow": "@s%d" % (i + 1), "side": "up", "bubbleW": min(300, W / n - 40), "bubbleH": 80}
+                       for i in range(n)],
+             "steps": [{"title": lines[i], "set": dict({"s%d" % (i + 1): 1}, **({"s%d" % i: 0.8} if i else {})), "line": i + 1}
+                       for i in range(n)]})))
     m = min(n, 8)
     for fit, how, ok in ((50, "row", m <= 4), (50, "rows", m >= 5), (47, "rows", m == 4), (45, "column", 2 <= m <= 5),
                          (44, "stair", 3 <= m <= 5)):
@@ -4653,7 +4712,8 @@ def starter_kit2d(script, s, recent=()):
     cands = kit2d_candidates(script, s)
     if not cands:
         return None
-    pick = next((c for c in cands if c[1] not in recent), cands[0])
+    fresh = lambda c: c[1] not in recent and not (kit2d_family(c[1]) == "boxes" and "boxes" in recent)   # 2.136.0
+    pick = next((c for c in cands if fresh(c)), None) or next((c for c in cands if c[1] not in recent), cands[0])
     W, H = KIT2D_SIZE
     label = first_sentence(s.get("visual")) or s.get("title") or ""
     spec = {"label": label, "size": [W, H], "_k2": True}
@@ -4690,12 +4750,18 @@ def kit2d_variety(script, screens, slides, probs):
                 look = kit2d_look(json.loads(body.replace("<\\/", "</")))
             except ValueError:
                 continue
-            twin = next(((m, sid) for m, lk, sid in reversed(seen) if lk == look and n - m < KIT2D_APART), None)
+            twin = next(((m, sid) for m, lk, sid in reversed(seen) if lk == look and n - m < KIT2D_APART), None) or \
+                (next(((m, sid) for m, lk, sid in reversed(seen) if kit2d_family(lk) == "boxes" and n - m < KIT2D_BOXES_APART), None)
+                 if kit2d_family(look) == "boxes" else None)       # 2.136.0 - box drawings laid out another way still look alike
             if twin:
-                other = [KIT2D_KIND_WORDS.get(c[1], c[1]) for c in kit2d_candidates(script, s) if c[1] != look]
+                boxes = kit2d_family(look) == "boxes"
+                other = [KIT2D_KIND_WORDS.get(c[1], c[1]) for c in kit2d_candidates(script, s)
+                         if c[1] != look and not (boxes and kit2d_family(c[1]) == "boxes")]
                 probs.append("%s: its 2D figure looks like the one on %s, %d slide(s) before (%s) - 2D figures that look alike are "
-                             "at least %d slides apart; compose this one differently%s (course-visuals\\kit2d\\SPEC.md)"
-                             % (cs.place(script, s["id"]), twin[1], n - twin[0], KIT2D_KIND_WORDS.get(look, look), KIT2D_APART,
+                             "at least %d slides apart%s; compose this one differently%s (course-visuals\\kit2d\\SPEC.md)"
+                             % (cs.place(script, s["id"]), twin[1], n - twin[0], "boxes and arrows" if boxes else KIT2D_KIND_WORDS.get(look, look),
+                                KIT2D_BOXES_APART if boxes else KIT2D_APART,
+                                " - boxes laid out another way still read as the same drawing" if boxes else "",
                                 ": its words also make %s" % ", ".join(dict.fromkeys(other)) if other else ""))
             seen.append((n, look, s["id"]))
 
@@ -4731,6 +4797,8 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
         if not two_d and (s["id"] in skip or cs.parse_kind(s.get("visual_kind", "")) not in STARTER_FIGURE_KINDS):
             continue
         recent = [lk for n, lk in looks if at - n < KIT2D_APART]
+        if any(kit2d_family(lk) == "boxes" for n, lk in looks if at - n < KIT2D_BOXES_APART):
+            recent.append("boxes")                        # 2.136.0 - no two box drawings closer than KIT2D_BOXES_APART
         spec = starter_kit2d(script, s, recent) if kit2d_slide(script, s) else None    # an idea, a sequence or numbers: the 2D kit
         spec = spec or starter_figure(script, s, pool, taken)
         if not spec:
