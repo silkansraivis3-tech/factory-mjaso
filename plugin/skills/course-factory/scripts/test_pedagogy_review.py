@@ -367,6 +367,25 @@ def main():
               (topic13()["intended"], topic13()["revised"]) == (out13, REVISED)
               and topic13()["revised_verb"].startswith("apply")
               and not any("not in English" in p for p in pr.check(e)[0]), (topic13(), pr.check(e)[0]))
+
+        print("\n-- what the build is held to: each topic's level and teaching as the experts saw them")
+        dc = tap.write_course(os.path.join(tmp, "decided"), tap.PROGRAMME, copy.deepcopy(tap.ARCH))
+        complete(dc)
+        pr.record_expert(dc, 2, "1.3", 1, "Keep it at recall, as the old course.", "Anna Liepa")
+        rows = {d["id"]: d for d in pr.decided(dc, 1)}
+        check("decided gives every topic of the module: the proposal's level and teaching, nobody's name on it",
+              set(rows) == {"1.1", "1.1.a", "1.1.b"} and all(d["how"] == "sets the value on the panel" and not d["by"]
+                                                              for d in rows.values()), rows)
+        d13 = pr.decided(dc, "M02")
+        check("... and an expert's own decision with their name - the module named either way",
+              [(d["id"], d["level"], d["by"]) for d in d13] == [("1.3", 1, "Anna Liepa")], d13)
+        check("a module of Main ILOs only: its Main ILO's level is there too, where the script stage reads it",
+              [(d["id"], d["main"]) for d in pr.decided(dc, 3)] == [("1", True)], pr.decided(dc, 3))
+        code, out = run("decided", "--course", dc, "--module", "2")
+        blk = json.loads(out[out.index("{"):])
+        check("the decided command prints the block the content script copies, its screens left to name",
+              code == 0 and blk == {"decided": {"1.3": {"level": 1, "how": "", "screens": []}}} and "Anna Liepa" in out, out)
+        check("a course with no experts' documents has nothing decided", pr.decided(os.path.join(tmp, "nowhere"), 1) == [])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

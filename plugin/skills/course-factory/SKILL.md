@@ -272,7 +272,9 @@ script (`build_module.py`).
 
 A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobody to answer:
 
-- Carry out every expert note (`pedagogy_review.py check`) and write its `done`. Pass every STOP with the expert's name:
+- Carry out every expert note (`pedagogy_review.py check`) and write its `done`. A row the expert left unanswered goes
+  ahead as proposed. Every module's script takes in the level and teaching each topic is built to
+  (`pedagogy_review.py decided`, `script/GUIDE.md` §0 step 6) and is held to them. Pass every STOP with the expert's name:
   `--approve --by "<expert> (Ready in editor)"`, `content_script.py approve ... --by "<expert> (Ready in editor)"`; the
   build plan question takes its first option.
 - Never ask: a question goes to `working_claude/OPEN_EXPERT_QUESTIONS.md` with the choice made, and the build goes on.

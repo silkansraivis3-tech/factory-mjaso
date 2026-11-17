@@ -703,24 +703,64 @@ def main():
             rp = os.path.join(nc, "working_claude", "pedagogy_review.json")
             rev = json.load(io.open(rp, encoding="utf-8")) if os.path.isfile(rp) else {}
             rev["ready"] = {"by": "Anna Liepa", "on": "2026-11-04"}
-            rev["modules"] = {"1": {"rows": {"1.1": {"proposed": {"level": 3}}, "1.2": {"proposed": {"level": 2}}}}}
-            io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
-            code, out = cs_run("approve", nc, "--module", "1", "--by", "Anna Liepa (Ready in editor)")
-            check("a Ready over topic rows the expert never answered is not a review: no approval (GAS BASIC: 0 of 124 answered)",
-                  code == 1 and "2 of 2 topic rows unanswered (1/1.1, 1/1.2)" in out, out)
-            rev["modules"]["1"]["rows"]["1.1"]["expert_review"] = {"verdict": "ok", "by": "Anna Liepa"}
-            io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
-            code, out = cs_run("approve", nc, "--module", "1", "--by", "Anna Liepa (Ready in editor)")
-            check("... nor over some of them", code == 1 and "1 of 2 topic rows unanswered (1/1.2)" in out, out)
-            rev["modules"]["1"]["rows"]["1.2"]["expert_notes"] = [{"said": "Lift it to Apply.", "done": ""}]
+            rev["modules"] = {"1": {"rows": {"1.1": {"proposed": {"level": 3, "how": "Trainees set the tank pressure on the panel."}},
+                                             "1.2": {"proposed": {"level": 2, "how": "Trainees sort the containment systems."}}}}}
             io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
             code, out = cs_run("approve", nc, "--module", "1", "--by", "Raivis (Ready in editor)")
-            check("... only with the expert's own Ready from the editor (L70), by the name they signed it with",
+            check("an unattended run approves only with the expert's own Ready from the editor (L70), by the name they signed it with",
                   code == 1 and "Anna Liepa (Ready in editor)" in out, out)
             code, out = cs_run("approve", nc, "--module", "1", "--by", "Anna Liepa (Ready in editor)")
-            check("... which it records", code == 0 and "approved by Anna Liepa (Ready in editor)" in out, out)
+            check("a Ready with every row unanswered: the rows go ahead as proposed, and the script is held to the proposal - "
+                  "not approved while it has not taken the levels and teaching in",
+                  code == 1 and "unanswered" not in out and "Topic 1.1: the level and teaching the experts saw are not in the script" in out
+                  and "3 Apply" in out and "Trainees set the tank pressure on the panel." in out, out)
+            sp = os.path.join(nc, "working_claude", "script", "M01.json")
+            scr = json.load(io.open(sp, encoding="utf-8"))
+            blk = {"1.1": {"level": 3, "how": "Trainees set the tank pressure on the panel.", "screens": ["s01"]},
+                   "1.2": {"level": 2, "how": "Trainees sort the containment systems.", "screens": ["s03"]}}
+            scr["decided"] = blk
+            io.open(sp, "w", encoding="utf-8").write(json.dumps(scr, ensure_ascii=False))
+            code, out = cs_run("approve", nc, "--module", "1", "--by", "Anna Liepa (Ready in editor)")
+            check("... with them taken in, the Ready approves it, and says which rows went ahead as proposed (the editor: "
+                  "anything not answered goes ahead as proposed)", code == 0 and "approved by Anna Liepa (Ready in editor)" in out
+                  and "2 of 2 topic rows the expert left unanswered went ahead as proposed (1/1.1, 1/1.2)" in out, out)
+            rev["modules"]["1"]["rows"]["1.1"]["expert_review"] = [{"answer": "a1", "ok": True, "by": "Anna Liepa"}]
+            io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
+            check("... a row answered is not counted among them", cs.unattended_signer(nc) == "Anna Liepa (Ready in editor)"
+                  and cs.unanswered(rev)[1] == ["1/1.2"])
         finally:
             del os.environ["NOVIKONTAS_AUTO_BUILD"]
+
+        print("\n-- the levels and teaching the experts saw: the script is held to them")
+        rules = lambda: [(f["rule"], f["detail"]) for f in cs.decision_findings(nc, scr)]
+        check("taken in word for word, with screens of the topic: nothing to fix", rules() == [], rules())
+        scr["decided"] = dict(blk, **{"1.2": dict(blk["1.2"], screens=["s01"])})
+        check("a screen named that is not of the topic does not carry it out", [r for r, _ in rules()] == ["d_no_screen"], rules())
+        scr["decided"] = blk
+        rev["modules"]["1"]["rows"]["1.1"]["proposed"]["how"] = "Trainees find the leak on the simulator."
+        io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
+        check("a decision changed after the script took it in stops it until the script is brought in line",
+              [r for r, _ in rules()] == ["d_changed"] and "find the leak" in rules()[0][1], rules())
+        rev["modules"]["1"]["rows"]["1.1"]["proposed"].update(level=5, how="Trainees set the tank pressure on the panel.")
+        blk["1.1"]["level"] = 5
+        io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
+        check("a topic built to Evaluate that no question reaches is a must-fix (its best is Apply)",
+              [(f["rule"], f["level"]) for f in cs.decision_findings(nc, scr)] == [("d_below", cs.FAIL)] and "3 Apply" in rules()[0][1], rules())
+        rev["modules"]["1"]["rows"]["1.1"]["proposed"]["level"] = 3
+        blk["1.1"]["level"] = 3
+        rev["modules"]["1"]["rows"]["1.2"]["proposed"].update(level=1, how="Kept as the old course teaches it: slides.",
+                                                              expert={"by": "Anna Liepa", "said": "Keep it", "kept": True})
+        blk["1.2"].update(level=1, how="Kept as the old course teaches it: slides.")
+        io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
+        found = cs.decision_findings(nc, scr)
+        check("a topic the expert kept at Remember: a question of it at Understand is a must-fix that names the expert - the "
+              "factory does not push it back up", [(f["rule"], f["screen"]) for f in found] == [("d_above", "m03")]
+              and "Anna Liepa" in found[0]["detail"] and "1 Remember" in found[0]["detail"], found)
+        bm = cs.bloom_of(nc, scr)
+        check("the review page's Bloom map aims the topic's tasks at the level decided, not at the outcome's verb",
+              {s["id"]: s["level"] for s in bm["subs"]} == {"1.1": 3, "1.2": 1}, bm["subs"])
+        os.remove(rp)
+        check("a course without the experts' documents is held to nothing here", cs.decision_findings(nc, scr) == [])
 
         print("\n-- 2.18.1: the instructor notes are short, and live in their own .md file for the instructor's panel")
         code, out = cs_run("render", c, "--module", "1")

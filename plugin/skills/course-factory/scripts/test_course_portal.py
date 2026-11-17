@@ -18,7 +18,13 @@ pulled answers are not pulled again). Pinned:
   * a Sub-ILO's new wording that arrives in the programme's language (a decision with Claude, or Take proposed on
     a proposal an older factory wrote in it) is never taken as it is: the architecture keeps what it had, the
     wording becomes the expert's note, check stops until pedagogy_review.py reword has written it in English;
-  * the client knows only the staging project, and the key comes from the office PC, never from a course folder.
+  * the answers reach what the build reads: an OK keeps the row's proposed activities in the architecture (the
+    module's own on its activities row), Keep as now strikes the topic's and drops the raised level's reason, a
+    decision with Claude keeps the teaching agreed as an activity and strikes the rest; a wording already ratified is
+    not ratified or logged again; a note's log row says done once it is; the answers the factory carried out stand on
+    the next version (the editor does not ask them again), a row the factory changed itself is asked again;
+  * the client knows only the staging project and the live editor address, retries a passing gateway error (520),
+    and the key comes from the office PC, never from a course folder.
 """
 from __future__ import annotations
 
@@ -79,6 +85,10 @@ class Server:
                 return {"document": {"version": was[-1]["version"]}, "unchanged": True}
             for d in was:
                 d["status"] = "superseded"
+            for c in p.get("carried") or []:        # an answer the factory carried out stands on the new words
+                for a in self.answers:
+                    if a["id"] == c["id"] and a["item"] == c["item"] and a.get("pulled") and c["item"] in p["items"]:
+                        a["item_hash"] = p["items"][c["item"]]
             d = dict(id=str(uuid.uuid4()), course_id=p["course_id"], kind=p["kind"], module="", version=len(was) + 1,
                      items=p["items"], content=p["content"], fingerprint=p["fingerprint"], status="open")
             self.docs.append(d)
@@ -345,6 +355,150 @@ def main():
               and topics["1.1.a"]["revised"].startswith("Identify the types") and pr.check(c)[0] == [],
               (pr.check(c)[0], topics["1.1.a"]["revised"]))
 
+        print("\n-- the expert's answers reach what the build reads")
+        import make_architecture_page as ap
+        arch2 = copy.deepcopy(tap.ARCH)
+        arch2["modules"][0]["active_learning"] = [
+            {"id": "A1.1", "subtopic": "1.1", "technique": "explore", "status": "proposed", "minutes": 10, "does": "Open the hull in 3D."},
+            {"id": "A1.2", "subtopic": "1.1.b", "technique": "predict-then-reveal", "status": "proposed", "minutes": 5,
+             "does": "Predict which tank leans on the hull."},
+            {"id": "A1.3", "subtopic": "tank types", "technique": "explore", "status": "proposed", "minutes": 5, "does": "Walk the deck plan."}]
+        arch2["modules"][1]["active_learning"] = [
+            {"id": "A2.1", "subtopic": "1.3", "technique": "worked-example", "status": "proposed", "minutes": 10,
+             "does": "Set the pressure alarm on the panel."}]
+        c2 = tap.write_course(os.path.join(tmp, "course2"), tap.PROGRAMME, arch2)
+        io.open(os.path.join(c2, "FEEDBACK_LOG.md"), "w", encoding="utf-8").write(
+            "| # | Date | Stage · module · where | said | changed | fact |\n|---|---|---|---|---|---|\n| 1 | | | | | no |\n")
+        intake = json.load(io.open(os.path.join(c2, "intake.json"), encoding="utf-8"))
+        intake["course_name"] = "GAS BASIC 4"
+        io.open(os.path.join(c2, "intake.json"), "w", encoding="utf-8").write(json.dumps(intake))
+        srv2 = Server()
+        cp.CALL = srv2
+        out_of(cp.cmd_create, c2)
+        tpr.complete(c2)
+        rev = json.load(io.open(pr.files(c2)["review"], encoding="utf-8"))
+        rev["modules"]["2"]["rows"]["1.3"]["proposed"].update(level=2, why="the alarm is set by the officer on watch")
+        io.open(pr.files(c2)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
+        pr.render(c2, pdf=False)
+        code, out = out_of(cp.cmd_push_pedagogy, c2)
+        check("a second course goes to the editor", code == 0 and srv2.docs, out)
+        ok11 = srv2.answer("anna.liepa@novikontas.org", "1/1.1", "ok")
+        okm = srv2.answer("anna.liepa@novikontas.org", "act/1/module", "ok")
+        keep = srv2.answer("anna.liepa@novikontas.org", "2/1.3", "decision", decision={"choice": "keep", "level": 1, "said": "Keep it."})
+        cl = srv2.answer("anna.liepa@novikontas.org", "1/1.1.b", "decision", decision={
+            "choice": "claude", "level": 3, "how": "Trainees name the tank type on five photographs and say why.",
+            "why": "They must know their own ship's tanks.", "said": "Make it practical.",
+            "revised_outcome": "Identify the tank type on a photograph"})
+        note = srv2.answer("anna.liepa@novikontas.org", "1/1.1.a", "change", "Show a real general arrangement plan.")
+        srv2.ready("Anna Liepa")
+        out_of(cp.cmd_pull, c2)
+        a2 = json.load(io.open(pr.files(c2)["arch"], encoding="utf-8"))
+        st = {x["id"]: x for m in a2["modules"] for x in m.get("active_learning") or []}
+        check("Take proposed keeps the topic's proposed activity in the architecture, with who and their words",
+              st["A1.1"]["status"] == "approved" and st["A1.1"]["decided_by"] == "Anna Liepa", st["A1.1"])
+        check("OK on the module's activities row keeps the module's own", st["A1.3"]["status"] == "approved", st["A1.3"])
+        check("Keep as now strikes the activity that would have lifted the topic", st["A2.1"]["status"] == "struck", st["A2.1"])
+        new = [x for x in st.values() if x["does"].startswith("Trainees name the tank type")]
+        check("a decision with Claude: the teaching agreed is a kept activity of the topic, the old proposal struck beside it",
+              len(new) == 1 and new[0]["status"] == "approved" and new[0]["subtopic"] == "1.1.b" and new[0]["id"] == "A1.4"
+              and new[0]["minutes"] == 5 and st["A1.2"]["status"] == "struck", st)
+        prog2 = json.load(io.open(pr.files(c2)["prog"], encoding="utf-8"))
+        check("nothing is left waiting for Keep or Strike: the Stage 2 approval does not wait for the expert's OK again",
+              ap.analyse(prog2, a2)["waiting"] == [], ap.analyse(prog2, a2)["waiting"])
+        rev = json.load(io.open(pr.files(c2)["review"], encoding="utf-8"))
+        r13 = rev["modules"]["2"]["rows"]["1.3"]
+        why13 = {t["id"]: t for m in pr.view(c2)["content"]["modules"] for t in m["topics"]}["1.3"]["proposed"]["why"]
+        check("Keep as now drops the raised level's reason: no 'On board' line from the lift is left",
+              r13["proposed"]["why"] == pr.KEPT_WHY and not any("officer on watch" in w or w.startswith("On board") for w in why13), why13)
+        check("the answers carried out are remembered with the words they made; the note is not among them",
+              set(rev.get("carried") or {}) == {ok11["id"], okm["id"], keep["id"], cl["id"]}, rev.get("carried"))
+        log = io.open(os.path.join(c2, "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("FEEDBACK_LOG.md says which activities were kept and struck",
+              "activities A1.1 kept" in log and "A2.1 struck" in log and "A1.4 kept" in log and "A1.2 struck" in log, log[-1200:])
+        n1a = rev["modules"]["1"]["rows"]["1.1.a"]["expert_notes"][0]
+        row_no = n1a.get("log")
+        check("a note remembers its row in the log", isinstance(row_no, int) and ("| %d | " % row_no) in log
+              and "Show a real general arrangement plan." in log.split("| %d | " % row_no)[1].split("\n")[0], (row_no, log[-600:]))
+        n1a["done"] = "A real general arrangement plan is on the slide."
+        io.open(pr.files(c2)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
+        pr.render(c2, pdf=False)
+        line = [l for l in io.open(os.path.join(c2, "FEEDBACK_LOG.md"), encoding="utf-8").read().split("\n") if l.startswith("| %d | " % row_no)][0]
+        check("once the note is done, its row in the log says so - no 'to do' left", "to do" not in line
+              and "done: A real general arrangement plan is on the slide." in line, line)
+        code, out = out_of(cp.cmd_push_pedagogy, c2)
+        sent = srv2.calls[-1][1]
+        check("push sends the answers carried out with the new version", {x["id"] for x in sent.get("carried") or []}
+              == {ok11["id"], okm["id"], keep["id"], cl["id"]}, sent.get("carried"))
+        live = {a["item"] for a in srv2.answers if srv2.docs[-1]["items"].get(a["item"]) == a["item_hash"]}
+        check("on version 2 the expert's Keep as now and decision with Claude are still their answers - not asked again; the "
+              "topic the factory changed after their note is", code == 0 and srv2.docs[-1]["version"] == 2
+              and live == {"1/1.1", "act/1/module", "2/1.3", "1/1.1.b"}, (out, live))
+        rev = json.load(io.open(pr.files(c2)["review"], encoding="utf-8"))
+        rev["modules"]["1"]["rows"]["1.1"]["proposed"]["how"] = "Trainees set the value on the real panel."
+        io.open(pr.files(c2)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
+        pr.render(c2, pdf=False)
+        check("a row the factory changed on its own since is asked again: its answer is not carried",
+              "1/1.1" not in {x["item"] for x in cp.carried(c2, pr.view(c2))} and "1/1.1.b" in {x["item"] for x in cp.carried(c2, pr.view(c2))})
+        n_log = len(io.open(os.path.join(c2, "FEEDBACK_LOG.md"), encoding="utf-8").read().split("\n"))
+        srv2.answer("anna.liepa@novikontas.org", "1/1.1.b", "ok")
+        out_of(cp.cmd_pull, c2)
+        a3 = json.load(io.open(pr.files(c2)["arch"], encoding="utf-8"))
+        s1b = {s["id"]: s for s in a3["modules"][0]["sub_ilos"]}["1.1.b"]
+        check("Take proposed on a Sub-ILO already re-worded neither ratifies nor logs it again",
+              s1b["ratified"] == {s["id"]: s for s in a2["modules"][0]["sub_ilos"]}["1.1.b"]["ratified"]
+              and len(io.open(os.path.join(c2, "FEEDBACK_LOG.md"), encoding="utf-8").read().split("\n")) == n_log, s1b)
+        cp.CALL = srv
+
+        print("\n-- the editor's address and a passing server error")
+        check("the experts' link is the live staging site, not the old Vercel one",
+              cp.EDITOR.startswith("https://novikontas-staging.pages.dev/classroom/editor/prep.html") and "vercel" not in cp.EDITOR)
+        import urllib.error
+
+        class Resp:
+            def __init__(self, body):
+                self.body = body
+
+            def read(self):
+                return self.body
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        tries = []
+
+        def flaky(req, timeout=None):
+            tries.append(1)
+            if len(tries) == 1:
+                raise urllib.error.HTTPError(req.full_url, 520, "unknown", {}, io.BytesIO(b""))
+            return Resp(b'{"ok": true}')
+
+        old_open, old_wait, old_key = cp.urllib.request.urlopen, cp.WAIT, os.environ.get("NOVIKONTAS_FACTORY_KEY")
+        cp.urllib.request.urlopen, cp.WAIT, os.environ["NOVIKONTAS_FACTORY_KEY"] = flaky, 0, "k" * 48
+        try:
+            check("HTTP 520 (a passing gateway error) is tried again, and the second answer is taken",
+                  cp._http("status", {"course_id": "x"}) == {"ok": True} and len(tries) == 2, tries)
+            del tries[:]
+
+            def refused(req, timeout=None):
+                tries.append(1)
+                raise urllib.error.HTTPError(req.full_url, 409, "conflict", {}, io.BytesIO(b'{"error": "taken"}'))
+
+            cp.urllib.request.urlopen = refused
+            try:
+                cp._http("create", {})
+                check("a real refusal (409) is not tried again", False)
+            except cp.PortalError as e:
+                check("a real refusal (409) is not tried again", len(tries) == 1 and e.status == 409 and "taken" in str(e), tries)
+        finally:
+            cp.urllib.request.urlopen, cp.WAIT = old_open, old_wait
+            if old_key is None:
+                os.environ.pop("NOVIKONTAS_FACTORY_KEY", None)
+            else:
+                os.environ["NOVIKONTAS_FACTORY_KEY"] = old_key
+
         print("\n-- the build after Ready, on the office PC")
         old_env = dict(os.environ)
         stub = os.path.join(tmp, "stub_claude.py")
@@ -385,6 +539,8 @@ def main():
             check("a queued course: claimed, Claude Code runs unattended in the course folder with the expert's name",
                   code == 0 and queue[0]["stage"] == "building" and args[0] == "-p" and "Anna Liepa (Ready in editor)" in args[1]
                   and os.path.samefile(io.open(os.path.join(tmp, "cwd.txt")).read(), workspace_master(c)), (code, args[:2]))
+            check("... told to write every script to the level and teaching decided, and that a row left unanswered goes "
+                  "ahead as proposed", "pedagogy_review.py decided" in args[1] and "goes ahead as proposed" in args[1], args[1])
             check("... edits accepted without asking, paid pictures and git push refused",
                   "acceptEdits" in args and "mcp__plugin_nano-banana_nano-banana__generate_image" in args and "Bash(git push:*)" in args, args)
             check("... and the built course is imported as a draft; nothing is marked stopped", srv.done is None)

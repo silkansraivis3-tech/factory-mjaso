@@ -132,6 +132,7 @@ sys.path.insert(0, HERE)
 import check_slide_text as slide_text  # noqa: E402  - the same four rules the built slides get (L22)
 import workspace  # noqa: E402  - the factory works in course\ beside the operator's material (L40)
 import bloom_map  # noqa: E402  - what level each question reaches, against its Sub-ILO (L48)
+import pedagogy_review  # noqa: E402  - the level and teaching each topic is built to (decision_findings)
 import design_choices  # noqa: E402  - the operator's design choices are theirs, not must-fixes (L26, 2.30.0)
 import interact_formats  # noqa: E402  - the interactive task types' formats (2.74.0), read in one place
 import ilo_map  # noqa: E402  - what this module owes: its rows of the ILO map (2.42.0)
@@ -2228,7 +2229,54 @@ def all_findings(script, course=None):
     th, _ = theory_findings(script)
     return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script) \
         + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script) \
-        + activity_findings(course, script)
+        + activity_findings(course, script) + decision_findings(course, script)
+
+
+# ------------------------------------------------------------------ the experts' levels and teaching, kept
+def decision_findings(course, script):
+    """MUST-FIX - the module against each topic's level and teaching as the experts saw them (pedagogy_review.py decided:
+    the proposal they took or left unanswered, or their own decision). The script carries them in "decided" - {topic:
+    {"level", "how", "screens"}} - word for word, with the screens that carry each one out: a topic missing there, a
+    decision changed since it was copied, or no screen of the topic named is a must-fix. Every question of a topic
+    together reaches its level (Create counts at Evaluate, as the Bloom map does); a topic the expert decided
+    themselves - kept as the old course, or set with Claude - is asked at no higher level than they decided."""
+    if not course or str(script.get("module")).lower() == "final":
+        return []
+    try:
+        rows = pedagogy_review.decided(course, script.get("module"))
+    except (OSError, ValueError):
+        return []
+    if not rows:
+        return []
+    lvl = lambda n: "%d %s" % (n, bloom_map.level_name(n, "en"))
+    have = script.get("decided") if isinstance(script.get("decided"), dict) else {}
+    screens = {s.get("id"): s for s in script.get("screens", [])}
+    found = []
+
+    def add(sid, key, **kw):
+        found.append({"where": place(script, sid) if sid else T(script, "s_the_module"), "screen": sid or "", "field": "decided",
+                      "level": FAIL, "rule": key, "detail": T(script, key, **kw), "fix": ""})
+
+    for d in rows:
+        t, how = d["id"], short(d["how"] or "-", 160)
+        mine = have.get(t) if isinstance(have.get(t), dict) else None
+        if mine is None:
+            add("", "d_not_taken", s=t, lvl=lvl(d["level"]), how=how)
+        elif mine.get("level") != d["level"] or " ".join(str(mine.get("how") or "").split()) != " ".join(d["how"].split()):
+            add("", "d_changed", s=t, lvl=lvl(d["level"]), how=how,
+                had="%s, \"%s\"" % (lvl(mine["level"]) if isinstance(mine.get("level"), int) and 1 <= mine["level"] <= 6 else "-",
+                                     short(str(mine.get("how") or "-"), 80)))
+        elif not [x for x in (mine.get("screens") or []) if x in screens and t in sub_ilos_of(screens[x])]:
+            add("", "d_no_screen", s=t, how=how)
+        qs = [q for q in script.get("screens", []) if q.get("kind") in TASKS and t in sub_ilos_of(q)]
+        got = [(q, bloom_map.task_level(mech(q), q.get("bloom"))["level"]) for q in qs]
+        if got and max(n for _, n in got) < min(d["level"], 5):
+            add("", "d_below", s=t, lvl=lvl(min(d["level"], 5)), got=lvl(max(n for _, n in got)))
+        if d["by"]:
+            for q, n in got:
+                if n > d["level"]:
+                    add(q.get("id"), "d_above", s=t, got=lvl(n), lvl=lvl(d["level"]), by=d["by"])
+    return found
 
 
 # ------------------------------------------------------------------ varied practical-activity formats (2.128.0, L68)
@@ -2381,7 +2429,11 @@ def bloom_of(course, script):
     rd = lambda n: load(workspace.claude_path(course, n)) if course and os.path.isfile(workspace.claude_path(course, n)) else None
     arch, prog = rd("architecture.json"), rd("programme.json")
     am = next((m for m in (arch or {}).get("modules", []) if str(m.get("module")) == str(script.get("module"))), None)
-    return bloom_map.module_map(script, am, prog, arch, mech=mech, where=lambda sid: place(script, sid))
+    try:
+        decided = {d["id"]: d["level"] for d in pedagogy_review.decided(course, script.get("module"))} if course else {}
+    except (OSError, ValueError):
+        decided = {}
+    return bloom_map.module_map(script, am, prog, arch, mech=mech, where=lambda sid: place(script, sid), decided=decided)
 
 
 # ------------------------------------------------------------------ the review page
@@ -3365,9 +3417,9 @@ def unattended_signer(course):
     rev = workspace.claude_path(course, "pedagogy_review.json")
     data = (load(rev) if os.path.isfile(rev) else {}) or {}
     by = (data.get("ready") or {}).get("by", "").strip()
-    rows, answered = unanswered(data)
-    # a Ready over rows nobody answered is not a review (GAS BASIC: Ready with 0 of 124 rows answered approved every script)
-    return "%s (Ready in editor)" % by if by and rows and not answered else None
+    # a row the expert left unanswered goes ahead as proposed - the editor says so beside Ready, and the script is held
+    # to that proposal like to any decision (decision_findings)
+    return "%s (Ready in editor)" % by if by else None
 
 
 def unanswered(rev):
@@ -3391,13 +3443,8 @@ def cmd_approve(course, module, by, despite=False):
         print("Not approved - an unattended run approves with --by \"%s\" only." % signer)
         return 1
     if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1" and not signer:
-        rp = workspace.claude_path(course, "pedagogy_review.json")
-        rows, left = unanswered(load(rp) if os.path.isfile(rp) else {})
-        why = ("the expert pressed Ready with %d of %d topic rows unanswered (%s%s) - a Ready is a review only when every row "
-               "has the expert's answer" % (len(left), rows, ", ".join(left[:6]), " ..." if len(left) > 6 else "")) if left else \
-            "nobody pressed Ready"
-        print("Not approved - an unattended run approves only with the expert's own Ready from the editor: %s. "
-              "Build --draft and say which scripts wait (script/GUIDE.md §4)." % why)
+        print("Not approved - an unattended run approves only with the expert's own Ready from the editor: nobody pressed "
+              "Ready. Build --draft and say which scripts wait (script/GUIDE.md §4).")
         return 1
     script = load(p["script"])
     if os.path.isfile(p["pending"]):
@@ -3435,6 +3482,12 @@ def cmd_approve(course, module, by, despite=False):
     save(p["script"], script)
     render(course, module, quiet=True)
     print("Module %s's script is approved by %s. The slides built from it must say exactly this (check_script_match.py)." % (script["module"], by))
+    if signer:
+        rp = workspace.claude_path(course, "pedagogy_review.json")
+        rows, left = unanswered(load(rp) if os.path.isfile(rp) else {})
+        if left:
+            print("  %d of %d topic rows the expert left unanswered went ahead as proposed (%s%s)."
+                  % (len(left), rows, ", ".join(left[:6]), " ..." if len(left) > 6 else ""))
     return 0
 
 
