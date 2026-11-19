@@ -94,10 +94,16 @@ DEFAULT_PASS = 70
 # explanation beside it (gb_answer.css data-pic="side"); a list of MANY rows or more to order, build or match has its
 # numbered places beside the cards (data-many) - eight rows needed a scroll to reach the cards at 1280 x 800
 SIDE_AR, MANY = 1.8, 6
+# 2.138.0 - five steps to put in order already ran the bank under the Check bar at 1024 x 768 (IT course M04 check m07: the
+# tray of actions was cut, two visible, and nothing showed it scrolled): an order of ORDER_MANY steps has its bank beside
+ORDER_MANY = 5
+# 2.138.0 - a labelled drawing (with its label rows) narrower than this puts its cards in a column beside it (gb_answer.css
+# data-pic="lab"): stacked above the cards it was only (100vh - 400px) tall - small, with tiny labels and long leaders
+LAB_SIDE_AR = 1.9
 
 
-def many(n, how="1"):
-    return ' data-many="%s"' % how if n >= MANY else ""
+def many(n, how="1", at=MANY):
+    return ' data-many="%s"' % how if n >= at else ""
 
 
 def ga_class(fig):
@@ -120,6 +126,10 @@ WORDS = {"en": {
     "symptoms": "What you notice", "fault_say": "Tap a part to check it. Then tap “This is the fault” on the part that is faulty.",
     "tap_to_check": "Tap to check", "is_fault": "This is the fault",
     "errors_say": "Tap every line that is wrong. Tap it again to take the mark off.",
+    # 2.138.0 - the line that says what to do on a drag task (IT course M02 q04 / check m02: nothing on screen said to drag)
+    "order_say": "Drag each card to its number. Or tap a card, then tap its number.",
+    "sort_say": "Drag each card into the box it belongs to. Or tap a card, then tap the box.",
+    "match_say": "Drag each card to its match. Or tap a card, then tap its place.",
     "plan_say": "Put the cards that belong into the plan, in order. Not every card belongs – leave those where they are.",
     "timeline_order": "1. Put the events in the order they happened.",
     "timeline_stop": "2. Now tap the event where it should have been stopped.",
@@ -806,6 +816,21 @@ def opt_buttons(sid, q, multi=False, cls="opts", pics=None):
     return out
 
 
+NUMBERED = re.compile(r"^(\d+)[.)]?\s+(\S.*)$")
+
+
+def unnumbered(words):
+    """{answer words: the words to show on its card} - 2.138.0. Answers written "1 Firewall", "2 Router" ... name the
+    drawing's numbered markers, which the task hides (data-task-hide): a card that said "5 Server" gave the order away
+    and its number was nowhere on the drawing (IT course M03 q02 / q09 / check m01). When EVERY answer starts with its own
+    number, the card says the words alone (its key is made from what it says, as the engine checks it; the place is
+    still found by the full answer)"""
+    found = [NUMBERED.match(t) for t in words]
+    if len(words) < 2 or not all(found) or len({m.group(1) for m in found}) != len(words):
+        return {}
+    return {t: m.group(2) for t, m in zip(words, found)}
+
+
 def chips(sid, items, places=None):
     """items: [(words, value)] - shuffled; places: {words: place} - a card that is right or wrong AND has a place
     (build the plan, the incident) carries the place in data-place (0 = it stays out)"""
@@ -1084,8 +1109,9 @@ def label_width_problems(places, vb, where):
 
 def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
     w = w or WORDS["en"]
+    en = WORDS["en"]
     sid, m = q["id"], cs.mech(q)
-    where = "%s (%s)" % (q.get("set") or "", sid)
+    where ="%s (%s)" % (q.get("set") or "", sid)
     out = ['  <section class="scr" data-script="%s" data-mech="%s"%s>' % (sid, m, "%s"), q_head(n, q)]
     extra = ""
     if m in ip.TYPES:                                   # 2.74.0 - true or false, a colleague, work it out, predict, explore, investigate, 3D
@@ -1166,6 +1192,8 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
             if wide:
                 fig, places = wide, placed(wide, [])
         vb = fig.vb if fig else None
+        if vb and vb[2] / vb[3] < LAB_SIDE_AR:                 # 2.138.0 - a drawing that is not wide: the cards beside it, so it can be bigger
+            extra += ' data-pic="lab"'
         auto = [p for p in places if not p["at"]]
         if auto and vb:
             label_boxes(auto, vb, probs, where)
@@ -1185,6 +1213,8 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
                 bh = 100.0 * BOX_PX / (vb[3] * ppu(vb)) if vb else 0.0
                 x1, y1 = bx + bw / 2, by + (bh if by < 50 else 0)
                 x2, y2 = p["box"][0] + p["box"][2] / 2, p["box"][1] + p["box"][3] / 2
+                if p["hand"] and bx <= x2 <= bx + bw and by <= y2 <= by + bh:
+                    continue                           # 2.138.0 - a box laid on its own part needs no leader (build sheet "label_bands": false)
                 out.append('        <line x1="%.2f" y1="%.2f" x2="%.2f" y2="%.2f" vector-effect="non-scaling-stroke"%s/>'
                            % (x1, y1, x2, y2, ' data-part="%s"' % a(p["id"]) if fig.kind == "kit" else ""))
             out.append("      </svg>")
@@ -1193,11 +1223,13 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
                        % (a(p["id"]), p["at"][0], p["at"][1], p["at"][2], 100.0 * BOX_PX / (vb[3] * ppu(vb)) if vb else 12))
         out.append("    </div></div>")
         out.append('    <div class="tray">')
-        out += chips(sid, [(p["t"], p["id"]) for p in places])
+        shown = unnumbered([p["t"] for p in places])        # the card's words (and so its key) without the hidden marker's number
+        out += chips(sid, [(shown.get(p["t"], p["t"]), p["id"]) for p in places])
         out.append("    </div>")
     elif m == "match":
         pairs = [[x.strip() for x in ln.split("=", 1)] for ln in cs.lines_of(q.get("answer")) if "=" in ln]
         extra = many(len(pairs))
+        out.append('    <p class="opts-say do">%s</p>' % e(w.get("match_say") or en["match_say"]))
         out.append('    <div class="rows">')
         for left, _ in pairs:
             out.append('      <div class="row"><div class="name" data-script-field="answer">%s</div>'
@@ -1211,6 +1243,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         for ln in cs.lines_of(q.get("answer")):
             g, _, rest = ln.partition(":")
             groups.append((g.strip(), [i.strip() for i in rest.split(";") if i.strip()]))
+        out.append('    <p class="opts-say do">%s</p>' % e(w.get("sort_say") or en["sort_say"]))
         out.append('    <div class="tray">')
         out += chips(sid, [(i, g) for g, its in groups for i in its])
         out.append("    </div>")
@@ -1221,7 +1254,8 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out.append("    </div>")
     elif m == "order":
         items, _ = cs.answer_items(q)
-        extra = many(len(items))
+        extra = many(len(items), at=ORDER_MANY)
+        out.append('    <p class="opts-say do">%s</p>' % e(w.get("order_say") or en["order_say"]))
         out.append('    <div class="rows order">')
         for i in range(1, len(items) + 1):
             out.append('      <div class="row"><div class="name">%d</div><div class="zone slot" data-cap="1" data-val="%d"></div></div>' % (i, i))
@@ -1433,7 +1467,7 @@ def group_screen(groups, w):
         '  <!-- which group: the trainee sees the questions for everyone and those of their group -->',
         '  <section class="scr th-w" id="grpScr">',
         '    <h1 class="q"><span class="stem">%s</span></h1>' % e(w["grp_ask"]),
-        '    <div class="grp">'] + [
+        '    <div class="grp-picks">'] + [
         '      <button type="button" class="grp-pick" data-pick="%s"><span class="grp-dot"></span><span class="grp-name">%s</span></button>'
         % (a(g), e(name)) for g, name in groups.items()] + [
         "    </div>",
@@ -1545,7 +1579,7 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
         try_tablet = first_set and not is_check
     # a drawing labelled on this page gets its label bands on every question of the page - it is in the page once
     figs, sections = {"_bands": {((sheet.get(q["id"]) or {}).get("figure") or "").strip() for q in qs
-                                 if cs.mech(q) == "label_diagram"}}, []
+                                 if cs.mech(q) == "label_diagram" and (sheet.get(q["id"]) or {}).get("label_bands") is not False}}, []
     last = "th-w"                                       # the opening screen is white
     for n, q in enumerate(qs, 1):
         last = theme_of(q, sheet.get(q["id"]) or {}, last, probs)

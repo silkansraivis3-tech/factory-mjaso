@@ -17,7 +17,7 @@
      tips past what it draws at rest */
   var CROPS = {};
   ('chart curve point span trace region callout cycle gantt matrix node arrow token bars pyramid events compare ' +
-   'person track pairs compartments').split(' ').forEach(function (t) { CROPS[t] = 1; });
+   'person track pairs compartments email nest sea').split(' ').forEach(function (t) { CROPS[t] = 1; });
   try { reduce = !!(w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e0) { reduce = false; }
 
   /* ------------------------------------------------------------------------------------------------ helpers */
@@ -1377,6 +1377,9 @@
       var sy = A.y + Math.sign(dy || 1) * A.h / 2, ey = B.y - Math.sign(dy || 1) * (B.h / 2 + 6);
       ps = Math.abs(dx) < 4 ? [[A.x, sy], [B.x, ey]] : (p.via === 'v' ? [[A.x, sy], [A.x, B.y], [B.x - Math.sign(dx) * (B.w / 2 + 6), B.y]] : [[A.x, sy], [A.x, (sy + ey) / 2], [B.x, (sy + ey) / 2], [B.x, ey]]);
     }
+    /* 2.137.2 - "lit": a route or a cable the step names glows amber under the arrow (a token's dot alone was "only one
+       tiny dot", IT course M03 s03 walk review) */
+    var glow = p.lit != null ? el('path', { d: poly(ps), 'class': 'k2-arrow-lit', opacity: 0, 'data-may-overlap': '' }, f.L.back) : null;
     var line = el('path', { d: poly(ps), 'class': 'k2-arrow', pathLength: 1, 'stroke-dasharray': '0 1' }, f.L.back);
     var e = ps[ps.length - 1], b = ps[ps.length - 2], ang = Math.atan2(e[1] - b[1], e[0] - b[0]) * 180 / Math.PI;
     /* 2.137.0 - the tip stops 9 units short of the box (it reached 4 past the line's end, into a box drawn without the old
@@ -1396,6 +1399,7 @@
       draw: function () {
         var k = clamp(f.get(p.draw, 1), 0, 1);
         line.setAttribute('stroke-dasharray', k.toFixed(4) + ' 1'); setOp(head, clamp(k * 8 - 7, 0, 1));
+        if (glow) { setOp(glow, clamp(f.get(p.lit, 0), 0, 1) * k); }
       }
     };
   });
@@ -1722,8 +1726,10 @@
     f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
     return {
       draw: function () {
-        var at = f.get(p.at, R.length);
-        rows.forEach(function (r, i) { var k = clamp(at - i, 0, 1), e = k * k * (3 - 2 * k); setOp(r.g, e); r.g.setAttribute('transform', 'translate(0 ' + ((1 - e) * 16).toFixed(1) + ')'); });
+        /* 2.137.1 - a row not reached yet is faint ("dim", 0.3), never missing: a table started full so the frame was not
+           blank, and the first Next then took the rows away (IT course M05 s07, the walk review) */
+        var at = f.get(p.at, R.length), dim = p.dim != null ? p.dim : 0.3;
+        rows.forEach(function (r, i) { var k = clamp(at - i, 0, 1), e = k * k * (3 - 2 * k); setOp(r.g, dim + (1 - dim) * e); r.g.setAttribute('transform', 'translate(0 ' + ((1 - e) * 8).toFixed(1) + ')'); });
       }
     };
   });
@@ -1784,6 +1790,7 @@
     return {
       draw: function () {
         var at = f.get(p.at, 0);
+        if (p.show != null) { var sh = clamp(f.get(p.show, 1), 0, 1); setOp(g, sh); setOp(lineG, sh); }   /* 2.137.2 - an answer's route */
         stops.forEach(function (s, i) {
           var k = i + 1, cur = clamp(1 - Math.abs(at - k), 0, 1), st = at >= k + 0.5 ? 'done' : (at > k - 0.5 ? 'now' : 'next');
           if (s.st !== st) {
@@ -1900,6 +1907,166 @@
           dots.forEach(function (d0) { d0.c.setAttribute('cx', (rooms[k - 1].x + d0.q[0] * rw).toFixed(1)); d0.c.setAttribute('cy', (ry + d0.q[1] * rhh).toFixed(1)); });
         }
         setOp(threat, k >= 1 ? clamp(1 - Math.abs(h - k) * 2, 0, 1) : 0);
+      }
+    };
+  });
+
+  /* sea - craft drawn where they work: a cross-section of sky, surface and water; boats and ships on the surface line,
+     underwater vehicles below it, a tether from a vehicle to the craft its pilot is on. 2.137.2 - IT course M06 s02 (five
+     kinds of craft were five boxes; the owner: "if there is no kit for it then make a new element for it"). {x, y, w, h,
+     surface: 0.35 (the waterline, a share of h), craft: [{id, kind: "boat" | "sail" | "ship" | "rov" | "auv", at: 0..1
+     (across), depth: 0..1 (under water; 0 on the surface), name, sub, tether: id, show, lit}]} */
+  define('sea', function (f, p) {
+    var x0 = p.x, y0 = p.y, W = p.w, H = p.h, sy = y0 + H * (p.surface || 0.35);
+    var back = el('g', {}, f.L.back), g = el('g', {}, f.L.hero), fr = el('g', {}, f.L.front);
+    f.fills(x0, y0, W, H);
+    el('rect', { x: x0, y: y0, width: W, height: sy - y0, rx: 14, 'class': 'k2-sea-sky' }, back);
+    el('rect', { x: x0, y: sy, width: W, height: y0 + H - sy, rx: 14, 'class': 'k2-sea-water' }, back);
+    var wave = 'M' + x0 + ' ' + sy;
+    for (var wx = x0; wx < x0 + W; wx += 24) { wave += ' q6 -4 12 0 q6 4 12 0'; }
+    el('path', { d: wave, 'class': 'k2-sea-line' }, back);
+    var pos = {}, items = (p.craft || []).map(function (c) {
+      var cx = x0 + W * (c.at != null ? c.at : 0.5), cy = c.depth ? sy + (y0 + H - sy) * c.depth : sy;
+      pos[c.id] = [cx, cy];
+      var cg = el('g', {}, g), inner = el('g', {}, cg), k = c.kind || 'boat', body;
+      var ring = null;
+      if (k === 'boat' || k === 'sail' || k === 'ship') {
+        var hw = k === 'ship' ? 62 : 34;
+        body = el('path', { d: 'M' + (cx - hw) + ' ' + (cy - 12) + ' H' + (cx + hw) + ' L' + (cx + hw * 0.72) + ' ' + (cy + 10) + ' H' + (cx - hw * 0.72) + ' Z', 'class': 'k2-sea-hull' }, inner);
+        if (k === 'sail') { el('path', { d: 'M' + cx + ' ' + (cy - 14) + ' V' + (cy - 78) + ' L' + (cx + 30) + ' ' + (cy - 20) + ' Z', 'class': 'k2-sea-sail' }, inner); }
+        else if (k === 'ship') { el('rect', { x: cx + 14, y: cy - 40, width: 34, height: 28, rx: 3, 'class': 'k2-sea-house' }, inner); el('rect', { x: cx - 40, y: cy - 26, width: 46, height: 14, rx: 2, 'class': 'k2-sea-cargo' }, inner); }
+        else { el('rect', { x: cx - 12, y: cy - 30, width: 26, height: 18, rx: 3, 'class': 'k2-sea-house' }, inner); }
+        ring = el('rect', { x: cx - hw - 10, y: cy - (k === 'sail' ? 90 : 52), width: 2 * hw + 20, height: (k === 'sail' ? 110 : 72), rx: 14, 'class': 'k2-sea-now', opacity: 0, 'data-may-overlap': '' }, fr);
+      } else if (k === 'rov') {
+        body = el('rect', { x: cx - 30, y: cy - 20, width: 60, height: 40, rx: 8, 'class': 'k2-sea-rov' }, inner);
+        [-22, 22].forEach(function (dx) { el('circle', { cx: cx + dx, cy: cy + 22, r: 7, 'class': 'k2-sea-thr' }, inner); });
+        el('circle', { cx: cx, cy: cy, r: 7, 'class': 'k2-sea-eye' }, inner);
+        ring = el('rect', { x: cx - 42, y: cy - 32, width: 84, height: 72, rx: 14, 'class': 'k2-sea-now', opacity: 0, 'data-may-overlap': '' }, fr);
+      } else {
+        body = el('path', { d: 'M' + (cx - 52) + ' ' + cy + ' Q' + (cx - 40) + ' ' + (cy - 15) + ' ' + (cx + 10) + ' ' + (cy - 15) + ' H' + (cx + 30) + ' Q' + (cx + 50) + ' ' + (cy - 15) + ' ' + (cx + 52) + ' ' + cy + ' Q' + (cx + 50) + ' ' + (cy + 15) + ' ' + (cx + 30) + ' ' + (cy + 15) + ' H' + (cx + 10) + ' Q' + (cx - 40) + ' ' + (cy + 15) + ' ' + (cx - 52) + ' ' + cy + ' Z', 'class': 'k2-sea-auv' }, inner);
+        el('path', { d: 'M' + (cx - 46) + ' ' + cy + ' L' + (cx - 62) + ' ' + (cy - 14) + ' V' + (cy + 14) + ' Z', 'class': 'k2-sea-auv' }, inner);
+        ring = el('rect', { x: cx - 70, y: cy - 26, width: 134, height: 52, rx: 14, 'class': 'k2-sea-now', opacity: 0, 'data-may-overlap': '' }, fr);
+      }
+      var above = !c.depth, ly = above ? y0 + 42 : cy + 58;            /* surface craft: their words high in the sky, clear of masts */
+      var nm = el('text', { x: cx, y: ly, 'text-anchor': 'middle', 'class': 'k2-t-lbl k2-sea-name' }, fr, c.name || '');
+      var sb = c.sub ? el('text', { 'text-anchor': 'middle', 'class': 'k2-t-sub k2-sea-sub' }, fr) : null;
+      return { c: c, cg: cg, inner: inner, ring: ring, nm: nm, sb: sb, cx: cx, ly: ly, above: above };
+    });
+    (p.craft || []).forEach(function (c) {
+      if (c.tether && pos[c.tether] && pos[c.id]) {
+        var a = pos[c.id], b = pos[c.tether];
+        el('path', { d: 'M' + a[0] + ' ' + (a[1] - 20) + ' C' + a[0] + ' ' + ((a[1] + b[1]) / 2) + ' ' + (b[0] - 30) + ' ' + ((a[1] + b[1]) / 2) + ' ' + b[0] + ' ' + (b[1] + 8), 'class': 'k2-sea-tether', 'data-may-cross': '' }, back);
+      }
+    });
+    var room = Math.min(150, W / Math.max(1, items.filter(function (o) { return o.above; }).length) - 8);
+    (f.fits = f.fits || []).push(function () {
+      items.forEach(function (o) {
+        wrapText(o.nm, o.c.name || '', o.cx, o.ly, o.above ? room : 200, 44);
+        if (o.sb) { wrapText(o.sb, o.c.sub, o.cx, o.ly + 40, o.above ? room : 220, 50); }
+      });
+    });
+    f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
+    return {
+      draw: function () {
+        items.forEach(function (o) {
+          var sh = clamp(f.get(o.c.show, 1), 0, 1);
+          setOp(o.cg, sh); setOp(o.nm, sh); if (o.sb) { setOp(o.sb, sh); }
+          setOp(o.ring, clamp(f.get(o.c.lit, 0), 0, 1));
+        });
+      }
+    };
+  });
+
+  /* nest - things inside things (AI > machine learning > generative AI > LLM; a ship > a system > a part): bold coloured
+     layers one inside the other, each with its name and meaning in its own band; a step opens the next layer in, the layer
+     just named framed amber, the ones not yet named a faint outline. 2.137.2 - IT course M05 s01 ("needs to be different,
+     looks very boring": four dim dotted circles with their words outside). {x, y, w, h, levels: [{text, sub, cat}], at:
+     "@k" (layers shown, the k-th the current), chip: {text, show} (an example in the innermost layer)} */
+  define('nest', function (f, p) {
+    var L = p.levels || [], n = Math.max(1, L.length), x0 = p.x, y0 = p.y, W = p.w, H = p.h;
+    var padX = Math.min(28, W * 0.06), band = Math.min(96, (H - 90) / n), g = el('g', {}, f.L.hero), fr = el('g', {}, f.L.front);
+    f.fills(x0, y0, W, H);
+    var lays = L.map(function (lv, i) {
+      var x = x0 + i * padX, y = y0 + i * band, w = W - 2 * i * padX, h = H - i * band - i * padX * 0.6;
+      var lg = el('g', {}, g);
+      var ghost = el('rect', { x: x, y: y, width: w, height: h, rx: 18, 'class': 'k2-nest-ghost' }, lg);
+      var body = el('rect', { x: x, y: y, width: w, height: h, rx: 18, fill: f.url('solid-cat-' + (lv.cat || (i % 5) + 1)) }, lg);
+      var ring = el('rect', { x: x - 5, y: y - 5, width: w + 10, height: h + 10, rx: 22, 'class': 'k2-nest-now', opacity: 0, 'data-may-overlap': '' }, fr);
+      /* layers sit inside each other on purpose: not "boxes on each other" for the overlap check, their words wrapped to
+         the layer's own width */
+      body.setAttribute('data-may-overlap', ''); ghost.setAttribute('data-may-overlap', '');
+      var t = el('text', { x: x + 22, 'class': 'k2-t-oncat k2-t-big' }, lg);
+      var s = lv.sub ? el('text', { x: x + 22, 'class': 'k2-t-oncat-sub' }, lg) : null;
+      return { body: body, t: t, s: s, ring: ring, ghost: ghost, x: x, y: y, w: w, h: h, lv: lv };
+    });
+    (f.fits = f.fits || []).push(function () {
+      lays.forEach(function (o) {
+        wrapText(o.t, o.lv.text || '', o.x + 22, o.y + 30, o.w - 44, band * 0.45);
+        if (o.s) { wrapText(o.s, o.lv.sub, o.x + 22, o.y + band * 0.68, o.w - 44, band * 0.4); }
+      });
+    });
+    var chip = null;
+    if (p.chip && lays.length) {
+      var last = lays[lays.length - 1], cw = Math.min(last.w - 40, 220), cx = last.x + last.w / 2, cy = last.y + band + (last.h - band) / 2;
+      chip = el('g', { opacity: 0 }, fr);
+      el('rect', { x: cx - cw / 2, y: cy - 24, width: cw, height: 48, rx: 24, 'class': 'k2-nest-chip' }, chip);
+      el('text', { x: cx, y: cy + 7, 'text-anchor': 'middle', 'class': 'k2-t-lbl k2-nest-chipt' }, chip, p.chip.text || '');
+    }
+    f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
+    return {
+      draw: function () {
+        var at = f.get(p.at, n);
+        lays.forEach(function (o, i) {
+          var k = clamp(at - i, 0, 1);
+          setOp(o.body, k); setOp(o.t, k); if (o.s) { setOp(o.s, k); }
+          setOp(o.ghost, 1 - k);
+          setOp(o.ring, clamp(1 - Math.abs(at - (i + 1)), 0, 1));
+        });
+        if (chip) { setOp(chip, clamp(f.get(p.chip.show, 0), 0, 1)); }
+      }
+    };
+  });
+
+  /* email - an e-mail as it looks on the screen: a window, who it is from, its subject, a line or two of its text and its
+     link - the button the reader sees and the real address under it; "flag" rings the address red with its words (a
+     phishing e-mail's tell). 2.137.2 - IT course M04 s13 ("this looks weird": a two-column table half empty). {x, y, w, h,
+     from, subject, lines: [text], link: {text, addr}, flag: "@f", flagText, show} */
+  define('email', function (f, p) {
+    var x0 = p.x, y0 = p.y, W = p.w, H = p.h, g = el('g', {}, f.L.hero), fr = el('g', {}, f.L.front), bar = 34;
+    f.fills(x0, y0, W, H);
+    var win = el('rect', { x: x0, y: y0, width: W, height: H, rx: 14, 'class': 'k2-mail-win' }, g);
+    el('path', { d: 'M' + x0 + ' ' + (y0 + 14) + ' Q' + x0 + ' ' + y0 + ' ' + (x0 + 14) + ' ' + y0 + ' H' + (x0 + W - 14) + ' Q' + (x0 + W) + ' ' + y0 + ' ' + (x0 + W) + ' ' + (y0 + 14) + ' V' + (y0 + bar) + ' H' + x0 + ' Z', 'class': 'k2-mail-bar' }, g);
+    [0, 1, 2].forEach(function (i) { el('circle', { cx: x0 + 20 + i * 16, cy: y0 + bar / 2, r: 5, 'class': 'k2-mail-dot' }, g); });
+    holds(g, win);
+    var rows = [], y = y0 + bar + 30;
+    var add = function (label, text, cls) {
+      var t = el('text', { x: x0 + 18, y: y, 'class': cls }, g);
+      if (label) { el('tspan', { 'class': 'k2-mail-key' }, t, label + '  '); }
+      el('tspan', {}, t, text);
+      rows.push(t); y += 34;
+    };
+    if (p.from) { add('From', p.from, 'k2-t-sub'); }
+    if (p.subject) { add('Subject', p.subject, 'k2-t-lbl'); }
+    el('line', { x1: x0 + 14, x2: x0 + W - 14, y1: y - 18, y2: y - 18, 'class': 'k2-mail-rule' }, g);
+    y += 4;
+    var body = (p.lines || []).map(function (s) { var t = el('text', { 'class': 'k2-t-sub' }, g); var o = { t: t, s: s, y: y }; y += 50; return o; });
+    var lk = p.link || {}, bw = Math.min(W - 36, 280), by = y0 + H - (p.flagText ? 146 : 118);
+    var btn = el('rect', { x: x0 + 18, y: by, width: bw, height: 46, rx: 10, 'class': 'k2-mail-btn' }, g);
+    var bt = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-oncat' }, g);
+    var addr = el('text', { x: x0 + 18, y: by + 80, 'class': 'k2-t-sub k2-mail-addr' }, fr, lk.addr || '');
+    var ring = el('rect', { x: x0 + 8, y: by + 56, width: W - 16, height: 38, rx: 10, 'class': 'k2-mail-flag', opacity: 0, 'data-may-overlap': '' }, fr);
+    var ft = p.flagText ? el('text', { x: x0 + 18, y: by + 122, 'class': 'k2-t-lbl k2-mail-flagt', opacity: 0 }, fr, p.flagText) : null;   /* its own line, under the address */
+    (f.fits = f.fits || []).push(function () {
+      body.forEach(function (o) { wrapText(o.t, o.s, x0 + 18 + (W - 36) / 2, o.y, W - 36, 46); o.t.setAttribute('text-anchor', 'middle'); });
+      wrapText(bt, lk.text || '', x0 + 18 + bw / 2, by + 23, bw - 20, 40);
+    });
+    f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
+    return {
+      draw: function () {
+        var fl = clamp(f.get(p.flag, 0), 0, 1);
+        setOp(ring, fl); if (ft) { setOp(ft, fl); }
+        addr.classList.toggle('k2-mail-bad', fl > 0.5);
+        if (p.show != null) { setOp(g, clamp(f.get(p.show, 1), 0, 1)); }
       }
     };
   });

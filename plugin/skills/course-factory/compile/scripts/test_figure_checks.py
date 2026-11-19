@@ -56,7 +56,8 @@ def main():
         check("a kit figure is not covered: the answer is a card under it (%s)" % fig[:30],
               "lt-ans-over" not in out and 'class="lt-scol">' + fig in out and "lt-ans-under" in out and "Dock hire 35 %" in out)
     photo = '<figure class="lt-pic"><img src="a.jpg"></figure>'
-    check("a photograph still gets the answer over it", "lt-ans-over" in cm.answer_over(photo, s))
+    check("a photograph gets the answer in a card under it too (2.137.2), never over it",
+          "lt-ans-under" in cm.answer_over(photo, s) and "lt-ans-over" not in cm.answer_over(photo, s))
 
     print("-- a drawing that never moves")
     still = spec([{"title": "a", "line": 1, "play": [["C", 0, 200]]}, {"title": "b", "line": 2, "play": [["C", 0, 200]]}])

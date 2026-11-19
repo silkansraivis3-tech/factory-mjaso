@@ -6073,6 +6073,37 @@ KIT.define('tree', function (fig, part, g, p) {
              { title: 'The deck team reports to the chief officer', play: [['T', 5, 600]] } ] }
 });
 /* end kit-part */
+/* kit-part: document */
+KIT.define('document', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 46, ht = p.h || 58, f = Math.min(16, w * 0.3), x0 = -w / 2, y0 = -ht / 2, i;
+  /* 2.137.1: a saved file - a sheet with its corner folded, lines of text, and its type on a tag (IT course M01 s08: "there
+     is nothing for file? why?" - the chain's last box had no picture) */
+  h.el('path', { d: 'M' + x0 + ' ' + y0 + ' H' + (x0 + w - f) + ' L' + (x0 + w) + ' ' + (y0 + f) + ' V' + (y0 + ht) + ' H' + x0 + ' Z', 'class': 'kit-doc-sheet' }, g);
+  h.el('path', { d: 'M' + (x0 + w - f) + ' ' + y0 + ' V' + (y0 + f) + ' H' + (x0 + w), 'class': 'kit-doc-fold', 'data-no-contain': '' }, g);
+  for (i = 0; i < (p.ext ? 3 : 4); i++) {                          /* the lines stop above the type's tag */
+    var ly = y0 + f + 6 + i * ((ht - f - 12 - (p.ext ? 24 : 0)) / (p.ext ? 3 : 4));
+    h.el('line', { x1: x0 + 7, x2: x0 + w - (i === 3 ? 18 : 7), y1: ly.toFixed(1), y2: ly.toFixed(1), 'class': 'kit-doc-line', 'data-no-contain': '' }, g);
+  }
+  if (p.ext) {                                                     /* the type on a tag across the sheet's foot, inside it */
+    var tw = w - 8, th = 20;
+    h.el('rect', { x: (x0 + 4).toFixed(1), y: (y0 + ht - th - 5).toFixed(1), width: tw, height: th, rx: 4, 'class': 'kit-doc-tag', 'data-no-contain': '' }, g);
+    h.el('text', { x: '0', y: (y0 + ht - 10).toFixed(1), 'text-anchor': 'middle', 'class': 'kit-doc-ext', 'data-no-contain': '' }, g, String(p.ext));
+  }
+  part.render = function () {};
+}, {
+  family: 'it',
+  status: 'kit', merged_from: 'Information Technology M01',
+  course: 'Information Technology', module: 'M01', made: '2026-11-19',
+  look: 'equipment',
+  why: 'A saved file at the end of a data chain (sensor, signal, message, screen, file): the sheet says "a file", the tag its type (CSV, PDF, XLSX)',
+  value: 'none - a still part; options: w, h, ext (the file type on its tag)',
+  css: '.kit-doc-sheet{fill:var(--txt-d);stroke:var(--dim-d);stroke-width:1.5;stroke-linejoin:round}' +
+    '.kit-doc-fold{fill:var(--dim-d);stroke:var(--dim-d);stroke-width:1.2;stroke-linejoin:round}' +
+    '.kit-doc-line{stroke:var(--deep);stroke-width:2.5;stroke-linecap:round;opacity:.45}' +
+    '.kit-doc-tag{fill:var(--blue)}' +
+    '.kit-doc-ext{fill:var(--on-blue,#04263A);font-size:15px;font-weight:800;letter-spacing:.04em}'
+});
+/* end kit-part */
 /* kit-part: lamp */
 KIT.define('lamp', function (fig, part, g, p) {
   var h = KIT.h, ex = !!p.ex, cy = 22, r0 = ex ? 40 : 25, i;

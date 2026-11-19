@@ -329,6 +329,7 @@ var GBZoom = (function (w, d) {
   var TAPS = ".hot,.zone,.lbox,[data-zone],[data-key],.chip,.opt,.ff-part,.lbl,.kit-lbl,text,button,label";
   function placeCorner(f, b) {
     var R = f.getBoundingClientRect(), S = 48, best = null, things = [];
+    var sc0 = closest(f, ".scr"), qh = sc0 && sc0.querySelector(".q");
     if (!R.width || !R.height) { return; }
     [].forEach.call(f.querySelectorAll(TAPS), function (x) {
       if (x === b || b.contains(x)) { return; }
@@ -345,6 +346,12 @@ var GBZoom = (function (w, d) {
         gap = Math.min(gap, Math.sqrt(dx * dx + dy * dy));
       });
       if (k >= 4) { hit += 0.5; }                        /* outside the picture only when no corner inside is free */
+      /* 2.138.0 (IT course M06 q02) - and never on the question's own words: with every corner under a tap area the
+         button rose out of the top edge onto the end of the question line; it goes below the picture then */
+      if (k >= 4 && qh) {
+        var qr = qh.getBoundingClientRect();
+        if (qr.width && x < qr.right && x + S > qr.left && y < qr.bottom && y + S > qr.top) { hit += 2; }
+      }
       if (!best || hit < best.hit || (hit === best.hit && gap > best.gap + 0.5)) { best = { c: c, hit: hit, gap: gap }; }
     });
     b.style.top = b.style.bottom = b.style.left = b.style.right = "auto";

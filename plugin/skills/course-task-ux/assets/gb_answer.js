@@ -918,7 +918,11 @@
         /* the verdict above the board: scroll down as far as keeps the verdict under the top bar, so as much of the board
            as fits - its last group or line too, where it fits - sits above the dock, not under it */
         var end = q.mech === 'categorise' ? $('.grps', q.sec) : cg;
-        bring(end || q.why, q.why);
+        /* 2.138.0 - and when the question's heading too fits above the dock with the board, the heading stays in sight:
+           the page was scrolled to the verdict and cut the heading under the top bar (IT course M02 check m02 / m06) */
+        var hd = $('.q', q.sec), bd = band(), from = q.why;
+        if (hd && end && end.getBoundingClientRect().bottom - hd.getBoundingClientRect().top <= bd.bot - bd.top) { from = hd; }
+        bring(end || q.why, from);
       } else { bring(q.why, null); }
     }
   }

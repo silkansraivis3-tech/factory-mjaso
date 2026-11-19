@@ -171,6 +171,7 @@
 .k2-light [data-k2-holds] > .k2-outline-s{stroke:rgba(16,32,64,.16);stroke-width:2px}
 .k2-light .k2-lit{stroke:var(--k2-now);stroke-width:10}
 .k2-light .k2-arrow{stroke:#1F3A68;stroke-width:4.5}.k2-light .k2-arrow-head{fill:#1F3A68}
+.k2-arrow-lit{fill:none;stroke:var(--k2-now);stroke-width:14;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:.55}
 .k2-light .k2-edge{stroke-opacity:.3}
 .k2-track-line{fill:none;stroke:var(--k2-tr-line);stroke-width:6;stroke-linecap:round}
 .k2-track-loop{fill:none;stroke:var(--k2-tr-line);stroke-width:4.5;stroke-dasharray:11 10;stroke-linecap:round}.k2-track-loop-head{fill:var(--k2-tr-line)}
@@ -188,12 +189,41 @@
 .k2-threat{fill:#FF4D3D;stroke:#FFFFFF;stroke-width:2.5}
 .k2-aerial{fill:none;stroke:var(--k2-now);stroke-width:4;stroke-linecap:round}
 .k2-light .k2-t-amber{fill:var(--k2-now-ink)}
+/* 2.137.2 - craft at sea, drawn where they work */
+.k2-sea-sky{fill:#EAF3FB}.k2-sea-water{fill:#BFDDF6}
+.k2-sea-line{fill:none;stroke:#1C7ED6;stroke-width:3;stroke-linecap:round}
+.k2-sea-hull{fill:#1F3A68}.k2-sea-house{fill:#FFFFFF;stroke:#1F3A68;stroke-width:2.5}.k2-sea-cargo{fill:#C93A6B}
+.k2-sea-sail{fill:#FFFFFF;stroke:#1F3A68;stroke-width:2.5;stroke-linejoin:round}
+.k2-sea-rov{fill:#F08C00;stroke:#1F3A68;stroke-width:2.5}.k2-sea-thr{fill:#1F3A68}.k2-sea-eye{fill:#FFFFFF;stroke:#1F3A68;stroke-width:2}
+.k2-sea-auv{fill:#F5C400;stroke:#1F3A68;stroke-width:2.5;stroke-linejoin:round}
+.k2-sea-tether{fill:none;stroke:#1F3A68;stroke-width:3;stroke-dasharray:2 6;stroke-linecap:round}
+.k2-sea-now{fill:none;stroke:var(--k2-now);stroke-width:4}
+.k2-sea-name{fill:#1F3A68}.k2-sea-sub{fill:var(--k2-dim)}
+/* 2.137.2 - things inside things */
+.k2-nest-ghost{fill:none;stroke:rgba(16,32,64,.22);stroke-width:2.5;stroke-dasharray:8 7}
+.k2-nest-now{fill:none;stroke:var(--k2-now);stroke-width:5}
+.k2-nest-chip{fill:#FFFFFF;stroke:var(--k2-now);stroke-width:3}
+.k2-nest-chipt{fill:#1F3A68}
+/* 2.137.2 - an e-mail on the screen */
+.k2-mail-win{fill:#FFFFFF;stroke:rgba(16,32,64,.18);stroke-width:2}
+.k2-mail-bar{fill:#1F3A68}.k2-mail-dot{fill:#FFFFFF;opacity:.55}
+.k2-mail-key{font-weight:800;fill:var(--k2-faint)}
+.k2-mail-rule{stroke:rgba(16,32,64,.14);stroke-width:2}
+.k2-mail-btn{fill:#1C7ED6}
+.k2-mail-addr{font-family:Consolas,"Courier New",monospace;fill:var(--k2-dim)}
+.k2-mail-addr.k2-mail-bad{fill:#C2362B;font-weight:800}
+.k2-mail-flag{fill:rgba(229,72,59,.08);stroke:#E5483B;stroke-width:3.5}
+.k2-mail-flagt{fill:#C2362B}
 /* the light look's type is about a quarter larger - read from the back of a classroom (a reviewer measured the first
    light drawings at 14-15 px on a 1280 x 800 projector: "everything is 30-50 % too small") */
 .kit2d-fig .k2-light .k2-t-lbl,.kit2d-fig .k2-light .k2-t-oncat{font-size:calc(21px * var(--k2-up,1))}
 .kit2d-fig .k2-light .k2-t-sub,.kit2d-fig .k2-light .k2-t-oncat-sub{font-size:calc(18px * var(--k2-up,1))}
 .kit2d-fig .k2-light .k2-t-tick,.kit2d-fig .k2-light .k2-t-axis,.kit2d-fig .k2-light .k2-t-name{font-size:calc(17px * var(--k2-up,1))}
 .kit2d-fig .k2-light .k2-t-note{font-size:calc(19px * var(--k2-up,1))}
+/* every type of the light deck look is at least 17 px: the scale-up is worked out from 17 (a 14 px bubble drew at 10.4 px on
+   a 1024 x 768 screen, IT course M03 s15) */
+.kit2d-fig .k2-light .k2-t-face,.kit2d-fig .k2-light .k2-t-tag{font-size:calc(18px * var(--k2-up,1))}
+.kit2d-fig .k2-light .k2-t-inbar{font-size:calc(17px * var(--k2-up,1))}
 .kit2d-fig .k2-light .k2-t-big{font-size:calc(24px * var(--k2-up,1))}
 .kit2d-fig .k2-light .k2-track-lab-now{font-size:calc(24px * var(--k2-up,1))}
 

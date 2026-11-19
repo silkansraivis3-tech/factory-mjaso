@@ -2729,19 +2729,28 @@ def carousel_figure(fig, cards):
 
 
 def photo_points(b, nlines, key, probs, where, z=False):
-    """the build sheet's "spots" {line: [x, y]} or "zoom" {line: [x, y, scale]} in the photograph's own pixels, checked"""
+    """the build sheet's "spots" {line: [x, y]} or "zoom" {line: [x, y, scale]} in the photograph's own pixels, checked.
+    2.137.2 - a zoom may give a 4th number, the ring's width in the photograph's pixels, so the ring holds the whole part
+    (Aleksis, IT course M01 s03: "some of the circles dont circle the entire thing" - a fixed ring sat between two
+    sockets); without it the ring keeps its fixed size"""
     out = {}
     for k, v in (b.get(key) or {}).items():
         try:
             i, v = int(k), [float(x) for x in v]
         except (TypeError, ValueError):
             i, v = 0, []
-        if not 1 <= i <= nlines or len(v) != (3 if z else 2) or (z and not 1 <= v[2] <= 4):
+        if not 1 <= i <= nlines or len(v) not in ((3, 4, 5) if z else (2,)) or (z and not 1 <= v[2] <= 4):
             probs.append("%s: \"%s\" %s: %s - give a line number of the slide and %s in the photograph's own pixels"
-                         % (where, key, k, v, "[x, y, scale 1-4]" if z else "[x, y]"))
+                         % (where, key, k, v, "[x, y, scale 1-4], + the ring's width, + its height (a box)" if z else "[x, y]"))
             continue
         out[i] = v
     return out
+
+
+def zoom_mark(v):
+    """a zoom point on its line: where (x, y), how close (z) and, when given, the ring's width (r) - photograph pixels"""
+    return (' data-x="%g" data-y="%g" data-z="%g"' % tuple(v[:3]) + (' data-r="%g"' % v[3] if len(v) > 3 else "")
+            + (' data-rh="%g"' % v[4] if len(v) > 4 else ""))
 
 
 # The information decides the slide: a slide's own approved fields say what it holds - a claim
@@ -2845,13 +2854,11 @@ def answer_over(side, s):
     added under them)"""
     if not side or not (s.get("ask") and s.get("reveal")):
         return side
-    if re.search(r'\bdata-kit(?:2d|3d)?[="]', side):      # 2.115.0 - the drawing shows the answer's step; the answer's words open
-        card = '<div class="lt-ans-under" data-script-ignore>%s</div>' % "".join(      # in a card under it, never over it
-            "<p>%s</p>" % e(x) for x in cs.lines_of(s.get("reveal")))
-        return '<div class="lt-scol">%s%s</div>' % (side, card)
-    i = side.rfind("</")
-    panel = '<div class="lt-ans-over" data-script-ignore>%s</div>' % "".join("<p>%s</p>" % e(x) for x in cs.lines_of(s.get("reveal")))
-    return side[:i] + panel + side[i:]
+    # 2.115.0 a kit drawing, 2.137.2 every picture: the answer's words open in a card under it, never over it - over a
+    # photograph or a drawn table it hid what the answer names (IT course walk review: M01 a02, M02 a02 and a05 - "the
+    # answer panel lies over picture 2", "covers the Chart 1 and Chart 2 labels")
+    card = '<div class="lt-ans-under" data-script-ignore>%s</div>' % "".join("<p>%s</p>" % e(x) for x in cs.lines_of(s.get("reveal")))
+    return '<div class="lt-scol">%s%s</div>' % (side, card)
 
 
 def img_tag(fig):
@@ -3301,7 +3308,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         comp = "flow"
     if comp == "photo" and not is_photo:
         comp = "stage"
-    if ph_keys and comp != "photo":
+    if ph_keys and comp not in ("photo", "two-col", "wide-left", "wide-right"):      # 2.137.2: a photo column steps too
         probs.append("%s: \"photos\" (a carousel of photographs) needs the slide to be a photograph slide (composition \"photo\") - "
                      "it is built as \"%s\", so the carousel is not used" % (where, comp))
     # 2.63.0 (IGF M01 v263 runs 2-3): a template asked for by name on a PHOTOGRAPH - words in parts, or the photo column -
@@ -3517,7 +3524,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             d["class"] += " lt-carousel"
         if spots or zoom:
             fig = spot_width(fig, mdir, m, (b.get("figure") or "").replace("\\", "/"))
-            words = step_marks(words, dict((i, ' data-x="%g" data-y="%g" data-z="%g"' % tuple(v)) for i, v in zoom.items()))
+            words = step_marks(words, dict((i, zoom_mark(v)) for i, v in zoom.items()))
             if spots:
                 layer = '<div class="lt-spots">%s</div>' % "".join('<span class="lt-spot" data-k="%d" data-x="%g" data-y="%g"><i></i></span>'
                                                                    % (i, x, y) for i, (x, y) in sorted(spots.items()))
@@ -3561,6 +3568,25 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if comp in ("two-col", "wide-left", "wide-right"):
         # a drawing, an animation or a 3D model gets the wider column (owner, 2026-10-15: bigger pictures)
         cls = "two-col " + (comp if comp != "two-col" else "fig-wide")
+        # 2.137.2 - "photos" beside the words too: the photo column changes with the lines (IT course walk review, M01 s06 /
+        # s09: "the same single photo at every stop"; their words do not fit on a split photo, so they keep the column)
+        ph_marks = {}
+        if photo_col and ph_keys:
+            cards = carousel_cards(ph_keys, b, mdir, figdir, s, probs, where)
+            if cards:
+                fig = carousel_figure(fig, cards)
+                d["class"] += " lt-carousel"
+                ph_marks = dict((i, ' data-photo="%d"' % i) for i in cards)
+        elif ph_keys:
+            probs.append("%s: \"photos\" (a carousel of photographs) needs a photograph slide - it is built as \"%s\", so the "
+                         "carousel is not used" % (where, comp))
+        # 2.137.2 - "zoom" in the photo column too: the photograph zooms to the part its line names, a ring marks it (IT
+        # course walk review, M01 s02 / s03: "the photo never changes or marks any part"; their words spill on a split photo)
+        zoom_col = photo_points(b, len(lines), "zoom", probs, where, z=True) if photo_col and b.get("zoom") and not ph_marks else {}
+        if zoom_col:
+            fig = spot_width(fig, mdir, m, (b.get("figure") or "").replace("\\", "/")) + '<span class="lt-ring"></span>'
+            d["class"] += " lt-zoom"
+            ph_marks = dict((i, zoom_mark(v)) for i, v in zoom_col.items())
         box = box_of(fig)
         if photo_col:                      # the photograph is cropped to its column, which has the slide's height
             box = box.replace('class="fill fig"', 'class="fill fig photo-col"', 1)
@@ -3583,7 +3609,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             # 2.125.1 - words beside a photograph walk line by line too (see the plain return below; L67)
             if len(lines) >= 2 and not re.search(r'\bdata-kit(?:2d|3d)?[="]', fig or "") and not b.get("static") \
                     and s.get("kind") != "activity":      # a task screen stays still (PM FINAL a04, up between defences)
-                words = step_marks(words if isinstance(words, list) else [words], {})
+                words = step_marks(words if isinstance(words, list) else [words], ph_marks)
                 d["class"] += " lt-walk"
             reading = copy(words, 4)
         # 2.54.0 (L23; built as 2.52.0 on its own branch) - the figure first in the markup: a portrait tablet (one column)

@@ -424,8 +424,9 @@ def reveal_part(tmp):
     # it the answer was added under the question and cut on all 37 GAS BASIC reveals at 1280 x 800
     check("the room's question carries class \"ask\" (the stylesheet's hook for the last Next)",
           all('<b class="ask" data-script-field="ask">' in section(page, x) for x in ("s40", "s42", "s43")), p[:1600])
-    check("beside a picture the answer opens over the picture on the last Next (lt-ans-over), its words as approved",
-          '<div class="lt-ans-over" data-script-ignore><p>No - the reliquefaction plant keeps the pressure down.</p></div>' in p, p[:2000])
+    check("beside a picture the answer opens in a card under the picture on the last Next (lt-ans-under, 2.137.2), its words as approved",
+          '<div class="lt-ans-under" data-script-ignore><p>No - the reliquefaction plant keeps the pressure down.</p></div>' in p
+          and "lt-ans-over" not in p.split('data-title="Tank pressure is rising')[1][:3000], p[:2000])
     css = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_upgrade.css"), encoding="utf-8").read()
     check("... and the stylesheet shows it only on the last Next, the question kept",
           ".slide[data-last] .lt-ans-over{display:flex" in css and ".slide[data-last] .lt-split:has(.lt-ans-over) .lt-work li.you .ask{display:block}" in css)

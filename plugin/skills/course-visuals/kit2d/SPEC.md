@@ -137,7 +137,7 @@ Every part is drawn at arrival, dim (0.55-0.7); the step that names it brightens
 | `gantt` | `x y w h nameW start end step tick`, `tasks: [{id, name, d, after, slip, crit, cat}]`, `draw`, `crit`, `today`, `finish`, `dur` - a slip pushes what follows; publishes `finish` |
 | `matrix` | `x y w h rows cols xlabel ylabel heat`, `items: [{name, r, c, show, dx, dy}]` - r and c from 0 at the top left |
 | `node` | `id x y w h kind` (`box` / `decision` / `end`), `text sub cat show lit` |
-| `arrow` | `id from to label draw via` (`h` / `v`) - right-angled, drawn on |
+| `arrow` | `id from to label draw via` (`h` / `v`), `lit` (a route or cable the step names glows amber, 2.137.2) - right-angled, drawn on |
 | `token` | `route: [arrow ids]`, `at` (k = the end of the k-th arrow), `show` |
 | `pyramid` | `x y w h`, `levels: [{name, cat}]` (top first), `at` (levels shown from the top), `pick`, `top` / `bottom` (the side note) |
 | `balance` | `x y` (the pivot), `w`, `left` / `right`: `{label, items: [names], weight, cat}`, `k`, `max` - the beam tips on a spring; a pan shows as many items as its weight |
@@ -146,6 +146,8 @@ Every part is drawn at arrival, dim (0.55-0.7); the step that names it brightens
 | `person` | `x y` (feet), `scale`, `name`, `role`, `cat`, `say`, `sayShow`, `side` (`up` / `right` / `left`: the bubble), `bubbleW`, `bubbleH`, `show`, `lit` - `say` may be `{"pick": "@k", "of": [lines]}`, a new line each step |
 | `track` | `x y w h`, `steps: [{text}]`, `at` (k: stop k is current - amber, larger; before it solid, after it grey), `loop` (a dashed way back from the last stop to the first), `title` |
 | `pairs` | `x y w h`, `heads` (`["Don't", "Do"]`), `rows: [[don't, do]]`, `at` (rows shown; the row just reached is ringed amber), `dim` (a row not reached yet, 0.3) |
+| `nest` | `x y w h`, `levels: [{text, sub, cat}]` (outermost first), `at` (layers shown; the k-th framed amber), `chip: {text, show}` (an example in the innermost) - things inside things (2.137.2) |
+| `email` | `x y w h`, `from`, `subject`, `lines`, `link: {text, addr}`, `flag` (rings the real address red), `flagText`, `show` - an e-mail as it looks on screen (2.137.2) |
 | `compartments` | `x y w h`, `rooms: [{text, sub, cat}]`, `walls` (the bulkheads, 0..1), `hit` (k: malware dots held in room k, 0 none), `wall` (the words over it: "Firewalls = bulkheads"), `mast` (a Wi-Fi aerial and its words), `wallShow`, `mastShow` |
 | `callout` | `at: [x, y]`, `text`, `sub`, `side`, `dist`, `show` - `text` / `sub` may be `{"pick": "@k", "of": [...]}` |
 

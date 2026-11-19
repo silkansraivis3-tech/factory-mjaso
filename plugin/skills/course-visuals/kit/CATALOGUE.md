@@ -90,6 +90,7 @@ screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"a
 - `spill` (gas-fire-machinery) - w h surface(deck/water) label from reach - value: 0..1 spread; boils from 0.5 - ex: `{"type":"spill","x":10,"y":10,"w":300,"surface":"deck","label":"LNG on deck","value":0}`
 - `wind` (gas-fire-machinery) - w rows gap dir max unit label - value: 0..1 strength - ex: `{"type":"wind","x":320,"y":56,"w":300,"rows":6,"gap":40,"dir":0,"label":"wind","value":0}`
 - `tree` (procedures) - root children:[{label, children}] w minW - value: 0..n box k lit - ex: `{"type":"tree","x":10,"y":10,"root":"Master","value":0}`
+- `document` (it) - w=46 h=58 ext - value: none - a still part; options: w, h, ext (the file type on its tag)
 - `lamp` (gas-fire-machinery) - label ex [a light fitting on its cable: electrical equipment, an igni…] - value: 0 off, 1 lit
 - `spark` (gas-fire-machinery) - kind(electric/friction) to:[dx,dy] label - value: 0..1 the spark - ex: `{"type":"spark","x":60,"y":110,"to":[110,0],"label":"electric spark"}`
 - `composition_bar` (charts) - w h segments:[{label,pct}] total unit label - value: 0..n: segment k fills from its left edge from k to k+1, its name and share appear once it is half drawn - ex: `{"type":"composition_bar","x":40,"y":100,"w":460,"label":"natural gas, share by volume"}`

@@ -291,8 +291,12 @@
 
 /* ------------------------------------------------ split photo: the photograph zooms to the part the line names */
 .slide[data-template^="photo-explain."].lt-zoom .photo-wrap > img{transform-origin:0 0;transition:transform 1.3s cubic-bezier(.3,.7,.2,1);animation:none!important}
-.lt-zoom .lt-ring{position:absolute;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;border-radius:50%;border:3px solid var(--lt-blue);
-  box-shadow:0 0 0 2000px var(--up-a1171728),0 0 30px var(--up-a831672196);opacity:0;transition:opacity .5s .7s,left 1.3s,top 1.3s;pointer-events:none}
+/* 2.137.2 - the marker: an amber frame round the part (a rounded box sized to it, or a circle), a dark edge so it reads on
+   any photograph, the rest of the photo dimmed (Aleksis: "i like it, but it needs to look good") */
+.lt-zoom .lt-ring{position:absolute;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;border-radius:50%;border:4px solid #FFB020;
+  box-shadow:0 0 0 2px rgba(10,24,46,.55),inset 0 0 0 2px rgba(10,24,46,.35),0 0 0 2000px var(--up-a1171728),0 0 26px rgba(255,176,32,.55);
+  opacity:0;transition:opacity .5s .7s,left 1.3s,top 1.3s,width 1.3s,height 1.3s,margin 1.3s,border-radius .6s;pointer-events:none}
+.lt-zoom .lt-ring.box{border-radius:18px}
 .lt-zoom .lt-ring.on{opacity:1}
 .lt-zoom .photo-copy .lead.sub{cursor:pointer;transition:color .3s,transform .3s}
 .lt-zoom .photo-copy .lead.cur{color:var(--lt-white);transform:translateX(min(1vmin,8px))}
@@ -805,3 +809,11 @@
 .photo-wrap:has(> img[data-ph]) > img{position:absolute;inset:0;opacity:0;transition:opacity .7s ease;pointer-events:none;animation:none!important}
 .photo-wrap:has(> img[data-ph]) > img.on{opacity:1;pointer-events:auto}
 @media (prefers-reduced-motion:reduce){.photo-wrap:has(> img[data-ph]) > img{transition:none}}
+/* 2.137.2 - the photo column steps through its photos as well, stacked in the column */
+.fill.fig.photo-col:has(img[data-ph]){position:relative}
+.fill.fig.photo-col img[data-ph]{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .7s ease;pointer-events:none;animation:none!important}
+.fill.fig.photo-col img[data-ph].on{opacity:1;pointer-events:auto}
+@media (prefers-reduced-motion:reduce){.fill.fig.photo-col img[data-ph]{transition:none}}
+.lt-zoom .fill.fig.photo-col{position:relative;overflow:hidden}
+.lt-zoom .fill.fig.photo-col > img{transform-origin:0 0;transition:transform 1.3s cubic-bezier(.3,.7,.2,1);animation:none!important}
+@media (prefers-reduced-motion:reduce){.lt-zoom .fill.fig.photo-col > img{transition:none}}

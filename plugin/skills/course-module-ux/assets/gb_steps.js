@@ -36,14 +36,26 @@
     /* the photograph zooms to the part the line names, and a ring marks it */
     function (s) {
       if (!s.classList.contains('lt-zoom')) { return null; }
-      var img = q('.photo-wrap img', s), ring = q('.lt-ring', s);
+      var img = q('.photo-wrap img', s) || q('.photo-col img', s), ring = q('.lt-ring', s);   /* 2.137.2: a photo column too */
+      if (!img) { return null; }
       var at = function (k) {
         var st = q('[data-k="' + k + '"]', s), z = +(st && st.getAttribute('data-z')) || 1;
         var c = cover(img, +(st && st.getAttribute('data-x')) || 800, +(st && st.getAttribute('data-y')) || 500);
         var tx = c.W / 2 - z * c.x, ty = c.H / 2 - z * c.y;
         tx = Math.min(-z * c.ox, Math.max(c.W - z * (c.ox + c.dw), tx)); ty = Math.min(-z * c.oy, Math.max(c.H - z * (c.oy + c.dh), ty));
         img.style.transform = 'translate(' + tx.toFixed(1) + 'px,' + ty.toFixed(1) + 'px) scale(' + z + ')';
-        if (ring) { ring.style.left = (z * c.x + tx) + 'px'; ring.style.top = (z * c.y + ty) + 'px'; ring.classList.toggle('on', z > 1); }
+        if (ring) {
+          ring.style.left = (z * c.x + tx) + 'px'; ring.style.top = (z * c.y + ty) + 'px'; ring.classList.toggle('on', z > 1);
+          /* 2.137.2 - data-r: the ring's width in the photograph's pixels, so it holds the whole part; else its fixed size */
+          /* data-rh too: a rounded box of the part's width and height (a row of sockets), not a circle */
+          var r = +(st && st.getAttribute('data-r')) || 0, rh = +(st && st.getAttribute('data-rh')) || 0;
+          var k = (c.dw / (img.naturalWidth || 1600)) * (img.naturalWidth / (+img.getAttribute('data-px-w') || img.naturalWidth || 1600));
+          if (r) {
+            var dw = Math.round(r * k * z), dh = Math.round((rh || r) * k * z);
+            ring.style.width = dw + 'px'; ring.style.height = dh + 'px'; ring.style.margin = (-dh / 2) + 'px 0 0 ' + (-dw / 2) + 'px';
+            ring.classList.toggle('box', !!rh);
+          } else { ring.style.width = ring.style.height = ring.style.margin = ''; ring.classList.remove('box'); }
+        }
       };
       w.addEventListener('resize', function () { if (s.classList.contains('active')) { at(+s.getAttribute('data-at') || 0); } });
       return at;
@@ -51,7 +63,7 @@
     /* a carousel of photographs: each line may carry data-photo (its own photo, data-ph on the <img>); the photo shown is the
        one of the latest line up to this stop, the first photo (data-ph 0) before any - a line with none keeps the previous */
     function (s) {
-      var imgs = qa('.photo-wrap img[data-ph]', s); if (imgs.length < 2) { return null; }
+      var imgs = qa('.photo-wrap img[data-ph], .photo-col img[data-ph]', s); if (imgs.length < 2) { return null; }   /* 2.137.2: a photo column too */
       return function (k) {
         var want = '0';
         for (var j = 1; j <= k; j++) { var st = q('[data-k="' + j + '"][data-photo]', s); if (st) { want = st.getAttribute('data-photo'); } }
