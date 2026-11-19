@@ -6081,13 +6081,13 @@ KIT.define('document', function (fig, part, g, p) {
   h.el('path', { d: 'M' + x0 + ' ' + y0 + ' H' + (x0 + w - f) + ' L' + (x0 + w) + ' ' + (y0 + f) + ' V' + (y0 + ht) + ' H' + x0 + ' Z', 'class': 'kit-doc-sheet' }, g);
   h.el('path', { d: 'M' + (x0 + w - f) + ' ' + y0 + ' V' + (y0 + f) + ' H' + (x0 + w), 'class': 'kit-doc-fold', 'data-no-contain': '' }, g);
   for (i = 0; i < (p.ext ? 3 : 4); i++) {                          /* the lines stop above the type's tag */
-    var ly = y0 + f + 6 + i * ((ht - f - 12 - (p.ext ? 24 : 0)) / (p.ext ? 3 : 4));
+    var ly = y0 + f + 6 + i * ((ht - f - 12 - (p.ext ? 31 : 0)) / (p.ext ? 3 : 4));
     h.el('line', { x1: x0 + 7, x2: x0 + w - (i === 3 ? 18 : 7), y1: ly.toFixed(1), y2: ly.toFixed(1), 'class': 'kit-doc-line', 'data-no-contain': '' }, g);
   }
   if (p.ext) {                                                     /* the type on a tag across the sheet's foot, inside it */
-    var tw = w - 8, th = 20;
+    var tw = w - 8, th = 27;                                    /* 2.137.4: 17 px type (15 px drew at 12.3 px on a 1024 x 768 screen) */
     h.el('rect', { x: (x0 + 4).toFixed(1), y: (y0 + ht - th - 5).toFixed(1), width: tw, height: th, rx: 4, 'class': 'kit-doc-tag', 'data-no-contain': '' }, g);
-    h.el('text', { x: '0', y: (y0 + ht - 10).toFixed(1), 'text-anchor': 'middle', 'class': 'kit-doc-ext', 'data-no-contain': '' }, g, String(p.ext));
+    h.el('text', { x: '0', y: (y0 + ht - 12).toFixed(1), 'text-anchor': 'middle', 'class': 'kit-doc-ext', 'data-no-contain': '' }, g, String(p.ext));
   }
   part.render = function () {};
 }, {
@@ -6101,7 +6101,7 @@ KIT.define('document', function (fig, part, g, p) {
     '.kit-doc-fold{fill:var(--dim-d);stroke:var(--dim-d);stroke-width:1.2;stroke-linejoin:round}' +
     '.kit-doc-line{stroke:var(--deep);stroke-width:2.5;stroke-linecap:round;opacity:.45}' +
     '.kit-doc-tag{fill:var(--blue)}' +
-    '.kit-doc-ext{fill:var(--on-blue,#04263A);font-size:15px;font-weight:800;letter-spacing:.04em}'
+    '.kit-doc-ext{fill:var(--on-blue,#04263A);font-size:17px;font-weight:800;letter-spacing:.04em}'
 });
 /* end kit-part */
 /* kit-part: lamp */

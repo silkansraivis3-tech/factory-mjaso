@@ -31,6 +31,10 @@ window.FitProbe = function () {
     }
     return { L: Math.max(L, 0), T: Math.max(T, 0), R: Math.min(R, vw), B: Math.min(B, vh), by: by, r: r };
   }
+  function zoomed(el) {
+    /* a zoom on a part (.lt-zoom), or the slow drift of a split photo (scale 1.0-1.07, IT course M03 s01: "87 % seen") */
+    return el.tagName === "IMG" && !!el.closest(".photo-wrap, .photo-col") && getComputedStyle(el).transform !== "none";
+  }
   function ownText(el) {
     for (var i = 0; i < el.childNodes.length; i++) {
       var n = el.childNodes[i];
@@ -53,7 +57,7 @@ window.FitProbe = function () {
   var parts = body.querySelectorAll(".copy, .fill, figure, li, .lt-in, .lt-pic, .lt-opt, img");
   for (i = 0; i < parts.length; i++) {
     el = parts[i];
-    if (el.closest("[data-fit-skip]") || shown(el) < 0.05) continue;
+    if (el.closest("[data-fit-skip]") || shown(el) < 0.05 || zoomed(el)) continue;
     var p = el.getBoundingClientRect();
     if (p.width < 2) continue;
     var over = Math.max(p.bottom - Math.min(sr.bottom, vh), p.right - Math.min(sr.right, vw), sr.top - p.top, sr.left - p.left);
@@ -77,7 +81,8 @@ window.FitProbe = function () {
     out.pic.push({ src: (im.getAttribute("src") || "").split("/").pop(), fit: cs.objectFit, natural: nw + "x" + nh,
                    box: Math.round(bw) + "x" + Math.round(bh), part: +part.toFixed(2), stretch: +stretch.toFixed(2),
                    seen: +boxSeen.toFixed(2), by: boxSeen < 0.97 ? v.by : "",
-                   backdrop: !!im.closest('[data-fit="cover"], .lt-ba, .photo-strip') });
+                   /* 2.137.4: a photo zoomed in on a part (.lt-zoom, a transform) is cropped by its frame on purpose */
+                   backdrop: !!im.closest('[data-fit="cover"], .lt-ba, .photo-strip') || zoomed(im), zoomed: zoomed(im) });
   }
   return out;
 };

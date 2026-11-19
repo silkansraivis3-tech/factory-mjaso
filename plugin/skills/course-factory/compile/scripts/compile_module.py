@@ -2904,18 +2904,21 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         variant = "picture" if fig else "text-only"
         why_box = ('<div class="lt-why" data-k="1"><span class="stamp" data-script-ignore>%s</span><div>%s</div></div>'
                    % (e(w["true" if right == "t" else "false"]), why))
+        tfk = ""
         if fig and re.search(r'\bdata-kit(?:2d|3d)?[="]', side):
-            # 2.137.0 - beside a drawing, why opens in a card under it, never over it: over it the stamp and the lines hid the
-            # drawing's own answer (Aleksis, IT course M02 s04: "the false always shows and blocks other elements")
-            side, why_box = '<div class="lt-scol">%s%s</div>' % (side, why_box), ""
+            # 2.137.0 - beside a drawing, why never opens over it: over it the stamp and the lines hid the drawing's own answer
+            # (Aleksis, IT course M02 s04: "the false always shows and blocks other elements"). 2.137.4 - nor under it: a why of
+            # four lines left the drawing 94 px tall (IT course M03 s17 at 1024 x 768). It opens in the words' column, under
+            # the claim, in the place of the vote (its stamp says which it was), and the drawing keeps its whole column
+            tfk = " lt-tfk"
         elif fig:
             # beside a picture, why opens over the picture's column: under the claim and the vote it had a third of the
             # slide, and a why of three lines was cut (the factory trial, M01 s04)
             i = side.rfind("</")
             side, why_box = side[:i] + why_box + side[i:], ""
-        body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-tf">\n      <p class="lt-claim lt-in" style="--i:1" '
+        body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-tf%s">\n      <p class="lt-claim lt-in" style="--i:1" '
                 'data-script-field="claim">%s</p>\n      <div class="lt-vote lt-in" style="--i:2">%s</div>\n      %s</div>%s</div>'
-                % ("48fr 52fr" if fig else "1fr", e(s.get("claim")), vote, why_box, "\n    " + side if fig else ""))
+                % (("54fr 46fr" if tfk else "48fr 52fr") if fig else "1fr", tfk, e(s.get("claim")), vote, why_box, "\n    " + side if fig else ""))
 
     elif tid == "scenario":
         # the situation and the question, the choices the room picks from; Next shows why each, the right one green

@@ -42,7 +42,10 @@
         var st = q('[data-k="' + k + '"]', s), z = +(st && st.getAttribute('data-z')) || 1;
         var c = cover(img, +(st && st.getAttribute('data-x')) || 800, +(st && st.getAttribute('data-y')) || 500);
         var tx = c.W / 2 - z * c.x, ty = c.H / 2 - z * c.y;
-        tx = Math.min(-z * c.ox, Math.max(c.W - z * (c.ox + c.dw), tx)); ty = Math.min(-z * c.oy, Math.max(c.H - z * (c.oy + c.dh), ty));
+        /* 2.137.4 - a whole photo (contain) narrower or shorter than its frame at this scale stays centred on that side: the
+           clamp below pulled it to the frame's edge, 105 px up on an unzoomed stop (IT course M01 s02), cutting its box */
+        var keep = function (t, F, o, d) { return z * d <= F ? F / 2 - z * (o + d / 2) : Math.min(-z * o, Math.max(F - z * (o + d), t)); };
+        tx = keep(tx, c.W, c.ox, c.dw); ty = keep(ty, c.H, c.oy, c.dh);
         img.style.transform = 'translate(' + tx.toFixed(1) + 'px,' + ty.toFixed(1) + 'px) scale(' + z + ')';
         if (ring) {
           ring.style.left = (z * c.x + tx) + 'px'; ring.style.top = (z * c.y + ty) + 'px'; ring.classList.toggle('on', z > 1);

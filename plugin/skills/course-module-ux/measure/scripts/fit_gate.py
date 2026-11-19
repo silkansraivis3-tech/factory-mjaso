@@ -194,7 +194,7 @@ def walk(page, deck, min_shown, shots=None, record=None):
                                   % (f["src"], round(f["part"] * 100), f["natural"], f["box"], f["fit"])))
                 elif f["stretch"] > 1.1:
                     found.append((r["id"], step, "picture", "%s stretched x%.2f" % (f["src"], f["stretch"])))
-                elif f["seen"] < 0.9:
+                elif f["seen"] < 0.9 and not f.get("zoomed"):   # 2.137.4: a photo zoomed in on a part is cropped on purpose
                     found.append((r["id"], step, "picture", "%s: only %d %% of its box is seen (cut by %s)"
                                   % (f["src"], round(f["seen"] * 100), f["by"])))
             k2 = page.evaluate(KIT2D, r["id"])

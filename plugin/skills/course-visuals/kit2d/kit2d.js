@@ -1813,15 +1813,19 @@
   define('pairs', function (f, p) {
     var R = p.rows || [], n = Math.max(1, R.length), x0 = p.x, y0 = p.y, W = p.w, H = p.h, gap = 18, cw = (W - gap) / 2, hh = 50;
     var rh = (H - hh - 8) / n, heads = p.heads || ["Don't", 'Do'], dim = p.dim != null ? p.dim : 0.3;
-    var hg = el('g', {}, f.L.hero);
+    var hg = el('g', {}, f.L.hero), hts = [];
     f.fills(x0, y0, W, H);
     [0, 1].forEach(function (j) {
       var cx = x0 + j * (cw + gap) + 20, cyy = y0 + hh / 2 - 4;
       el('circle', { cx: cx, cy: cyy, r: 18, 'class': j ? 'k2-mark-good' : 'k2-mark-warn' }, hg);
       el('path', { d: j ? 'M' + (cx - 8) + ' ' + cyy + ' l 6 6 l 11 -12' : 'M' + (cx - 7) + ' ' + (cyy - 7) + ' l 14 14 M' + (cx + 7) + ' ' + (cyy - 7) + ' l -14 14',
         'class': 'k2-mark-ink' }, hg);
-      el('text', { x: cx + 30, y: cyy + 8, 'class': 'k2-t-lbl k2-t-big ' + (j ? 'k2-pair-do-h' : 'k2-pair-dont-h') }, hg, heads[j]);
+      /* 2.137.4 - a head fits its column (wrapped, then smaller): unfitted, "Paper or visit" ran into "Digital tool" when
+         the drawing was drawn small (IT course M06 s15 at 1024 x 768) */
+      hts.push({ t: el('text', { x: cx + 30, y: cyy, 'class': 'k2-t-lbl k2-t-big ' + (j ? 'k2-pair-do-h' : 'k2-pair-dont-h') }, hg),
+                 txt: heads[j], x: cx + 30, y: cyy, room: cw - 54, h: hh });
     });
+    (f.fits = f.fits || []).push(function () { hts.forEach(function (c) { wrapText(c.t, c.txt, c.x, c.y, c.room, c.h); }); });
     var rows = R.map(function (r, i) {
       var y = y0 + hh + 8 + i * rh, rg = el('g', {}, f.L.front), cells = [];
       [0, 1].forEach(function (j) {

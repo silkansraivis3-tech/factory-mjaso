@@ -568,6 +568,10 @@
 .lt-why{display:none;gap:min(1.6vmin,13px);align-items:flex-start;padding:min(1.8vmin,14px) min(2.2vmin,18px);border-radius:min(1.6vmin,13px);background:var(--lt-white);
   border:1.5px solid var(--lt-line);box-shadow:0 14px 30px -16px var(--up-a10369945)}
 .lt-why.cur{display:flex;animation:lt-rise .5s both}
+/* 2.137.4 - beside a drawing (lt-tfk) why opens under the claim in the place of the vote; its stamp sits above its lines */
+.lt-tfk:has(> .lt-why:is(.cur,.lit)) > .lt-vote{display:none}
+.lt-tfk > .lt-why:is(.cur,.lit){display:flex;flex-direction:column;min-height:0;overflow:hidden;gap:min(1vmin,8px)}
+.lt-tfk > .lt-why p{font-size:calc(var(--lt-fs) * .94);line-height:1.32}
 /* beside a picture, why opens over the foot of the picture's column - only as tall as its words (up to the whole column),
    so the picture stays in sight above it (2.133.2: a full cover hid the picture for every stop the why was open) */
 .lt-split > .fig:has(> .lt-why){position:relative}

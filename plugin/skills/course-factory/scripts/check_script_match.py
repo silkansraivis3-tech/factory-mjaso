@@ -222,7 +222,10 @@ def main(argv=None):
                     extra = Counter(built) - Counter(norm(x) for x in items)
                     if not extra - states:
                         built = list((Counter(built) - extra).elements())
-                if sorted(norm(x) for x in items) != sorted(built):
+                # 2.137.4 - an order / label card no longer shows its marker number ("1 Firewall" is built "Firewall":
+                # the number gave the order away, task_pages 2.137.2); compared without it on both sides
+                nonum = lambda t: re.sub(r"^\d{1,2}[.)]?\s+", "", t) if cs.mech(s) in ("order", "label_diagram") else t
+                if sorted(nonum(norm(x)) for x in items) != sorted(nonum(x) for x in built):
                     probs.append("%s in %s: the answer's items are not the approved ones - approved: \"%s\" / built: \"%s\"" % (
                         where, got["file"], " / ".join(norm(x) for x in items), " / ".join(built) or "(missing)"))
                 elif right:
