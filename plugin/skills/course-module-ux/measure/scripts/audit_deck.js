@@ -330,6 +330,16 @@
     if (!c.height && !c.width) { return 0; }
     return (c.bottom - (r.top + (el.clientTop + el.clientHeight) * (sy || 1))) / (sy || 1);
   }
+  function scaledPictureOnly(el) {
+    var bottom = el.getBoundingClientRect().bottom + CONFIG.scrollTolPx, any = false, kids = el.children;
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i].getBoundingClientRect().bottom <= bottom) { continue; }
+      any = true;
+      if (!/^(IMG|VIDEO|CANVAS|PICTURE|SVG)$/i.test(kids[i].tagName)) { return false; }
+      if (getComputedStyle(kids[i]).transform === "none") { return false; }
+    }
+    return any;
+  }
   function boxIn(el, root) {
     var o = offsetBox(el, root);
     if (o) { return o; }
@@ -564,6 +574,10 @@
              elements: a pseudo-element has none - the official logo's clear space hanging 35-40 px below the
              template's top line (IGF M04 s01, s08) is no part of the slide anyone needs to reach */
           if (st.overflowY === "visible" && realOverflow(el) <= CONFIG.scrollTolPx) { return; }
+          /* 2.137.3 - a clipped box whose only overflow is a picture scaled by a transform (the photo-explain
+             slow zoom, scale 1.0 to 1.07, IT course M03 s01: "scrolls div.photo-wrap by 19 px") hides nothing
+             anyone needs to reach - the clip is the design */
+          if (/(hidden|clip)/.test(st.overflowY) && scaledPictureOnly(el)) { return; }
         }
         out.scroll.push({ el: el.tagName.toLowerCase() +
                               (el.className && el.className.baseVal === undefined &&
