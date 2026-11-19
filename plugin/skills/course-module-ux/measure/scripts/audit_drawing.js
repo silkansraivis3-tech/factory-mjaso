@@ -1139,6 +1139,9 @@
           CONFIG.transientClasses.forEach(function (c) { x.classList.remove(c); });
           x.classList.toggle(CONFIG.activeClass, j === i);
         });
+        /* 2.137.0 - say the slide changed, as the deck does (and audit_deck's fireResize): a 2D kit figure sizes itself to
+           its box then - measured before, it was judged at a size the trainee never sees (IT course M03 s23, "64 % blank") */
+        try { window.dispatchEvent(new Event("resize")); } catch (e) { /* an old engine */ }
         return sleep(CONFIG.settleMs).then(function () {
           var s = slides[i], where = "slide " + (i + 1) + (s.id ? " (" + s.id + ")" : "");
           qa(s, "svg").filter(function (v) { return !v.ownerSVGElement && shown(v, v) && !v.closest("button, .mediabar, .slide-kind, .lt-timer"); })

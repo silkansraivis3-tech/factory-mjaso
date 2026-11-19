@@ -35,6 +35,7 @@
    drawing filled only the top of its box with a band empty below, on every kit figure since the light look made it
    visible (Aleksis, IT course: "elements that dont take the whole container, and isnt centered"). Its box sizes it. */
 .k2 .k2-stage svg{max-height:none}
+.kit2d-fig .k2-stage{display:flex;align-items:center;justify-content:center}
 .k2 svg text{font-family:var(--font,"Raleway","Segoe UI",Arial,sans-serif)}
 
 /* type, in drawing units; --k2-up grows it so nothing is drawn under 12.5 px on screen */

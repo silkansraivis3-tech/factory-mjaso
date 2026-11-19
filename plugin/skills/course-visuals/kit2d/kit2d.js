@@ -323,7 +323,7 @@
          the frame again, and the drawing blew up to nothing (IT course M03 s10, the first light build) */
       var VW = f.VW || f.W, VH = f.VH || f.H;
       /* 2.137.0 - on the light look the floor is 15 px (read from the back of the room), elsewhere 12.6 */
-      var scale = Math.min(r.width / VW, r.height / VH), up = Math.max(1, (f.light && f.deck ? 15 : 12.6) / (14 * scale));
+      var scale = Math.min(r.width / VW, r.height / VH), up = Math.max(1, 12.6 / ((f.light && f.deck ? 17 : 14) * scale));   /* the smallest type: 17 px on the deck's light look */
       f.svg.style.setProperty('--k2-up', up.toFixed(3));
       f.scale = scale;
       f.thinNow();
@@ -333,7 +333,14 @@
       f.layout();
       this.labels.forEach(function (L) { if (L.goal) { L.off = L.goal.slice(); } });
       f.follow(0);
-      if (!f.cropped && f.crop()) { f.resize(); }
+      if (!f.cropped && f.crop()) { f.resize(); return; }
+      /* 2.137.0 - in a deck the drawing is as large as its box allows, in its own shape, centred: one that could not take
+         the box's shape (a ring, a scene) stretched across a tall box left empty bands the drawing check counts */
+      if (f.deck) {
+        var a = (f.VH || f.H) / (f.VW || f.W);
+        if (r.height > r.width * a) { f.svg.style.width = '100%'; f.svg.style.height = (r.width * a).toFixed(1) + 'px'; }
+        else { f.svg.style.height = '100%'; f.svg.style.width = (r.height / a).toFixed(1) + 'px'; }
+      }
     },
 
     /* ---- 2.137.0 - a diagram fills its box: the frame is cut to what is drawn, so a drawing whose size left a third of
@@ -1250,13 +1257,18 @@
       Cl.forEach(function (cl, c) {
         var sc = ((Rw.length - 1 - r) / Math.max(1, Rw.length - 1) + c / Math.max(1, Cl.length - 1)) / 2;
         var tone = p.heat === false ? 'plain' : sc < 0.38 ? 'good' : sc < 0.68 ? 'amber' : 'warn';
-        el('rect', { x: x0 + c * cw + 3, y: y0 + r * ch + 3, width: cw - 6, height: ch - 6, rx: 10, 'class': 'k2-heat k2-heat-' + tone }, g);
+        /* 2.137.0 - a cell is the ground items and their names sit on: never "words over a shape" */
+        el('rect', { x: x0 + c * cw + 3, y: y0 + r * ch + 3, width: cw - 6, height: ch - 6, rx: 10, 'class': 'k2-heat k2-heat-' + tone, 'data-may-overlap': '' }, g);
       });
       el('text', { x: x0 - 14, y: y0 + (r + 0.5) * ch + 5, 'text-anchor': 'end', 'class': 'k2-t-tick' }, g, rl);
     });
-    Cl.forEach(function (cl, c) { el('text', { x: x0 + (c + 0.5) * cw, y: y0 + H + 24, 'text-anchor': 'middle', 'class': 'k2-t-tick' }, g, cl); });
+    /* 2.137.0 - a column's name wraps and shrinks to its column: at the light look's size four names ran into each other */
+    var colT = Cl.map(function (cl, c) { return { t: el('text', { 'text-anchor': 'middle', 'class': 'k2-t-tick' }, g), cl: cl, x: x0 + (c + 0.5) * cw }; });
+    (f.fits = f.fits || []).push(function () { colT.forEach(function (o) { wrapText(o.t, o.cl, o.x, y0 + H + 30, cw - 10, 44); }); });
     if (p.xlabel) { el('text', { x: x0 + W / 2, y: y0 + H + 54, 'text-anchor': 'middle', 'class': 'k2-t-axis' }, g, p.xlabel + ' →'); }
-    if (p.ylabel) { el('text', { x: x0 - 14, y: y0 - 16, 'text-anchor': 'end', 'class': 'k2-t-axis' }, g, p.ylabel + ' ↑'); }
+    /* 2.137.0 - over the row names, reading right: ending at the grid's corner it reached far left of the drawing, and
+       the frame widened into an empty strip (IT course M04 s14) */
+    if (p.ylabel) { el('text', { x: x0 - 30, y: y0 - 14, 'text-anchor': 'start', 'class': 'k2-t-axis' }, g, p.ylabel + ' ↑'); }
     function at(r, c, it) { return [x0 + (c + 0.5) * cw + (it.dx || 0), y0 + (r + 0.5) * ch + (it.dy || 0)]; }
     var its = (p.items || []).map(function (it, i) {
       var gh = el('g', {}, f.L.back), trail = el('path', { 'class': 'k2-trail' }, gh), ghost = el('circle', { r: 19, 'class': 'k2-pt-ghost' }, gh);
@@ -1319,17 +1331,15 @@
     if (p.sub) { subT = el('text', { x: x, 'text-anchor': 'middle', 'class': p.cat ? 'k2-t-oncat-sub' : 'k2-t-sub' }, inner, p.sub); }
     /* the name on as many lines as the box's width needs (a decision's diamond is narrower where its words are) */
     (f.fits = f.fits || []).push(function () {
-      var room = (kind === 'decision' ? w * 0.72 : w - 26), words = String(p.text || '').split(/\s+/), rows = [], cur = '';
-      name.textContent = '';
-      var probe = el('tspan', {}, name);
-      words.forEach(function (wd) {
-        var t = cur ? cur + ' ' + wd : wd;
-        probe.textContent = t;
-        if (cur && probe.getComputedTextLength() > room) { rows.push(cur); cur = wd; } else { cur = t; }
-      });
-      if (cur) { rows.push(cur); }
-      name.removeChild(probe);
-      var fs = parseFloat((name.ownerDocument.defaultView.getComputedStyle(name).fontSize) || 17);
+      var room = (kind === 'decision' ? w * 0.72 : w - 26), words = String(p.text || '').split(/\s+/), rows, r;
+      name.textContent = ''; name.style.fontSize = '';
+      var fs0 = parseFloat((name.ownerDocument.defaultView.getComputedStyle(name).fontSize) || 17), fs = fs0, least = leastPx(name, fs0);
+      /* 2.137.0 - words that do not fit the box are made smaller a step at a time (leastPx), never left touching its edge */
+      for (;;) {
+        r = rowsOf(name, words, room); rows = r.rows;
+        if (fs <= least || (r.wide <= room && rows.length * fs * 1.15 + (subT ? fs * 1.1 : 0) <= h - 14)) { break; }
+        fs = Math.max(least, fs * 0.92); name.style.fontSize = fs.toFixed(2) + 'px';
+      }
       var total = rows.length * fs * 1.15 + (subT ? fs * 1.1 : 0), y0 = y - total / 2 + fs * 0.85;
       rows.forEach(function (r, i) { el('tspan', { x: x, y: (y0 + i * fs * 1.15).toFixed(1) }, name, r); });
       if (subT) { subT.setAttribute('y', (y0 + rows.length * fs * 1.15 + fs * 0.05).toFixed(1)); }
@@ -1345,7 +1355,9 @@
       onStep: function (n, instant) { wasLit = f.target(p.lit, 0); },
       draw: function (dt, snap) {
         moving = sp.go(f.target(p.show, 1), dt, snap);
-        var sh = clamp(f.get(p.show, 1), 0, 1), sc = 0.7 + 0.3 * Math.max(0, sp.x);
+        /* 2.137.0 - a box shown dim (0.55) is full size: only one coming in from nothing grows into place (dim boxes drawn at
+           87 % left the arrival frame emptier than the drawing, IT course M03 s23) */
+        var sh = clamp(f.get(p.show, 1), 0, 1), sc = 0.7 + 0.3 * clamp(sp.x * 2, 0, 1);
         inner.setAttribute('transform', 'translate(' + x + ' ' + y + ') scale(' + sc.toFixed(3) + ') translate(' + (-x) + ' ' + (-y) + ')');
         setOp(g, sh); setOp(lit, clamp(f.get(p.lit, 0), 0, 1));
       },
@@ -1367,7 +1379,9 @@
     }
     var line = el('path', { d: poly(ps), 'class': 'k2-arrow', pathLength: 1, 'stroke-dasharray': '0 1' }, f.L.back);
     var e = ps[ps.length - 1], b = ps[ps.length - 2], ang = Math.atan2(e[1] - b[1], e[0] - b[0]) * 180 / Math.PI;
-    var head = el('path', { d: 'M 0 0 L -14 -8 L -14 8 Z', 'class': 'k2-arrow-head', transform: 'translate(' + pt([e[0] + Math.cos(ang * Math.PI / 180) * 4, e[1] + Math.sin(ang * Math.PI / 180) * 4]) + ') rotate(' + ang.toFixed(1) + ')' }, f.L.back);
+    /* 2.137.0 - the tip stops 9 units short of the box (it reached 4 past the line's end, into a box drawn without the old
+       7-unit outline: "pokes out by 3 px", IT course M06 s13) */
+    var head = el('path', { d: 'M 0 0 L -14 -8 L -14 8 Z', 'class': 'k2-arrow-head', transform: 'translate(' + pt([e[0] - Math.cos(ang * Math.PI / 180) * 3, e[1] - Math.sin(ang * Math.PI / 180) * 3]) + ') rotate(' + ang.toFixed(1) + ')' }, f.L.back);
     (f.routes = f.routes || {})[p.id] = ps;
     var lab = null;
     f.line(function () { return ps; });
@@ -1410,20 +1424,41 @@
   });
 
   /* a box's words on as many lines as its width needs, centred on (x, y) - at the type's grown size (run from a fit) */
-  function wrapText(t, text, x, y, room) {
-    var words = String(text || '').split(/\s+/), rows = [], cur = '', probe;
-    t.textContent = '';
-    probe = el('tspan', {}, t);
+  /* the words in rows no wider than room; 2.137.0 - with maxH (the box's height) words that do not fit their box (rows too
+     many, or one word wider than the box) are made smaller a step at a time, to no less than 72 % of their size: the
+     light look's larger type spilled out of boxes drawn for the old size (IT course, 2.137.0 rebuild) */
+  function rowsOf(t, words, room) {
+    var rows = [], cur = '', wide = 0, probe = el('tspan', {}, t);
     words.forEach(function (wd) {
       var q = cur ? cur + ' ' + wd : wd;
       probe.textContent = q;
       if (cur && probe.getComputedTextLength() > room) { rows.push(cur); cur = wd; } else { cur = q; }
     });
     if (cur) { rows.push(cur); }
+    rows.forEach(function (r) { probe.textContent = r; wide = Math.max(wide, probe.getComputedTextLength()); });
     t.removeChild(probe);
-    var fs = parseFloat(w.getComputedStyle(t).fontSize) || 16, y0 = y - (rows.length - 1) * fs * 0.58 + fs * 0.34;
-    rows.forEach(function (r, i) { el('tspan', { x: x, y: (y0 + i * fs * 1.16).toFixed(1) }, t, r); });
-    return rows.length;
+    return { rows: rows, wide: wide };
+  }
+  /* the smallest a word may be made: 72 % of its size, and never under 12.8 px on screen (the deck audit's floor) */
+  function leastPx(t, fs0) {
+    var m = null, sv = t.ownerSVGElement;
+    try { m = sv && sv.getScreenCTM(); } catch (e) { m = null; }
+    var k = m && m.a > 0 ? m.a : 1;
+    return Math.min(fs0, Math.max(fs0 * 0.72, 12.8 / k));
+  }
+  function wrapText(t, text, x, y, room, maxH) {
+    var words = String(text || '').split(/\s+/), r, fs, fs0, least;
+    t.textContent = ''; t.style.fontSize = '';
+    fs = fs0 = parseFloat(w.getComputedStyle(t).fontSize) || 16;
+    least = leastPx(t, fs0);
+    for (;;) {
+      r = rowsOf(t, words, room);
+      if (!maxH || fs <= least || (r.wide <= room && r.rows.length * fs * 1.16 <= maxH)) { break; }
+      fs = Math.max(least, fs * 0.92); t.style.fontSize = fs.toFixed(2) + 'px';
+    }
+    var y0 = y - (r.rows.length - 1) * fs * 0.58 + fs * 0.34;
+    r.rows.forEach(function (row, i) { el('tspan', { x: x, y: (y0 + i * fs * 1.16).toFixed(1) }, t, row); });
+    return r.rows.length;
   }
   function holds(g, shape) { g.setAttribute('data-k2-holds', ''); shape.setAttribute('data-k2-shape', ''); }
 
@@ -1663,7 +1698,8 @@
       var x = x0 + j * (cw + 16), hg = el('g', {}, f.L.hero), cat = c.cat || j * 2 + 1;
       var o = el('rect', { x: x, y: y0, width: cw, height: hh, rx: 14, 'class': 'k2-outline-s', 'stroke-width': 5 }, hg);
       el('rect', { x: x, y: y0, width: cw, height: hh, rx: 14, fill: f.url('solid-cat-' + cat) }, hg);
-      el('text', { x: x + cw / 2, y: y0 + hh / 2 + 7, 'text-anchor': 'middle', 'class': 'k2-t-oncat' }, hg, c.title || '');
+      var ht = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-oncat' }, hg);
+      (f.fits = f.fits || []).push(function () { wrapText(ht, c.title || '', x + cw / 2, y0 + hh / 2, cw - 24, hh - 10); });   /* 2.137.0 */
       holds(hg, o);
     });
     var rows = R.map(function (r, i) {
@@ -1678,11 +1714,11 @@
           el('path', { d: mk ? 'M' + (ix - 7) + ' ' + iy + ' l 5 5 l 9 -10' : 'M' + (ix - 6) + ' ' + (iy - 6) + ' l 12 12 M' + (ix + 6) + ' ' + (iy - 6) + ' l -12 12', 'class': 'k2-mark-ink' }, cg);
         }
         holds(cg, o);
-        cells.push({ t: t, txt: txt, x: x + cw / 2 + (mk === 1 || mk === 0 ? 18 : 0), y: y + (rh - 10) / 2, room: cw - (mk === 1 || mk === 0 ? 70 : 28) });
+        cells.push({ t: t, txt: txt, x: x + cw / 2 + (mk === 1 || mk === 0 ? 18 : 0), y: y + (rh - 10) / 2, room: cw - (mk === 1 || mk === 0 ? 70 : 28), h: rh - 22 });
       });
       return { g: rg, cells: cells, y: y };
     });
-    (f.fits = f.fits || []).push(function () { rows.forEach(function (r) { r.cells.forEach(function (c) { wrapText(c.t, c.txt, c.x, c.y, c.room); }); }); });
+    (f.fits = f.fits || []).push(function () { rows.forEach(function (r) { r.cells.forEach(function (c) { wrapText(c.t, c.txt, c.x, c.y, c.room, c.h); }); }); });
     f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
     return {
       draw: function () {
@@ -1739,7 +1775,7 @@
     });
     (f.fits = f.fits || []).push(function () {
       stops.forEach(function (s) {
-        if (vert) { wrapText(s.lab, s.text, s.cx + R + 26, s.cy, x0 + W - (s.cx + R + 30)); return; }
+        if (vert) { wrapText(s.lab, s.text, s.cx + R + 26, s.cy, x0 + W - (s.cx + R + 30), slot - 8); return; }
         var rows = wrapText(s.lab, s.text, s.cx, s.cy + R + 34, slot - 14), fs = parseFloat(w.getComputedStyle(s.lab).fontSize) || 17;
         s.lab.setAttribute('transform', 'translate(0 ' + ((rows - 1) * fs * 0.58).toFixed(1) + ')');
       });
@@ -1786,12 +1822,12 @@
         var o = el('rect', { x: x, y: y, width: cw, height: rh - 12, rx: 12, 'class': j ? 'k2-pair-do' : 'k2-pair-dont' }, cg);
         var t = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-lbl ' + (j ? 'k2-pair-do-t' : 'k2-pair-dont-t') }, cg);
         holds(cg, o);
-        cells.push({ t: t, txt: (r && r[j]) || '', x: x + cw / 2, y: y + (rh - 12) / 2, room: cw - 26 });
+        cells.push({ t: t, txt: (r && r[j]) || '', x: x + cw / 2, y: y + (rh - 12) / 2, room: cw - 26, h: rh - 24 });
       });
       var ring = el('rect', { x: x0 - 5, y: y - 5, width: W + 10, height: rh - 2, rx: 15, 'class': 'k2-pair-now', opacity: 0, 'data-may-overlap': '' }, rg);
       return { g: rg, cells: cells, ring: ring };
     });
-    (f.fits = f.fits || []).push(function () { rows.forEach(function (r) { r.cells.forEach(function (c) { wrapText(c.t, c.txt, c.x, c.y, c.room); }); }); });
+    (f.fits = f.fits || []).push(function () { rows.forEach(function (r) { r.cells.forEach(function (c) { wrapText(c.t, c.txt, c.x, c.y, c.room, c.h); }); }); });
     f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
     return {
       draw: function () {
@@ -1851,7 +1887,7 @@
     }
     (f.fits = f.fits || []).push(function () {
       /* the name in the upper part of its room: the threat's dots sit in the lower part, never on the words */
-      rooms.forEach(function (r) { wrapText(r.t, r.text, r.x + rw / 2, ry + rhh * (r.sub ? 0.3 : 0.36), rw - 16); });
+      rooms.forEach(function (r) { wrapText(r.t, r.text, r.x + rw / 2, ry + rhh * (r.sub ? 0.3 : 0.36), rw - 16, rhh * 0.56); });
     });
     f.solid(function () { return { x: x0, y: yd - sh, x2: x0 + W, y2: yk + 14 }; });
     return {
@@ -1899,7 +1935,7 @@
       el('path', { d: bd, 'class': 'k2-bubble' }, bub);
       var bt = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-face' }, bub);
       holds(bub, bo);
-      var said = pick(f, p.say), sayNow = function () { wrapText(bt, said, bx + bw / 2, by + bh / 2, bw - 30); };
+      var said = pick(f, p.say), sayNow = function () { wrapText(bt, said, bx + bw / 2, by + bh / 2, bw - 30, bh - 18); };
       (f.fits = f.fits || []).push(sayNow);
       f.solid(function () { return { x: bx, y: by, x2: bx + bw, y2: by + bh + 26 }; });
       bub.__o = [bx + bw / 2, by + bh];
