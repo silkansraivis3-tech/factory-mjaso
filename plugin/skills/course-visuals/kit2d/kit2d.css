@@ -15,7 +15,7 @@
   --k2-l-ink:var(--ink,#011111);--k2-l-dim:var(--dim-l,#41556A);--k2-l-faint:var(--faint-l,#415C8F);
   --k2-l-halo:#F4F7FA;--k2-l-panel-hi:#FFFFFF;--k2-l-panel-lo:#EEF2F7;--k2-l-grid:rgba(65,85,106,.14);
   --k2-l-blue:#1A6FA8;--k2-l-amber:var(--kit-alarm-ink,var(--amber-ink,#7A5300));--k2-l-warn:var(--warn,#B4453A);--k2-l-good:var(--good,#12805A);
-  --k2-l-cat-1:#1A6FA8;--k2-l-cat-2:#0E7468;--k2-l-cat-3:#5B48B8;--k2-l-cat-4:#A23A68;--k2-l-cat-5:#4A5F76;
+  --k2-l-cat-1:#1C7ED6;--k2-l-cat-2:#0F9D76;--k2-l-cat-3:#6C4AD0;--k2-l-cat-4:#C93A6B;--k2-l-cat-5:#1F3A68;
   --k2-l-outline:#1E2C3E;--k2-l-metal-hi:#D5DEE8;--k2-l-metal-mid:#8D9FB5;--k2-l-metal-lo:#4B5E78;--k2-l-hatch:#2A3A50;
   --k2-l-cavity:#1B2A40;--k2-l-glow:rgba(26,111,168,.10);--k2-l-shadow:rgba(10,24,46,.28);
   /* the course tokens a rule needs, each with its fallback */
@@ -31,6 +31,10 @@
 .k2-stage{flex:1 1 auto;min-height:0;border-radius:16px;overflow:hidden;
   background:radial-gradient(120% 95% at 35% 0%,var(--k2-panel-hi),var(--k2-panel-lo) 72%)}
 .k2-stage svg{display:block;width:100%;height:100%}
+/* 2.137.0 - the deck caps a slide's svg (gb_shell.css .slide-body svg{max-height:var(--fig-max)}, about 420 px): the
+   drawing filled only the top of its box with a band empty below, on every kit figure since the light look made it
+   visible (Aleksis, IT course: "elements that dont take the whole container, and isnt centered"). Its box sizes it. */
+.k2 .k2-stage svg{max-height:none}
 .k2 svg text{font-family:var(--font,"Raleway","Segoe UI",Arial,sans-serif)}
 
 /* type, in drawing units; --k2-up grows it so nothing is drawn under 12.5 px on screen */
@@ -151,6 +155,46 @@
 .k2-t-oncat{font-size:calc(17px * var(--k2-up,1));font-weight:800;fill:var(--k2-on-cat)}
 .k2-t-oncat-sub{font-size:calc(14px * var(--k2-up,1));font-weight:700;fill:var(--k2-on-cat);opacity:.85}
 .k2-arrow{fill:none;stroke:var(--k2-dim);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}.k2-arrow-head{fill:var(--k2-dim)}
+
+/* 2.137.0 - the light bold look (Aleksis, IT course: "easily understandable, look good, can see from afar, be modern";
+   "i dont like dark colors on dark background"). A diagram is drawn on a light panel: solid colour blocks with white
+   words, a soft edge instead of a black outline, thick navy lines, and one amber for "where we are now". */
+:root{
+  --k2-now:#FFB020;--k2-now-ink:#FFC85A;--k2-tr-done:#E6EEF8;--k2-tr-done-ink:#0C1E3A;--k2-tr-next:#2C4370;--k2-tr-next-ink:#8FA0BF;--k2-tr-line:#C9D6E6;
+  --k2-pair-dont:rgba(255,140,130,.16);--k2-pair-dont-ink:#FFB3AB;--k2-pair-do:rgba(79,214,160,.16);--k2-pair-do-ink:#9FF0CC;
+  --k2-sea-band:#12345E;--k2-hull:#3A5A8C;--k2-super:#4C6EA3;--k2-wall:#FF5A4E}
+.k2-light{--k2-on-cat:#FFFFFF;
+  --k2-now:#F08C00;--k2-now-ink:#9A5700;--k2-tr-done:#1F3A68;--k2-tr-done-ink:#FFFFFF;--k2-tr-next:#E3E8F0;--k2-tr-next-ink:#5B6B85;--k2-tr-line:#1F3A68;
+  --k2-pair-dont:#FDECEA;--k2-pair-dont-ink:#8E1F14;--k2-pair-do:#E3F6EF;--k2-pair-do-ink:#0B5E46;
+  --k2-sea-band:#BFDDF6;--k2-hull:#1F3A68;--k2-super:#2C4A80;--k2-wall:#E5483B}
+.k2-light [data-k2-holds] > .k2-outline-s{stroke:rgba(16,32,64,.16);stroke-width:2px}
+.k2-light .k2-lit{stroke:var(--k2-now);stroke-width:10}
+.k2-light .k2-arrow{stroke:#1F3A68;stroke-width:4.5}.k2-light .k2-arrow-head{fill:#1F3A68}
+.k2-light .k2-edge{stroke-opacity:.3}
+.k2-track-line{fill:none;stroke:var(--k2-tr-line);stroke-width:6;stroke-linecap:round}
+.k2-track-loop{fill:none;stroke:var(--k2-tr-line);stroke-width:4.5;stroke-dasharray:11 10;stroke-linecap:round}.k2-track-loop-head{fill:var(--k2-tr-line)}
+.k2-track-done{fill:var(--k2-tr-done)}.k2-track-now{fill:var(--k2-now)}.k2-track-next{fill:var(--k2-tr-next)}
+.k2-track-halo{fill:var(--k2-now);fill-opacity:.25}
+.k2-t-tracknum{font-weight:800;font-variant-numeric:lining-nums tabular-nums}
+.k2-track-num-done{fill:var(--k2-tr-done-ink)}.k2-track-num-now{fill:#FFFFFF}.k2-track-num-next{fill:var(--k2-tr-next-ink)}
+.k2-track-lab-done{fill:var(--k2-ink)}.k2-track-lab-now{fill:var(--k2-now-ink);font-size:calc(19px * var(--k2-up,1))}.k2-track-lab-next{fill:var(--k2-faint)}
+.k2-pair-dont{fill:var(--k2-pair-dont)}.k2-pair-do{fill:var(--k2-pair-do)}
+.k2-pair-dont-t{fill:var(--k2-pair-dont-ink)}.k2-pair-do-t{fill:var(--k2-pair-do-ink)}
+.k2-pair-dont-h{fill:var(--k2-warn)}.k2-pair-do-h{fill:var(--k2-good)}
+.k2-pair-now{fill:none;stroke:var(--k2-now);stroke-width:4}
+.k2-sea-band{fill:var(--k2-sea-band)}.k2-hull{fill:var(--k2-hull)}.k2-super{fill:var(--k2-super)}.k2-window{fill:var(--k2-sea-band)}
+.k2-bulkhead{fill:var(--k2-wall)}
+.k2-threat{fill:#FF4D3D;stroke:#FFFFFF;stroke-width:2.5}
+.k2-aerial{fill:none;stroke:var(--k2-now);stroke-width:4;stroke-linecap:round}
+.k2-light .k2-t-amber{fill:var(--k2-now-ink)}
+/* the light look's type is about a quarter larger - read from the back of a classroom (a reviewer measured the first
+   light drawings at 14-15 px on a 1280 x 800 projector: "everything is 30-50 % too small") */
+.kit2d-fig .k2-light .k2-t-lbl,.kit2d-fig .k2-light .k2-t-oncat{font-size:calc(21px * var(--k2-up,1))}
+.kit2d-fig .k2-light .k2-t-sub,.kit2d-fig .k2-light .k2-t-oncat-sub{font-size:calc(18px * var(--k2-up,1))}
+.kit2d-fig .k2-light .k2-t-tick,.kit2d-fig .k2-light .k2-t-axis,.kit2d-fig .k2-light .k2-t-name{font-size:calc(17px * var(--k2-up,1))}
+.kit2d-fig .k2-light .k2-t-note{font-size:calc(19px * var(--k2-up,1))}
+.kit2d-fig .k2-light .k2-t-big{font-size:calc(24px * var(--k2-up,1))}
+.kit2d-fig .k2-light .k2-track-lab-now{font-size:calc(24px * var(--k2-up,1))}
 
 /* in a deck: the figure fills its picture box */
 .kit2d-stage{width:100%;height:100%;min-height:0}

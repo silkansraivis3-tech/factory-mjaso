@@ -744,8 +744,11 @@ def kit2d_figure(text, s, probs, where):
         spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
     sid = "k2-" + s["id"]
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    return ('<div class="fill fig kit2d-fig" data-script-ignore><div class="kit2d-stage" data-kit2d="#%s"></div>'
-            '<script type="application/json" id="%s">%s</script></div>' % (sid, sid, data))
+    # 2.137.0 - a 2D figure is drawn on a light panel (the kit then takes its light bold look): on the dark panel its boxes
+    # were dark colours on dark (Aleksis, IT course: "i dont like dark colors on dark background"); "theme": "dark" keeps it
+    light = "" if spec.get("theme") == "dark" else " lt-light"
+    return ('<div class="fill fig kit2d-fig%s" data-script-ignore><div class="kit2d-stage" data-kit2d="#%s"></div>'
+            '<script type="application/json" id="%s">%s</script></div>' % (light, sid, sid, data))
 
 
 # 2.60.0 - a 3D scene's control hint ("Drag to turn - tap a part to look closer") is the scene's own words for the screen,
@@ -2894,7 +2897,11 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         variant = "picture" if fig else "text-only"
         why_box = ('<div class="lt-why" data-k="1"><span class="stamp" data-script-ignore>%s</span><div>%s</div></div>'
                    % (e(w["true" if right == "t" else "false"]), why))
-        if fig:
+        if fig and re.search(r'\bdata-kit(?:2d|3d)?[="]', side):
+            # 2.137.0 - beside a drawing, why opens in a card under it, never over it: over it the stamp and the lines hid the
+            # drawing's own answer (Aleksis, IT course M02 s04: "the false always shows and blocks other elements")
+            side, why_box = '<div class="lt-scol">%s%s</div>' % (side, why_box), ""
+        elif fig:
             # beside a picture, why opens over the picture's column: under the claim and the vote it had a third of the
             # slide, and a why of three lines was cut (the factory trial, M01 s04)
             i = side.rfind("</")
@@ -4434,7 +4441,14 @@ KIT2D_HEROES = (                    # words that say one of the kit's detailed s
     (re.compile(r"(?i)\b(motherboard|cpu|ram|pcie|chipset|gpu)\b"), "motherboard"),
     (re.compile(r"(?i)\b(pump|pumps|pipeline|tank level)\b"), "pump, pipe and tank"),
 )
+# 2.137.0 (Aleksis chose, on four IT course figures: a numbered track over a ring, do / don't beside each other over a
+# person reciting rules, a ship's compartments for segregation): the words that start the two new kinds
+KIT2D_DONT = re.compile(r"(?i)\b(never|do not|don't|must not|instead of|rather than|avoid)\b|, not\b")
+KIT2D_DONT_SPLIT = re.compile(r"(?i),?\s+(?:not|instead of|rather than)\s+")
+KIT2D_ZONES = re.compile(r"(?i)\b(segregat\w*|segment\w*|separat\w*|zones?|isolat\w*|compartments?|bulkheads?|kept apart)\b")
 KIT2D_KIND_WORDS = {"bars": "bars of the slide's own numbers", "events": "a time line of its times", "cycle": "a cycle",
+                    "track": "numbered stops on one line", "pairs": "don't beside do, row by row",
+                    "compartments": "a hull in watertight compartments",
                     "pyramid": "a pyramid, top first", "compare": "two columns compared row by row", "person": "people speaking",
                     "gantt": "a schedule", "matrix": "a grid", "chart": "a graph", "process:row": "a process across",
                     "process:rows": "a process in two rows", "process:column": "a process down the page",
@@ -4610,12 +4624,45 @@ def kit2d_candidates(script, s):
                        "tick": "{v}" if tu == "clock" else "{v} %s" % tu, "clock": tu == "clock", "cursor": "@t",
                        "events": [{"at": v, "label": (rest or lab)[:40], "sub": lab, "cat": i % 5 + 1} for i, (v, rest, lab) in enumerate(times)]}],
             "steps": [{"title": lines[i], "set": {"t": times[i][0] + tick * 0.25}, "line": i + 1} for i in range(len(times))]}))
+    # 2.137.0 - a procedure that goes round is numbered stops on one line with a way back, not a ring: the current stop is
+    # amber, the ones done solid, the ones to come grey (Aleksis, IT course M05 s09)
     if KIT2D_CYCLE.search(words) and 3 <= n <= 6:
-        out.append((80, "cycle", "the words say it goes round", lambda: {
+        out.append((80, "track", "the words say it goes round - numbered stops with a way back", lambda: {
             "state": {"stage": 0}, "rates": {"stage": 3.4},
-            "parts": [{"id": "C", "type": "cycle", "x": W / 2, "y": H / 2, "r": min(W, H) * 0.3, "band": 48, "at": "@stage",
-                       "stages": [{"name": t, "sub": ""} for t, _ in items]}],
+            "parts": [{"id": "T", "type": "track", "x": 30, "y": 20, "w": W - 60, "h": H - 40, "at": "@stage", "loop": True,
+                       "steps": [{"text": t} for t, _ in items]}],
             "steps": [{"title": lines[i], "set": {"stage": i + 1}, "line": i + 1} for i in range(n)]}))
+    # 2.137.0 - rules said against the mistake they stop: a "don't" column beside a "do" column (Aleksis, IT course M02 s04).
+    # A line that says both ("Keep the row, not delete it") is split; a half the words do not give is left to "_todo"
+    donts = sum(1 for x in lines if KIT2D_DONT.search(x))
+    if 2 <= n <= 5 and donts * 2 >= n:
+        def pairs_of():
+            rows, todo = [], False
+            for t, rest in items:
+                whole = t + (" - " + rest if rest else "")
+                bits = KIT2D_DONT_SPLIT.split(whole, 1)
+                if len(bits) == 2:
+                    rows.append([bits[1].strip(" .").capitalize(), bits[0].strip(" .")])
+                else:
+                    rows.append(["", whole.strip(" .")])
+                    todo = True
+            body = {"state": {"r": 0}, "rates": {"r": 5},
+                    "parts": [{"id": "P", "type": "pairs", "x": 30, "y": 16, "w": W - 60, "h": H - 32, "at": "@r", "rows": rows}],
+                    "steps": [{"title": lines[i], "set": {"r": i + 1}, "line": i + 1} for i in range(n)]}
+            if todo:
+                body["_todo"] = "each row's \"don't\" (the mistake the rule stops), from the slide's own words or the course's sources"
+            return body
+        out.append((82, "pairs", "the lines say what not to do - each mistake beside its rule", pairs_of))
+    # 2.137.0 - things kept apart: a hull in watertight compartments, the bulkheads between them (Aleksis, IT course M03 s10)
+    if KIT2D_ZONES.search(head) and 2 <= n <= 6:          # the slide is about keeping things apart, not a line that says so
+        names = [t for t, _ in items if not KIT2D_ZONES.search(t)][:4] or [t for t, _ in items][:4]
+        out.append((70, "compartments", "the words keep things apart - a ship's compartments and bulkheads", lambda: {
+            "state": {"w": 0, "h": 0}, "rates": {"w": 3, "h": 3},
+            "parts": [{"id": "S", "type": "compartments", "x": 20, "y": 10, "w": W - 40, "h": H - 20, "walls": "@w", "hit": "@h",
+                       "rooms": [{"text": t[:24], "cat": i % 5 + 1} for i, t in enumerate(names)]}],
+            "steps": [{"title": lines[i], "set": {"w": 1 if i else 0}, "line": i + 1} for i in range(n)],
+            "_todo": "the compartments (what is kept apart), the words over the drawing (\"wall\") and on which step a threat "
+                     "shows in which compartment (\"hit\") - from the slide's own words (SPEC.md: compartments)"}))
     says = [KIT2D_SAY.match(x) for x in lines]
     if 2 <= n <= 3 and all(says):
         xs = [W * (i + 0.5) / n for i in range(n)]

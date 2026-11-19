@@ -13,6 +13,11 @@
   'use strict';
   var d = w.document, NS = 'http://www.w3.org/2000/svg', UID = 0, TYPES = {}, figs = [];
   var reduce = false;
+  /* 2.137.0 - the diagram parts: a figure made only of these is cut to what it draws (Fig.crop). Not a balance: its beam
+     tips past what it draws at rest */
+  var CROPS = {};
+  ('chart curve point span trace region callout cycle gantt matrix node arrow token bars pyramid events compare ' +
+   'person track pairs compartments').split(' ').forEach(function (t) { CROPS[t] = 1; });
   try { reduce = !!(w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e0) { reduce = false; }
 
   /* ------------------------------------------------------------------------------------------------ helpers */
@@ -79,7 +84,7 @@
   function Fig(host, spec) {
     var f = this;
     f.spec = spec; f.host = host; f.id = 'k2-' + (++UID);
-    f.W = (spec.size || [960, 540])[0]; f.H = (spec.size || [960, 540])[1];
+    f.W = (spec.size || [960, 540])[0]; f.H = (spec.size || [960, 540])[1]; f.VW = f.VH = 0; f.cropped = false;
     f.T = {}; f.S = {}; f.V = {}; f.fx = []; f.pending = []; f.out = {}; f.parts = []; f.byId = {}; f.labels = []; f.solids = []; f.rate = spec.rates || {};
     f.step = 0; f.steps = [{ title: spec.idle || '' }].concat(spec.steps || []);
     var k;
@@ -94,13 +99,53 @@
     });
     f.side(); f.bar();
     f.goStep(0, true);
+    f.observe();
     f.resize();
-    if (w.ResizeObserver) { new w.ResizeObserver(function () { f.resize(); }).observe(f.stage); }
-    else { w.addEventListener('resize', function () { f.resize(); }); }
+  }
+  /* 2.137.0 - the parts a figure can be laid out again in its box's shape: their places are numbers in the drawing's
+     units, so stretching the y of each (and the height of each box) keeps the drawing and fills a taller box */
+  var RESHAPES = {};
+  'node arrow token track pairs compartments compare matrix pyramid events bars person callout chart curve point'.split(' ').forEach(function (t) { RESHAPES[t] = 1; });
+  function reshaped(spec, sy) {
+    var s = JSON.parse(JSON.stringify(spec));
+    s.size = [s.size[0], Math.round(s.size[1] * sy)];
+    (s.parts || []).forEach(function (p) {
+      if (typeof p.y === 'number') { p.y = Math.round(p.y * sy); }
+      if (typeof p.h === 'number' && p.type !== 'node') { p.h = Math.round(p.h * sy); }
+      if (p.type === 'node' && typeof p.h === 'number') { p.h = Math.round(p.h * Math.min(sy, 1.6)); }
+      if (p.at && p.at.length === 2 && typeof p.at[1] === 'number') { p.at = [p.at[0], Math.round(p.at[1] * sy)]; }
+    });
+    return s;
   }
   Fig.prototype = {
+    /* 2.137.0 - watched again after a reshape (a new stage): the box's own size, and the window's resize (a slide shown by
+       its class alone - the deck audit, a viewer - says so with a resize event, and a ResizeObserver's callback may come
+       after the words were already measured: they drew under 12.5 px, IT course M03, 1024 x 768) */
+    observe: function () {
+      var f = this;
+      if (f.ro) { f.ro.disconnect(); }
+      if (w.ResizeObserver) { f.ro = new w.ResizeObserver(function () { f.resize(); }); f.ro.observe(f.stage); }
+      if (!f.onWin) { f.onWin = function () { f.resize(); }; w.addEventListener('resize', f.onWin); }
+    },
+    /* 2.137.0 - a diagram in a box of another shape is laid out again in the box's shape (Aleksis, IT course: the drawings
+       sat small in tall boxes - a 560 x 340 track in a 478 x 520 box used half of it). Once, on the first real size; only
+       when every part can be (RESHAPES) and the shapes differ by more than 12 %; "reshape": false keeps the drawing's own */
+    reshape: function (r) {
+      var f = this, sp = f.spec;
+      f.reshaped = true;
+      if (!f.deck || sp.reshape === false || !sp.size || (sp.parts || []).some(function (p) { return !RESHAPES[p.type]; })) { return false; }
+      var want = r.height / r.width, have = f.H / f.W, sy = want / have;
+      if (Math.abs(sy - 1) < 0.06) { return false; }
+      sy = Math.max(0.6, Math.min(2.2, sy));
+      var at = f.step;
+      Fig.call(f, f.host, reshaped(sp, sy));
+      if (at) { f.goStep(at, true); }
+      return true;
+    },
     build: function () {
       var f = this, h = f.host, light = f.spec.theme === 'light' || (f.spec.theme !== 'dark' && lightBehind(h));
+      f.light = light;
+      f.deck = !!(h.closest && h.closest('.kit2d-fig'));    /* 2.137.0 - in a course deck: reshaped, cut, the larger floor */
       h.innerHTML = '';
       f.root = d.createElement('div'); f.root.className = 'k2' + (light ? ' k2-light' : '');
       f.main = d.createElement('div'); f.main.className = 'k2-main';
@@ -131,7 +176,9 @@
       ['blue', 'amber', 'good', 'cat-1', 'cat-2', 'cat-3', 'cat-4', 'cat-5'].forEach(function (c) {
         stops(el('linearGradient', { id: id + '-fill-' + c, x1: 0, y1: 0, x2: 0, y2: 1 }, D),
           [[0, 'k2-s-' + c, 0.5], [0.6, 'k2-s-' + c, 0.2], [1, 'k2-s-' + c, 0.06]]);
-        stops(el('linearGradient', { id: id + '-solid-' + c, x1: 0, y1: 0, x2: 0.35, y2: 1 }, D), [[0, 'k2-s-' + c, 1], [1, 'k2-s-' + c, 0.62]]);
+        /* 2.137.0 - on a light page a solid stays solid: fading to 0.62 let the panel through, and on the dark panel that
+           made every box a dark colour on dark (Aleksis: "i dont like dark colors on dark background") */
+        stops(el('linearGradient', { id: id + '-solid-' + c, x1: 0, y1: 0, x2: 0.35, y2: 1 }, D), [[0, 'k2-s-' + c, 1], [1, 'k2-s-' + c, f.light ? 0.9 : 0.62]]);
       });
     },
     url: function (name) { return 'url(#' + this.id + '-' + name + ')'; },
@@ -262,14 +309,21 @@
       for (k in f.T) { if (Math.abs(f.S[k] - f.T[k]) > 1e-3 * (1 + Math.abs(f.T[k]))) { return false; } }
       return true;
     },
-    show: function () { this.hidden = false; this.kick(); },
+    /* 2.137.0 - sized the moment its slide shows, not on the next resize callback: a check (or a slow tablet) that looks
+       at once saw the words at their unsized 17 px in a shrunk frame (IT course M03, 1024 x 768) */
+    show: function () { this.hidden = false; this.resize(); this.kick(); },
     hide: function () { this.hidden = true; if (this.raf) { w.cancelAnimationFrame(this.raf); this.raf = 0; } },
 
     /* ---- the 12.5 px floor: type grows by 1 / the scale the drawing is shown at */
     resize: function () {
       var f = this, r = f.stage.getBoundingClientRect();
       if (!r.width || !r.height) { return; }
-      var scale = Math.min(r.width / f.W, r.height / f.H), up = Math.max(1, 12.6 / (14 * scale));
+      if (!f.reshaped && f.reshape(r)) { return; }            /* laid out again in the box's shape - it sized itself */
+      /* its own frame (cut or not), never the deck fit's widened one: sized against that, the words grew, the fit widened
+         the frame again, and the drawing blew up to nothing (IT course M03 s10, the first light build) */
+      var VW = f.VW || f.W, VH = f.VH || f.H;
+      /* 2.137.0 - on the light look the floor is 15 px (read from the back of the room), elsewhere 12.6 */
+      var scale = Math.min(r.width / VW, r.height / VH), up = Math.max(1, (f.light && f.deck ? 15 : 12.6) / (14 * scale));
       f.svg.style.setProperty('--k2-up', up.toFixed(3));
       f.scale = scale;
       f.thinNow();
@@ -279,6 +333,41 @@
       f.layout();
       this.labels.forEach(function (L) { if (L.goal) { L.off = L.goal.slice(); } });
       f.follow(0);
+      if (!f.cropped && f.crop()) { f.resize(); }
+    },
+
+    /* ---- 2.137.0 - a diagram fills its box: the frame is cut to what is drawn, so a drawing whose size left a third of
+       the panel empty no longer sits small at the top of it (Aleksis, IT course M03 s10: "elements that dont take the whole
+       container, and isnt centered ... very small and hard to see"). Only for diagrams: a scene (a tanker, a radar, a board)
+       keeps the frame it was drawn in. A part still appearing (drawn smaller) is measured at its full size; "crop": false
+       in the spec keeps the frame. */
+    crop: function () {
+      var f = this;
+      if (d.fonts && d.fonts.status === 'loading') {              /* cut once the words have their own font and width */
+        if (!f.fontWait) { f.fontWait = true; d.fonts.ready.then(function () { f.resize(); }); }
+        return false;
+      }
+      f.cropped = true;
+      if (!f.deck || f.spec.crop === false || (f.spec.parts || []).some(function (p) { return !CROPS[p.type]; })) { return false; }
+      var saved = [], x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      [].forEach.call(f.svg.querySelectorAll('[transform]'), function (n) {
+        var t = n.getAttribute('transform');
+        if (/^translate\([^)]*\) scale\([^)]*\) translate\([^)]*\)$/.test(t)) { saved.push([n, t]); n.removeAttribute('transform'); }
+      });
+      ['back', 'contents', 'fx', 'hero', 'front', 'lbl'].forEach(function (k) {
+        var b;
+        try { b = f.L[k].getBBox(); } catch (e) { return; }
+        if (!b || (!b.width && !b.height)) { return; }
+        x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height);
+      });
+      saved.forEach(function (s) { s[0].setAttribute('transform', s[1]); });
+      if (x1 <= x0 || y1 <= y0) { return false; }
+      var m = 10 + 0.03 * Math.max(x1 - x0, y1 - y0), cw = x1 - x0 + 2 * m, ch = y1 - y0 + 2 * m;
+      if (cw * ch > 0.93 * f.W * f.H) { return false; }       /* it already fills its frame */
+      f.svg.setAttribute('viewBox', [x0 - m, y0 - m, cw, ch].map(function (v) { return (Math.round(v * 10) / 10); }).join(' '));
+      f.VW = cw; f.VH = ch;
+      f.svg.removeAttribute('data-fit-orig');                  /* the deck's fit (gb_fit.js) starts from the cut frame */
+      return true;
     },
 
     /* ---- labels: words for a place, beside it, clear of the others and of the solids */
@@ -502,6 +591,16 @@
     if (F && F.kind === 'poly') { return function (x) { var s = 0, i; for (i = F.c.length - 1; i >= 0; i--) { s = s * x + F.c[i]; } return s; }; }
     if (F && F.kind === 'exp') { return function (x) { return (F.a || 1) * Math.exp((F.k || 1) * x) + (F.b || 0); }; }
     var P = (p.pts || []).slice().sort(function (a, b) { return a[0] - b[0]; });
+    if (p.straight) {                                       /* 2.137.0 - measured values: straight between them, nothing invented */
+      return function (x) {
+        if (!P.length) { return 0; }
+        if (x <= P[0][0]) { return P[0][1]; }
+        if (x >= P[P.length - 1][0]) { return P[P.length - 1][1]; }
+        var i = 1; while (P[i][0] < x) { i++; }
+        var a = P[i - 1], b = P[i];
+        return a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]);
+      };
+    }
     return function (x) {                                   /* monotone cubic through the points: no overshoot */
       if (!P.length) { return 0; }
       if (x <= P[0][0]) { return P[0][1]; }
@@ -537,9 +636,15 @@
     f.line(function () { var q = [], j; for (j = 0; j <= N; j += 7) { q.push(ps[j]); } q.push(ps[N]); return q; });
     f.fns = f.fns || {}; f.fns[p.id] = { fn: fn, chart: C };
     var L = p.label ? f.label({ text: p.label, at: function () { return end; }, side: 'upleft', show: function () { return f.get(p.draw, 1) > 0.9 ? 1 : 0; } }) : null;
+    /* 2.137.0 - "dots": a dot on each measured value, shown as the line reaches it */
+    var dots = p.dots && p.pts ? p.pts.map(function (q) {
+      var dx = C.X(q[0]), dy = C.Y(clamp(q[1], C.yaxis.min, C.yaxis.max));
+      return { x: dx, c: el('circle', { cx: dx.toFixed(1), cy: dy.toFixed(1), r: 7, 'class': 'k2-pt k2-c-' + cat, opacity: 0 }, f.L.hero) };
+    }) : [];
     return {
       draw: function () {
         var k = clamp(f.get(p.draw, 1), 0, 1), at = along(k), on = k > 0.005 && k < 0.995 ? 1 : 0;
+        dots.forEach(function (o) { setOp(o.c, k > 0.005 && at[0] >= o.x - 1 ? 1 : 0); });
         line.setAttribute('stroke-dasharray', k.toFixed(4) + ' 1');
         clip.setAttribute('width', Math.max(0, at[0] - C.box.x).toFixed(1));
         tip.setAttribute('cx', at[0].toFixed(1)); tip.setAttribute('cy', at[1].toFixed(1)); setOp(tip, on);
@@ -1583,6 +1688,182 @@
       draw: function () {
         var at = f.get(p.at, R.length);
         rows.forEach(function (r, i) { var k = clamp(at - i, 0, 1), e = k * k * (3 - 2 * k); setOp(r.g, e); r.g.setAttribute('transform', 'translate(0 ' + ((1 - e) * 16).toFixed(1) + ')'); });
+      }
+    };
+  });
+
+  /* track - a procedure's steps as numbered stops on one line: the stop being talked about is amber and larger, the ones
+     before it solid, the ones after it grey; "loop" adds a dashed way back from the last stop to the first. 2.137.0 - it
+     replaces the ring for a procedure that repeats (Aleksis chose it over the ring, IT course M05 s09: a ring with words in
+     its corners said nothing of where we are). {x, y, w, h, steps: [{text}], at: "@s" (1 = the first stop is current, 0
+     none yet, n + 1 all done), loop: true, title} */
+  define('track', function (f, p) {
+    var S = p.steps || [], n = Math.max(1, S.length), x0 = p.x, y0 = p.y, W = p.w, H = p.h;
+    /* 2.137.0 - in a tall box the stops go down the page with their words beside them ("dir": "down" / "across") */
+    var vert = p.dir === 'down' || (p.dir !== 'across' && H > W * 1.05), top = y0 + (p.title ? 56 : 8);
+    var slot = vert ? (y0 + H - top - (p.loop ? 10 : 0)) / n : W / n;
+    var R = vert ? Math.max(22, Math.min(46, slot * 0.34, W * 0.12)) : Math.max(20, Math.min(50, slot * 0.3, H * 0.17));
+    var cy = top + R + 14, colX = x0 + (p.loop ? 58 : 14) + R;
+    var at_ = function (i) { return vert ? [colX, top + slot * (i + 0.5)] : [x0 + slot * (i + 0.5), cy]; };
+    var lineG = el('g', {}, f.L.back), g = el('g', {}, f.L.hero), loopG = null;
+    f.fills(x0, y0, W, H);
+    if (p.title) { el('text', { x: x0 + W / 2, y: y0 + 36, 'text-anchor': 'middle', 'class': 'k2-t-lbl k2-t-big' }, g, p.title); }
+    for (var i = 0; i < S.length - 1; i++) {
+      var a0 = at_(i), a1 = at_(i + 1);
+      el('path', { d: vert ? 'M' + a0[0] + ' ' + (a0[1] + R + 10) + ' V' + (a1[1] - R - 10) : 'M' + (a0[0] + R + 10) + ' ' + a0[1] + ' H' + (a1[0] - R - 10), 'class': 'k2-track-line' }, lineG);
+    }
+    if (p.loop && S.length > 1) {
+      var fa = at_(0), la = at_(S.length - 1), dl, hd;
+      if (vert) {
+        var lx = colX - R - 40;
+        dl = 'M' + (la[0] - R - 8) + ' ' + la[1] + ' Q' + lx + ' ' + la[1] + ' ' + lx + ' ' + ((la[1] + fa[1]) / 2) + ' T' + (fa[0] - R - 16) + ' ' + fa[1];
+        hd = 'translate(' + (fa[0] - R - 8) + ' ' + fa[1] + ') rotate(0)';
+      } else {
+        var ly = y0 + H - 46, lx1 = la[0], lx0 = fa[0];
+        dl = 'M' + lx1 + ' ' + ly + ' Q' + ((lx0 + lx1) / 2) + ' ' + (y0 + H + 18) + ' ' + (lx0 + 14) + ' ' + (ly + 6);
+        hd = 'translate(' + (lx0 + 8) + ' ' + (ly + 2) + ') rotate(-160)';
+      }
+      loopG = el('g', {}, lineG);
+      el('path', { d: dl, 'class': 'k2-track-loop' }, loopG);
+      el('path', { d: 'M 0 0 L -16 -9 L -16 9 Z', 'class': 'k2-track-loop-head', transform: hd }, loopG);
+    }
+    var stops = S.map(function (s, i) {
+      var cx = at_(i)[0], cy = at_(i)[1], sg = el('g', {}, g), inner = el('g', {}, sg);
+      var halo = el('circle', { cx: cx, cy: cy, r: R + 11, 'class': 'k2-track-halo', opacity: 0 }, inner);
+      var disc = el('circle', { cx: cx, cy: cy, r: R, 'class': 'k2-track-next' }, inner);
+      var num = el('text', { x: cx, y: (cy + R * 0.33).toFixed(1), 'text-anchor': 'middle', 'class': 'k2-t-tracknum k2-track-num-next',
+        style: 'font-size:' + (R * 0.92).toFixed(1) + 'px' }, inner, String(i + 1));
+      var lab = el('text', { 'text-anchor': vert ? 'start' : 'middle', 'class': 'k2-t-lbl k2-track-lab-next' }, sg);
+      holds(inner, disc);
+      return { cx: cx, cy: cy, inner: inner, halo: halo, disc: disc, num: num, lab: lab, text: (s && (s.text || s.name)) || String(s || '') };
+    });
+    (f.fits = f.fits || []).push(function () {
+      stops.forEach(function (s) {
+        if (vert) { wrapText(s.lab, s.text, s.cx + R + 26, s.cy, x0 + W - (s.cx + R + 30)); return; }
+        var rows = wrapText(s.lab, s.text, s.cx, s.cy + R + 34, slot - 14), fs = parseFloat(w.getComputedStyle(s.lab).fontSize) || 17;
+        s.lab.setAttribute('transform', 'translate(0 ' + ((rows - 1) * fs * 0.58).toFixed(1) + ')');
+      });
+    });
+    f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
+    return {
+      draw: function () {
+        var at = f.get(p.at, 0);
+        stops.forEach(function (s, i) {
+          var k = i + 1, cur = clamp(1 - Math.abs(at - k), 0, 1), st = at >= k + 0.5 ? 'done' : (at > k - 0.5 ? 'now' : 'next');
+          if (s.st !== st) {
+            s.st = st;
+            s.disc.setAttribute('class', 'k2-track-' + st); s.num.setAttribute('class', 'k2-t-tracknum k2-track-num-' + st);
+            s.lab.setAttribute('class', 'k2-t-lbl k2-track-lab-' + st);
+          }
+          var sc = 1 + 0.16 * cur;
+          s.inner.setAttribute('transform', 'translate(' + s.cx + ' ' + s.cy + ') scale(' + sc.toFixed(3) + ') translate(' + (-s.cx) + ' ' + (-s.cy) + ')');
+          setOp(s.halo, cur);
+        });
+      }
+    };
+  });
+
+  /* pairs - the mistake beside the rule: a "don't" column and a "do" column, one row a step. 2.137.0 - Aleksis chose it
+     over a person reciting the rules (IT course M02 s04). A row not reached yet is faint, never missing, so the frame is
+     whole from the first Next; the row just reached is ringed. {x, y, w, h, heads: ["Don't", "Do"], rows: [[don't, do]],
+     at: "@r" (rows shown), dim: 0.3} */
+  define('pairs', function (f, p) {
+    var R = p.rows || [], n = Math.max(1, R.length), x0 = p.x, y0 = p.y, W = p.w, H = p.h, gap = 18, cw = (W - gap) / 2, hh = 50;
+    var rh = (H - hh - 8) / n, heads = p.heads || ["Don't", 'Do'], dim = p.dim != null ? p.dim : 0.3;
+    var hg = el('g', {}, f.L.hero);
+    f.fills(x0, y0, W, H);
+    [0, 1].forEach(function (j) {
+      var cx = x0 + j * (cw + gap) + 20, cyy = y0 + hh / 2 - 4;
+      el('circle', { cx: cx, cy: cyy, r: 18, 'class': j ? 'k2-mark-good' : 'k2-mark-warn' }, hg);
+      el('path', { d: j ? 'M' + (cx - 8) + ' ' + cyy + ' l 6 6 l 11 -12' : 'M' + (cx - 7) + ' ' + (cyy - 7) + ' l 14 14 M' + (cx + 7) + ' ' + (cyy - 7) + ' l -14 14',
+        'class': 'k2-mark-ink' }, hg);
+      el('text', { x: cx + 30, y: cyy + 8, 'class': 'k2-t-lbl k2-t-big ' + (j ? 'k2-pair-do-h' : 'k2-pair-dont-h') }, hg, heads[j]);
+    });
+    var rows = R.map(function (r, i) {
+      var y = y0 + hh + 8 + i * rh, rg = el('g', {}, f.L.front), cells = [];
+      [0, 1].forEach(function (j) {
+        var x = x0 + j * (cw + gap), cg = el('g', {}, rg);
+        var o = el('rect', { x: x, y: y, width: cw, height: rh - 12, rx: 12, 'class': j ? 'k2-pair-do' : 'k2-pair-dont' }, cg);
+        var t = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-lbl ' + (j ? 'k2-pair-do-t' : 'k2-pair-dont-t') }, cg);
+        holds(cg, o);
+        cells.push({ t: t, txt: (r && r[j]) || '', x: x + cw / 2, y: y + (rh - 12) / 2, room: cw - 26 });
+      });
+      var ring = el('rect', { x: x0 - 5, y: y - 5, width: W + 10, height: rh - 2, rx: 15, 'class': 'k2-pair-now', opacity: 0, 'data-may-overlap': '' }, rg);
+      return { g: rg, cells: cells, ring: ring };
+    });
+    (f.fits = f.fits || []).push(function () { rows.forEach(function (r) { r.cells.forEach(function (c) { wrapText(c.t, c.txt, c.x, c.y, c.room); }); }); });
+    f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
+    return {
+      draw: function () {
+        var at = f.get(p.at, R.length);
+        rows.forEach(function (r, i) {
+          setOp(r.g, dim + (1 - dim) * clamp(at - i, 0, 1));
+          setOp(r.ring, clamp(1 - Math.abs(at - (i + 1)), 0, 1) * (at < R.length + 0.5 ? 1 : 0));
+        });
+      }
+    };
+  });
+
+  /* compartments - a ship's hull cut into watertight compartments with the bulkheads between them: the picture a seafarer
+     already has for segregation - malware, like a flood, is held in the compartment it got into. 2.137.0 - Aleksis, IT
+     course M03 s10. {x, y, w, h, rooms: [{text, sub, cat}], walls: "@w" (the bulkheads, 0..1), hit: "@h" (k: the k-th room
+     takes the threat, 0 none), wall: "Firewalls work like bulkheads" (the words over the drawing), mast: "Wi-Fi:
+     uncontrolled" (an aerial on the superstructure, with its words), wallShow / mastShow: "@k" (when each shows)} */
+  define('compartments', function (f, p) {
+    var Rm = p.rooms || [], n = Math.max(1, Rm.length), x0 = p.x, y0 = p.y, W = p.w, H = p.h;
+    var head = p.wall ? 44 : 0, yd = y0 + head + H * 0.3, yk = y0 + H * 0.94, sea = y0 + head + H * 0.6;
+    var back = el('g', {}, f.L.back), g = el('g', {}, f.L.hero), front = el('g', {}, f.L.front);
+    f.fills(x0, y0, W, H);
+    var wl = el('g', {}, front), mg = el('g', {}, front);
+    if (p.wall) {
+      el('rect', { x: x0 + 4, y: y0 + 10, width: 12, height: 26, rx: 3, 'class': 'k2-bulkhead' }, wl);
+      el('text', { x: x0 + 28, y: y0 + 31, 'class': 'k2-t-lbl k2-t-big' }, wl, p.wall);
+    }
+    el('rect', { x: x0, y: sea, width: W, height: y0 + H - sea, rx: 10, 'class': 'k2-sea-band' }, back);
+    var sx = x0 + W * 0.7, sw = W * 0.16, sh = H * 0.15;
+    el('rect', { x: sx, y: yd - sh, width: sw, height: sh + 4, rx: 6, 'class': 'k2-super' }, g);
+    for (var wi = 0; wi < 3; wi++) { el('rect', { x: sx + sw * (0.12 + wi * 0.3), y: yd - sh * 0.72, width: sw * 0.2, height: sh * 0.26, rx: 2, 'class': 'k2-window' }, g); }
+    var cut = W * 0.06;
+    el('path', { d: 'M' + x0 + ' ' + yd + ' H' + (x0 + W) + ' L' + (x0 + W - cut) + ' ' + (yk - 10) + ' Q' + (x0 + W / 2) + ' ' + (yk + 14) + ' ' + (x0 + cut) + ' ' + (yk - 10) + ' Z', 'class': 'k2-hull' }, g);
+    var ix0 = x0 + cut + 10, ix1 = x0 + W - cut - 10, bt = 12, rw = (ix1 - ix0 - bt * (n - 1)) / n, ry = yd + 12, rhh = yk - 26 - ry;
+    var rooms = Rm.map(function (r, i) {
+      var rx = ix0 + i * (rw + bt), rg = el('g', {}, g);
+      var o = el('rect', { x: rx, y: ry, width: rw, height: rhh, rx: 8, fill: f.url('solid-cat-' + (r.cat || i % 5 + 1)) }, rg);
+      var t = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-oncat k2-t-big' }, rg);
+      if (r.sub) { el('text', { x: rx + rw / 2, y: ry + rhh * 0.52, 'text-anchor': 'middle', 'class': 'k2-t-oncat-sub' }, rg, r.sub); }
+      holds(rg, o);
+      return { x: rx, t: t, text: r.text || '', sub: r.sub };
+    });
+    var walls = [];
+    for (var b = 1; b < n; b++) {
+      var bx = ix0 + b * (rw + bt) - bt / 2;
+      walls.push(el('rect', { x: bx - 6, y: yd - 6, width: 12, height: yk - 16 - yd, rx: 3, 'class': 'k2-bulkhead' }, front));
+    }
+    var threat = el('g', { opacity: 0 }, front), dots = [[0.26, 0.84, 11], [0.5, 0.74, 9], [0.74, 0.86, 10]].map(function (q) {
+      return { q: q, c: el('circle', { cx: ix0, cy: ry, r: q[2], 'class': 'k2-threat' }, threat) };
+    });
+    if (p.mast) {
+      var mx = sx + sw / 2, my = yd - sh;
+      el('path', { d: 'M' + mx + ' ' + my + ' V' + (my - 26), 'class': 'k2-aerial' }, mg);
+      el('path', { d: 'M' + (mx - 11) + ' ' + (my - 30) + ' Q' + mx + ' ' + (my - 42) + ' ' + (mx + 11) + ' ' + (my - 30) +
+        ' M' + (mx - 19) + ' ' + (my - 36) + ' Q' + mx + ' ' + (my - 54) + ' ' + (mx + 19) + ' ' + (my - 36), 'class': 'k2-aerial' }, mg);
+      el('text', { x: mx - 30, y: my - 22, 'text-anchor': 'end', 'class': 'k2-t-lbl k2-t-amber' }, mg, p.mast);
+    }
+    (f.fits = f.fits || []).push(function () {
+      /* the name in the upper part of its room: the threat's dots sit in the lower part, never on the words */
+      rooms.forEach(function (r) { wrapText(r.t, r.text, r.x + rw / 2, ry + rhh * (r.sub ? 0.3 : 0.36), rw - 16); });
+    });
+    f.solid(function () { return { x: x0, y: yd - sh, x2: x0 + W, y2: yk + 14 }; });
+    return {
+      draw: function () {
+        var wv = clamp(f.get(p.walls, 1), 0, 1), h = f.get(p.hit, 0), k = Math.round(h);
+        walls.forEach(function (b0) { setOp(b0, wv); });
+        setOp(wl, f.get(p.wallShow, 1)); setOp(mg, f.get(p.mastShow, 1));
+        if (k >= 1 && k <= rooms.length && threat.k !== k) {
+          threat.k = k;
+          dots.forEach(function (d0) { d0.c.setAttribute('cx', (rooms[k - 1].x + d0.q[0] * rw).toFixed(1)); d0.c.setAttribute('cy', (ry + d0.q[1] * rhh).toFixed(1)); });
+        }
+        setOp(threat, k >= 1 ? clamp(1 - Math.abs(h - k) * 2, 0, 1) : 0);
       }
     };
   });
@@ -3203,7 +3484,15 @@
     var H = w.GB_HOOKS = w.GB_HOOKS || {}, old = H[id] || {}, cur = {};
     cur.enter = function () { if (old.enter) { old.enter.apply(this, arguments); } if (fns.enter) { fns.enter(); } };
     cur.leave = function () { if (old.leave) { old.leave.apply(this, arguments); } if (fns.leave) { fns.leave(); } };
-    cur.step = function (dir) { if (old.step && old.step(dir)) { return true; } return !!(fns.step && fns.step(dir)); };
+    /* 2.137.0 - "first": the figure's steps before the slide's own stops going forward (and after them going back) - on a
+       true / false slide the why is the reveal: shown at the first Next it took half the drawing's room while the drawing
+       still stepped (Aleksis, IT course M02 s04: "the false always shows and blocks other elements") */
+    cur.step = function (dir) {
+      var mine = function () { return !!(fns.step && fns.step(dir)); }, theirs = function () { return !!(old.step && old.step(dir)); };
+      if (fns.first && dir > 0) { return mine() || theirs(); }
+      if (fns.first && dir < 0) { return theirs() || mine(); }
+      return theirs() || mine();
+    };
     H[id] = cur;
   }
   function deck(f, slide) {
@@ -3217,6 +3506,7 @@
     };
     f.hide();
     hook(slide.id, {
+      first: !!slide.querySelector('.lt-why'),
       enter: function () { f.goStep(0, true); f.show(); f.resize(); },
       leave: function () { f.hide(); },
       step: function (dir) {

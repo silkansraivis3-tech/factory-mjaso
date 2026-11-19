@@ -20,8 +20,20 @@ and for courses already built with it. A new 2D figure is a 2D-kit spec.
   trails), with a leader when they must go further; they glide when they move. Axis numbers thin out when the grown
   type no longer fits, and fade out of the way of a value tag. Type grows so no word is under 12.5 px on screen.
 - **Colour.** Course tokens and five category colours (`--cat-1`..`--cat-5`: blue, teal, violet, rose, slate). Its
-  warning colour is the factory's alarm amber (`--kit-alarm`): a deck's brand styles make `--amber` blue. Dark is
-  the slide; on a light ground the kit takes its light set (`.k2-light`, or `"theme": "light"`).
+  warning colour is the factory's alarm amber (`--kit-alarm`): a deck's brand styles make `--amber` blue. On a light
+  ground the kit takes its light set (`.k2-light`, or `"theme": "light"`).
+- **The light bold look (2.137.0).** In a deck a 2D figure sits on a light panel (the compiler adds `lt-light`;
+  `"theme": "dark"` keeps the dark one): solid colour blocks with white words, a soft edge instead of a black outline,
+  thick navy lines and arrows, one amber for "where we are now" (a lit box's ring, a track's current stop, a pair's
+  ring). Owner, IT course 2026-11-19: "easily understandable, look good, can see from afar, be modern"; "i dont like
+  dark colors on dark background".
+- **Fills its box (2.137.0, in a course deck).** The deck no longer caps the drawing at `--fig-max` (it sat in the top
+  420 px of a 520 px box). A figure of diagram parts whose box has another shape is laid out again in the box's shape
+  once, on its first real size (`reshape`: the y of each part and the height of each box stretched; `"reshape": false`
+  keeps its own), then its frame is cut to what it draws plus a margin (`"crop": false` keeps it). The type is about a
+  quarter larger on the light look and never under 15 px on screen; it is sized against the kit's own frame, never the
+  deck fit's widened one (that fed back into a blown-up drawing). A true / false slide plays the drawing's steps before
+  its why. Outside a deck (the demo pages) none of this applies.
 - **The deck.** Inside a slide the deck's Next and Back walk the steps (GB_HOOKS); a step's `line` lights the
   slide's line. Outside a deck the kit draws its own step bar.
 - **The overlap check.** `KIT2D.audit(figure)` lists words over words, words that spill out of the box they are written
@@ -75,7 +87,10 @@ same elements ... no way to make them more interesting and understandable?"). Pi
 | numbers, a rise or a fall, a comparison of amounts | `chart` + `curve` + `point`, or `bars` |
 | dates, a history, a road map, a day's order | `events` |
 | two or three things side by side, for and against, before and after | `compare` (ticks and crosses where the words say yes / no) |
-| something going round (a loop, a review cycle, the six functions) | `cycle` |
+| rules, and the mistakes they stop ("keep the row", "never edit the raw sheet") | `pairs` - a "don't" column beside a "do" column (2.137.0) |
+| a procedure that repeats (check, then the next claim from step 1) | `track` with `loop` - numbered stops, a way back (2.137.0; not a ring) |
+| things kept apart (network zones, segregation, isolation) | `compartments` - the ship's hull, watertight compartments, bulkheads (2.137.0) |
+| something going round with no first step (the six functions, PDCA as a whole) | `cycle` |
 | levels, a hierarchy, rules above rules | `pyramid` |
 | who says or does what (a master, shore support, a phishing e-mail, a vendor) | `person` with a speech bubble, `callout` |
 | a computer's parts, ports, memory, storage | `motherboard` (hero) |
@@ -96,7 +111,7 @@ Every part is drawn at arrival, dim (0.55-0.7); the step that names it brightens
 | type | settings |
 |---|---|
 | `chart` | `x y w h`, `xaxis` / `yaxis`: `{min, max, step, label, unit, decimals}` - grid, axes, ticks |
-| `curve` | `on` (chart), `fn` (`{"kind": "power", "a", "n", "b"}`, `poly` `{"c": [...]}`, `exp` `{"a", "k", "b"}`) or `pts` (joined smoothly), `cat`, `draw` (0..1 drawn in, a bright tip leading), `area`, `label` |
+| `curve` | `on` (chart), `fn` (`{"kind": "power", "a", "n", "b"}`, `poly` `{"c": [...]}`, `exp` `{"a", "k", "b"}`) or `pts` (joined smoothly; `straight: true` joins measured values with straight lines, `dots: true` marks each - 2.137.0), `cat`, `draw` (0..1 drawn in, a bright tip leading), `area`, `label` |
 | `point` | `on`, `curve`, `x`, `tagx` / `tagy` (`"{x} kn"`, `"{y} t"`; `tagx: false` for a second point at the same x), `dx` / `dy` decimals, `show`, `drag` (the state a drag writes), `snap`, `min` / `max`, `ghost: {x, show}` - publishes `x`, `y` |
 | `span` | `on`, `curve`, `from`, `to`, `show`, `text` (`"{pct} % less fuel"`) - the band and bracket between two points |
 | `trace` | `on`, `pts` (a route point to point; a coordinate may be a state, `"@left"`), `cat`, `draw` (0..1, a bright tip leading), `label`, `sub`, `side`, `labelAt` (0..1 along) - publishes `x`, `y` at the tip |
@@ -129,6 +144,9 @@ Every part is drawn at arrival, dim (0.55-0.7); the step that names it brightens
 | `events` | `x y w start end step tick`, `clock` (times in minutes after midnight, shown as 02:10), `events: [{at, label, sub, cat}]`, `cursor`, `cursorTag` - each comes in as the cursor reaches it - words that would touch the last ones take the other side or a lane further out (`stem`, `lane` px) |
 | `compare` | `x y w h`, `cols: [{title, cat}]`, `rows: [{cells: [..], marks: [1, 0, null]}]` (a tick, a cross, none), `at` (rows shown) |
 | `person` | `x y` (feet), `scale`, `name`, `role`, `cat`, `say`, `sayShow`, `side` (`up` / `right` / `left`: the bubble), `bubbleW`, `bubbleH`, `show`, `lit` - `say` may be `{"pick": "@k", "of": [lines]}`, a new line each step |
+| `track` | `x y w h`, `steps: [{text}]`, `at` (k: stop k is current - amber, larger; before it solid, after it grey), `loop` (a dashed way back from the last stop to the first), `title` |
+| `pairs` | `x y w h`, `heads` (`["Don't", "Do"]`), `rows: [[don't, do]]`, `at` (rows shown; the row just reached is ringed amber), `dim` (a row not reached yet, 0.3) |
+| `compartments` | `x y w h`, `rooms: [{text, sub, cat}]`, `walls` (the bulkheads, 0..1), `hit` (k: malware dots held in room k, 0 none), `wall` (the words over it: "Firewalls = bulkheads"), `mast` (a Wi-Fi aerial and its words), `wallShow`, `mastShow` |
 | `callout` | `at: [x, y]`, `text`, `sub`, `side`, `dist`, `show` - `text` / `sub` may be `{"pick": "@k", "of": [...]}` |
 
 **Hero figures** - one detailed scene a module can build its story on; `courses.html` shows each step by step.

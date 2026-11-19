@@ -2516,7 +2516,7 @@ def kit2d_part(tmp):
     probs = []
     h = cm.kit2d_figure(json.dumps(KIT2D_SPEC), s4, probs, "s04")
     check("kit2d_figure: the box, the stage [data-kit2d], the spec as data; its words are the kit's, not the script's",
-          h.startswith('<div class="fill fig kit2d-fig" data-script-ignore><div class="kit2d-stage" data-kit2d="#k2-s04"></div>'
+          h.startswith('<div class="fill fig kit2d-fig lt-light" data-script-ignore><div class="kit2d-stage" data-kit2d="#k2-s04"></div>'
                        '<script type="application/json" id="k2-s04">') and h.endswith("</script></div>") and not probs, (h, probs))
     check("... a '</script>' inside the spec cannot end the page's script early, and the spec comes back whole",
           "</script>" not in h.split('id="k2-s04">')[1][:-len("</script></div>")]
@@ -2557,8 +2557,19 @@ def kit2d_part(tmp):
           and st["size"] == list(cm.KIT2D_SIZE) and "_todo" not in st and st.get("_k2"), st)
     cyc = dict(proc, id="s06", text="Plan - set the goal.\nDo - try it.\nCheck - measure it.\nAct - keep what works, and round again.")
     sc = cm.starter_kit2d({"module": 1}, cyc)
-    check("... a slide whose words say it goes round is a cycle of its lines' names",
-          sc["parts"][0]["type"] == "cycle" and [x["name"] for x in sc["parts"][0]["stages"]] == ["Plan", "Do", "Check", "Act"], sc)
+    check("... a slide whose words say it goes round is numbered stops of its lines' names with a way back (2.137.0, not a ring)",
+          sc["parts"][0]["type"] == "track" and sc["parts"][0]["loop"] is True
+          and [x["text"] for x in sc["parts"][0]["steps"]] == ["Plan", "Do", "Check", "Act"], sc)
+    # 2.137.0 - rules said against the mistake: don't beside do; things kept apart: a hull in compartments
+    dd = cm.starter_kit2d({"module": 1}, dict(proc, id="s09", title="Cleaning a log",
+                                              text="Keep the row, not delete it.\nCheck the value against the log, not guess it.\nNever edit the raw sheet."))
+    seg = cm.starter_kit2d({"module": 1}, dict(proc, id="s10", title="Segregation of the ship's networks",
+                                               text="OT network - engines and navigation.\nIT network - office PCs.\nCrew network - Wi-Fi."))
+    check("... lines that say what not to do are don't beside do, split where a line says both; a slide about keeping things "
+          "apart is a hull in compartments named by its lines",
+          dd["_look"] == "pairs" and dd["parts"][0]["rows"][0] == ["Delete it", "Keep the row"] and "_todo" in dd
+          and seg["_look"] == "compartments" and [r["text"] for r in seg["parts"][0]["rooms"]] == ["OT network", "IT network", "Crew network"],
+          (dd, seg))
     ch = cm.starter_kit2d({"module": 1}, dict(proc, id="s07", visual_kind="chart"))
     bad2 = []
     cm.kit2d_figure(json.dumps({k: v for k, v in ch.items() if k != "_k2"}), proc, bad2, "s07")
@@ -2602,7 +2613,7 @@ def kit2d_part(tmp):
     cm.kit2d_variety({"module": 1, "screens": scr}, scr, [page("s01", cyc_spec), "", "", "", "", page("s06", cyc_spec), ""], far)
     check("kit2d_variety: two 2D figures that look alike two slides apart are a problem naming the other slide and what else "
           "the slide's words make; five slides apart they are not",
-          len(near) == 1 and "s01" in near[0] and "a cycle" in near[0] and "also make" in near[0] and not far, (near, far))
+          len(near) == 1 and "s01" in near[0] and "numbered stops" in near[0] and "also make" in near[0] and not far, (near, far))
     check("... the module holds the factory's kit2d.js and kit2d.css, byte for byte (design_system.py ships them)",
           same(os.path.join(md, "assets", "kit2d.js"), design_system.shipped_src(os.path.join(kit2d_dir, "kit2d.js")))
           and same(os.path.join(md, "assets", "kit2d.css"), os.path.join(kit2d_dir, "kit2d.css")), out)
