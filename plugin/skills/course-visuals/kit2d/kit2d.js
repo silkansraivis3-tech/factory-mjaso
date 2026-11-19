@@ -328,6 +328,14 @@
       f.scale = scale;
       f.thinNow();
       (f.fits || []).forEach(function (fn) { fn(); });
+      /* 2.137.5 - the scale it is really drawn at (a cut or reshaped frame can draw it smaller than the plan says): the
+         floor is set again from that, once (IT course M06 s08: 12.3 px at 1024 x 768 under a 12.6 px floor) */
+      var m = f.svg.getScreenCTM && f.svg.getScreenCTM(), real = m ? Math.abs(m.a) : 0;
+      if (real && real < scale * 0.98) {
+        up = Math.max(1, 12.6 / ((f.light && f.deck ? 17 : 14) * real));
+        f.svg.style.setProperty('--k2-up', up.toFixed(3));
+        (f.fits || []).forEach(function (fn) { fn(); });
+      }
       f.frame(!f.sized);                            /* the first size jumps to the step; a later one (a step title wrapping) lets it play on */
       f.sized = true;
       f.layout();

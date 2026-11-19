@@ -171,7 +171,7 @@
 .k2-light [data-k2-holds] > .k2-outline-s{stroke:rgba(16,32,64,.16);stroke-width:2px}
 .k2-light .k2-lit{stroke:var(--k2-now);stroke-width:10}
 .k2-light .k2-arrow{stroke:#1F3A68;stroke-width:4.5}.k2-light .k2-arrow-head{fill:#1F3A68}
-.k2-arrow-lit{fill:none;stroke:var(--k2-now);stroke-width:14;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:.55}
+.k2-arrow-lit{fill:none;stroke:var(--k2-now);stroke-width:18;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:.7}
 .k2-light .k2-edge{stroke-opacity:.3}
 .k2-track-line{fill:none;stroke:var(--k2-tr-line);stroke-width:6;stroke-linecap:round}
 .k2-track-loop{fill:none;stroke:var(--k2-tr-line);stroke-width:4.5;stroke-dasharray:11 10;stroke-linecap:round}.k2-track-loop-head{fill:var(--k2-tr-line)}

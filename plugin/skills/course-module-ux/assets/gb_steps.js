@@ -19,7 +19,12 @@
     var whole = (w.getComputedStyle ? w.getComputedStyle(img).objectFit : '') === 'contain';
     var sc = whole ? Math.min(W / iw, Hh / ih) : Math.max(W / iw, Hh / ih);
     var k = iw / (+img.getAttribute('data-px-w') || iw); px *= k; py *= k;
-    return { x: (W - iw * sc) / 2 + px * sc, y: (Hh - ih * sc) / 2 + py * sc, ox: (W - iw * sc) / 2, oy: (Hh - ih * sc) / 2, dw: iw * sc, dh: ih * sc, W: W, H: Hh };
+    /* 2.137.5 - where the picture sits in its box is its object-position (e.g. 40% 35%), not always the centre: rings and
+       zooms landed 20-40 px off (IT course M02 s05, s09) */
+    var op = ((w.getComputedStyle ? w.getComputedStyle(img).objectPosition : '') || '50% 50%').split(/\s+/);
+    var fr = function (v) { return /%$/.test(v || '') ? parseFloat(v) / 100 : 0.5; };
+    var ox = (W - iw * sc) * fr(op[0]), oy = (Hh - ih * sc) * fr(op[1]);
+    return { x: ox + px * sc, y: oy + py * sc, ox: ox, oy: oy, dw: iw * sc, dh: ih * sc, W: W, H: Hh };
   }
 
   /* what each kind of part does at a stop */
