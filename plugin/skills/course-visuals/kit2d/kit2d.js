@@ -1662,6 +1662,9 @@
        so words close in time never sit on each other */
     function lanes() {
       var base = p.stem || 92, gap = p.lane || 58, last = { true: [], false: [] };
+      /* 2.137.7 - a lane is at least a label and its sub high, at the size they are drawn now (grown to the floor) */
+      var fz0 = evs.length ? parseFloat(w.getComputedStyle ? w.getComputedStyle(evs[0].tl).fontSize : '') || 18 : 18;
+      gap = Math.max(gap, Math.max(22, fz0 * 1.15) * 2 + 10);
       evs.forEach(function (o, i) {
         var b = o.tg.getBBox(), half = b.width / 2 + 10, pref = i % 2 === 0, lane, side, k;
         for (k = 0; k < 2 * evs.length; k++) {
@@ -1673,8 +1676,11 @@
         }
         last[side][lane] = o.x + half;
         var len = base + lane * gap, ty = y0 + (o.up ? -len - 12 : len + 24);
+        /* 2.137.7 - the line between a label and its sub is the label's real size: with the type grown to the 12.5 px floor,
+           a fixed 22 printed them over each other (IT course M05 s10, a drawing in a band) */
+        var fz = parseFloat(w.getComputedStyle ? w.getComputedStyle(o.tl).fontSize : '') || 18, dy = Math.max(22, fz * 1.15);
         o.stem.setAttribute('d', 'M' + o.x + ' ' + y0 + ' V' + (y0 + (o.up ? -len : len)));
-        o.tl.setAttribute('y', ty - (o.up && o.ts ? 22 : 0)); if (o.ts) { o.ts.setAttribute('y', ty + (o.up ? 0 : 22)); }
+        o.tl.setAttribute('y', ty - (o.up && o.ts ? dy : 0)); if (o.ts) { o.ts.setAttribute('y', ty + (o.up ? 0 : dy)); }
         o.y = ty;
       });
     }

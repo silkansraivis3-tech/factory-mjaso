@@ -205,6 +205,25 @@
 .slide .lt-split{display:grid;grid-template-columns:var(--cols,44fr 56fr);gap:var(--lt-gap);flex:1;min-height:0}
 .slide .lt-split > .copy{display:flex;flex-direction:column;justify-content:center;min-width:0;align-self:stretch}  /* 2.125.1: fills the row, so the centring works (PM M02 s04 / s05 sat in the top 40 %) */
 .slide .lt-split > .fill{min-height:0;min-width:0}
+/* 2.137.7 - "band": the drawing is a wide band over the steps, the steps take the whole width under it */
+.slide .lt-split.lt-band,.slide .lt-split.lt-band:has(> .lt-scol){grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,32fr) minmax(0,68fr);gap:min(1.6vmin,13px)}
+@media (max-width:1100px){.slide .lt-split.lt-band,.slide .lt-split.lt-band:has(> .lt-scol){grid-template-rows:minmax(0,25fr) minmax(0,75fr)}}
+.slide .lt-split.lt-band > .fill,.slide .lt-split.lt-band > .lt-scol{order:-1}
+/* the answer card sits beside the drawing in the band, not under it */
+.slide .lt-split.lt-band > .lt-scol{flex-direction:row;align-items:stretch}
+.slide .lt-split.lt-band > .lt-scol > .fig{flex:1.5 1 0;min-width:0}
+.slide .lt-split.lt-band > .lt-scol > .lt-ans-under{flex:1 1 0;min-width:0;overflow:hidden}
+/* when the answer opens it takes the whole band (the drawing has had its stops): beside the drawing it ran 30-90 px past
+   the band (IT course M05 s08, s10 at 1024 x 768) */
+.slide[data-last] .lt-split.lt-band > .lt-scol > .fig{display:none}
+.slide[data-last] .lt-split.lt-band > .lt-scol > .lt-ans-under{flex:1 1 0;display:flex;flex-direction:column;justify-content:center}
+.slide .lt-split.lt-band .lt-work{gap:min(.8vmin,6px)!important}
+.slide .lt-split.lt-band .lt-work > li{padding-top:min(.5vmin,4px);padding-bottom:min(.5vmin,4px);min-height:0}
+.slide .lt-split.lt-band .lt-work > li > .n{width:min(3.4vmin,27px);height:min(3.4vmin,27px);min-width:0;font-size:.85em}
+/* the whole width: a row's two halves ("What I asked | Since when ...") sit on one line, not stacked */
+.slide .lt-split.lt-band .lt-work > li > div{display:flex;flex-wrap:wrap;column-gap:.7em;align-items:baseline}
+.slide .lt-split.lt-band .lt-work > li > div > *{display:inline}
+.slide .lt-split.lt-band > .copy{justify-content:flex-start}
 .slide .lt-split .kit3d-fig{height:100%}
 .slide .lt-split .kit3d-stage{height:100%;min-height:0}
 

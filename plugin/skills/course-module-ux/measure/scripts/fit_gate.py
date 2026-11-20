@@ -52,8 +52,10 @@ def find_deck(arg):
 
 # the 2D kit's own check (kit2d.js KIT2D.audit) on the figures of the slide in front: words over words, words or shapes cut
 # at the edge, a label on a line - measured once the figure has stopped moving
+# 2.137.7 - only a figure on screen: a drawing put away at its slide's answer stop (the band, IT course M05 s08) has no box
 KIT2D = """(id) => { const s = document.getElementById(id); if (!window.KIT2D || !s) { return null; }
-  const fs = KIT2D.figures.filter(f => s.contains(f.host)); if (!fs.length) { return null; }
+  const fs = KIT2D.figures.filter(f => s.contains(f.host) && f.host.getClientRects().length && f.host.getBoundingClientRect().height > 2);
+  if (!fs.length) { return null; }
   return { idle: fs.every(f => f.idle()), found: [].concat.apply([], fs.map(f => KIT2D.audit(f))) }; }"""
 
 

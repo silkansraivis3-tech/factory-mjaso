@@ -2952,8 +2952,12 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         d["data-stops"] = str(len(lines) + 2)
         variant = "figure" if fig else "text-only"
         side = answer_over(side, s)
-        body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
-                % ("56fr 44fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
+        # 2.137.7 - "band": true: a wide, short drawing runs as a band ABOVE the steps and the steps get the whole width -
+        # beside the drawing a worked example of long quoted lines needed 537 px of a 496 px column and lost its drawing
+        # (IT course M05 s08, s10; Aleksis: "make it fit")
+        band = bool(fig) and bool(b.get("band"))
+        body = ('<div class="slide-body lt-split%s" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
+                % (" lt-band" if band else "", "56fr 44fr" if fig and not band else "1fr", steps, you, "\n    " + side if fig else ""))
 
     elif tid == "name-parts":
         # the room names each numbered part on the picture first; Next shows the names one by one

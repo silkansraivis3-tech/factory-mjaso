@@ -144,6 +144,9 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 
 /* the points: numbered 01, 02 ... in the brand's blue - the reference's numbered list */
 .slide[data-template] .support{counter-reset:lt;gap:min(2.6vmin,22px)}
+/* 2.137.7 - on a screen 800 px tall or less the lines sit a little closer: a slide of six two-row lines beside a drawing ran
+   5 px past it at 1024 x 768 (IT course M05 s13) */
+@media (max-height:800px){.slide[data-template] .support{gap:min(2vmin,16px)}}
 .slide[data-template] .support li{counter-increment:lt;padding-left:min(5vmin,44px);font-size:var(--lt-fs);line-height:1.5;color:var(--lt-steel);font-weight:500}
 .slide[data-template].dark .support li{color:var(--lt-dim-d)}
 .slide[data-template] .support li b{color:var(--lt-navy)}
