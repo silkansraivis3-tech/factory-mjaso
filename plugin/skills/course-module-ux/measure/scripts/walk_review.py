@@ -303,17 +303,24 @@ def save_json(p, data):
 
 def figure_why(course, module):
     """{slide id: (why, why_text)} from the module's build sheet (kit figure, kit3d model or custom figure)"""
-    name, out = mid(canon(course, module)), {}
+    name, out, named = mid(canon(course, module)), {}, {}
     for d in (os.path.join(_work(course), "working_claude", "script"), os.path.join(_work(course), "script")):
         b = load_json(os.path.join(d, name + ".build.json"))
         if b:
             for sid, e in (b.get("screens") or {}).items():
+                if isinstance(e, dict) and "figure" in e:
+                    named[sid] = os.path.basename(str(e.get("figure") or ""))
                 if isinstance(e, dict) and (e.get("why") or e.get("why_text")):
                     out[sid] = (e.get("why", ""), e.get("why_text", ""))
             break
-    # the reason may live in the figure's own spec (figures/MNN/sNN.kit.json, .kit2d.json, .kit3d.json)
+    # the reason may live in the figure's own spec (figures/MNN/sNN.kit.json, .kit2d.json, .kit3d.json). 2.137.6 - only the
+    # spec the build sheet names: an old sNN.kit.json left beside the sNN.kit2d.json that replaced it gave the reviewer the
+    # old drawing's purpose (IT course M04 s08 "entry points"), and a slide whose drawing was taken off still "declared" one
     for spec in sorted(glob.glob(os.path.join(_work(course), "working_claude", "figures", name, "*.kit*.json"))):
-        sid = os.path.basename(spec).split(".")[0]
+        base = os.path.basename(spec)
+        sid = base.split(".")[0]
+        if sid in named and named[sid] != base:
+            continue
         s = load_json(spec) or {}
         if sid not in out and isinstance(s, dict) and (s.get("why") or s.get("why_text")):
             out[sid] = (s.get("why", ""), s.get("why_text", ""))

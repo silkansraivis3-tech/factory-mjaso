@@ -3704,8 +3704,10 @@
        still stepped (Aleksis, IT course M02 s04: "the false always shows and blocks other elements") */
     cur.step = function (dir) {
       var mine = function () { return !!(fns.step && fns.step(dir)); }, theirs = function () { return !!(old.step && old.step(dir)); };
-      if (fns.first && dir > 0) { return mine() || theirs(); }
-      if (fns.first && dir < 0) { return theirs() || mine(); }
+      /* 2.137.6 - the figure's own reveal step and the slide's answer are ONE stop: the scenario's right choice turned green
+         at the first Next, before the drawing walked the situation (IT course M03 s11, M06 s08, s17) */
+      if (fns.first && dir > 0) { if (fns.pair && fns.pair(1)) { mine(); theirs(); return true; } return mine() || theirs(); }
+      if (fns.first && dir < 0) { if (fns.pair && fns.pair(-1)) { theirs(); mine(); return true; } return theirs() || mine(); }
       return theirs() || mine();
     };
     H[id] = cur;
@@ -3720,8 +3722,17 @@
       }
     };
     f.hide();
+    var last = function () { return f.steps.length - 1; }, revealEnd = function () { return !!(f.steps[last()] && f.steps[last()].reveal); };
     hook(slide.id, {
-      first: !!slide.querySelector('.lt-why'),
+      /* a slide whose own last stop gives the answer - a true / false (its why) or a scenario (its choices turn green) -
+         walks the drawing first */
+      first: !!slide.querySelector('.lt-why, .lt-opts'),
+      /* the drawing's last step is its reveal: it comes with the slide's answer, not one Next before it */
+      pair: function (dir) {
+        if (!revealEnd() || last() < 1) { return false; }
+        return dir > 0 ? f.step === last() - 1 && !slide.hasAttribute('data-last')
+                       : f.step === last() && slide.hasAttribute('data-last');
+      },
       enter: function () { f.goStep(0, true); f.show(); f.resize(); },
       leave: function () { f.hide(); },
       step: function (dir) {
