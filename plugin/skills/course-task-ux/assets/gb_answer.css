@@ -279,7 +279,6 @@ html{scroll-padding-top:var(--state-h);scroll-padding-bottom:var(--dock-h)}
    left it invisible when it lies on a bar of the drawing (IT course M01 q03) */
 .th-n .ga .lbox.zone{border-color:var(--navy);background:var(--white)}
 .th-n .ga .lbox.zone.over{border-color:var(--blue);background:var(--blue-wash-l)}
-
 /* ---- parts: a scenario's steps, the incident's order and then its stop point ---- */
 .scr .part{display:none;margin:0 0 10px}
 .scr .part.on,.scr .part.past,.scr .part.stopping{display:block}

@@ -102,6 +102,10 @@ body:has(.scr.on.th-n) .scr[data-mech="spot_the_error"] .q{background:var(--tk-n
 .grp .gname{background:var(--tk-navy)}
 .th-n .chip:not(.right):not(.wrong):not(.fixed){background:var(--tk-glass-n);border-color:var(--tk-line-n);color:var(--tk-white);box-shadow:none}
 .th-n .chip.sel:not(.right):not(.wrong):not(.fixed){border-color:var(--tk-blue);background:var(--tk-glass-hi)}
+/* 2.137.8 - a card dropped in a white label box on the drawing takes the drawing's dark ink: it kept the Navy screen's white
+   words on the white box and could not be read (Aleksis, IT course M01 q03: "i dragged the answers and the words didnt
+   change to black") */
+.th-n .ga .lbox.zone .chip:not(.right):not(.wrong):not(.fixed){color:var(--tk-navy, #0a2463);background:var(--tk-white, #fff);border-color:transparent}
 /* a card's verdict - right, wrong, moved to its place - keeps the engine's own colours on either ground */
 .th-n .row .name{background:var(--tk-glass-n);color:var(--tk-white);border-color:var(--tk-line-n)}
 .th-n .rows.order .name{background:var(--tk-blue);color:var(--tk-navy)}
