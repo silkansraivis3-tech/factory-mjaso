@@ -8,7 +8,23 @@ documents (§5) are a gate.
 
 **Why (owner, 2026-10-15):** on paper and in Google Classroom the tasks were almost all *Remember*.
 The tablet lets a trainee operate, find and decide. The factory's job is to use that — to lift the
-level of the tasks up to what the ILOs ask, and above *Remember* wherever the content allows.
+level of the **tasks** up to what the ILOs ask. Never the outcome: the job sets the level, and a higher
+level is not a better outcome.
+
+**The seven rules (pedagogy lead, Instructor-Led Course Design Framework, 2 Nov 2026 — `bloom.json` `"rules"`):**
+
+| | Rule | In the factory |
+|---|---|---|
+| B1 | Tag every outcome with one level | `bloom_map.py` reads every ILO and Sub-ILO; one it cannot read is said |
+| B2 | Never raise a regulator's outcome by rewording it; add a sub-outcome beside it | L2, guideline R1 |
+| B3 | The job sets the level. A must-know rule stays at *Remember*, however critical | §5: *Remember is a right answer* |
+| B4 | Check for tags that are too low: "knows" or "describes" where the job is a decision | `instructor_led.py check`, asked under C5 |
+| B5 | The trainee practises at the tagged level at least once, and is assessed at it | the module map: a question below its Sub-ILO, a Sub-ILO the module check or the practice does not reach |
+| B6 | Lower levels are prerequisites, not separate lessons; do not walk every topic up all six | §3: a lift never removes the recall |
+| B7 | No quota: no target share of higher-level outcomes | the 50 % in §4 counts **questions**, and is a suggestion |
+
+Bloom is a tag. It does not choose the method — the task type does (`instructor-led/GUIDE.md` §0) — because it
+describes thinking and says nothing about what the hands must learn or how people behave towards each other.
 
 ## 1 · The six levels, in one line each
 
@@ -71,8 +87,10 @@ python scripts/bloom_map.py --course <course> --module 1   # one module, from it
 ```
 
 It prints, in the operator's language: the level of every ILO; the level each task reaches (stated or
-estimated); the module's share at *Apply* or higher (suggested at least 50 %); every task below its
-Sub-ILO; and for each, the tablet task types that would lift it. The same section is on the Stage 2
+estimated); the module's share of **questions** at *Apply* or higher (suggested at least 50 % — never a
+share of outcomes, and a module of must-know facts may sit below it); every task below its
+Sub-ILO; every Sub-ILO that no practice moment reaches before it is checked (a self-check question, or an
+activity or active slide by its format's Bloom tag — rule B5); and for each, the tablet task types that would lift it. The same section is on the Stage 2
 architecture page and on each Stage 3 review page. To link a question to the Sub-ILO it checks, give it
 `"sub_ilo": "1.1"` in the content script — then the gaps are shown per Sub-ILO, not only per module.
 

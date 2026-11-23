@@ -645,7 +645,11 @@ made a review item). Every drill, simulator run and team scenario runs brief (3-
 debrief (15-20 min for a team, 5-10 alone) inside its own minutes (R8, L1 kept); the recorded run is a later run under a
 changed condition after at least two practice runs (R9); the instructor watches and stays quiet, the stop word on the
 pre-brief card (R10); a recorded run is assessed on a form of 8-12 critical steps with a stop criterion, a global rating
-and Yes / Not yet (R12). Per course, the factory writes `working_claude/instructor_led.json` - the outcome register's
+and Yes / Not yet (R12). The guideline names the Instructor-Led Course Design Framework and the TLA Pool and Modality
+Matrix as the rules behind it; two things it only summarises are kept in full (2.140.0): the task type × modality matrix -
+a Sub-ILO's scored evidence comes from a modality its task type accepts, only weak or no being a "no" until justified
+(checklist C27) - and the framework's seven Bloom rules (`bloom.json` `rules`), which are suggestions and never block.
+Per course, the factory writes `working_claude/instructor_led.json` - the outcome register's
 task type, must-know and evidence per Sub-ILO, each practical's cycle and cards, the final's must-pass questions, the
 employer sheet, the one-line justifications - and the operator approves it. Main ILOs, hours and facts are never changed
 by it (L1, L2, L4). Course documents claim behaviour change, never accident reduction. Not yet the factory's: the final

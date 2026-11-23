@@ -17,6 +17,11 @@ measured it. This reads:
 and says, in the operator's language: where the course is now, every task below its ILO, and which
 tablet task types would lift it. Every finding is a SUGGESTION in 2.25.0 - it never blocks.
 
+WHAT IS LIFTED (2.140.0, knowledge/bloom.json "rules" - the Instructor-Led Course Design Framework's seven rules)
+The TASK, up to the level its outcome asks for - never the outcome. The job sets the level; a higher level is not a
+better outcome; what must be known by heart stays at Remember; there is no target share of higher-level outcomes. The
+module map also says when no practice moment reaches a Sub-ILO's level before it is checked (rule B5).
+
 The same results are drawn on the Stage 2 architecture page (make_architecture_page.py) and on each
 Stage 3 review page (content_script.py render). The judgement a list cannot make is in bloom/GUIDE.md.
 Standard library only.
@@ -267,6 +272,30 @@ def course_map(prog, arch, lang=None):
 
 
 # ------------------------------------------------------------------ the tasks of one module
+def practice_levels(script, rows):
+    """{Sub-ILO id: the highest level a practice moment tagged to it reaches} (rule B5). A practice moment is a self-check
+    question (its task level), or an activity screen or active slide whose format's TLA carries a Bloom tag
+    (instructor-led.json tla_pool, through activity_formats). The module check and the final are the assessment, not practice."""
+    import activity_formats as af                  # here, not at the top: activity_formats reads this file
+    out = {}
+
+    def put(tags, lvl):
+        for t in tags:
+            out[t] = max(out.get(t, 0), lvl)
+
+    for r in rows:
+        if r["kind"] == "self-check" and r["sub_ilo"]:
+            put([r["sub_ilo"]], r["level"])
+    for s in script.get("screens", []):
+        if s.get("kind") not in ("activity", "slide"):
+            continue
+        lvl = (af.get(af.format_of(s)) or {}).get("level")
+        v = s.get("sub_ilo")
+        if lvl:
+            put([str(x).strip() for x in (v if isinstance(v, list) else [v]) if x not in (None, "") and str(x).strip()], lvl)
+    return out
+
+
 def module_map(script, arch_module=None, prog=None, arch=None, mech=None, where=None):
     """Stage 3: every question's level, the module's share at Apply or higher, every gap and how to lift it.
     mech(q) -> the question's mechanic; where(id) -> where it is, in words (content_script passes both)."""
@@ -313,6 +342,15 @@ def module_map(script, arch_module=None, prog=None, arch=None, mech=None, where=
         if s["level"] and checks and not ok and B["floors"]["module_check_reaches_ilo"]:
             found.append(("b_sub_unchecked", {"s": s["id"], "want": level_name(s["level"], lang),
                                               "how": lift_text(min(s["level"], 5), lang)}))
+    # rule B5 (2.140.0): the trainee practises at the tagged level at least once - a suggestion, like the rest
+    prac = practice_levels(script, rows) if B["floors"].get("practice_reaches_ilo") else {}
+    if any(prac):                                  # only when a practice moment names a Sub-ILO
+        for s in subs:
+            got = max([lv for t, lv in prac.items() if t == s["id"] or (t in parents and s["id"].startswith(t + "."))], default=0)
+            if s["level"] and got < min(s["level"], 5):
+                found.append(("b_sub_unpractised", {"s": s["id"], "want": level_name(s["level"], lang),
+                                                    "got": level_name(got, lang) if got else "-",
+                                                    "how": lift_text(min(s["level"], 5), lang)}))
     return {"rows": rows, "counts": counts, "share": share, "floor": floor, "subs": sub_rows,
             "linked": linked, "findings": found, "lang": lang}
 

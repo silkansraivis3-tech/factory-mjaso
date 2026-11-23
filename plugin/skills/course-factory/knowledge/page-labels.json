@@ -428,6 +428,7 @@
     "b_share_low": "Only {pct} % of the questions are at Apply or higher (suggested: at least {min} %). Could be lifted: {ids}. Task types that reach Apply: {how}.",
     "b_q_below": "{w} checks Sub-ILO {s} ({want}) but reaches only {got} ({now}). To lift it: {how}.",
     "b_sub_unchecked": "Sub-ILO {s} asks for {want}, and no module-check question reaches it. Task types that do: {how}.",
+    "b_sub_unpractised": "Sub-ILO {s} asks for {want}, and no practice tagged to it reaches that level before it is checked (highest: {got}). Practise it there at least once - an activity, or a self-check with: {how}.",
     "b_q_over": "{w} is stated as {lvl}, but \"{how}\" usually reaches at most {ceil} - check the reason given.",
     "a_title": "Plain theory and active learning - aiming at 20 / 80",
     "a_intro": "The programme's hours stay as written. Every theory slide stays - the instructor can move through it faster, and its words are there to read. Most of the time the trainees learn by doing: tasks, practice, and slides where they predict, explain, explore or work an example. Suggestions only.",

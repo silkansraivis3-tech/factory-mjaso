@@ -16,6 +16,10 @@ Pinned:
     form of 8-12 critical steps with a stop criterion; a practice exercise at least two runs per trainee;
   * the register: an observable verb, one task type, must-know listed, every looked-up fact its aid, evidence named, at
     most five Sub-ILOs per outcome, every must-pass criterion its own form step;
+  * the rules behind the guideline (2.140.0): the task type x modality matrix as the lead's table has it; C27 - the best
+    grade among a Sub-ILO's scored evidence decides: only weak or no is a "no" until justified, support is a note, a line
+    whose modality cannot be told is the reviewer's; the framework's seven Bloom rules named; a tag that may be too low
+    (B4) asked under C5, never a "no";
   * the course: 6-8 must-pass questions in the final and its 70 % pass mark, the employer sheet complete, no claim of
     accident reduction;
   * the command line: draft adds what is missing without touching what is there, check exits 1 while an item is open,
@@ -125,9 +129,34 @@ def main():
             by[t["bloom"]] = by.get(t["bloom"], 0) + 1
         check("the TLA pool holds 28, at most five per Bloom level", len(pool) == 28 and max(by.values()) <= 5, by)
         check("every TLA is under one of the four task types", set(k for k in K["tla_pool"] if not k.startswith("_")) == set(il.TASK_TYPES))
-        check("every checklist item is auto, elsewhere (with its place) or by hand, C1-C26",
-              [c["id"] for c in il.CHECKLIST] == ["C%d" % i for i in range(1, 27)]
+        check("every checklist item is auto, elsewhere (with its place) or by hand, C1-C27",
+              [c["id"] for c in il.CHECKLIST] == ["C%d" % i for i in range(1, 28)]
               and all(c["how"] in ("auto", "hand") or (c["how"] == "elsewhere" and c.get("by")) for c in il.CHECKLIST))
+        check("C27 says it comes from the modality matrix, not the guideline's own checklist",
+              "Modality Matrix" in next(c for c in il.CHECKLIST if c["id"] == "C27").get("from", ""))
+        MM = K["modality_matrix"]
+        check("the modality matrix: twelve modalities, each graded for all four task types",
+              len(MM["rows"]) == 12 and all(v.get(t) in MM["grades"] for v in MM["rows"].values() for t in il.TASK_TYPES)
+              and all(v.get("label") and v.get("watch") and v.get("words") for v in MM["rows"].values()))
+        cell = lambda row: [MM["rows"][row][t] for t in ("fixed_sequence", "decision", "real_time_judgement", "team_behaviour")]
+        check("... as the lead's table has them: real equipment, full-mission simulator, tablet tasks, role-play, video",
+              cell("real_equipment") == ["primary", "support", "weak", "support"]
+              and cell("full_simulator") == ["support", "support", "primary", "primary"]
+              and cell("tablet_task") == ["weak", "primary", "no", "no"]
+              and cell("role_play") == ["no", "support", "weak", "primary"]
+              and cell("video") == ["no", "weak", "no", "weak"], [cell(r) for r in MM["rows"]])
+        check("... every task type has a primary modality; the order names every row; every 'where' and format modality is a row",
+              all(any(v[t] == "primary" for v in MM["rows"].values()) for t in il.TASK_TYPES)
+              and sorted(MM["order"]) == sorted(MM["rows"]) and set(MM["where"].values()) <= set(MM["rows"])
+              and all(f.get("modality", "tablet_task") in MM["rows"] for f in K["formats"]["pool"].values()))
+        check("... weak and no are findings, support a note, primary neither",
+              MM["finding"] == ["weak", "no"] and MM["note"] == ["support"] and il.GRADES == ["primary", "support", "weak", "no"])
+        BR = il.bloom_map.B["rules"]
+        check("the framework's seven Bloom rules are named, B1-B7, each with where the factory carries it",
+              [k for k in BR if not k.startswith("_")] == ["B%d" % i for i in range(1, 8)]
+              and all(BR["B%d" % i].get("rule") and BR["B%d" % i].get("where") for i in range(1, 8)))
+        check("... 'set no quota': no floor counts outcomes, and the question share is said to count questions",
+              "QUESTIONS" in il.bloom_map.B["floors"]["_apply_plus"] and "no target share" in BR["B7"]["rule"])
         al = json.load(io.open(os.path.join(il.SKILL, "knowledge", "active-learning.json"), encoding="utf-8"))
         check("no active-learning pattern lets the class answer aloud (R4)",
               not any("aloud" in (p.get("does") or "") for p in al["patterns"].values()), [p["does"] for p in al["patterns"].values()])
@@ -242,6 +271,68 @@ def main():
         check("C3, C5 and C6 pass with the register filled",
               [status(rows, "M01", x)[0] for x in ("C3", "C5", "C6")] == ["yes", "yes", "yes"], [status(rows, "M01", x) for x in ("C3", "C5", "C6")])
         check("C5 still names the job test for the reviewer", any("job test" in x for x in status(rows, "M01", "C5")[1]))
+        low = [x for x in status(rows, "M01", "C5")[1] if "too low" in x]
+        check("Bloom rule B4: a Sub-ILO read at Understand whose task type is a fixed sequence is asked about - C5 stays a yes",
+              len(low) == 1 and low[0].startswith("by hand: 1.b") and "Understand" in low[0] and "B4" in low[0], status(rows, "M01", "C5"))
+        check("... and a decision read at Evaluate is not, must-pass or not", not any("1.a" in x for x in low), low)
+
+        print("\n-- C27: the scored evidence on a modality the task type accepts")
+        check("a decision scored on the final paper: tablet tasks are primary for a decision - yes",
+              status(rows, "M01", "C27") == ("yes", []), status(rows, "M01", "C27"))
+        st = status(rows, "M02", "C27")
+        check("'form steps 1-5' names no practical: listed for the reviewer, never guessed, never a no",
+              st[0] == "yes" and len(st[1]) == 1 and st[1][0].startswith("by hand:") and "cannot be told (2.a)" in st[1][0], st)
+
+        def scored(sid, lines, task_type=None, change=None, justify=None):
+            r3 = json.loads(json.dumps(reg))
+            r3[sid]["evidence"]["scored"] = lines
+            if task_type:
+                r3[sid]["task_type"] = task_type
+            d = json.loads(json.dumps(dict(base, register=r3, justify=justify or {})))
+            if change:
+                change(d["practicals"])
+            put(c, d)
+            return status(il.check(c)[0], "M0" + sid[0], "C27")
+
+        st = scored("2.a", ["M02.A01 form steps 1-5"])
+        check("a fixed sequence scored on a simulator run: support - said as a note, not a no",
+              st[0] == "yes" and len(st[1]) == 1 and st[1][0].startswith("note: 2.a") and "full-mission simulator" in st[1][0], st)
+        st = scored("2.a", ["M02.A01 form steps 1-5"], change=lambda p: p["M02.A01"].__setitem__("modality", "real_equipment"))
+        check("... and the practical's own \"modality\" wins: on real equipment it is primary", st == ("yes", []), st)
+        st = scored("2.a", ["final q03"])
+        check("a fixed sequence scored only on the final paper: weak - a no, naming the primary modalities",
+              st[0] == "no" and "weak" in st[1][0] and "Real equipment drill" in st[1][0] and "Part-task trainer" in st[1][0], st)
+        st = scored("2.a", ["final q03"], justify={"M02": {"C27": "The detectors arrive in March; until then the simulator"}})
+        check("... justified in one line it is JUSTIFIED, with the line", st[0] == "justified" and any("March" in x for x in st[1]), st)
+        st = scored("2.a", ["final q03", "M02.A01 form steps 1-5"], task_type="real_time_judgement")
+        check("the best grade decides: a written question beside an observed simulator run is fine", st == ("yes", []), st)
+        st = scored("2.a", ["final q03"], task_type="real_time_judgement")
+        check("real-time judgement scored only on a screen: no", st[0] == "no" and "Full-mission simulator" in st[1][0], st)
+        st = scored("2.a", ["role-play with a senior who pushes back"], task_type="team_behaviour")
+        check("team behaviour scored in a role-play: primary", st == ("yes", []), st)
+        st = scored("1.a", ["a video with questions"])
+        check("a decision scored on a video: weak - a no", st[0] == "no" and "video" in st[1][0], st)
+        st = scored("2.a", ["final q03", "the observed drill"])
+        check("a weak line beside one whose modality cannot be told: for the reviewer, not a no",
+              st[0] == "yes" and any("the observed drill" in x for x in st[1]), st)
+        check("an evidence line is read by the practical it names before its words",
+              il.evidence_modality("FINAL.A04 form steps 7-8", {"FINAL.A04": "role_play"}) == "role_play"
+              and il.evidence_modality("FINAL.A04 form steps 7-8", {}) is None
+              and il.evidence_modality("M03 SC2 on the tablet", {}) == "tablet_task"
+              and il.evidence_modality("bump test on the gas detector simulator", {}) == "desktop_sim"
+              and il.evidence_modality("oral cards A and B", {}) == "vignette")
+        check("a practical's modality: its entry's, else its format's, else where it runs",
+              il.modality_of("desktop-sim", "simulator") == "desktop_sim" and il.modality_of("scenario-run", "simulator") == "full_simulator"
+              and il.modality_of("scenario-run", "room") == "role_play" and il.modality_of("demonstration", "equipment") == "real_equipment"
+              and il.modality_of("scenario-run", "room", {"modality": "walk_round"}) == "walk_round")
+        check("... a team exercise in the room is a role-play or live scenario; any other room exercise is not guessed",
+              il.modality_of("exercise", "room", {"team": True}) == "role_play" and il.modality_of("exercise", "room") is None
+              and il.modality_of("write-plan", "room") == "paper_tabletop" and MM["room_team"] in MM["rows"])
+        st = scored("2.a", ["M01.A09 form"], change=lambda p: p.__setitem__("M01.A09", dict(CARDS, cycle=GOOD_CYCLE)))
+        check("... and evidence on a practical whose modality cannot be told asks for it on the practical",
+              st[0] == "yes" and len(st[1]) == 1 and "state it on the practical" in st[1][0], st)
+        put(c, dict(base, register=reg))
+        rows, _ = il.check(c)
         r2 = json.loads(json.dumps(reg))
         r2["1.a"]["lookup"].append({"fact": "The tube for benzene"})
         r2["1.a"]["criteria"][0]["step"] = "M02.A01 20"
@@ -265,6 +356,7 @@ def main():
         res = il.module_check(c, "M03", bare, {}, *il.course_files(c))
         check("a module with no drill, run or scenario, and no must-pass criterion: n/a, never a yes",
               all(res[x][0] == "n/a" for x in ("C6", "C12", "C13", "C14", "C19", "C23")), {x: res[x] for x in ("C6", "C12", "C13", "C19")})
+        check("... and with no scored evidence named, C27 is n/a too", res["C27"][0] == "n/a", res["C27"])
         res = il.module_check(c, "M01", cs.load(os.path.join(c, "working_claude", "script", "M01.json")), {}, *il.course_files(c))
         check("a simulator exercise not yet in the file: C12 and C23 no, C13 and C14 wait for it, C19 n/a",
               [res[x][0] for x in ("C12", "C23", "C13", "C14", "C19")] == ["no", "no", "n/a", "n/a", "n/a"],

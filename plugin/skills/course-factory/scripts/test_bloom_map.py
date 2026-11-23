@@ -16,6 +16,9 @@ Pinned:
     (noted only - it stays verbatim, L2), planned tasks below the module's ILOs, a module with less than
     half its questions at Apply, a question below the Sub-ILO it checks, a Sub-ILO no module-check
     question reaches - and nothing on a module that already fits;
+  * the framework's seven Bloom rules (2.140.0) are in the knowledge file and none is a floor on outcomes; rule B5 - a
+    Sub-ILO no practice moment reaches (a self-check question, or an activity or active slide by its format's Bloom tag)
+    is a suggestion, said only when a practice moment names a Sub-ILO;
   * every finding is a suggestion: the architecture check's exit code and the content script's approval
     do not change;
   * both review pages show the Bloom section in the operator's language, and the command runs.
@@ -201,6 +204,26 @@ def main():
     mm = bm.module_map(s2, am, {}, {"course": {"course_language": "English"}}, mech=cs.mech)
     check("lifted to operate-the-panel, the gap is gone", "b_q_below" not in keys(mm["findings"])
           and [s["ok"] for s in mm["subs"] if s["id"] == "1.2"] == [True], mm["findings"])
+    unp = lambda m: [kw for k, kw in m["findings"] if k == "b_sub_unpractised"]
+    check("rule B5 - no practice moment names a Sub-ILO: nothing is said about practice", not unp(mm), mm["findings"])
+    s4 = copy.deepcopy(s2)
+    s4["screens"].append({"id": "a09", "kind": "activity", "title": "Line up the valves", "text": "Pairs line up the cargo valves on paper.",
+                          "sub_ilo": "1.1", "minutes": 10})
+    mm4 = bm.module_map(s4, am, {}, {"course": {"course_language": "English"}}, mech=cs.mech)
+    check("... an exercise tagged to 1.1 (Understand) reaches it; 1.2 (Apply) has no practice at its level - a suggestion",
+          [x["s"] for x in unp(mm4)] == ["1.2"] and unp(mm4)[0]["got"] == "-" and bm.mech_label("panel_operate", "lv") in unp(mm4)[0]["how"],
+          mm4["findings"])
+    check("... worded for the operator", "Sub-ILO 1.2" in bm.T("en", "b_sub_unpractised", **unp(mm4)[0]))
+    s4["screens"][-1]["sub_ilo"] = ["1.1", "1.2"]
+    check("... and an exercise tagged to both is practice at Apply for both",
+          not unp(bm.module_map(s4, am, {}, {"course": {"course_language": "English"}}, mech=cs.mech)))
+    s4["screens"][-1].update(sub_ilo="1.2", format="retrieval-round")
+    low = unp(bm.module_map(s4, am, {}, {"course": {"course_language": "English"}}, mech=cs.mech))
+    check("... a retrieval round (a Remember TLA) does not practise an Apply outcome",
+          [x["s"] for x in low] == ["1.1", "1.2"] and low[1]["got"] == bm.level_name(1, "lv"), low)
+    check("the seven Bloom rules are in the knowledge file, and none of them is a floor on outcomes",
+          sorted(k for k in bm.B["rules"] if not k.startswith("_")) == ["B%d" % i for i in range(1, 8)]
+          and set(k for k in bm.B["floors"] if not k.startswith("_")) == {"apply_plus_min_share", "module_check_reaches_ilo", "practice_reaches_ilo"})
     s3 = copy.deepcopy(script)
     s3["screens"][[q["id"] for q in s3["screens"]].index("m02")].update(bloom=4, bloom_why="the trainee works out the cargo from a boiling point")
     row = [r for r in bm.module_map(s3, mech=cs.mech)["rows"] if r["id"] == "m02"][0]

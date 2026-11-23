@@ -9,6 +9,13 @@ The guideline adds no parallel set of documents. It sets what the factory's outp
 items: the pre-brief card, the debrief card, the observation card and the employer sheet. Main ILOs, hours and facts are
 never changed by it (L1, L2, L4).
 
+**The rules behind it (2.140.0).** The guideline names two documents of the pedagogy lead as "the rules behind it": the
+*Instructor-Led Course Design Framework* (2 Nov 2026) and the *TLA Pool and Modality Matrix* (3 Nov 2026). Where the
+guideline decided differently - in-class TLAs are Practice, one must-know test instead of six recall codes - the factory
+follows the guideline. Two things the guideline only summarises are kept in full: the task type × modality table
+(`instructor-led.json` `"modality_matrix"`, checked as C27 - section 2) and the framework's seven Bloom rules
+(`bloom.json` `"rules"`, `bloom/GUIDE.md`).
+
 ## 0 · Choose the formats while the module is written (2.128.0)
 
 Aigars Kluga (2026-11-11): *"the factory is good but cannot vary - fine for one-direction courses like Gas, but narrow."*
@@ -78,6 +85,11 @@ from the activity's `"format"`). A tablet task, a case, a map or a discussion ne
   `what` shows in the plan's instructor column. The rows add up to the screen's minutes exactly: brief and debrief come
   out of the exercise's time, never on top of it (L1).
 - `team` - true for a team drill or simulator run (the longer debrief).
+- `modality` - only when the default is wrong: the row of the modality matrix this practical is (`"real_equipment"`,
+  `"part_task"`, `"full_simulator"`, `"desktop_sim"`, `"role_play"`, `"paper_tabletop"`, `"walk_round"` ...). Without it:
+  the format's own (a desktop simulation, a walk-through on paper), else a simulator exercise is the full-mission
+  simulator, an equipment exercise the real equipment, a team exercise in the room a role-play or live scenario. Any
+  other room exercise (a project block, an exercise of no named format) is not guessed: state it when it is scored.
 - `practice_runs` - runs each trainee completes; at least two after the first correct one (R9).
 - `prebrief` - `objective` (one sentence: what you will be able to do at the end), `roles` (who performs, who observes,
   who plays outside roles), `safety` (the hazards and limits, a list), `stop_word`, and `intervention` only when it differs
@@ -113,6 +125,26 @@ line - never counted as passed), **n/a** (nothing in the module to judge - never
 a reviewer can judge: a sea story, a decorative photograph, written English in a scored item, three surface variants).
 Exit 1 while any item is NO. Fix in the content script (`content_script.py propose`, L29) what is the script's - an active
 slide's notes that only ask the room, a passive block longer than 15 minutes - and in this file what is this file's.
+
+**C27 - the scored evidence on the right modality.** For every Sub-ILO with scored evidence the check reads what
+each line is scored on - the practical it names (`"M05.A01 form steps 1-5"`), else its words (`"final q03"`, `"on the
+tablet"`, `"role-play"`) - and looks it up for the Sub-ILO's task type:
+
+| | Fixed sequence | Decision | Real-time judgement | Team behaviour |
+|---|---|---|---|---|
+| **Primary** - produces the evidence | real equipment, part-task trainer | tablet tasks, desktop simulation, paper tabletop, vignette, walk-round | full-mission simulator | full-mission simulator, role-play or live scenario |
+| **Support** - practice or a sub-step | simulator, desktop simulation, walk-round, teach-back | real equipment, simulator, role-play, teach-back | part-task trainer | real equipment, tabletop, vignette, teach-back |
+| **Weak / No** | tablet tasks, VR; paper, role-play, vignette, video | part-task trainer, video, VR | everything else | everything else |
+
+The **best** line decides: a written question beside an observed run is fine. Only weak or no is a **NO** - move the
+record to a primary modality, or, when nothing better exists, write one line in `justify` (`{"M03": {"C27": "..."}}`).
+Support is said as a note. A line whose modality cannot be told (`"form steps 1-5"`) is listed for the reviewer: name its
+practical. A task type that came from the verb is only a draft (R2) - a NO here is often the sign that the task type is
+wrong, not the evidence.
+
+**Under C5, for the reviewer - a tag that may be too low (Bloom rule B4).** A Sub-ILO read at Remember or Understand
+whose task type is a fixed sequence, real-time judgement or team behaviour, or that has a must-pass criterion, is asked
+about. If the job is a doing or a decision, add a Sub-ILO that says so; the programme's wording stays (L2). Never a NO.
 
 Show the operator the file in plain words - the cycles, the cards, the must-pass questions, the employer sheet, every
 justification - and on their yes:

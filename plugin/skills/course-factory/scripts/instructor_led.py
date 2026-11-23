@@ -17,6 +17,13 @@ judge (a sea story, written English in a scored item) is listed for the reviewer
 in one line in instructor_led.json "justify" - the reviewer may reject the justification. A justified item is reported as
 JUSTIFIED with its line, never as passed.
 
+THE RULES BEHIND THE GUIDELINE (2.140.0)
+The guideline names the Instructor-Led Course Design Framework and the TLA Pool and Modality Matrix as the rules behind
+it. Two things it only summarises are checked from them: C27 - a Sub-ILO's scored evidence must come from a modality its
+task type accepts (knowledge/instructor-led.json "modality_matrix": primary or support; only weak or no is a "no"), and,
+under C5 for the reviewer, a Bloom tag that may be too low (knowledge/bloom.json "rules" B4) - asked, never a "no".
+A practical's modality is the one its entry states ("modality": "role_play"), else its format's, else where it runs.
+
 THE COURSE'S FILE (working_claude/instructor_led.json - written by the factory, approved by the operator)
     {"register":   {"10.b": {"task_type": "fixed_sequence", "must_know": ["The bump-test order"],
                              "lookup": [{"fact": "Each cargo's limit", "aid": "the SDS"}],
@@ -76,6 +83,9 @@ KNOW = json.load(io.open(os.path.join(SKILL, "knowledge", "instructor-led.json")
 LIM = KNOW["limits"]
 CHECKLIST = KNOW["checklist"]
 TASK_TYPES = [k for k in KNOW["task_types"] if not k.startswith("_")]
+MM = KNOW["modality_matrix"]                      # task type x modality: what may carry the scored evidence (C27)
+GRADES = list(MM["grades"])                       # best first: primary, support, weak, no
+PRACTICAL_KEY = re.compile(r"(?<![\w.])((?:M\d\d|FINAL)\.[A-Za-z]\w*)")
 CYCLE_KINDS = ("brief", "show", "diagnostic", "run", "debrief")
 NAME = "instructor_led.json"
 SCRIPT_FILE = re.compile(r"^(M\d\d|FINAL)\.json$")
@@ -259,6 +269,82 @@ def form_problems(entry):
     return out
 
 
+# ------------------------------------------------------------------ C27 - the modality of the scored evidence
+def modality_of(fmt, where, entry=None):
+    """the modality-matrix row of a practical: the one its entry states ("modality"), else its format's own, else by
+    where the activity runs, a team exercise in the room being a role-play or live scenario (knowledge/instructor-led.json
+    "modality_matrix" "where", "room_team"); None when it cannot be told - any other room exercise"""
+    entry = entry or {}
+    stated = str(entry.get("modality") or "").strip()
+    if stated in MM["rows"]:
+        return stated
+    f = af.get(fmt) or {}
+    if f.get("modality") in MM["rows"]:
+        return f["modality"]
+    if where in MM["where"]:
+        return MM["where"][where]
+    return MM["room_team"] if (entry["team"] if "team" in entry else f.get("team")) else None
+
+
+def modalities(course, scr, data, arch, sheet):
+    """{practical key: modality row} for every activity screen of the course, the final's included"""
+    pracs = data.get("practicals") or {}
+    out = {}
+    for mid, script in scr:
+        try:
+            acts = activities(course, mid, script, arch, sheet)
+        except Exception:                           # a script the additional materials cannot read yet: nothing to tell
+            continue
+        for k, s, where in acts:
+            e = pracs.get(k) or {}
+            out[k] = modality_of(e.get("_format") or af.format_of(s), where, e)
+    for k, e in pracs.items():                      # a practical whose screen is not found: what its entry states, if anything
+        out.setdefault(k, modality_of(e.get("_format"), None, e) if isinstance(e, dict) else None)
+    return out
+
+
+def evidence_modality(line, mods):
+    """the modality-matrix row of one scored-evidence line, or None when it cannot be told: the practical it names
+    ("M05.A01 form steps 1-5"), else the first row one of whose words is in the line"""
+    named = [m.group(1) for m in PRACTICAL_KEY.finditer(str(line or ""))]
+    if named:
+        for n in named:
+            mid, sid = n.split(".", 1)
+            if mods.get(key(mid, sid)):
+                return mods[key(mid, sid)]
+        return None
+    for row in MM["order"]:
+        if _cue(str(line or ""), MM["rows"][row]["words"]):
+            return row
+    return None
+
+
+def modality_problems(sid, row, mods):
+    """C27 for one register row -> (problems, notes, evidence lines whose modality cannot be told, judged). The BEST grade
+    among the Sub-ILO's scored evidence decides: a written question beside an observed run is fine; an observed skill
+    scored only on a screen is not."""
+    tt = row.get("task_type")
+    scored = [str(x) for x in (row.get("evidence") or {}).get("scored") or [] if str(x).strip()]
+    if tt not in TASK_TYPES or not scored:
+        return [], [], [], False
+    got = [(x, evidence_modality(x, mods)) for x in scored]
+    unknown = [x for x, m in got if not m]
+    known = [m for _, m in got if m]
+    label = KNOW["task_types"][tt]["label"].lower()
+    if not known:
+        return [], [], unknown, True
+    best = min(known, key=lambda m: GRADES.index(MM["rows"][m][tt]))
+    grade = MM["rows"][best][tt]
+    primary = "; ".join(v["label"] for v in MM["rows"].values() if v[tt] == "primary")
+    if grade in MM["finding"] and not unknown:
+        return (["%s: %s, scored only on %s - %s: %s. Score it on: %s" % (sid, label, MM["rows"][best]["label"].lower(), grade,
+                                                                       MM["grades"][grade], primary)], [], unknown, True)
+    if grade in MM["note"]:
+        return [], ["note: %s - %s, best scored evidence %s: %s" % (sid, label, MM["rows"][best]["label"].lower(),
+                                                                   MM["grades"][grade])], unknown, True
+    return [], [], unknown, True
+
+
 # ------------------------------------------------------------------ the checklist
 def _status(found, cid, mid, justify):
     """"no" with the problems, or "justified" with the line, or "yes" """
@@ -273,8 +359,8 @@ def _status(found, cid, mid, justify):
     return ("justified", found + ["justified: " + why]) if why else ("no", found)
 
 
-def module_check(course, mid, script, data, arch, prog, sheet):
-    """{checklist id: (status, [lines])} for one module"""
+def module_check(course, mid, script, data, arch, prog, sheet, mods=None):
+    """{checklist id: (status, [lines])} for one module. mods: modalities() of the course, read here when not given"""
     res = {}
     justify = data.get("justify") or {}
     reg = data.get("register") or {}
@@ -289,10 +375,22 @@ def module_check(course, mid, script, data, arch, prog, sheet):
     put = lambda cid, found: res.__setitem__(cid, _status(found, cid, mid, justify))
 
     # C2 - an observable verb and one task type; C3 - must-know listed, every other fact its aid; C5 - evidence named
-    c2, c3, c5 = [], [], []
+    c2, c3, c5, low = [], [], [], []
+    b4 = (bloom_map.B.get("rules") or {}).get("B4") or {}      # Bloom rule B4: a tag that may be too low - asked, never a no
+    stated = {str(r.get("sub_ilo_id")): r.get("bloom") for r in rows}
     for sid in leaves:
         r = reg.get(sid) or {}
         lv = bloom_map.ilo_level(text_of.get(sid) or "", lang) if text_of.get(sid) else None
+        try:
+            level = int(stated.get(sid) or (lv or {}).get("level") or 0)
+        except (TypeError, ValueError):
+            level = 0
+        why = ("its task type is %s" % KNOW["task_types"][r["task_type"]]["label"].lower() if r.get("task_type") in (b4.get("task_types") or [])
+               else "it has a must-pass criterion" if b4.get("must_pass") and any(isinstance(c, dict) and c.get("must_pass") for c in r.get("criteria") or [])
+               else "")
+        if why and 0 < level <= int(b4.get("at_or_below") or 0):
+            low.append("by hand: %s reads %s, but %s - is the tag too low? If the job is a doing or a decision, add a Sub-ILO "
+                       "that says so; the programme's wording stays (Bloom rule B4)" % (sid, bloom_map.level_name(level), why))
         if lv and lv.get("weak"):
             c2.append("%s: %r cannot be watched - re-express the Sub-ILO with a verb an assessor can see" % (sid, lv["verb"]))
         if r.get("task_type") not in TASK_TYPES:
@@ -308,7 +406,7 @@ def module_check(course, mid, script, data, arch, prog, sheet):
     put("C2", c2)
     put("C3", c3)
     c5_status = _status(c5, "C5", mid, justify)
-    res["C5"] = (c5_status[0], c5_status[1] + ["by hand: the job test - does someone at this certificate level do this on board?"])
+    res["C5"] = (c5_status[0], c5_status[1] + ["by hand: the job test - does someone at this certificate level do this on board?"] + low)
 
     # C4 - about one sub-outcome per allocated hour, at most five per outcome
     c4 = []
@@ -420,6 +518,24 @@ def module_check(course, mid, script, data, arch, prog, sheet):
     if not any(isinstance(c, dict) and c.get("must_pass") for sid in leaves for c in (reg.get(sid) or {}).get("criteria") or []):
         res["C6"] = ("n/a", ["no must-pass criterion in this module's register"])
 
+    # C27 - the scored evidence on a modality the Sub-ILO's task type accepts (the modality matrix)
+    if mods is None:
+        mods = modalities(course, scripts(course), data, arch, sheet)
+    c27, notes, untold, judged = [], [], {}, 0
+    for sid in leaves:
+        p, n, u, j = modality_problems(sid, reg.get(sid) or {}, mods)
+        c27, notes, judged = c27 + p, notes + n, judged + j
+        for x in u:                                # one line per practical, or per evidence line that names none
+            m = PRACTICAL_KEY.search(x)
+            who = untold.setdefault(m.group(1).upper() if m else x, [])
+            who += [sid] if sid not in who else []
+    hand = ["by hand: the modality of %s cannot be told (%s) - %s" % (
+        x if PRACTICAL_KEY.fullmatch(x) else repr(x), ", ".join(sids),
+        "state it on the practical (\"modality\": a row of the modality matrix)" if PRACTICAL_KEY.fullmatch(x)
+        else "name its practical (\"M05.A01\") or the modality in words") for x, sids in untold.items()]
+    st = _status(c27, "C27", mid, justify)
+    res["C27"] = (st[0], st[1] + notes + hand) if judged else ("n/a", ["no Sub-ILO of this module has scored evidence named yet"])
+
     # C24 - this module's misconceptions in the course list (the debrief tags)
     tags = workspace.claude_path(course, "script", "%s.debrief.json" % mid)
     has_tasks = any(s.get("kind") in cs.TASKS for s in script.get("screens", []))
@@ -512,10 +628,11 @@ def check(course, only=None):
     scr = scripts(course)
     rows, n_open = [], 0
     items = {c["id"]: c for c in CHECKLIST}
+    mods = modalities(course, scr, data, arch, sheet)
     for mid, script in scr:
         if mid == "FINAL" or (only is not None and ilo_map.mkey(mid) != ilo_map.mkey(only)):
             continue
-        res = module_check(course, mid, script, data, arch, prog, sheet)
+        res = module_check(course, mid, script, data, arch, prog, sheet, mods)
         for c in CHECKLIST:
             if c["id"] in res:
                 st, lines = res[c["id"]]
