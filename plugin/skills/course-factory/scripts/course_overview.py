@@ -85,6 +85,14 @@ def nice(stem):
     return s[:1].upper() + s[1:]
 
 
+def short(title, limit=90):
+    """a long title cut at a whole word, never mid-word: the list in LND shows it on one or two lines"""
+    s = re.sub(r"\s+", " ", title).strip()
+    if len(s) <= limit:
+        return s
+    return s[:limit + 1].rsplit(" ", 1)[0].rstrip(" /,.;:-") + " ..."
+
+
 def programme_documents(course, arch, prog):
     """[path] of the programme files that exist: every source_files\\<name>.docx|doc|pdf that architecture.json
     course.programme_file or programme.json source names (free text - revision 2 and revision 3 may both be in it)"""
@@ -172,7 +180,7 @@ def material_rows(course):
             # the file name is cut short; the page it was printed from has the full title
             page = os.path.join(root, "day-sheets", os.path.splitext(f)[0] + ".html")
             m = re.search(r"<title>([^<]+)", open(page, encoding="utf-8", errors="replace").read(4000)) if os.path.isfile(page) else None
-            out.append(("day-sheets", html.unescape(m.group(1)).strip()[:140] if m else nice(os.path.splitext(f)[0]),
+            out.append(("day-sheets", short(html.unescape(m.group(1))) if m else nice(os.path.splitext(f)[0]),
                         os.path.join(root, "day-sheets", f)))
     return out
 

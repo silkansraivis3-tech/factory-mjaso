@@ -160,6 +160,11 @@ def main():
         check("caught: no overview.json at all", any("overview.json is missing" in p for p in co.package_problems(m)))
         w(os.path.join(m, "_course_shell", "overview.json"), "{not json")
         check("caught: an overview that is not JSON", any("not valid JSON" in p for p in co.package_problems(m)))
+        # a long title (a day sheet names every module of its day) is cut at a whole word, never mid-word
+        long = "Day 1 - Information, data and computers / Working with documents and data / Networks and shipboard digital systems"
+        cut = co.short(long)
+        check("a long title is cut at a whole word", len(cut) <= 94 and cut.endswith(" ...") and long.startswith(cut[:-4]) and long[len(cut) - 4] in " /", cut)
+        check("a short title is left as it is", co.short("Course  plan (ACP)") == "Course plan (ACP)")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n" + "=" * 72)
