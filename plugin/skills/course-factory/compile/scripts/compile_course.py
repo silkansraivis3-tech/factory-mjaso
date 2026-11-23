@@ -63,6 +63,7 @@ import additional_materials  # noqa: E402
 import handout  # noqa: E402
 import content_script as cs  # noqa: E402
 import ilo_coverage  # noqa: E402
+import course_overview  # noqa: E402
 import workspace  # noqa: E402
 
 RECORD = "compiled_course.json"
@@ -470,6 +471,17 @@ def main(argv=None):
     if am_written:
         print("Built %d file(s) of the additional materials (%s)" % (len(am_written), additional_materials.FOLDER))
     probs += am_probs
+    # 2.138.0 - the course's whole picture for LND (programme outline with hours, main ILOs, the programme document, project
+    # cards, course plan, day sheets): after the additional materials, because it copies their files. A course with no
+    # programme topics gets no overview and a plain line - the package check stops it too
+    ov_written, ov_probs = course_overview.build(course, title, rec)
+    cs.save(rec_p, rec)
+    built += ov_written
+    if ov_written:
+        print("Built _course_shell/overview.json and its materials (%d file(s) written)" % len(ov_written))
+    elif os.path.isfile(os.path.join(root, "_course_shell", "overview.json")):
+        print("The course overview (_course_shell/overview.json) is as the last build wrote it.")
+    probs += ov_probs
 
     # every module's two start pages
     for info in infos:

@@ -12,6 +12,7 @@ Also pinned: the vendored importer is byte-identical to the classroom system's, 
 from __future__ import annotations
 
 import io
+import json
 import os
 import shutil
 import subprocess
@@ -66,6 +67,14 @@ def good_course(c):
       "<a href=\"module01/START_HERE.html\">Module 1</a><a href=\"module02/START_HERE.html\">Final assessment</a></body></html>")
     w(os.path.join(c, "_course_shell", "course_map.js"), 'window.COURSE_MAP = [{"code":"module01","title":"Gas tankers","entry":"presentation/index.html"},'
       '{"code":"module02","title":"Final assessment","entry":"presentation/index.html"}];')
+    # 2.138.0 - every compiled course carries its overview and the programme document it lists
+    w(os.path.join(c, "_course_shell", "materials", "programme", "Programme.docx"), "programme")
+    w(os.path.join(c, "_course_shell", "overview.json"), json.dumps({
+        "kind": "course-overview", "version": 1, "built": "2026-11-23", "course": {"title": "GAS Basic", "language": "English"},
+        "programme": {"source": "Programme", "academic_hour_min": 45}, "hours": {"theory": 3, "practical": 2, "total": 5, "note": ""},
+        "outline": [{"n": 1, "module": "M01", "title": "Gas tankers", "theory": 3, "practical": 2, "total": 5, "assessment": False, "ilos": ["1"], "topics": []}],
+        "ilos": [{"id": "1", "text": "Understand gas tankers.", "modules": ["M01"]}],
+        "materials": [{"group": "programme", "title": "Study course programme", "file": "materials/programme/Programme.docx", "size": 9}]}))
     m = os.path.join(c, "module01")
     w(os.path.join(m, "presentation", "index.html"),
       "<!DOCTYPE html><html><head><title>GAS Basic · Module 1 " + D + " Gas tankers · Instructor presentation</title>"
@@ -184,6 +193,36 @@ def main():
             code, out = run(b) if importer else run(b, "--no-importer")
             check("caught: " + name, code == 1 and needle in out, out)
 
+        print("\n-- 2.138.0: the course overview (_course_shell/overview.json) and its materials")
+        ov = os.path.join("_course_shell", "overview.json")
+
+        def edit_overview(fn):
+            def go(b):
+                p = os.path.join(b, ov)
+                d = json.load(io.open(p, encoding="utf-8"))
+                fn(d)
+                w(p, json.dumps(d))
+            return go
+
+        broken("no overview.json", lambda b: os.remove(os.path.join(b, ov)), "overview.json is missing")
+        broken("an overview with no programme material", edit_overview(lambda d: d.update(materials=[])), "lists no programme document")
+        broken("a listed material that is not in the folder", lambda b: os.remove(os.path.join(b, "_course_shell", "materials", "programme", "Programme.docx")),
+               "which is not in _course_shell")
+        broken("outline hours that do not add up to the overview's total", edit_overview(lambda d: d["hours"].update(total=9)), "hours add up to")
+        broken("a material under a folder the importer copies to the trainees", lambda b: (
+            os.makedirs(os.path.join(b, "_course_shell", "materials", "documents")),
+            shutil.move(os.path.join(b, "_course_shell", "materials", "programme", "Programme.docx"), os.path.join(b, "_course_shell", "materials", "documents", "Programme.docx")),
+            edit_overview(lambda d: d["materials"][0].update(file="materials/documents/Programme.docx"))(b)), "would be copied to the trainee tablets")
+        if node:
+            code, out = run(c)
+            check("the importer keeps overview.json and materials under instructor/ only - no trainee/ path carries them",
+                  code == 0, out)
+            sys.path.insert(0, HERE)
+            import check_course_package as ccp
+            imp, _ = ccp.run_importer(c)
+            paths = [f if isinstance(f, str) else f.get("path", "") for f in (imp or {}).get("trainee", [])]
+            check("... checked on the importer's own trainee list (%d files)" % len(paths), bool(paths) and not any("overview.json" in p or "materials/" in p for p in paths), paths[:5])
+
         print("\n-- the classroom's own before-handover list")
         broken("a module without presentation/index.html", lambda b: os.remove(os.path.join(b, "module01", "presentation", "index.html")),
                "module01/presentation/index.html is missing")
@@ -285,7 +324,6 @@ def main():
                '{"code":"module01","title":"Gas tankers","entry":"presentation/index.html"}];')
         broken("a course map in another order than the folders, with no order declared",
                lambda b: w(os.path.join(b, "_course_shell", "course_map.js"), rev), "names it in working_claude\\course.build.json \"module_order\"")
-        import json
         b2 = os.path.join(tmp, "order_ok", "modules")
         shutil.copytree(c, b2)
         w(os.path.join(b2, "_course_shell", "course_map.js"), rev)

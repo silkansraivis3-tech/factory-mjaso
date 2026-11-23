@@ -184,7 +184,8 @@ edit `known-findings.json` to get past it unless a human asks for that specific 
   any path. It is publishable; **do not create a second course this way**, and do not convert
   it without being asked (it moves hundreds of files and every relative link with them).
 
-`references/course-package.md` has the pack contract, the `course.json` fields, versioning,
+`references/course-package.md` has the pack contract (including `_course_shell/overview.json` and
+`_course_shell/materials/`, the instructor-side course overview LND shows), the `course.json` fields, versioning,
 and the honest list of what still needs wiring for a truly generic platform.
 
 ## 4 · Git, and working alongside colleagues

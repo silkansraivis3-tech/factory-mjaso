@@ -7,6 +7,25 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.138.0 · Every compiled course carries its overview for LND (2026-11-23)
+
+- `scripts/course_overview.py`: `build(course, title, record)` writes `modules\_course_shell\overview.json` (kind
+  `course-overview`, version 1 - outline with hours, main ILOs with their modules, materials) and copies the files it lists
+  into `modules\_course_shell\materials\<programme|project-work|course-plan|day-sheets>\`. Read off `programme.json`,
+  `architecture.json`, `project_work.json` and `additional-materials\`; the programme document is found from the free text
+  of `course.programme_file` / `programme.json source` (`source_files\<name>.docx|doc|pdf`). `python course_overview.py
+  <course folder>` runs just this step.
+- `compile_course.py` calls it after `additional_materials.build()` (it copies that build's files). Its hashes are in
+  `compiled_course.json`, not `additional_materials.json` - that record moves aside every file the additional materials no
+  longer make, which would take the copies away. A course with no `programme.json` or no topics: no overview, a plain line.
+- `check_course_package.py` runs `course_overview.package_problems()`: missing / invalid overview, an empty outline, hours that
+  do not add up, no programme material, a listed file that is not there, a material path the importer would copy to the
+  trainees (it copies a path with tasks, handout, documents, assets or assessment in it - the regex is not anchored to the start).
+- Instructor-side only: `platform.json` `ships_in_course_shell_globs` has both paths; `finished_course.py` already keeps all of
+  `_course_shell/` out of the trainee copy.
+- Tests: `test_course_overview.py`; `test_course_package.py` (good course carries an overview; five break cases; no `trainee/`
+  path carries it); `test_publisher.py` (classified INSTRUCTOR).
+
 ## 2.134.0 · Project work arrives with the course (2026-11-17)
 
 - `scripts/project_work.py` (`init` / `check` / `link` / `approve`): a course's project cards in

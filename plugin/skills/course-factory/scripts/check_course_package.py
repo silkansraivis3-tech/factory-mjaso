@@ -14,6 +14,9 @@ byte-identical to admin/package-core.mjs) - so a folder that passes here is one 
 
 WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
   COURSE.html with a <title>; _course_shell/course_map.js readable as data, listing every module in order
+  _course_shell/overview.json (2.138.0): kind course-overview, a non-empty outline whose hours add up to its totals, a
+    programme document among its materials, every listed file in _course_shell/materials/ and none of them under a
+    folder the importer copies to the trainees (course_overview.package_problems)
   module folders named module01, module02 ... and nothing else loose (anything of the factory's own starts with _)
   per module: presentation/index.html; START_HERE.html and START_HERE_EXTENDED.html (L43); every .slide has data-title;
     every Task / Check slide has data-activity, and either data-task-href to a page that exists or (work in the room)
@@ -67,6 +70,7 @@ sys.path.insert(0, HERE)
 import workspace  # noqa: E402
 import design_choices  # noqa: E402  - the operator's design choices are theirs, not problems (L26, 2.30.0)
 import classroom_files  # noqa: E402  - the instructor-only classroom\ folder (prepare.json, forms\) the tablet app reads on publish
+import course_overview  # noqa: E402  - _course_shell\overview.json and materials\, the course's whole picture for LND (2.138.0)
 
 CONTRACT = json.load(io.open(os.path.join(os.path.dirname(HERE), "knowledge", "classroom-system.json"), encoding="utf-8"))
 LIM = CONTRACT["limits"]
@@ -319,6 +323,8 @@ def check(folder):
             notes.append("%s at the top of the course folder is skipped by the classroom or not used" % d)
     # the classroom\ folder (prepare.json, forms\) - the app's own limits and form rules; a module code must be a module here
     probs += classroom_files.folder_problems(folder, mods)
+    # 2.138.0 - every compiled course carries its overview for LND (programme outline with hours, ILOs, the programme document)
+    probs += course_overview.package_problems(folder)
     mp = os.path.join(folder, "_course_shell", "course_map.js")
     if os.path.isfile(mp):
         m = re.search(r"window\.COURSE_MAP\s*=\s*(\[[\s\S]*\])\s*;?\s*$", read(mp))

@@ -37,7 +37,18 @@ COURSE = os.path.join(HERE, "compile_course.py")
 PACKAGE = os.path.join(t.SKILL, "scripts", "check_course_package.py")
 PASS, FAIL = [], []
 TITLE = "Basic training for ships subject to the IGF Code"
-ARCH = {"course": {"title": TITLE, "course_language": "English"},
+# 2.138.0 - every compile writes the course overview, which needs the programme's topics and its document
+PROG = {"academic_hour_min": 45, "total_row": {"total": 26}, "topics": {"1": {"title": "IGF ships", "theory": 26, "practical": 0}}}
+PROG_FILE = "source_files/Programme.docx"
+
+
+def give_programme_file(course):
+    d = os.path.join(os.path.dirname(course), "source_files")
+    os.makedirs(d, exist_ok=True)
+    open(os.path.join(d, "Programme.docx"), "wb").write(b"programme")
+
+
+ARCH = {"course": {"title": TITLE, "course_language": "English", "programme_file": PROG_FILE},
         "modules": [{"module": 1, "title": "Planned title of module 1"}, {"module": 2, "title": "Fuel systems"}],
         "final_assessment": {"topic": "3"}}
 
@@ -63,8 +74,9 @@ def main():
         check("no approved architecture - nothing is built", code == 2 and not os.path.isfile(os.path.join(root, "COURSE.html")), out)
 
         wc = os.path.join(c, "working_claude")
+        give_programme_file(c)
         cs.save(os.path.join(wc, "architecture.json"), ARCH)
-        cs.save(os.path.join(wc, "programme.json"), {"academic_hour_min": 45, "total_row": {"total": 26}})
+        cs.save(os.path.join(wc, "programme.json"), PROG)
         cs.save(os.path.join(wc, "course.build.json"), {"regulation": "STCW Regulation V/3", "programme": "LJA programme 13-51-306"})
         # 2.47.0 - instructor\M01_PLAN.html is the compiled plan (compile_module.py wrote it above), not a stub
         io.open(os.path.join(md, "assessment", "check_answer_key.html"), "w", encoding="utf-8").write("<title>Answer key</title>")
@@ -85,6 +97,19 @@ def main():
         check("2.83.0 with an ILO map: _course_shell/ilo_coverage.json is built, kind ilo-coverage, the course's title, the module's row",
               code == 0 and "Built _course_shell/ilo_coverage.json" in out and cov.get("kind") == "ilo-coverage" and cov.get("course") == TITLE
               and [r["id"] for r in cov.get("rows", [])] == ["1.1"], out)
+        # 2.138.0 - the course overview LND shows: outline with hours, ILOs, the programme document among the materials
+        ov_p = os.path.join(root, "_course_shell", "overview.json")
+        ov = json.loads(read(ov_p)) if os.path.isfile(ov_p) else {}
+        check("2.138.0 _course_shell/overview.json is built with the outline and the programme document copied into materials/",
+              ov.get("kind") == "course-overview" and ov["hours"]["total"] == 26 and [r["module"] for r in ov["outline"]] == ["M01"]
+              and any(m["group"] == "programme" and os.path.isfile(os.path.join(root, "_course_shell", *m["file"].split("/"))) for m in ov["materials"]), out)
+        cs.save(os.path.join(wc, "programme.json"), dict(PROG, topics={}))
+        os.remove(ov_p)
+        code, out = run(COURSE, c)
+        check("2.138.0 a programme with no topics: the build says plainly that no overview was written and why, writes none, does not crash",
+              code == 1 and "No course overview was written" in out and "has no topics" in out and not os.path.isfile(ov_p) and "Traceback" not in out, out)
+        cs.save(os.path.join(wc, "programme.json"), PROG)
+        run(COURSE, c)
         # 2.69.0 - the trainee's handout: the one button on the tablet (owner, 2026-10-27)
         hp = os.path.join(md, "handout", "index.html")
         hand = read(hp) if os.path.isfile(hp) else ""
@@ -211,8 +236,9 @@ def main():
         cs.save(os.path.join(cd, "working_claude", "script", "M02.json"), sc2)
         code, out = run(t.COMPILE, cd, "--module", "2", "--draft")
         wd = os.path.join(cd, "working_claude")
+        give_programme_file(cd)
         cs.save(os.path.join(wd, "architecture.json"), ARCH)
-        cs.save(os.path.join(wd, "programme.json"), {"academic_hour_min": 45, "total_row": {"total": 26}})
+        cs.save(os.path.join(wd, "programme.json"), PROG)
         rd = os.path.dirname(mdd)
         code, out = run(COURSE, cd)
         check("F7: a draft module is reported as 'draft - not packaged' and left out of COURSE.html and the module list",
@@ -252,10 +278,11 @@ def main():
                        modules=[dict(ARCH["modules"][0], main_ilos=["1"], topic_en="Ships using gas as fuel",
                                      sub_ilos=[{"id": "1.1", "status": "original", "text_en": "Name the new spaces of a gas-fuelled ship"}]),
                                 ARCH["modules"][1]])
+        give_programme_file(cv)
         cs.save(os.path.join(wv, "architecture.json"), arch_lv)
         cs.save(os.path.join(wv, "programme.json"), {"language": "Latvian", "academic_hour_min": 45, "total_row": {"total": 26},
                                                      "main_ilos": {"1": main_lv}, "outcomes": {"1.1": out_lv},
-                                                     "topics": {"1": {"title": "Kuģi, kas izmanto gāzi kā degvielu"}}})
+                                                     "topics": {"1": {"title": "Kuģi, kas izmanto gāzi kā degvielu", "theory": 26, "practical": 0}}})
         import ilo_map
         ilo_map.build(cv, quiet=True)
         code, out = run(COURSE, cv, "--no-pdf")
@@ -283,8 +310,9 @@ def main():
             cl, mdl = t.new_course(base, sc, build=False)
             run(t.COMPILE, cl, "--module", "1")
             wl = os.path.join(cl, "working_claude")
-            cs.save(os.path.join(wl, "architecture.json"), dict(ARCH, course={"title": TITLE, "course_language": lang}))
-            cs.save(os.path.join(wl, "programme.json"), {"academic_hour_min": 45, "total_row": {"total": 26}})
+            give_programme_file(cl)
+            cs.save(os.path.join(wl, "architecture.json"), dict(ARCH, course={"title": TITLE, "course_language": lang, "programme_file": PROG_FILE}))
+            cs.save(os.path.join(wl, "programme.json"), PROG)
             code, out = run(COURSE, cl)
             if not everything:
                 check("Norwegian: the start pages' words are not in the factory - reported, never silent",

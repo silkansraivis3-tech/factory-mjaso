@@ -27,6 +27,13 @@ app/src/instructor/assets/instructor_terminal/courses/<course_id>/   INSTRUCTOR
     answers/                  answer keys, marking criteria, case analyses
 ```
 
+**The course overview (2.138.0).** Every compiled course also carries `modules/_course_shell/overview.json` (programme
+outline with hours, main ILOs, list of materials) and `modules/_course_shell/materials/<programme|project-work|course-plan|day-sheets>/`
+(the programme document, project work cards, course plan, day sheets) for LND's course page and review editor. They are
+INSTRUCTOR files: the importer keeps `_course_shell/` under `instructor/` and copies to the trainees only a path with
+`tasks`, `handout`, `documents`, `assets` or `assessment` in it, so those names are never used for a materials folder.
+`check_course_package.py` refuses a course without the overview or without a programme document among its materials.
+
 `<course_id>` is a lowercase slug: `gas-advanced`, `fire-fighting`, `first-aid`. It is the
 folder name, the `id` in `course.json`, the branch name and the registry key. Pick it once;
 changing it later is a rename across every path.

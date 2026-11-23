@@ -298,6 +298,13 @@ def main() -> int:
         check("2.83.0 ... while the ILO map's own working file, ilo_map.json, stays internal",
               _gates.classify("/r", plat, "/r/app/src/instructor/assets/instructor_terminal/courses/c/working_claude/ilo_map.json") == "INTERNAL")
         ib = "/r/app/src/instructor/assets/instructor_terminal/courses/c/"
+        # 2.138.0 - the course overview and its materials ship too, instructor-side; the programme document is not swallowed by
+        # the (programme|plan|...).json internal pattern
+        ov = ib + "modules/_course_shell/"
+        check("2.138.0 overview.json and _course_shell/materials/ (programme, project-work, course-plan, day-sheets) sort INSTRUCTOR, never INTERNAL",
+              all(_gates.classify("/r", plat, ov + p) == "INSTRUCTOR" for p in (
+                  "overview.json", "materials/programme/Programme_rev3.docx", "materials/project-work/D1_ECDIS.pdf",
+                  "materials/course-plan/ACP_c.docx", "materials/day-sheets/Day_1.pdf")))
         check("the additional materials (the office's paper) never ship; the two plan pages ship, instructor-side",
               _gates.classify("/r", plat, ib + "additional-materials/acp/ACP_c.docx") == "INTERNAL"
               and _gates.classify("/r", plat, ib + "modules/_course_shell/advanced_course_plan.html") == "INSTRUCTOR"

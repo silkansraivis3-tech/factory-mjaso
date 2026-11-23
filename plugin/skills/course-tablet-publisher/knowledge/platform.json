@@ -124,8 +124,11 @@
   ],
   "_shared_note": "Shared engines live ONCE at the terminal root and are referenced, never copied into a course. A copy goes stale the first time the engine is fixed - that has already happened here: the per-module gb_done.js exists in five identical copies.",
   "ships_in_course_shell_globs": [
-   "(^|/)_course_shell/ilo_coverage\\.json$"
+   "(^|/)_course_shell/ilo_coverage\\.json$",
+   "(^|/)_course_shell/overview\\.json$",
+   "(^|/)_course_shell/materials/"
   ],
+  "_overview_note": "2.138.0 - the course overview LND shows (_course_shell/overview.json: programme outline with hours, main ILOs, list of materials) and the files it lists (_course_shell/materials/<programme|project-work|course-plan|day-sheets>/). Instructor-side only, like ilo_coverage.json: the importer keeps _course_shell/ under instructor/ and copies to the trainees only a path with tasks, handout, documents, assets or assessment in it, so the group folders never use those names (check_course_package.py refuses it). The glob is tested before internal_globs, so a programme document under materials/programme/ is never swallowed by the (programme|plan|...).json pattern.",
   "_additional_note": "course/additional-materials/ is the office's and the auditor's paper (the ACP, every task as PDF and Word, the day's simulator papers) - beside the course, never on a tablet. The instructor's plan pages that do ship are inside modules/ (_course_shell/advanced_course_plan.html, moduleNN/instructor/advanced_module_plan.html) and sort INSTRUCTOR by their folders. 2.129.0 - the day sheets also ship inside modules/ (_course_shell/documents/day_sheets/*.html, no answers, no instructor notes): the classroom importer gives them to the instructor and to the trainees (documents/). Copies of the paper ones in additional-materials/day-sheets/ stay internal.",
   "_ships_note": "2.83.0 - the ILO map the admin panel reads (the factory writes it into modules/_course_shell/ by compile_course.py). It is a generated file beside course_map.js, not a working file: it ships with the course, in the instructor tree (the importer keeps _course_shell/ under instructor/), and NEVER reaches a trainee tablet. These globs are tested BEFORE internal_globs, so no broader internal pattern can swallow it.",
   "internal_globs": [
