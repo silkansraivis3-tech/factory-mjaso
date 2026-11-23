@@ -525,7 +525,55 @@ def view(course):
         out["modules"].append(mod)
     out["decisions"] = [{"decision": k, "topics": tally.get(k, 0)} for k in ("kept", "lifted", "above the outcome", "the expert's decision")]
     out["active_minutes"] = sum(int(a.get("minutes") or 0) for m in mods for a in m["active"] if a.get("status") != "struck")
-    return {"content": out, "items": items, "fingerprint": _hash([out, items])}
+    # What the editor shows is the outcomes form (the owner's Excel, 2026-11-23): one row per outcome, the rows the
+    # experts answer. The documents' own view stays beside it ("review") for the pull and the Word files.
+    form = outcomes_form(out, arch)
+    rows = {r["item"]: items[r["item"]] for t in form["topics"] for r in t["rows"] if r.get("item")}
+    return {"content": form, "items": rows, "fingerprint": _hash([form, rows]), "review": out, "review_items": items}
+
+
+def _lv(label):
+    """'3 Apply' -> 3; 'not taught', '-', 'not judged yet' -> None"""
+    m = re.match(r"^\s*([1-6])\b", str(label or ""))
+    return int(m.group(1)) if m else None
+
+
+def _verb(text):
+    """'describe · 2 Understand' -> 'describe'; a level alone or '-' -> ''"""
+    v = str(text or "").split(" · ")[0].strip()
+    return "" if v == "-" or re.match(r"^\d", v) else v
+
+
+def outcomes_form(out, arch):
+    """The learning-outcome review as the editor shows it (2026-11-23, the owner's Excel "IMO 1.04 Part C - Bloom
+    distribution"): topic (the module) -> ILO (its Main ILO) -> sub-ILO, each row the original wording and its level
+    beside the proposed one, and the practical task. An expert who does not agree with a proposed level picks another
+    and presses Regenerate: Claude words the outcome again at that level (a Main ILO keeps its words) - an answer the
+    pull carries out as a decision with Claude. A module's Main ILO heads its Sub-ILOs (a "heading" row, not
+    answered); a module without Sub-ILOs is answered on its Main ILOs."""
+    main_text = {str(i.get("id")): i.get("text", "") for i in arch.get("main_ilos", [])}
+    arch_mod = {str(am.get("module")): am for am in arch.get("modules", [])}
+    topics = []
+    for m in out["modules"]:
+        mains = [str(x) for x in (arch_mod.get(str(m["n"])) or {}).get("main_ilos") or []]
+        subs = any(not t["main"] for t in m["topics"])
+        rows = []
+        if subs:
+            for i in mains:
+                info = bloom_map.ilo_level(main_text.get(i, ""))
+                rows.append({"ref": i, "heading": True, "main": True,
+                             "original": {"verb": info.get("verb") or "", "text": main_text.get(i, ""), "level": info.get("level") or None}})
+        parent = mains[0] if subs and len(mains) == 1 else None
+        for t in m["topics"]:
+            lv, rw = _lv(t["proposed"]["level"]), t["revised"]
+            acts = [a for a in t["activities"] if a.get("status") != "struck"]
+            rows.append({"item": t["item"], "ref": t["id"], "parent": None if t["main"] else parent, "main": t["main"],
+                         "original": {"verb": _verb(t["existing_verb"]), "text": t["intended"], "level": _lv(t["asks"])},
+                         "proposed": {"verb": _verb(t["revised_verb"]) if rw else _verb(t["existing_verb"]), "text": rw or t["intended"], "level": lv} if lv else None,
+                         "task": {"name": acts[0]["kind"] if acts else "", "does": t["tla"]} if _filled(t["tla"]) and t["tla"] != "not judged yet" else None,
+                         "old": {"level": t["now"]["level"], "how": t["now"]["how"]} if _filled(t["now"]["how"]) and t["now"]["how"] != "not judged yet" else None})
+        topics.append({"n": m["n"], "title": m["title"], "rows": rows})
+    return {"form": "outcomes", "title": out["title"], "levels": out["levels"], "topics": topics}
 
 
 def verb_of(text, lang, lvl=None):

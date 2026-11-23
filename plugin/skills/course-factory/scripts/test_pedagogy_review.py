@@ -255,7 +255,7 @@ def main():
               and "Kept because the old course already reaches what the outcome asks" in new and "Not higher because: no detector" in new,
               [x for x in ("the expert's decision", "They can judge", "Kept because the old course", "Not higher because")
                if x not in new])
-        t13 = next((t for m in pr.view(c)["content"]["modules"] for t in m["topics"] if t["id"] == "1.3"), {})
+        t13 = next((t for m in pr.view(c)["review"]["modules"] for t in m["topics"] if t["id"] == "1.3"), {})
         check("L19: the experts read the revised outcome in English, the programme's own words beside it",
               (t13.get("revised"), t13.get("intended")) == (REVISED, "Aprakstīt sašķidrināto gāzu vielu fizikālās īpašības")
               and t13.get("revised_verb", "").startswith("apply"), t13)

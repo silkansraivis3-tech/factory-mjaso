@@ -172,9 +172,19 @@ def main():
         tpr.complete(c)
         code, out = out_of(cp.cmd_push_pedagogy, c)
         d = srv.docs[-1] if srv.docs else {}
-        check("push sends the pedagogy: version 1, a row for the course and one per topic",
-              code == 0 and d.get("version") == 1 and set(d["items"]) == {"course", "upgrades", "1/1.1", "1/1.1.a", "1/1.1.b", "act/1/module", "2/1.3", "3/1"}, (out, d.get("items")))
-        t = d["content"]["modules"][0]["topics"][0]
+        check("push sends the pedagogy: version 1, a row per learning outcome",
+              code == 0 and d.get("version") == 1 and set(d["items"]) == {"1/1.1", "1/1.1.a", "1/1.1.b", "2/1.3", "3/1"}, (out, d.get("items")))
+        form = d["content"]
+        rows = {r.get("item") or "head " + r["ref"]: r for tp in form.get("topics", []) for r in tp["rows"]}
+        r1a = rows.get("1/1.1.a") or {}
+        check("... as the outcomes form (the owner's Excel): topic, ILO, sub-ILO; the original beside the proposed, and the task",
+              form.get("form") == "outcomes" and [tp["n"] for tp in form["topics"]] == [1, 2, 3]
+              and r1a["original"]["text"].startswith("Identificēt") and r1a["original"]["level"] in range(1, 7)
+              and r1a["proposed"]["level"] in range(1, 7) and r1a["task"]["does"] and r1a["parent"] == "1" and not r1a["main"], r1a)
+        check("... a module's Main ILO heads its Sub-ILOs and is not answered; a module without Sub-ILOs answers its Main ILO",
+              rows.get("head 1", {}).get("heading") and "item" not in rows["head 1"]
+              and rows["3/1"]["main"] and not rows["3/1"].get("heading") and rows["3/1"]["parent"] is None, list(rows))
+        t = pr.view(c)["review"]["modules"][0]["topics"][0]
         check("... in the Word files' words: the outcome from the architecture, now, proposed with its decision and why",
               t["outcome"] and t["now"]["checked"] == "final test Q1" and "->" in t["proposed"]["change"]
               and t["proposed"]["decision"] in ("kept", "lifted", "above the outcome") and t["proposed"]["why"], t)
@@ -186,7 +196,7 @@ def main():
         print("\n-- the experts answer, the factory pulls")
         a_ok = srv.answer("anna.liepa@novikontas.org", "1/1.1", "ok")
         a_ch = srv.answer("anna.liepa@novikontas.org", "2/1.3", "change", "They set it on the real panel: lift it to Apply.")
-        srv.answer("janis.berzins@novikontas.org", "course", "change", "Say how long the simulator runs are.")
+        srv.answer("janis.berzins@novikontas.org", "1/1.1.b", "change", "Say how long the simulator runs are.")
         srv.ready("Anna Liepa")
         code, out = out_of(cp.cmd_pull, c)
         rev = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))
@@ -195,19 +205,20 @@ def main():
         check("needs change goes into the row's expert_notes, with the words and who, not done yet",
               r13.get("expert_notes") and r13["expert_notes"][0]["said"].startswith("They set it on the real panel")
               and r13["expert_notes"][0]["done"] == "" and r13["expert_notes"][0]["by"] == "Anna Liepa", r13)
-        check("a note on the summaries goes to the whole course's expert_notes",
-              rev.get("expert_notes") and rev["expert_notes"][0]["by"] == "Janis Berzins", rev.get("expert_notes"))
+        r1b = rev["modules"]["1"]["rows"]["1.1.b"]
+        check("a note from a second expert goes to that row's expert_notes",
+              r1b.get("expert_notes") and r1b["expert_notes"][0]["by"] == "Janis Berzins", r1b)
         check("Ready is recorded with the name it was signed with, and the changes it goes with",
               rev.get("ready", {}).get("by") == "Anna Liepa" and rev["ready"]["changes"] == 2, rev.get("ready"))
         log = io.open(os.path.join(c, "FEEDBACK_LOG.md"), encoding="utf-8").read()
         check("FEEDBACK_LOG.md has each change asked and the Ready",
               "| 2 | " in log and "2 · M02 · 1.3 | They set it on the real panel" in log and "[Anna Liepa, editor mode] | to do" in log
-              and "2 · course · summaries |" in log and "Ready - signed Anna Liepa" in log, log[-700:])
+              and "2 · M01 · 1.1.b | Say how long" in log and "Ready - signed Anna Liepa" in log, log[-700:])
         check("what was taken is acknowledged", all(a.get("pulled") for a in srv.answers) and srv.docs[-1].get("ready_pulled"))
         probs, _ = pr.check(c)
         check("check stops until every change asked is carried out",
               any("module 2, topic 1.3: Anna Liepa asked in editor mode" in x for x in probs)
-              and any("the whole course: Janis Berzins asked" in x for x in probs), probs)
+              and any("topic 1.1.b: Janis Berzins asked" in x for x in probs), probs)
         n = len(log)
         code, out = out_of(cp.cmd_pull, c)
         check("pulled again: nothing taken twice", "0 answer(s) - 0 OK" in out and len(io.open(os.path.join(c, "FEEDBACK_LOG.md"), encoding="utf-8").read()) == n, out)
@@ -219,9 +230,8 @@ def main():
               and [x["answer"] for x in r13["expert_review"]] == [a_ch["id"]], r13)
 
         rev = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))
-        for x in rev["expert_notes"]:
-            x["done"] = "the simulator runs' minutes are in the summary"
-        rev["proposed_summary"] += " Each simulator run is 30 minutes."
+        for x in rev["modules"]["1"]["rows"]["1.1.b"]["expert_notes"]:
+            x["done"] = "the simulator runs' minutes are in the task"
         io.open(pr.files(c)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
         check("with every change carried out, check is clean again", pr.check(c)[0] == [], pr.check(c)[0])
         pr.render(c, pdf=False)
@@ -240,7 +250,14 @@ def main():
         srv.answer("anna.liepa@novikontas.org", "2/1.3", "decision", decision={
             "choice": "claude", "level": 4, "how": "Trainees find the fault in a recorded loading on the simulator.",
             "why": "On board they must see what went wrong before the alarm.", "said": "They should analyse a real loading."})
-        srv.answer("janis.berzins@novikontas.org", "act/1/module", "change", "Give the 3D section ten minutes more.")
+        # the outcomes form (2026-11-23): Regenerate at a level the expert chose, and Keep original
+        srv.answer("anna.liepa@novikontas.org", "1/1.1.b", "decision", decision={
+            "choice": "claude", "level": 2, "level_name": "2 Understand", "verb": "Explains", "archetype": "Explain-Why Prompt Set",
+            "revised_outcome": "Explains why a membrane tank needs a secondary barrier", "how": "Learners explain it on a section drawing.",
+            "why": "", "said": "Regenerate at 2 Understand", "regenerated": True})
+        srv.answer("anna.liepa@novikontas.org", "3/1", "decision", decision={
+            "choice": "keep", "level": 3, "level_name": "3 Apply", "verb": "Operate", "revised_outcome": "",
+            "said": "Keep the original wording and level."})
         code, out = out_of(cp.cmd_pull, c)
         rev = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))
         p11, p13 = rev["modules"]["1"]["rows"]["1.1"]["proposed"], rev["modules"]["2"]["rows"]["1.3"]["proposed"]
@@ -250,23 +267,26 @@ def main():
         check("a decision with Claude: its level, what the trainee does and why, the expert's words",
               p13["level"] == 4 and p13["how"].startswith("Trainees find the fault") and p13["why"].startswith("On board they must")
               and p13["expert"]["said"] == "They should analyse a real loading." and not p13.get("above_why"), p13)
-        m1 = rev["modules"]["1"]
-        check("a note on the module's activities goes to the module, about the activities",
-              m1.get("expert_notes") and m1["expert_notes"][0]["about"] == "activities", m1.get("expert_notes"))
+        p1b, p31 = rev["modules"]["1"]["rows"]["1.1.b"]["proposed"], rev["modules"]["3"]["rows"]["1"]["proposed"]
+        arch_1b = {s["id"]: s for s in json.load(io.open(pr.files(c)["arch"], encoding="utf-8"))["modules"][0]["sub_ilos"]}["1.1.b"]
+        check("Regenerate: the level the expert chose, the new task, the Sub-ILO re-worded at that level",
+              p1b["level"] == 2 and p1b["how"] == "Learners explain it on a section drawing." and p1b["expert"]["said"] == "Regenerate at 2 Understand"
+              and arch_1b["text"] == "Explains why a membrane tank needs a secondary barrier", (p1b, arch_1b))
+        check("Keep original: the outcome's own words at its own level, not the old course's",
+              p31["level"] == 3 and not p31.get("revised_outcome") and p31["expert"]["said"] == "Keep the original wording and level.", p31)
         probs, _ = pr.check(c)
-        check("check: the decisions pass every keep-or-lift rule; the activity note waits for its 'done'",
-              probs and all("module 1: Janis Berzins asked" in x for x in probs), probs)
+        check("check: the decisions pass every keep-or-lift rule", probs == [], probs)
         log = io.open(os.path.join(c, "FEEDBACK_LOG.md"), encoding="utf-8").read()
         check("FEEDBACK_LOG.md says what each decision changed",
               "kept as the old course, at" in log and "set with Claude to 4 Analyse: Trainees find the fault" in log
-              and "2 · M01 · activities | Give the 3D section ten minutes more." in log, log[-900:])
+              and "the original wording kept, at 3 Apply" in log, log[-900:])
         v = pr.view(c)
-        t13 = v["content"]["modules"][1]["topics"][0]
+        t13 = v["review"]["modules"][1]["topics"][0]
         check("sent again, the topic shows the expert's decision", t13["proposed"]["decision"] == "the expert's decision"
               and any("They should analyse a real loading." in w for w in t13["proposed"]["why"]), t13["proposed"])
 
         print("\n-- intended and revised learning outcomes")
-        mods = {m["n"]: {t["id"]: t for t in m["topics"]} for m in v["content"]["modules"]}
+        mods = {m["n"]: {t["id"]: t for t in m["topics"]} for m in v["review"]["modules"]}
         t1a, t31 = mods[1]["1.1.a"], mods[3]["1"]
         check("a Sub-ILO the factory re-expressed: the programme's words as intended, the new words as revised, each with its verb",
               t1a["intended"].startswith("Identificēt") and t1a["revised"].startswith("Identify the cargo containment")
@@ -295,7 +315,7 @@ def main():
               and subs["1.1"]["programme_text"].startswith("Identificēt") and subs["1.1"]["ratified"]["by"] == "Anna Liepa", subs["1.1"])
         check("a decision with Claude that re-words the Sub-ILO is ratified the same way",
               subs["1.1.b"]["text"] == "Identify the tank type on a photograph" and subs["1.1.b"]["ratified"]["by"] == "Anna Liepa", subs["1.1.b"])
-        t11 = {t["id"]: t for t in pr.view(c)["content"]["modules"][0]["topics"]}["1.1"]
+        t11 = {t["id"]: t for t in pr.view(c)["review"]["modules"][0]["topics"]}["1.1"]
         check("sent again, the topic shows the programme's words as intended and the ratified ones as revised",
               t11["intended"].startswith("Identificēt") and t11["revised"].startswith("Operate the cargo"), t11)
 

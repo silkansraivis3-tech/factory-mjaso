@@ -280,7 +280,7 @@ def pull_pedagogy(course, answers, ready):
     # the editor's row -> (where it is written, the log's place, what it is about)
     where_of = {"course": (rev, "2 · course · summaries", None), "upgrades": (rev, "2 · course · upgrades", "upgrades")}
     topic_of = {}            # the editor's topic row -> (module, Sub-ILO id, is a Main ILO)
-    for m in v["content"]["modules"]:
+    for m in v["review"]["modules"]:
         mod = rev.setdefault("modules", {}).setdefault(str(m["n"]), {})
         rows = mod.setdefault("rows", {})
         if m.get("act_item"):
@@ -303,7 +303,7 @@ def pull_pedagogy(course, answers, ready):
             said.append("%s answered %s, which is not a row of the documents any more - left in the editor" % (_who(a), a["item"]))
             continue
         row, where, about = target
-        older = " (on words sent before)" if v["items"].get(a["item"]) != a.get("item_hash") else ""
+        older = " (on words sent before)" if v["items"].get(a["item"], v["review_items"].get(a["item"])) != a.get("item_hash") else ""
         # one answer is one row in the editor: sent again, it replaces what it said before
         row["expert_review"] = [x for x in row.get("expert_review") or [] if x.get("answer") != a["id"]]
         row["expert_notes"] = [x for x in row.get("expert_notes") or [] if x.get("answer") != a["id"] or pr._filled(x.get("done"))]
@@ -320,7 +320,14 @@ def pull_pedagogy(course, answers, ready):
             log.append((where, "%s [%s, editor mode]" % (a.get("note") or "", _who(a)), "to do"))
         elif a["verdict"] == "decision" and about is None and row is not rev and d.get("choice") in ("keep", "claude"):
             now = row.get("now") or {}
-            if d["choice"] == "keep":
+            if d["choice"] == "keep" and "verb" in d:
+                # the outcomes form's Keep original: the outcome's own words and the level they ask (2026-11-23)
+                lvl = int(d.get("level") or 0) or (now.get("level") if isinstance(now.get("level"), int) else None)
+                pr.carry_out(row, lvl, d.get("said") or "Keep the original wording and level.", _who(a),
+                             how=(row.get("proposed") or {}).get("how") or "")
+                row["proposed"].pop("revised_outcome", None)
+                what = "the original wording kept, at %s" % pr.level(lvl)
+            elif d["choice"] == "keep":
                 lvl = now.get("level") if isinstance(now.get("level"), int) and now.get("level") >= 1 else d.get("level")
                 pr.carry_out(row, lvl, d.get("said") or "Keep it as the old course teaches it.", _who(a),
                              how="Kept as the old course teaches it: " + (now.get("how") or ""))
