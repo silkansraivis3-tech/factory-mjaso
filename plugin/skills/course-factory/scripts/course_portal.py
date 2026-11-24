@@ -324,7 +324,7 @@ def pull_pedagogy(course, answers, ready):
                 # the outcomes form's Keep original: the outcome's own words and the level they ask (2026-11-23)
                 lvl = int(d.get("level") or 0) or (now.get("level") if isinstance(now.get("level"), int) else None)
                 pr.carry_out(row, lvl, d.get("said") or "Keep the original wording and level.", _who(a),
-                             how=(row.get("proposed") or {}).get("how") or "")
+                             how=(row.get("proposed") or {}).get("how") or "", decision="keep", keep_codes=d.get("keep_codes"))
                 row["proposed"].pop("revised_outcome", None)
                 what = "the original wording kept, at %s" % pr.level(lvl)
             elif d["choice"] == "keep":
@@ -333,7 +333,11 @@ def pull_pedagogy(course, answers, ready):
                              how="Kept as the old course teaches it: " + (now.get("how") or ""))
                 what = "kept as the old course, at %s" % pr.level(lvl)
             else:
-                pr.carry_out(row, int(d["level"]), d.get("said") or "", _who(a), how=d.get("how") or "", why=d.get("why") or None)
+                # the elevation method (2.142.0): a re-wording the expert took is a raise; the same words at the same
+                # level is a keep, with the keep codes the editor's Regenerate named
+                pr.carry_out(row, int(d["level"]), d.get("said") or "", _who(a), how=d.get("how") or "", why=d.get("why") or None,
+                             decision="raise" if (d.get("revised_outcome") or "").strip() and not topic_of[a["item"]][2] else
+                             "keep" if d.get("keep_codes") else None, keep_codes=d.get("keep_codes"))
                 what = "set with Claude to %s: %s" % (pr.level(int(d["level"])), d.get("how") or "")
                 rw = (d.get("revised_outcome") or "").strip()
                 if rw and not topic_of[a["item"]][2]:

@@ -246,9 +246,16 @@ def main():
         row = next(r for t in v["content"]["topics"] for r in t["rows"] if r.get("ref") == "1.1")
         check("the editor's form: the original beside the proposed wording, its level, the decision and the TLA as the task",
               row["original"]["text"] == O["1.1"] and row["proposed"]["text"] == RAISED and row["proposed"]["level"] == 5
-              and row["elevation"]["decision"] == "raise" and row["task"]["name"].startswith("Case dilemma") and v["review"]["counts"]["decided"] == 8, row)
+              and row["decision"] == "raise" and row["task"]["name"].startswith("Case dilemma") and row["task"]["id"] == "case-dilemma"
+              and row["task"]["fit"] == "strong" and "Scored" in row["task"]["route"] and "kept" not in row and v["review"]["counts"]["decided"] == 8, row)
         kept = next(r for t in v["content"]["topics"] for r in t["rows"] if r.get("ref") == "2.2")
-        check("... a kept outcome keeps its words and carries its codes", kept["proposed"]["text"] == O["2.2"] and kept["elevation"]["codes"] == ["SAF", "REC"], kept)
+        check("... a kept outcome keeps its words and carries its codes and its reason",
+              kept["proposed"]["text"] == O["2.2"] and kept["decision"] == "keep" and kept["kept"] == {"criteria": ["SAF", "REC"], "why": "The signal is recalled at once, with no aid."}, kept)
+        fm = v["content"]
+        check("... and the form carries the rules the editor shows and checks a Regenerate with: the 28 TLAs, the keep codes, the verbs of each level, the thresholds",
+              fm["method"] == "elevation" and len(fm["archetypes"]) == 28 and fm["archetypes"][0].keys() >= {"id", "name", "level", "levels", "route"}
+              and [c["code"] for c in fm["keep_codes"]][:2] == ["PRE", "SAF"] and "Verifies" in fm["write_verbs"]["5"] and fm["checks"]["length_max"] == 1.3
+              and fm["counts"]["raise"] == 5, {k: fm[k] for k in ("method", "write_verbs")})
 
         bad = copy.deepcopy(rev)
         bad["modules"]["1"]["rows"]["1.2"]["proposed"].pop("keep_codes")
@@ -280,6 +287,22 @@ def main():
                   next(s for s in pr._load(f["arch"])["modules"][0]["sub_ilos"] if s["id"] == "1.1")))
         probs, _ = pr.check(c)
         check("... and the review still checks the raise against the programme's own words", probs == [], probs)
+
+        print("\n-- the expert's answer from the editor keeps the counts true")
+        before = pr.counts(c)
+        r2 = load()
+        row21 = r2["modules"]["2"]["rows"]["2.1"]
+        pr.carry_out(row21, 1, "Keep the original wording and level.", "Anna Berzina", how=row21["proposed"]["how"], decision="keep", keep_codes=["saf", "XXX"])
+        row13 = r2["modules"]["1"]["rows"]["1.3"]
+        pr.carry_out(row13, 4, "Make it a comparison.", "Anna Berzina", how="Pairs compare two bump tests.", decision="raise")
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(r2, ensure_ascii=False))
+        after = pr.counts(c)
+        check("Keep old ILO makes the row a keep, with the keep codes Regenerate named (only real ones); a re-wording taken stays a raise",
+              row21["proposed"]["decision"] == "keep" and row21["proposed"]["keep_codes"] == ["SAF"] and "revised_outcome" not in row21["proposed"]
+              and row13["proposed"]["decision"] == "raise" and (after["raise"], after["keep"]) == (before["raise"] - 1, before["keep"] + 1), (before, after))
+        probs, notes = pr.check(c)
+        check("... and the expert's rows never stop the documents", not any("2.1" in p or "1.3" in p for p in probs), probs)
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
 
         print("\n-- a review started before 2.142.0")
         old = course(tmp, "old")

@@ -643,8 +643,10 @@ def view(course):
                  "activities": [a for a in acts if str(a["topic"]) == str(r["id"])],
                  "changes_made": _done(x) + _done(x, "activities")}
             if new.get("decision") in ("raise", "keep"):       # the elevation method: what was decided, and the task's TLA
+                act = el.tla(new.get("tla")) or {}
                 t["elevation"] = {"decision": new["decision"], "codes": list(new.get("keep_codes") or []) if new["decision"] == "keep" else [],
-                                  "does": new.get("does") or "", "activity": (el.tla(new.get("tla")) or {}).get("name", ""),
+                                  "why": new.get("why") or "", "does": new.get("does") or "", "activity": act.get("name", ""),
+                                  "activity_id": act.get("key", ""), "route": act.get("route", ""),
                                   "fit": new.get("fit") or "", "fit_note": new.get("fit_note") or "", "attention": new.get("attention") or ""}
             items[t["item"]] = _hash([t["intended"], t["revised"], t["asks"], t["now"], t["proposed"], t["activities"],
                                       t["changes_made"]] + ([t["elevation"]] if "elevation" in t else []))
@@ -700,16 +702,36 @@ def outcomes_form(out, arch):
         parent = mains[0] if subs and len(mains) == 1 else None
         for t in m["topics"]:
             lv, rw = _lv(t["proposed"]["level"]), t["revised"]
+            ev = t.get("elevation") or {}
             acts = [a for a in t["activities"] if a.get("status") != "struck"]
             rows.append({"item": t["item"], "ref": t["id"], "parent": None if t["main"] else parent, "main": t["main"],
                          "original": {"verb": _verb(t["existing_verb"]), "text": t["intended"], "level": _lv(t["asks"])},
                          "proposed": {"verb": _verb(t["revised_verb"]) if rw else _verb(t["existing_verb"]), "text": rw or t["intended"], "level": lv} if lv else None,
-                         "task": {"name": (t.get("elevation") or {}).get("activity") or (acts[0]["kind"] if acts else ""), "does": t["tla"]}
+                         "task": dict({"name": ev.get("activity") or (acts[0]["kind"] if acts else ""), "does": t["tla"]},
+                                      **({"id": ev["activity_id"], "route": ev["route"], "fit": ev["fit"], "fit_note": ev["fit_note"]} if ev.get("activity_id") else {}))
                          if _filled(t["tla"]) and t["tla"] != "not judged yet" else None,
-                         **({"elevation": t["elevation"]} if t.get("elevation") else {}),
+                         # the elevation method (2.142.0), in the editor's own words for a row: what was decided, why a
+                         # kept outcome is kept, and a row the expert should see first. The outcome and its task are ONE
+                         # decision in the editor (owner, 2026-11-24): keep the old outcome, or accept the new one
+                         **({"decision": ev["decision"]} if ev else {}),
+                         **({"kept": {"criteria": ev["codes"], "why": ev["why"]}} if ev.get("decision") == "keep" else {}),
+                         **({"flag": ev["attention"]} if ev.get("attention") else {}),
                          "old": {"level": t["now"]["level"], "how": t["now"]["how"]} if _filled(t["now"]["how"]) and t["now"]["how"] != "not judged yet" else None})
         topics.append({"n": m["n"], "title": m["title"], "rows": rows})
-    return {"form": "outcomes", "title": out["title"], "levels": out["levels"], "topics": topics}
+    form = {"form": "outcomes", "title": out["title"], "levels": out["levels"], "topics": topics}
+    if out.get("counts"):
+        # the elevation method: the rules the editor shows and checks a Regenerate with - sent with the form, so the
+        # training app never keeps a copy of its own (knowledge/ilo-elevation.json is the one source)
+        form.update(method=el.METHOD, counts=out["counts"],
+                    archetypes=[{"id": a["key"], "name": a["name"], "level": a["level"], "levels": level(a["level"]),
+                                 "route": a["route"], "task_type": a["task_type"]} for a in el.TLAS],
+                    keep_codes=[{"code": c, "means": v["means"], "levels": v["levels"]} for c, v in el.CODES.items()],
+                    write_verbs={str(n): [el.third_person(v)[0].capitalize() for v in vs] for n, vs in el.WRITE.items()},
+                    checks={"content_words_min": el.CK["content_words_min"], "length_max": el.CK["length_max"],
+                            "small_words": el.CK["small_words"], "task_words_max": el.TASK["words_max"],
+                            "variety": {k: v for k, v in el.VAR.items() if not k.startswith("_")}},
+                    judgement=el.E["judgement"]["raise"] + el.E["judgement"]["keep_low"])
+    return form
 
 
 def verb_of(text, lang, lvl=None):
@@ -758,15 +780,25 @@ def ratify(course, module, sub_id, text, by):
     return False
 
 
-def carry_out(row, lvl, said, by, how="", why=None):
+def carry_out(row, lvl, said, by, how="", why=None, decision=None, keep_codes=None):
     """An expert's decision on one topic, carried out as it is: their level, their words, and the 'how' they agreed to
-    (empty, for the factory to write, when they gave none)."""
+    (empty, for the factory to write, when they gave none). decision ("raise" / "keep"), for a row judged by the
+    elevation method: what the expert's answer makes of the outcome, so the counts stay true - Keep old ILO is a keep
+    (with the keep codes the editor's Regenerate named, else the row's own), a re-wording they took is a raise."""
     from datetime import date
     new = row.setdefault("proposed", {})
     new.update(level=lvl, how=how, limit="", above_why="", expert={"by": by.strip(), "on": date.today().isoformat(), "said": said.strip()})
     new.pop("revised_outcome", None)
     if why:
         new["why"] = why
+    if decision in ("raise", "keep") and new.get("decision") in ("raise", "keep"):
+        new["decision"] = decision
+        if decision == "keep":
+            new["keep_codes"] = [str(c).strip().upper() for c in (keep_codes or new.get("keep_codes") or []) if str(c).strip().upper() in el.CODES]
+            new.pop("does", None)
+        else:
+            new.pop("keep_codes", None)
+        new.pop("attention", None)
 
 
 def record_expert(course, module, topic, lvl, said, by):
