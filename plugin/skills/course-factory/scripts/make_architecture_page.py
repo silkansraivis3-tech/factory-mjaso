@@ -840,6 +840,8 @@ def approve(x, prog, arch, a, g, P, arch_path):
                      "(scripts/active_plan.py decide)." % len(a["waiting"]))
     import pedagogy_review
     lines += pedagogy_review.approval_problems(x.course)
+    import ilo_elevation               # 2.142.0 - the three frameworks, enforced for a course judged by the elevation method
+    lines += ilo_elevation.stage2_problems(x.course, prog, arch)
     if lines:
         print("Stopped - the approval was NOT recorded. The page cannot be approved while:\n%s"
               % "\n".join("  - " + s for s in lines))

@@ -619,6 +619,27 @@ def check(folder):
     return probs, notes, mods
 
 
+def framework_problems(given):
+    """2.142.0 (owner, 2026-11-24: "the frameworks need to be enforced") - for a course judged by the elevation method
+    (ilo-elevation.json "enforced" "package"): the package is not ready while the instructor-led checklist - the
+    guideline's C1-C27, the TLA pool and the modality matrix with it - has an item that is a NO. [] for any other course,
+    and for a folder that is only the built modules (no working files to read)."""
+    try:
+        import ilo_elevation
+        course = workspace.work_folder(os.path.abspath(given), create=False)
+        if not (ilo_elevation.ENF["package"]["instructor_led"] and ilo_elevation.enforced(course)):
+            return []
+        import instructor_led as il
+    except Exception:
+        return []
+    if not os.path.isfile(il.path(course)):
+        return ["the frameworks are enforced for this course and it has no instructor-led register "
+                "(working_claude/instructor_led.json) - instructor_led.py draft, then check"]
+    rows, _ = il.check(course)
+    return ["the instructor-led checklist: %s %s is a NO - %s (instructor_led.py check: fix it, or justify it in one line)"
+            % (where, c["id"], c["item"]) for where, c, st, _ in rows if st == "no"]
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("folder")
@@ -629,6 +650,7 @@ def main(argv=None):
         return 2
     folder = course_folder(a.folder)
     probs, notes, mods = check(folder)
+    probs += framework_problems(a.folder)
     imp, why = (None, None) if a.no_importer else run_importer_without_drafts(folder)
     if imp:
         probs += ["the classroom's importer: " + e for e in imp.get("errors", [])]

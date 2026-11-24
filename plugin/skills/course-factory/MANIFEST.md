@@ -427,6 +427,9 @@ upload, but no workflow build ever ran it, a one-slide fix made every slide stal
 - **The old course.** `from_old` is parsed ("<deck>.pptx, slides 16-18 and 20"), against `old_course_inventory.json`
   (which now keeps each slide's words). Every module's script counts for "cited". Thresholds in `OLD_RULES`.
 - **Bloom.** `LIFT_MAX = 1` in `pedagogy_review.py`; a topic the old course did not teach (level 0) is not capped.
+  (2.142.0: only for a review started before it - a new review has `"method": "elevation"` and is judged by
+  `scripts/ilo_elevation.py` with `knowledge/ilo-elevation.json`: raise or keep, one outcome at a time; tests in
+  `scripts/test_ilo_elevation.py`.)
   `revised_outcome` only with an expert's decision. The memory note on keep-or-lift was written before the cap.
 - **Ready.** `content_script.unanswered` counts the rows without expert_review, expert_notes or an expert decision.
 - **Open.** A slide too full at 1024x768, or a scenario's choices and feedback (GAS M01 s21), now stop the build and are

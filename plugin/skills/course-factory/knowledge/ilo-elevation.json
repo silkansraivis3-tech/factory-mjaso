@@ -1,0 +1,112 @@
+{
+  "_authority": "The pedagogy lead's ILO Elevation build spec and its runtime prompts (Aigars Kluga, Nov 2026), with the spreadsheet 'IMO 1.04 Part C - Bloom distribution' as the reference result (296 outcomes: 84 % Remember before, 20 % Remember or Understand after), given to the factory by the owner on 2026-11-24: 'change course factory accordingly, so we raise and make good ILO'. The method behind the experts' learning-outcome review (L69): every outcome is raised to a higher Bloom level or kept, on purpose, one outcome at a time. Read by scripts/pedagogy_review.py (next, propose, task, status, check, golden); the judgement is in bloom/GUIDE.md section 5. The spec was written for an application that calls Claude once per outcome; in the factory the same contract holds for the agent that drafts the review: one outcome per answer, the answer attached to its outcome by code, every answer checked by code, every count made by code.",
+
+  "_replaces": "Two earlier rules of the review (2.99.0-2.139.0), for every review started with this method ('method': 'elevation' in pedagogy_review.json - a review started before 2.142.0 is finished by the rules it was started with). (1) 'A course lifts a topic one level' - now: a raise lands on Apply or higher, as far as the content honestly supports, and Remember to Understand is not a raise. (2) 'A proposal never re-words an outcome' - now: a raise carries the re-worded outcome, the verb changed and as little else as possible; it becomes the Sub-ILO only when the expert takes it (ratify), with the programme's own words kept beside it. A Main ILO is still never re-worded (L2).",
+
+  "_where_the_frameworks_win": "The three frameworks are the rules above this file. (a) The task of each outcome is a TLA of the TLA Pool (instructor-led.json tla_pool) - not one of the spec's 34 task archetypes, which have no 'when to use' notes yet, twelve of them not approved, and many of them marked by an AI judge the classroom does not have. (b) A revised outcome is written with the Bloom Verb Guide: 'write_verbs' leaves out the spec's verbs the guide says to avoid or replace (discusses, demonstrates, assesses), puts elsewhere (classifies: Understand) or keeps for the hands (inspects, reports), and every verb here is read at its own level by bloom.json. (c) Bloom tags the outcome; the task type still chooses the method (framework rule, instructor-led.json R2): a TLA of the outcome's own task type is 'strong', one of another task type is 'adapted'.",
+
+  "rules": {
+    "E1": {"rule": "One outcome, one result. Every outcome gets exactly one outcome proposal and exactly one task proposal - no merging, splitting, grouping or dropping. A list under one verb is one outcome and stays one. The review is complete only when the count of decided outcomes equals the count of outcomes.", "where": "pedagogy_review.py next gives ONE outcome, propose and task attach the answer to it; status and check show n / total"},
+    "E2": {"rule": "Raise or keep, said for every outcome. The default is raise. A raise lands on Apply, Analyse, Evaluate or Create - the level the content naturally supports, not the highest that can be argued. A level is never lowered. Keep needs at least one keep code and a written reason. No fixed share is enforced; the kept share and the count per code are shown, so the overuse of a code is seen.", "where": "check: decision, level, keep_codes; status: the kept share and each code's count"},
+    "E3": {"rule": "The honesty test. One sentence says what the learner would actually do with this content at the new level, on board or in training. If that sentence can only be written by adding content the outcome does not contain, the outcome is kept.", "where": "'does' on a raise (check refuses a raise without it); a kept outcome too thin to raise carries the code THN"},
+    "E4": {"rule": "The rewrite is the verb and a minimal fit. A kept outcome keeps its wording, character for character - the code shows the original, nobody retypes it. A raised outcome changes the leading verb, keeps the technical content in the original words and adjusts only the grammar the new verb needs. No new fact, number, equipment, document, regulation, condition or task; nothing removed. One verb.", "where": "check: the seven checks of 'checks' below"},
+    "E5": {"rule": "One practical task per outcome, at the outcome's final level, naming the outcome's own content - an outline of one or two sentences, not a finished exercise. Variety is counted by code, not asked for.", "where": "task; check: 'task' and 'variety' below"},
+    "E6": {"rule": "The expert decides. Nothing proposed is final until the expert acts on it; the outcome and the task are two decisions; the original wording and its reference are always kept and shown beside the revised one.", "where": "the editor (course_portal.py push --pedagogy, pull); ratify keeps programme_text; an expert's own decision is checked as warnings only"}
+  },
+
+  "raise_levels": {
+    "_how": "Where a raise may land, and the kind of content that supports each.",
+    "3": "the learner carries out, operates, sets up, uses, or selects and uses something - hands-on or procedural content",
+    "4": "the learner differentiates, traces, interprets, predicts or diagnoses - relationships, causes, cause and effect",
+    "5": "the learner checks, verifies, justifies or decides against a criterion",
+    "6": "the learner prepares, develops, designs or plans a checklist, plan, procedure or drill - sparingly: only when the content is clearly about producing such a thing"
+  },
+
+  "judgement": {
+    "_how": "The lines every outcome's question carries beside the levels and the keep codes (ilo_elevation.py outcome_packet). From the reference spreadsheet's own method notes; tuned on the golden set - change one, run the golden set again.",
+    "raise": [
+      "These are novices on a basic course: Apply and Analyse are the usual landing. Evaluate needs a criterion to judge against that is in the content; Create only when the content is about producing a plan, a checklist, a procedure or a drill.",
+      "A small fact still gets a modest application - use it, find it, check a case against it. A fact the trainee may look up (where something is listed, what a reference contains) is raised to using that reference, not kept."
+    ],
+    "keep_low": [
+      "Keep is for what the trainee must simply know, on purpose - a minority of the outcomes: the basic set of types or definitions that later outcomes stand on (PRE) or that are easily mixed up with each other (CNF); a safety fact, or an immediate action ('when X happens, do Y'), recalled at once with no aid (SAF, REC).",
+      "THN is the last resort, for an outcome with nothing in it to use, compare or judge. Do not keep because raising takes effort, and do not raise just to raise: both are failures, and the count per code is shown to the expert."
+    ]
+  },
+
+  "keep_codes": {
+    "_how": "A kept outcome names at least one. 'levels': the original Bloom levels the code is allowed for - the check refuses a code outside them. The first six are the framework's recall codes; THN and ALR were added by the spec.",
+    "PRE": {"means": "prerequisite for a higher-level outcome", "levels": [1, 2]},
+    "SAF": {"means": "safety- or consequence-critical fact", "levels": [1, 2]},
+    "REC": {"means": "must be recalled without lookup", "levels": [1, 2]},
+    "CNF": {"means": "easily confused with a similar item", "levels": [1, 2]},
+    "FRQ": {"means": "used repeatedly inside larger tasks", "levels": [1, 2]},
+    "LOD": {"means": "looking it up would overload a time-pressured task", "levels": [1, 2]},
+    "THN": {"means": "content too thin to support a higher level honestly", "levels": [1, 2]},
+    "ALR": {"means": "already at Apply or above and no higher level fits", "levels": [3, 4, 5, 6]}
+  },
+
+  "write_verbs": {
+    "_how": "The verb a raised outcome starts with, in the third person ('Differentiates', 'Carries out') - one verb, of the list of its level. Each verb belongs to one level. The Bloom Verb Guide's verbs to write with (bloom.json 'levels' 'write') and the spec's verb list, where the two agree. select, check and prepare sit at two levels when an outcome is READ (bloom.json verb_guide 'depends'); a revised outcome states its level, so here each has one home. Not here, on purpose: demonstrates and assesses (the guide: replace), classifies (the guide: Understand), locates (read as Remember), inspects, reports and assists (actions of the hands or the watch, no Bloom level).",
+    "3": ["apply", "use", "carry out", "complete", "calculate", "operate", "read", "select", "perform", "measure"],
+    "4": ["analyse", "differentiate", "distinguish", "compare", "diagnose", "trace", "sort", "find the cause of", "interpret", "predict", "relate", "examine"],
+    "5": ["evaluate", "decide", "judge", "justify", "prioritise", "accept", "refuse", "recommend", "check", "verify", "critique"],
+    "6": ["plan", "draft", "design", "prepare", "propose", "develop", "draw up"]
+  },
+
+  "checks": {
+    "_how": "What the code checks on every outcome proposal. A failed check is named in plain words; the outcome is answered once more for that check only. If it still cannot pass and the raise is honest, the row says why in 'attention' - it is then shown first to the expert, flagged, and no longer stops the documents. The two thresholds are settings: tune them on the golden set.",
+    "list": [
+      "1 - the decision is raise or keep",
+      "2 - keep: at least one code, each allowed for the original level, a reason, and no revised wording",
+      "3 - raise: the level is Apply or higher, and higher than the original level",
+      "4 - raise: the revised outcome starts with one verb of its level's list, in the third person",
+      "5 - raise: every number and capitalised abbreviation of the original is in the revised outcome, and none is added",
+      "6 - raise: at least 'content_words_min' of the original's content words are in the revised outcome",
+      "7 - raise: the revised outcome is at most 'length_max' times as long as the original"
+    ],
+    "content_words_min": 0.7,
+    "length_max": 1.3,
+    "small_words": ["a", "an", "the", "that", "this", "these", "those", "of", "to", "in", "on", "at", "by", "for", "from", "with", "as", "per", "and", "or", "is", "are", "be", "been", "has", "have", "it", "its", "which", "such", "there", "will", "may", "can", "should", "must", "need", "needs", "when", "if", "than", "into", "not", "no", "all", "any", "their", "them", "they", "also", "so", "do", "does"]
+  },
+
+  "task": {
+    "_how": "The task proposal of one outcome: 'tla' names one TLA of the pool whose Bloom tag is the outcome's final level; 'how' says in one or two sentences what the trainee does, naming the outcome's own equipment, values, procedure or situation; 'fit' rates it. The assessment route is the TLA's own (tla_pool 'route').",
+    "words_max": 60,
+    "fit": {
+      "strong": "a TLA of the outcome's own task type, used as it was designed",
+      "adapted": "a TLA of another task type, or one used on ship plans, a simulator or a mock-up - 'fit_note' says what it needs",
+      "gap": "a hands-on physical skill an instructor must watch; the nearest TLA is used and an instructor checklist is assumed - 'fit_note' says so"
+    },
+    "variety": {
+      "_how": "Enforced by code in syllabus order. A TLA used by either of the 'previous' outcomes before this one is blocked. Once 'share_from' outcomes of the course have tasks, a TLA holding more than 'share_max' of them is blocked. If blocking leaves fewer than 'min_choices', the share block is dropped first, then the previous block.",
+      "previous": 2,
+      "share_from": 20,
+      "share_max": 0.15,
+      "min_choices": 3
+    }
+  },
+
+  "enforced": {
+    "_what": "Owner, 2026-11-24: 'the first 3 are frameworks, they need to be enforced - Bloom, TLA and Instructor-led Course'. For a course whose learning-outcome review is of the elevation method (every course started from 2.142.0; pedagogy_review.py draft --elevation moves an older one), what the three frameworks ask is no longer a note: it stops the step it belongs to, until it is fixed - or, where the framework itself allows a one-line reason, justified. A course started before finishes by the rules it was started with, so no review or build in progress is stopped by a rule it did not know. ilo_elevation.py enforced(), stage2_problems(); content_script.py ilo_findings; check_course_package.py.",
+    "stage2": {
+      "_how": "The Stage 2 approval (make_architecture_page.py --approve) is refused while a Sub-ILO has no Bloom level - its verb is not read and no \"bloom\" is written on it (framework rule B1: tag every outcome; an action of the hands or the team needs none) - or while a Sub-ILO WE wrote (re-expressed or added) opens with a verb no assessor can see (the Bloom Verb Guide; know, understand, discuss, demonstrate knowledge of ...). The programme's own wording is never asked to change.",
+      "untagged": true,
+      "unobservable": true
+    },
+    "stage3": {
+      "_how": "The module's content script (content_script.py check, approve) must fix: a Sub-ILO no module-check question reaches at its level, and a Sub-ILO no practice moment reaches at its level before it is checked (framework rule B5: the trainee practises at the tagged level at least once, and the assessment item sits at that level). The raise is not cosmetic: the task matches the final level.",
+      "must_fix": ["b_sub_unchecked", "b_sub_unpractised"]
+    },
+    "package": {
+      "_how": "The course package (check_course_package.py) is not ready for the classroom while the instructor-led checklist (instructor_led.py check - the guideline's C1-C27, the TLA pool and the modality matrix with it) has an item that is a NO: each is fixed, or justified in one line where the guideline allows it. A course with no instructor-led register is told to draft one.",
+      "instructor_led": true
+    }
+  },
+
+  "golden": {
+    "_how": "The golden set: 26 outcomes of IMO 1.04 with the decision and the level the reference spreadsheet reached. Run after every change to this file or to bloom/GUIDE.md section 5 (pedagogy_review.py golden). It tests the decision and the level, not the wording. Pass: no check fails, and at least 'match_min' decisions match; the mismatches are listed for the pedagogy lead - a mismatch may be the factory being right. The set holds IMO model-course text and is not in this public repository: keep it beside the course libraries and give its path.",
+    "match_min": 21,
+    "of": 26
+  }
+}

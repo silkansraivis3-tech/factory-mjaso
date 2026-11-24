@@ -2211,6 +2211,16 @@ def ilo_findings(course, script):
                 found.append({"where": T(script, "s_the_module"), "screen": "", "field": "sub_ilo", "level": NOTE,
                               "rule": "i_clause_not_checked", "detail": T(script, "i_clause_not_checked", s=sid, clause=c,
                                                                            n=len(tagged)), "fix": ""})
+    # 2.142.0 (owner, 2026-11-24: "the frameworks need to be enforced") - for a course whose outcomes were raised or kept
+    # by the elevation method, framework rule B5 is a must-fix, no longer a suggestion: every Sub-ILO practised at its
+    # level at least once, and checked at it (ilo-elevation.json "enforced" "stage3")
+    import ilo_elevation
+    if ilo_elevation.enforced(course):
+        bm = bloom_of(course, script)
+        for k, kw in bm["findings"]:
+            if k in ilo_elevation.ENF["stage3"]["must_fix"]:
+                found.append({"where": T(script, "s_the_module"), "screen": "", "field": "sub_ilo", "level": FAIL, "rule": k,
+                              "detail": bloom_map.T(bm["lang"], k, **kw), "fix": ""})
     return found
 
 

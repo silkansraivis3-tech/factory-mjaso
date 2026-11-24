@@ -886,7 +886,32 @@ The rules, limits, TLA pool and checklist are data in `knowledge/instructor-led.
 
 **L69 · The experts get the pedagogy first.** Before any content script is written, the course experts receive three documents, topic by topic and module by module: **Bloom now** - the level each learning outcome asks for and the level the old course really reached, how it taught the topic and how, if at all, it checked it, with the file and slides; **Bloom proposed** - for each topic **kept** or **lifted**, decided by the factory: the aim is the level the outcome asks, not the highest level; a topic the old course already teaches to its outcome is kept; a lift is one level toward the outcome (L71) and says why; above the outcome only with the task on board that needs it (`above_why`), never to raise the numbers; Remember stays where the outcome asks for it, and a lift never removes the recall question; a topic left below its outcome says what stops it (`limit`); an expert's decision is carried out as it is (`pedagogy_review.py expert`); never below the old course; how the trainee reaches it and why; **Teaching and learning activities** - the `active_learning` proposals of each topic with their status, and the course-wide pedagogy upgrades - each as Word (to review and sign), HTML and PDF in `to_review\pedagogy\`. The judgement is `working_claude/pedagogy_review.json`; the outcomes' words are read from the architecture and never written there, so no document can change one (L1, L2). The Stage 2 page is not approved until the documents are clean and written from the current files. A proposal below what the outcome asks, and Create, are notes, never stops (L48).
 
-→ `course-factory` (`scripts/pedagogy_review.py`, `bloom/GUIDE.md` §5, `scripts/make_architecture_page.py --approve`)
+**From 2.142.0 - raise or keep, one outcome at a time; the three frameworks enforced** (owner, 2026-11-24: "the first 3
+are frameworks, they need to be enforced ... change course factory accordingly, so we raise and make good ILO"). A
+review started from 2.142.0 follows the pedagogy lead's ILO elevation method (`knowledge/ilo-elevation.json`,
+`scripts/ilo_elevation.py`; reference: his spreadsheet for IMO 1.04). It replaces two rules above for those reviews -
+"a course lifts a topic one level" and "a proposal never re-words an outcome":
+
+- **One outcome, one result.** `pedagogy_review.py next` asks ONE outcome; `propose` and `task` attach the answer to it;
+  an answer that fails a check is not saved. Complete is a count: decided n / total.
+- **Raise is the default; keep is said.** A raise lands on Apply, Analyse, Evaluate or Create - what the content
+  honestly supports, with one sentence on what the learner does there. A keep needs a keep code allowed for the
+  original level (PRE, SAF, REC, CNF, FRQ, LOD, THN; ALR at Apply and above) and a reason. No share is enforced; the
+  kept share and each code's count are shown.
+- **The rewrite is the verb and a minimal fit.** One verb of the level's list (the Bloom Verb Guide's), every number and
+  abbreviation kept and none added, at least 70 % of the content words kept, at most 1.3 times as long. A kept
+  outcome keeps its words. The programme's wording always stays beside the raise; a Main ILO is never re-worded (L2).
+- **One TLA of the pool per outcome**, at its final level, with variety enforced by code in syllabus order.
+- **The expert decides**, as before, in the editor.
+- **Enforced for such a course** (`ilo-elevation.json` `"enforced"`): the Stage 2 approval stops on a Sub-ILO with no
+  Bloom level and on a Sub-ILO we wrote with a verb no assessor can see; a module's script must fix a Sub-ILO that is
+  not practised and checked at its level; the course package is not ready while the instructor-led checklist (C1-C27,
+  the TLA pool and the modality matrix with it) has a NO. A course started before finishes by the rules it was
+  started with; `pedagogy_review.py draft --elevation` moves it.
+
+→ `course-factory` (`scripts/pedagogy_review.py`, `bloom/GUIDE.md` §5, `scripts/make_architecture_page.py --approve`;
+2.142.0: `knowledge/ilo-elevation.json`, `scripts/ilo_elevation.py`, `content_script.py` `ilo_findings`,
+`check_course_package.py` `framework_problems`)
 
 ## L71 - kept, lifted one level, seen whole (2.105.0)
 

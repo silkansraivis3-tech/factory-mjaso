@@ -50,6 +50,8 @@ _k = lambda n: json.load(io.open(os.path.join(SKILL, "knowledge", n), encoding="
 B, LABELS, MEDIA = _k("bloom.json"), _k("page-labels.json"), _k("media-and-tasks.json")
 LEVELS = {int(k): v for k, v in B["levels"].items()}
 VG = B["verb_guide"]
+# the verbs that sit at two levels and are left out of the English list on purpose: select, check, prepare
+_TWO_LEVEL = [k for k in VG["depends"] if not k.startswith("_") and not any(k in v for n, v in B["verbs"]["en"].items() if not n.startswith("_"))]
 APPLY = B["apply_level"]
 TASK_KINDS = ("self-check", "module-check", "final")
 
@@ -123,6 +125,10 @@ def ilo_level(text, lang="en"):
     if lang not in B["verbs"]:
         lang = "en"
     low = (text or "").lower()
+    if lang == "en" and opens_with(text, _TWO_LEVEL):
+        # 2.142.0 - "Selects the PPE for a named cargo" was read as Remember, from 'named': an outcome that OPENS with a
+        # verb left out of the list on purpose (select, check, prepare) is not read from a later word - it is asked
+        return {"level": None, "verb": "", "weak": False, "verbs": []}
     hits, taken = [], set()
     for rx, lvl, weak, w in _patterns(lang):
         for m in rx.finditer(low):

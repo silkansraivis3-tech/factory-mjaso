@@ -133,7 +133,7 @@ bending or changing a law, or when a request seems to collide with one, read it 
 | **L66** | **Every item a simulator can train is trained on one** (`coverage/SIMULATORS.md`, `sim_coverage.py check`) |
 | **L67** | **Every slide moves on Next where its picture has something to show; 3D and 2D are drawn with a reason** (2.118.0: the 60-80 % 3D share and "never a flat line drawing" are gone - the figure's kind follows its `why`; a 3D model of a flat idea is a must-fix; `gb_upgrade.css`, `gb_steps.js`) |
 | **L68** | **The Instructor-Led Course Development Guideline** — active means every trainee commits to an output; a passive run at most 15 min and 20 % of theory, or a one-line reason (`instructor-led/GUIDE.md`, `instructor_led.py check`); every course gets day sheets and the course on one page - what is done each day, in order, never a clock time (§4, `day_sheets.py`) |
-| **L69** | **The experts get the pedagogy first** — Bloom now, Bloom proposed and the activities, before any script (`pedagogy_review.py`, `bloom/GUIDE.md` §5) |
+| **L69** | **The experts get the pedagogy first** — Bloom now, Bloom proposed and the activities, before any script (`pedagogy_review.py`, `bloom/GUIDE.md` §5). From 2.142.0 every outcome is **raised or kept, one at a time** (`pedagogy_review.py next` / `propose` / `task`, `knowledge/ilo-elevation.json`), and the three frameworks are **enforced** for such a course |
 | **L70** | **Built after the expert's Ready** — the office PC builds unattended; see *Auto build* |
 | **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done - and (2.118.0) not done without the **walk review**: an AI reviewer who did not build it looks at the contact sheet of every slide's stops as a trainee does (`walk_review.py`, `compile/GUIDE.md` 2i; the whole-course workflow's walk judge runs it; two rounds, then the operator accepts on record or has it fixed) |
 | **L72** | **Every finished course goes into the Course Libraries, with all its material** — `scripts/finished_course.py <course>` writes `Course Libraries\Finished courses\<Course name>\`: `trainee\` (only what a trainee sees or uses - give this to the trainee side), `complete\` (everything delivered, instructor material included), `00_READ_ME.md`; run again after every release or fix |
@@ -213,8 +213,9 @@ Corrections arrive in the operator's words ("too much text on screen 4"): act on
 ## The gate — Stage 2, approved before anything is built
 
 1. **Experts first (L69).** Bloom now, Bloom proposed and the activities, per topic, in `to_review\pedagogy\` (Word,
-   HTML, PDF): judge each topic in `pedagogy_review.json` by `bloom/GUIDE.md` §5, `pedagogy_review.py check` and
-   `render`; the experts answer in the training app's editor (`course_portal.py create`, `push --pedagogy`, `pull`).
+   HTML, PDF): judge each topic in `pedagogy_review.json` by `bloom/GUIDE.md` §5 - **one outcome at a time**:
+   `pedagogy_review.py next`, answer that one with `propose` (raise, or keep with a code), then its `task`; never
+   two at once, never a decision typed into the file - then `pedagogy_review.py check` and `render`; the experts answer in the training app's editor (`course_portal.py create`, `push --pedagogy`, `pull`).
 2. **Simulators (L66), unasked.** `coverage/scripts/sim_coverage.py needed <course>`; where needed, the maps and GAP
    drafts from `coverage/SIMULATORS.md`, and `sim_coverage.py check` passes before "next".
 3. **One page:** `python scripts/make_architecture_page.py --course <course> --check`, then without `--check`. It

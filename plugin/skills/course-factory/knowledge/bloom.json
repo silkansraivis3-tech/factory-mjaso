@@ -111,28 +111,28 @@
   "apply_level": 3,
 
   "verbs": {
-    "_how": "How the level of an ILO is read. en: whole words, the script adds -s, -es, -ed, -ing (identify -> identifies, identified). lv and ru: word STEMS - anything that starts with the stem matches (aprakst -> apraksta, aprakstīt). Multi-word entries are phrases. An entry ending in $ is a whole word only (lv 'veic$' - so that 'veicināt', to promote, is not read as 'veikt', to carry out). The ILO's level is the HIGHEST of the verbs that lead a clause - the first verb, and any verb straight after a comma, a semicolon or a lead word (and, or, to; un, spēj; и, уметь) - so a noun deep in the object is not read as a verb. 'weak' verbs cannot be observed or measured: they get a level, and a note. A verb in more than one level in real use (select, determine, check, определить) is left OUT on purpose - the report says 'not in the list' and Claude judges it (bloom/GUIDE.md 2); for select and check the Bloom Verb Guide's own test is shown (verb_guide 'depends'). A starting list: add the verbs your programmes use. 2.141.0, the Bloom Verb Guide's table: every verb of 'levels' 'write' is read at its own level - compare moved from Understand to Analyse (in all three languages), and give an example of, read, sort, find the cause of, accept and refuse were added. 'prepare' was at Apply and is now left out of the English list like select and check: the guide writes it at Create (preparing a plan or a document), programmes also use it for making equipment ready by a procedure - so it is asked, never guessed (verb_guide 'depends').",
+    "_how": "How the level of an ILO is read. en: whole words, the script adds -s, -es, -ed, -ing (identify -> identifies, identified). lv and ru: word STEMS - anything that starts with the stem matches (aprakst -> apraksta, aprakstīt). Multi-word entries are phrases. An entry ending in $ is a whole word only (lv 'veic$' - so that 'veicināt', to promote, is not read as 'veikt', to carry out). The ILO's level is the HIGHEST of the verbs that lead a clause - the first verb, and any verb straight after a comma, a semicolon or a lead word (and, or, to; un, spēj; и, уметь) - so a noun deep in the object is not read as a verb. 'weak' verbs cannot be observed or measured: they get a level, and a note. A verb in more than one level in real use (select, determine, check, определить) is left OUT on purpose - the report says 'not in the list' and Claude judges it (bloom/GUIDE.md 2); for select and check the Bloom Verb Guide's own test is shown (verb_guide 'depends'). A starting list: add the verbs your programmes use. 2.141.0, the Bloom Verb Guide's table: every verb of 'levels' 'write' is read at its own level - compare moved from Understand to Analyse (in all three languages), and give an example of, read, sort, find the cause of, accept and refuse were added. 'prepare' was at Apply and is now left out of the English list like select and check: the guide writes it at Create (preparing a plan or a document), programmes also use it for making equipment ready by a procedure - so it is asked, never guessed (verb_guide 'depends'). 2.142.0, the ILO elevation spec's verb list (ilo-elevation.json 'write_verbs'): interpret moved from Understand to Analyse (in all three languages), and predict, relate and verify were added - so every verb a raised outcome may start with is read at its own level.",
     "en": {
       "1": ["define", "list", "name", "state", "recall", "recognise", "recognize", "identify", "label", "locate", "memorise", "memorize", "repeat"],
-      "2": ["describe", "explain", "outline", "summarise", "summarize", "classify", "give an example of", "interpret", "discuss", "illustrate", "exemplify", "paraphrase", "translate"],
+      "2": ["describe", "explain", "outline", "summarise", "summarize", "classify", "give an example of", "discuss", "illustrate", "exemplify", "paraphrase", "translate"],
       "3": ["apply", "use", "operate", "carry out", "perform", "demonstrate", "calculate", "measure", "execute", "implement", "conduct", "handle", "adjust", "follow", "complete", "solve", "estimate", "plot", "respond", "maintain", "start up", "shut down", "make", "set up", "track", "monitor", "present", "assign", "record", "fill in", "read"],
-      "4": ["analyse", "analyze", "diagnose", "troubleshoot", "differentiate", "distinguish", "examine", "investigate", "deduce", "infer", "attribute", "break down", "trace", "compare", "sort", "find the cause of"],
-      "5": ["evaluate", "assess", "judge", "justify", "critique", "prioritise", "prioritize", "recommend", "defend", "argue", "appraise", "decide", "accept", "refuse"],
+      "4": ["analyse", "analyze", "diagnose", "troubleshoot", "differentiate", "distinguish", "examine", "investigate", "deduce", "infer", "attribute", "break down", "trace", "compare", "sort", "find the cause of", "interpret", "predict", "relate"],
+      "5": ["evaluate", "assess", "judge", "justify", "critique", "prioritise", "prioritize", "recommend", "defend", "argue", "appraise", "decide", "accept", "refuse", "verify"],
       "6": ["design", "plan", "develop", "create", "compose", "construct", "devise", "formulate", "produce", "propose", "draft", "build", "draw up"]
     },
     "lv": {
       "1": ["definē", "uzskait", "nosauc", "nosauk", "atpazī", "identificē", "atcer", "norād", "iegaumē"],
-      "2": ["aprakst", "izskaidro", "paskaidro", "skaidro", "klasificē", "interpretē", "apspried", "raksturo", "ilustrē"],
+      "2": ["aprakst", "izskaidro", "paskaidro", "skaidro", "klasificē", "apspried", "raksturo", "ilustrē"],
       "3": ["pielieto", "lietot", "lieto$", "izmanto", "darbin", "veic$", "veikt", "veicot", "izpild", "demonstrē", "aprēķin", "izmērī", "mērīt", "regulē", "iestat", "sagatavo", "rīkoj", "rīkot"],
-      "4": ["analizē", "diagnosticē", "atšķir", "izšķir", "izpēt", "secin", "salīdzin"],
+      "4": ["analizē", "diagnosticē", "atšķir", "izšķir", "izpēt", "secin", "salīdzin", "interpretē"],
       "5": ["novērtē", "izvērtē", "pamato", "izlem", "lemt", "lemj", "pieņemt lēmum", "pieņem lēmum", "prioritizē", "ieteik", "iesak"],
       "6": ["izstrādā", "plāno", "izveido", "projektē", "sastāda", "formulē"]
     },
     "ru": {
       "1": ["перечисл", "назвать", "называть", "распозна", "идентифицир", "вспомн", "воспроизв", "указать", "указывать"],
-      "2": ["описыва", "описа", "опиш", "объясн", "поясн", "классифицир", "интерпретир", "характеризова", "охарактериз", "обсужд", "обсуд"],
+      "2": ["описыва", "описа", "опиш", "объясн", "поясн", "классифицир", "характеризова", "охарактериз", "обсужд", "обсуд"],
       "3": ["примен", "использ", "выполн", "провест", "демонстрир", "продемонстр", "рассчит", "вычисл", "измер", "эксплуатир", "управл", "действова"],
-      "4": ["анализир", "проанализ", "диагностир", "дифференцир", "выяв", "исслед", "сравн"],
+      "4": ["анализир", "проанализ", "диагностир", "дифференцир", "выяв", "исслед", "сравн", "интерпретир"],
       "5": ["оцени", "оценк", "оценива", "обоснов", "принять решени", "принимать решени", "аргументир", "рекомендова"],
       "6": ["разраб", "спланир", "планир", "проектир", "спроектир", "созда", "составля", "составить", "сформулир", "формулир"]
     }

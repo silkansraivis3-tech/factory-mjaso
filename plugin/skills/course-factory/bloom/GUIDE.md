@@ -168,7 +168,69 @@ that calculates or carries out the procedure is Apply; a simulator run judged by
 `where` the file and slides ("Topic 4 deck S3-S20; final test 02C-1 Q12-14"). A topic the old course never taught is
 level 0, with `how` saying so.
 
-**Proposed - keep or lift, decided topic by topic.** Lifting the Bloom level is the aim of this step: every topic the
+**Proposed - raise or keep, one outcome at a time (2.142.0).** The pedagogy lead's ILO elevation method
+(`knowledge/ilo-elevation.json`, `scripts/ilo_elevation.py`); the reference result is his spreadsheet for IMO 1.04
+(296 outcomes: 84 % Remember before, 20 % Remember or Understand after). Judged as a whole course, outcomes get
+grouped, half are quietly left where they are, the same activity comes back everywhere and a raised outcome is
+re-written from scratch. So the code counts, loops and checks, and you give **one small answer about one outcome**:
+
+```
+python scripts/pedagogy_review.py next    --course <course>   # the ONE outcome to decide - later, the ONE task to propose
+python scripts/pedagogy_review.py propose --course <course> --module 4 --topic 4.1 --decision raise --level 4 \
+        --text "<the re-worded outcome>" --does "<what the learner does at that level>" --why "<why, for this outcome>"
+python scripts/pedagogy_review.py propose --course <course> --module 4 --topic 4.2 --decision keep --codes PRE,CNF --why "<why>"
+python scripts/pedagogy_review.py task    --course <course> --module 4 --topic 4.1 --tla key-feature --how "<the task>" --fit strong
+python scripts/pedagogy_review.py status  --course <course>   # decided n / total, raised and kept, each keep code, each TLA
+```
+
+Run `next`, answer that outcome only, run `next` again - never judge two at once, never write a decision into the
+file by hand. An answer that fails a check is **not saved** and the check is named: answer that outcome once more for
+that check. All outcomes first, then the tasks in syllabus order.
+
+- **Raise is the default.** A raise lands on Apply, Analyse, Evaluate or Create - the level the content *naturally
+  supports*, not the highest you can argue for. Remember to Understand is not a raise. A level is never lowered.
+- **The honesty test (`--does`).** One sentence: what the learner would actually do with this content at the new
+  level, on board or in training. If you can only write it by adding content the outcome does not contain, **keep**.
+- **Where a raise usually lands.** These are novices on a basic course: Apply and Analyse are the usual landing.
+  Evaluate needs a criterion to judge against that is *in the content*; Create only when the content is about
+  producing a plan, a checklist, a procedure or a drill. A small fact still gets a modest application - use it, find
+  it, check a case against it. A fact the trainee may look up (where something is listed) is raised to *using that
+  reference*, not kept.
+- **What is kept, on purpose - a minority.** The basic set of types or definitions that later outcomes stand on (PRE)
+  or that are easily mixed up (CNF); a safety fact, or an immediate action ("when X happens, do Y"), recalled at once
+  with no aid (SAF, REC). THN is the last resort, for an outcome with nothing in it to use, compare or judge.
+- **Keep only with a code and a reason about this outcome.** At Remember or Understand: PRE prerequisite for a
+  higher-level outcome, SAF safety-critical fact, REC recalled without lookup, CNF easily confused, FRQ used
+  repeatedly inside larger tasks, LOD looking it up would overload a time-pressured task, THN too thin to raise
+  honestly. At Apply or above: ALR already there and no higher level fits. Do not keep because raising takes effort,
+  and do not raise just to raise - both are failures, and `status` shows the kept share and each code's count.
+- **The rewrite is the verb and a minimal fit (`--text`).** Start with ONE verb of the level's list, third person
+  (`next` prints them - they are the Bloom Verb Guide's, §2a). Keep the technical content in the original words; change
+  only the grammar the new verb needs. Add nothing - no fact, number, equipment, document, regulation, condition or
+  task. Remove nothing - every item of a list stays. A kept outcome is not re-typed: the original is shown as it is.
+  *States that a cargo tank is entered only when the oxygen reading is 21 % ...* becomes *Verifies that a cargo tank is
+  entered only when the oxygen reading is 21 % ...* - never *Verifies the entry conditions and completes a permit*.
+- **The task (`task`).** One TLA of the pool at the outcome's final level - `next` lists the only ones the code allows
+  there (not the TLA of either of the two outcomes before; none above 15 % of the course once 20 have tasks) - and one
+  or two sentences, under 60 words, that name *this* outcome's equipment, values, procedure or situation. A task that
+  could be pasted under another outcome is too generic. Fit: `strong` (a TLA of the outcome's own task type, used as
+  designed), `adapted` (another task type, or on plans / a simulator / a mock-up - `--fit-note` says what it needs),
+  `gap` (a hands-on skill an instructor must watch - an instructor checklist is assumed).
+- **When a wording check cannot pass and the raise is honest** (the programme's own number is out of date, the original
+  is three words long): `--attention "<why>"` saves the row **flagged** - the expert sees it first - instead of stopping.
+- **The expert decides.** The original wording is always beside the proposed one. Take proposed ratifies the raise into
+  the architecture as re-expressed, with its level written on the Sub-ILO; an expert's own wording or level is carried
+  out as it is, and the checks only warn. A Main ILO is never re-worded (L2): its raise is the level and the task.
+- **After any change to this method** (this section, `ilo-elevation.json`): run the golden set -
+  `pedagogy_review.py golden --set <golden_set.json> --packet <ref>` asks one outcome, `--answers <file>` scores the
+  26 answers against the reference (at least 21 decisions, no failed check). The set holds IMO text and is not in the
+  repository.
+
+`now` is still judged for every outcome (above): the experts see what the old course did beside the proposal.
+
+**A review started before 2.142.0 - keep or lift, decided topic by topic.** A `pedagogy_review.json` without
+`"method": "elevation"` is finished by the rules below, the ones it was started with (`draft --elevation` moves it to
+the method above). Lifting the Bloom level is the aim of this step: every topic the
 old course teaches below its outcome is lifted unless something real stops it. The target is the level the outcome
 asks for - not the highest level there is; raising numbers is not the goal, teaching what the job needs is.
 
@@ -229,5 +291,5 @@ FEEDBACK_LOG.md, and Ready into `ready`. Carry out every note and write in its `
 `check` stops until each one has it, and the editor shows it to the expert - then `render` (it signs the documents
 with the Ready) and `push` again: the rows not changed keep their answers.
 
-**The outcomes stay the programme's.** The documents never propose a re-worded outcome: `revised_outcome` in a proposal stops `check`. Only an expert who says the outcome should read differently re-words a Sub-ILO - recorded as their decision (`pedagogy_review.py expert`), in English (L19; one in the programme's language stops `check`), its subject and standard unchanged, the programme's own words beside it. A Main ILO is never re-worded (L2). The expert's Take proposed, or a decision with Claude that re-words it, ratifies it into the architecture as re-expressed. After Ready the course is built by L70 (SKILL.md *Auto build*). An expert who cannot use the editor still
+**The outcomes stay the programme's.** The programme's own words are never lost: a raise is shown beside them and becomes the Sub-ILO only when the expert takes it. In a review started before 2.142.0 the documents never propose a re-worded outcome: `revised_outcome` in a proposal stops `check`, and only an expert who says the outcome should read differently re-words a Sub-ILO - recorded as their decision (`pedagogy_review.py expert`), in English (L19; one in the programme's language stops `check`), its subject and standard unchanged, the programme's own words beside it. A Main ILO is never re-worded (L2). The expert's Take proposed, or a decision with Claude that re-words it, ratifies it into the architecture as re-expressed. After Ready the course is built by L70 (SKILL.md *Auto build*). An expert who cannot use the editor still
 gets the Word files and signs them.

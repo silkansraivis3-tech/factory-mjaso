@@ -64,6 +64,7 @@ def complete(course):
     pr.draft(course)
     f = pr.files(course)
     rev = json.load(io.open(f["review"], encoding="utf-8"))
+    rev.pop("method", None)                # a review started before 2.142.0: finished by the rules it was started with
     rev.update(now_summary="Slides read out, a final test of recall questions.",
                proposed_summary="Every topic is done on the tablet or the simulator.",
                upgrades=[{"what": "Every self-check in two parts", "why": "recall first, then a harder task", "modules": "all"}])
@@ -106,6 +107,9 @@ def main():
         check("one row per Sub-ILO as bloom_map reads them; a module without Sub-ILOs by its Main ILO; no final assessment",
               code == 0 and rows == {"1": ["1.1", "1.1.a", "1.1.b"], "2": ["1.3"], "3": ["1"]}, rows)
         check("the outcomes' words are not in the judgement file", tap.SUB_NEW not in io.open(f["review"], encoding="utf-8").read())
+        check("a new review is judged by the elevation method (2.142.0) - and says how to go on",
+              rev.get("method") == "elevation" and "One outcome at a time" in out, out)
+        rev.pop("method")                      # from here: a review started before 2.142.0, by the rules it was started with
         rev["modules"]["1"]["rows"]["1.1.a"]["now"]["how"] = "kept"
         io.open(f["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
         run("draft", "--course", c)

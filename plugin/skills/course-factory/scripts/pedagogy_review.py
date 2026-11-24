@@ -8,6 +8,18 @@
     pedagogy_review.py expert --course <course> --module 4 --topic 4.1 --level 4 --said "<their words>" --by "<name>"
                                                             an expert's decision on a topic's level, carried out as it is
 
+  one outcome at a time (2.142.0 - the ILO elevation method, knowledge/ilo-elevation.json, scripts/ilo_elevation.py):
+    pedagogy_review.py next    --course <course>            the ONE outcome to decide next - or the one task to propose
+    pedagogy_review.py propose --course <course> --module 4 --topic 4.1 --decision raise --level 4
+                               --text "<the re-worded outcome>" --does "<what the learner does at that level>" --why "<why>"
+    pedagogy_review.py propose --course <course> --module 4 --topic 4.2 --decision keep --codes PRE,CNF --why "<why>"
+    pedagogy_review.py task    --course <course> --module 4 --topic 4.1 --tla key-feature --how "<the task>" --fit strong
+    pedagogy_review.py status  --course <course>            decided n / total, raised and kept, each keep code, each TLA
+    pedagogy_review.py golden  --set <golden_set.json> [--packet <ref> | --answers <answers.json>]
+  Each answer is checked by code before it is attached to its outcome; one that fails is not saved and the failed
+  check is named. A review started before 2.142.0 has no "method": it is finished by the rules it was started with
+  (one level a course, no re-wording in a proposal); `draft --elevation` moves it to this method.
+
 WHY THIS EXISTS
 The course experts decide how a course is taught. Before a single module is built they get, topic by topic and module
 by module:
@@ -50,6 +62,7 @@ SKILL = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(SKILL, "compile", "scripts"))
 import bloom_map  # noqa: E402
+import ilo_elevation as el  # noqa: E402  - raise or keep, one outcome at a time (2.142.0)
 import workspace  # noqa: E402
 
 FILE = "pedagogy_review.json"
@@ -105,16 +118,40 @@ def modules(prog, arch):
     for am in sorted(arch.get("modules", []), key=lambda m: int(m.get("module", 0))):
         if str(am.get("module")) == fa:
             continue
+        en = {str(s.get("id")): s.get("text_en") or "" for s in am.get("sub_ilos") or [] if isinstance(s, dict)}
         rows = [{"id": s["id"], "text": s["text"], "asks": s["level"], "main": False, "lang": s["lang"],
                  "programme_text": s.get("programme_text") or s["text"], "programme_lang": s.get("programme_lang") or s["lang"],
-                 "status": s.get("status")} for s in bloom_map._sub_ilos(prog, arch, am)]
+                 "status": s.get("status"), "orig": _orig_level(s), "text_en": en.get(s["id"], "")}
+                for s in bloom_map._sub_ilos(prog, arch, am)]
         if not rows:
             rows = [{"id": i, "text": main.get(i, ""), "asks": bloom_map.ilo_level(main.get(i, ""))["level"], "main": True,
-                     "lang": "en", "programme_text": main.get(i, ""), "programme_lang": "en", "status": "original"}
+                     "lang": "en", "programme_text": main.get(i, ""), "programme_lang": "en", "status": "original",
+                     "orig": bloom_map.ilo_level(main.get(i, ""))["level"], "text_en": ""}
                     for i in (str(x) for x in am.get("main_ilos", []))]
         out.append({"n": int(am["module"]), "title": am.get("title", ""), "rows": rows,
                     "active": [a for a in (am.get("active_learning") or []) if isinstance(a, dict)]})
     return out
+
+
+def _orig_level(s):
+    """The Bloom level of an outcome as the programme words it - before any re-wording an expert took (2.142.0)"""
+    given = s.get("programme_text") or ""
+    if s.get("status") == "re-expressed" and given and given != s["text"]:
+        return bloom_map.ilo_level(given, s.get("programme_lang") or s["lang"])["level"]
+    return s["level"]
+
+
+def original_of(r, x=None):
+    """(the wording a re-wording is compared with, its Bloom level, comparable) - the programme's own words when they are
+    English, else their English rendering (architecture "text_en"); comparable False when there is none, so the wording
+    checks cannot be made. The level is the row's "original_level" when the verb is not in the list and it was said."""
+    said = (x or {}).get("original_level")
+    lvl = said if isinstance(said, int) and 1 <= said <= 6 else r.get("orig")
+    if (r.get("programme_lang") or "en") == "en":
+        return r["programme_text"], lvl, True
+    if _filled(r.get("text_en")) and r.get("status") != "re-expressed":
+        return r["text_en"], lvl, True
+    return r["programme_text"], lvl, False
 
 
 def not_english(text, lang):
@@ -129,6 +166,8 @@ def decision(now, new, asks):
         return "-"
     if (new or {}).get("expert"):
         return "the expert's decision"
+    if (new or {}).get("decision") in ("raise", "keep"):          # the elevation method: said, not worked out
+        return "raised" if new["decision"] == "raise" else "kept"
     if b <= a:
         return "kept"
     return "above the outcome" if asks and b > max(a, asks) else "lifted"
@@ -139,13 +178,15 @@ def _blank():
             "proposed": {"level": None, "how": "", "why": "", "limit": "", "above_why": ""}}
 
 
-def draft(course):
+def draft(course, elevation=False):
     f = files(course)
     arch = _load(f["arch"])
     if not arch:
         print("Stopped - there is no architecture yet (working_claude/architecture.json). The documents follow its topics.")
         return 2
     rev = _load(f["review"], {}) or {}
+    if elevation or not rev.get("modules"):
+        rev["method"] = el.METHOD          # a new review raises or keeps every outcome, one at a time (2.142.0)
     rev.setdefault("now_summary", "")
     rev.setdefault("proposed_summary", "")
     rev.setdefault("upgrades", [])
@@ -159,6 +200,8 @@ def draft(course):
                 added += 1
     _save(f["review"], rev)
     print("%s: %d topic row(s) added, to be judged (bloom/GUIDE.md section 5)." % (f["review"], added))
+    if rev.get("method") == el.METHOD:
+        print("One outcome at a time: pedagogy_review.py next --course <course>, answer it with propose, then the tasks.")
     return 0
 
 
@@ -190,6 +233,8 @@ def check(course):
             probs.append("upgrade %d needs its 'what' and its 'why'" % i)
     mods = rev.get("modules") or {}
     known = set()
+    elev = rev.get("method") == el.METHOD      # raise or keep, one outcome at a time (2.142.0) - else the rules it was started with
+    used, before = {}, []                      # the TLAs of the outcomes so far, in syllabus order: variety is counted here
     for m in modules(_load(f["prog"], {}) or {}, arch):
         rows = (mods.get(str(m["n"])) or {}).get("rows") or {}
         if not m["active"]:
@@ -209,9 +254,13 @@ def check(course):
                     if not _filled(d.get(k)):
                         probs.append("%s: %s '%s' is empty" % (where, side, k))
             a, b = now.get("level"), new.get("level")
-            if isinstance(a, int) and isinstance(b, int) and b < a:
+            if elev:
+                p2, n2 = elevation_row(r, x, where, used, before)
+                probs += p2
+                notes += n2
+            elif isinstance(a, int) and isinstance(b, int) and b < a:
                 probs.append("%s: the proposal (%s) is below what the old course reached (%s)" % (where, level(b), level(a)))
-            if new.get("expert"):
+            if elev or new.get("expert"):
                 pass                          # the expert's decision is carried out as it is (record_expert)
             elif isinstance(a, int) and isinstance(b, int) and a >= 1 and b > a + LIFT_MAX:
                 # one level a course: GAS BASIC lifted 33 topics two or three levels at once and thinned its theory
@@ -222,7 +271,7 @@ def check(course):
             elif isinstance(a, int) and isinstance(b, int) and b > max(a, r["asks"] or 0) and not _filled(new.get("above_why")):
                 probs.append("%s: %s is above what the outcome asks (%s) - keep it at %s, or say in 'above_why' which task on "
                              "board needs it" % (where, level(b), level(r["asks"]), level(max(a, r["asks"]))))
-            if isinstance(b, int) and r["asks"] and b < r["asks"] and not new.get("expert"):
+            if not elev and isinstance(b, int) and r["asks"] and b < r["asks"] and not new.get("expert"):
                 if isinstance(a, int) and a >= 1 and b == a + LIFT_MAX:
                     notes.append("%s: proposed %s, one level above the old course - the outcome asks %s; the next course, or the "
                                  "expert, takes it further" % (where, level(b), level(r["asks"])))
@@ -238,6 +287,11 @@ def check(course):
             rw = (new.get("revised_outcome") or "").strip()
             if rw and r["main"]:
                 probs.append("%s: a Main ILO is never re-worded (L2) - empty its 'revised_outcome'" % where)
+            elif rw and elev and new.get("decision") == "raise" and not new.get("expert") and not_english(rw, r["programme_lang"]):
+                probs.append("%s: 'revised_outcome' is in the programme's language - write it in English, as the course will "
+                             "show it; the programme's own words stay beside it (L19)" % where)
+            elif rw and elev and not new.get("expert"):
+                pass                          # a raise carries its re-wording; ilo_elevation checked it (elevation_row)
             elif rw and not new.get("expert"):
                 # the outcomes are the programme's: a proposal never re-words one, only an expert's decision may
                 probs.append("%s: the outcome is the programme's - a proposal never re-words it; empty its 'revised_outcome' "
@@ -253,6 +307,68 @@ def check(course):
         probs += open_notes(m or {}, "module %s" % n)
     probs += open_notes(rev, "the whole course")
     return probs, notes
+
+
+def elevation_row(r, x, where, used, before):
+    """(problems, notes) of one row judged by the elevation method (ilo_elevation.py): its outcome proposal, then its
+    task. used and before are the TLAs of the outcomes so far, in syllabus order - this row's TLA is added to them, so
+    variety is counted by code. An expert's own decision is only warned about; a row whose "attention" says why a
+    wording check cannot be met is shown to the expert flagged, and no longer stops."""
+    now, new = x.get("now") or {}, x.get("proposed") or {}
+    basis, orig, comparable = original_of(r, x)
+    probs, notes = [], []
+    flagged = _filled(new.get("attention"))
+    for n, words in el.outcome_problems(basis, orig, new, main=r["main"], comparable=comparable):
+        if new.get("expert"):
+            notes.append("%s: %s - the expert's decision stands, this is only a warning" % (where, words))
+        elif flagged and n in el.WAIVABLE:
+            notes.append("FLAGGED for the expert - %s: %s (check %d). Because: %s" % (where, words, n, new["attention"].strip()))
+        else:
+            probs.append("%s: %s (check %d)" % (where, words, n))
+    if new.get("decision") == "raise" and not comparable and not r["main"]:
+        notes.append("%s: the programme's wording is not in English and the architecture has no English rendering of it - "
+                     "the wording of the raise could not be checked against it" % where)
+    a, b = now.get("level"), new.get("level")
+    if isinstance(a, int) and isinstance(b, int) and b < a and not new.get("expert"):
+        notes.append("%s: the old course reached %s and the outcome ends at %s - keep what it taught in the task" % (where, level(a), level(b)))
+    key = None
+    if new.get("decision") in ("raise", "keep") and isinstance(b, int) and 1 <= b <= 6:
+        found, key = el.task_problems(new, b, used, before)
+        for words in found:
+            (notes if new.get("expert") else probs).append("%s: %s" % (where, words) + (" - the expert's decision stands" if new.get("expert") else ""))
+        t = el.tla(new.get("tla"))
+        if t and str(new.get("fit") or "").lower() == "strong" and not r["main"]:
+            import activity_formats as af
+            tt = af.verb_type(new.get("revised_outcome") or r["text"])[0]
+            if t["task_type"] != tt:
+                notes.append("%s: %s is a %s activity and the outcome reads as a %s - if that is so, the fit is 'adapted'"
+                             % (where, t["key"], t["task_type"].replace("_", " "), tt.replace("_", " ")))
+    before.append(key)
+    if key:
+        used[key] = used.get(key, 0) + 1
+    return probs, notes
+
+
+def elevation_rows(course):
+    """[{n, title, r, x, where}] - every outcome of the course in syllabus order with its row of the review, or None when
+    there is no architecture or no review yet"""
+    f = files(course)
+    arch, rev = _load(f["arch"]), _load(f["review"])
+    if not arch or not rev:
+        return None
+    out = []
+    for m in modules(_load(f["prog"], {}) or {}, arch):
+        got = ((rev.get("modules") or {}).get(str(m["n"])) or {}).get("rows") or {}
+        for r in m["rows"]:
+            out.append({"n": m["n"], "title": m["title"], "r": r, "x": got.get(r["id"]) or {},
+                        "where": "module %d, topic %s" % (m["n"], r["id"])})
+    return out
+
+
+def counts(course):
+    """The counts of the review, all made by code: decided n / total, raised and kept, each keep code, each TLA"""
+    rows = elevation_rows(course) or []
+    return el.summary([{"orig": original_of(e["r"], e["x"])[1], "p": e["x"].get("proposed") or {}, "main": e["r"]["main"]} for e in rows])
 
 
 def open_notes(x, where):
@@ -328,11 +444,21 @@ def proposed_why(r, now, new):
     """The 'Why' cell of Bloom proposed: what the experts read beside each decision."""
     ex = new.get("expert") or {}
     met = decision(now, new, r["asks"]) == "kept" and r["asks"] and (now.get("level") or 0) >= r["asks"]
+    codes = [c for c in new.get("keep_codes") or [] if c in el.CODES] if new.get("decision") == "keep" else []
     return ((["Kept because the old course already reaches what the outcome asks (%s)." % level(r["asks"])] if met else [])
+            + (["Kept as it is worded: " + "; ".join("%s - %s" % (c, el.CODES[c]["means"]) for c in codes)] if codes else [])
+            + (["The trainee: " + new["does"]] if new.get("decision") == "raise" and _filled(new.get("does")) else [])
+            + (["Please check this one: " + new["attention"]] if _filled(new.get("attention")) else [])
             + ["On board: " + (new.get("why") or "-")]
             + (["Not higher because: " + new["limit"]] if _filled(new.get("limit")) else [])
             + (["Above the outcome: " + new["above_why"]] if _filled(new.get("above_why")) else [])
             + (["The expert (%s, %s): %s" % (ex.get("by", ""), ex.get("on", ""), ex.get("said", ""))] if ex else []))
+
+
+def _decisions(rev):
+    """The decisions a review counts: raised or kept by the elevation method, kept / lifted / above before it"""
+    return (("raised", "kept", "the expert's decision") if (rev or {}).get("method") == el.METHOD
+            else ("kept", "lifted", "above the outcome", "the expert's decision"))
 
 
 def activity_row(a, ids):
@@ -379,8 +505,7 @@ def doc_proposed(title, mods, rev):
             for side, box in (("now", now_n), ("proposed", new_n)):
                 lv = (x.get(side) or {}).get("level")
                 box[lv] = box.get(lv, 0) + 1
-    b.append(("table", ["", "Topics"], [[k.capitalize(), str(tally.get(k, 0))] for k in ("kept", "lifted", "above the outcome", "the expert's decision")],
-              [5000, 4638]))
+    b.append(("table", ["", "Topics"], [[k.capitalize(), str(tally.get(k, 0))] for k in _decisions(rev)], [5000, 4638]))
     b.append(("table", ["Level", "Old course", "Proposed"],
               [[level(n), str(now_n.get(n, 0)), str(new_n.get(n, 0))] for n in range(0, 7)], [3600, 3000, 3038]))
     for m in mods:
@@ -390,9 +515,12 @@ def doc_proposed(title, mods, rev):
         for r in m["rows"]:
             x = got.get(r["id"]) or {}
             now, new = x.get("now") or {}, x.get("proposed") or {}
-            rows.append([r["id"], r["text"], level(r["asks"]),
+            rw = (new.get("revised_outcome") or "").strip() if new.get("decision") == "raise" and not r["main"] else ""
+            act = el.tla(new.get("tla"))
+            rows.append([r["id"], [r["programme_text"], "Raised, proposed wording: " + rw] if rw else r["text"], level(r["asks"]),
                          ["%s -> %s" % (level(now.get("level")), level(new.get("level"))), decision(now, new, r["asks"])],
-                         new.get("how") or "not judged yet", proposed_why(r, now, new)])
+                         [new.get("how") or "not judged yet"] + (["Activity: %s (%s fit)" % (act["name"], new.get("fit") or "-")] if act else []),
+                         proposed_why(r, now, new)])
         b.append(("table", ["Topic", "Learning outcome", "Asks", "Now -> proposed", "How the trainee reaches it", "Why"],
                   rows, [650, 2400, 1000, 1500, 2600, 1488]))
     return b + _signoff(rev)
@@ -514,8 +642,12 @@ def view(course):
                               "decision": d, "how": new.get("how") or "not judged yet", "why": proposed_why(r, now, new)},
                  "activities": [a for a in acts if str(a["topic"]) == str(r["id"])],
                  "changes_made": _done(x) + _done(x, "activities")}
+            if new.get("decision") in ("raise", "keep"):       # the elevation method: what was decided, and the task's TLA
+                t["elevation"] = {"decision": new["decision"], "codes": list(new.get("keep_codes") or []) if new["decision"] == "keep" else [],
+                                  "does": new.get("does") or "", "activity": (el.tla(new.get("tla")) or {}).get("name", ""),
+                                  "fit": new.get("fit") or "", "fit_note": new.get("fit_note") or "", "attention": new.get("attention") or ""}
             items[t["item"]] = _hash([t["intended"], t["revised"], t["asks"], t["now"], t["proposed"], t["activities"],
-                                      t["changes_made"]])
+                                      t["changes_made"]] + ([t["elevation"]] if "elevation" in t else []))
             topics.append(t)
         mod = {"n": m["n"], "title": m["title"], "note": got.get("note") or "", "topics": topics,
                "module_activities": [a for a in acts if a["topic"] == "module"], "activity_changes": _done(got, "activities")}
@@ -523,7 +655,9 @@ def view(course):
             mod["act_item"] = "act/%s/module" % m["n"]
             items[mod["act_item"]] = _hash([mod["module_activities"], mod["activity_changes"]])
         out["modules"].append(mod)
-    out["decisions"] = [{"decision": k, "topics": tally.get(k, 0)} for k in ("kept", "lifted", "above the outcome", "the expert's decision")]
+    out["decisions"] = [{"decision": k, "topics": tally.get(k, 0)} for k in _decisions(rev)]
+    if rev.get("method") == el.METHOD:
+        out["counts"] = counts(course)
     out["active_minutes"] = sum(int(a.get("minutes") or 0) for m in mods for a in m["active"] if a.get("status") != "struck")
     # What the editor shows is the outcomes form (the owner's Excel, 2026-11-23): one row per outcome, the rows the
     # experts answer. The documents' own view stays beside it ("review") for the pull and the Word files.
@@ -570,7 +704,9 @@ def outcomes_form(out, arch):
             rows.append({"item": t["item"], "ref": t["id"], "parent": None if t["main"] else parent, "main": t["main"],
                          "original": {"verb": _verb(t["existing_verb"]), "text": t["intended"], "level": _lv(t["asks"])},
                          "proposed": {"verb": _verb(t["revised_verb"]) if rw else _verb(t["existing_verb"]), "text": rw or t["intended"], "level": lv} if lv else None,
-                         "task": {"name": acts[0]["kind"] if acts else "", "does": t["tla"]} if _filled(t["tla"]) and t["tla"] != "not judged yet" else None,
+                         "task": {"name": (t.get("elevation") or {}).get("activity") or (acts[0]["kind"] if acts else ""), "does": t["tla"]}
+                         if _filled(t["tla"]) and t["tla"] != "not judged yet" else None,
+                         **({"elevation": t["elevation"]} if t.get("elevation") else {}),
                          "old": {"level": t["now"]["level"], "how": t["now"]["how"]} if _filled(t["now"]["how"]) and t["now"]["how"] != "not judged yet" else None})
         topics.append({"n": m["n"], "title": m["title"], "rows": rows})
     return {"form": "outcomes", "title": out["title"], "levels": out["levels"], "topics": topics}
@@ -613,6 +749,10 @@ def ratify(course, module, sub_id, text, by):
                     prog = _load(f["prog"], {}) or {}
                     s["programme_text"] = (prog.get("outcomes") or {}).get(str(sub_id)) or s.get("text") or ""
                 s.update(status="re-expressed", text=text.strip(), ratified={"by": by, "on": date.today().isoformat()})
+                rev = _load(f["review"], {}) or {}
+                lvl = ((((rev.get("modules") or {}).get(str(module)) or {}).get("rows") or {}).get(str(sub_id)) or {}).get("proposed", {}).get("level")
+                if rev.get("method") == el.METHOD and isinstance(lvl, int) and 1 <= lvl <= 6:
+                    s["bloom"] = lvl          # a raised outcome carries its level: the tag is said, not read from the verb (rule B1)
                 _save(f["arch"], arch)
                 return True
     return False
@@ -648,31 +788,247 @@ def record_expert(course, module, topic, lvl, said, by):
     return 0
 
 
+# ------------------------------------------------------------------ one outcome at a time (the elevation method)
+def _elevation(course):
+    """(review, its rows in syllabus order) or (None, a message) when the review is not there or not of this method"""
+    f = files(course)
+    rev = _load(f["review"])
+    rows = elevation_rows(course)
+    if rows is None:
+        return None, "Stopped - not started yet: pedagogy_review.py draft --course <course>."
+    if rev.get("method") != el.METHOD:
+        return None, ("Stopped - this review was started before 2.142.0 and is finished by the rules it was started with. "
+                      "To raise or keep every outcome one at a time: pedagogy_review.py draft --course <course> --elevation.")
+    return rev, rows
+
+
+def _tla_state(rows, upto):
+    """(used, before, last) - the TLAs of the outcomes before row number `upto`, counted by code"""
+    used, before, last = {}, [], []
+    for e in rows[:upto]:
+        p = e["x"].get("proposed") or {}
+        t = el.tla(p.get("tla"))
+        before.append(t["key"] if t else None)
+        if t:
+            used[t["key"]] = used.get(t["key"], 0) + 1
+            last.append("%s - %s" % (t["key"], p.get("how") or ""))
+    return used, before, last[-el.VAR["previous"]:]
+
+
+def _decided(e):
+    p = e["x"].get("proposed") or {}
+    return p.get("decision") in ("raise", "keep") and isinstance(p.get("level"), int)
+
+
+def next_one(course):
+    """Print the ONE question to answer next: an outcome not decided yet, in syllabus order; when all are, the first
+    outcome without its task. Never two."""
+    rev, rows = _elevation(course)
+    if rev is None:
+        print(rows)
+        return 2
+    c = counts(course)
+    print("Outcomes decided %d / %d, tasks %d / %d." % (c["decided"], c["total"], c["tasked"], c["total"]))
+    for e in rows:
+        if not _decided(e) and not (e["x"].get("proposed") or {}).get("expert"):
+            basis, orig, _ = original_of(e["r"], e["x"])
+            print(el.outcome_packet("module %d, topic %s" % (e["n"], e["r"]["id"]), basis, orig, heading="Module %d - %s" % (e["n"], e["title"]),
+                                    where="a Main ILO: its words never change (L2) - a raise is the level and the task only" if e["r"]["main"] else ""))
+            print("\nAnswer with: pedagogy_review.py propose --course <course> --module %d --topic %s --decision raise|keep ..." % (e["n"], e["r"]["id"]))
+            return 0
+    for i, e in enumerate(rows):
+        p = e["x"].get("proposed") or {}
+        if _decided(e) and not (el.tla(p.get("tla")) and _filled(p.get("how")) and p.get("fit")):
+            used, before, last = _tla_state(rows, i)
+            text = (p.get("revised_outcome") or "").strip() if p.get("decision") == "raise" and not e["r"]["main"] else original_of(e["r"], e["x"])[0]
+            print(el.task_packet("module %d, topic %s" % (e["n"], e["r"]["id"]), text or e["r"]["text"], p["level"], used, before, last))
+            print("\nAnswer with: pedagogy_review.py task --course <course> --module %d --topic %s --tla <key> --how \"...\" --fit strong|adapted|gap" % (e["n"], e["r"]["id"]))
+            return 0
+    print("Every outcome is decided and has its task. Now: pedagogy_review.py check --course <course>.")
+    return 0
+
+
+def _row(rev, rows, module, topic):
+    for i, e in enumerate(rows):
+        if str(e["n"]) == str(module) and str(e["r"]["id"]) == str(topic):
+            x = rev.setdefault("modules", {}).setdefault(str(e["n"]), {}).setdefault("rows", {}).setdefault(e["r"]["id"], _blank())
+            return i, e, x
+    return None, None, None
+
+
+def propose(course, a):
+    """One outcome's answer, checked and attached to it by code. Nothing is saved when a check fails."""
+    rev, rows = _elevation(course)
+    if rev is None:
+        print(rows)
+        return 2
+    i, e, x = _row(rev, rows, a.module, a.topic)
+    if e is None:
+        print("Stopped - module %s has no topic %s." % (a.module, a.topic))
+        return 2
+    if a.original_level:
+        x["original_level"] = a.original_level
+    basis, orig, comparable = original_of(e["r"], x)
+    new = dict(x.get("proposed") or {})
+    was = new.get("level")
+    new.update(decision=a.decision, why=(a.why or new.get("why") or "").strip())
+    if a.decision == "keep":
+        new.update(level=orig, keep_codes=[c.strip().upper() for c in (a.codes or "").split(",") if c.strip()])
+        for k in ("revised_outcome", "does", "attention"):
+            new.pop(k, None)
+        if a.text:
+            print("Not saved - a kept outcome keeps its wording, character for character: leave --text out.")
+            return 2
+    else:
+        new.update(level=a.level, does=(a.does or "").strip())
+        new.pop("keep_codes", None)
+        if not e["r"]["main"]:
+            new["revised_outcome"] = (a.text or "").strip()
+        if a.attention:
+            new["attention"] = a.attention.strip()
+        else:
+            new.pop("attention", None)
+    found = [(n, w) for n, w in el.outcome_problems(basis, orig, new, main=e["r"]["main"], comparable=comparable)
+             if not (_filled(new.get("attention")) and n in el.WAIVABLE)]
+    if found:
+        print("Not saved - %s:" % e["where"])
+        for n, w in found:
+            print("  check %d: %s" % (n, w))
+        print("Answer this outcome once more for that check. If a wording check (5-7) still cannot pass and the raise is honest, "
+              "add --attention \"<why>\": the row is saved flagged, and the expert sees it first.")
+        return 2
+    if was != new.get("level"):                # the task was written for another level: it is out of date
+        for k in ("tla", "fit", "fit_note"):
+            new.pop(k, None)
+        new["how"] = ""
+    x["proposed"] = new
+    _save(files(course)["review"], rev)
+    c = counts(course)
+    print("Saved - %s: %s at %s. Outcomes decided %d / %d." % (e["where"], "raised" if a.decision == "raise" else "kept", level(new["level"]), c["decided"], c["total"]))
+    return 0
+
+
+def task(course, a):
+    """One outcome's task, checked against the TLAs the code allows at that place in the syllabus, and attached to it."""
+    rev, rows = _elevation(course)
+    if rev is None:
+        print(rows)
+        return 2
+    i, e, x = _row(rev, rows, a.module, a.topic)
+    if e is None or not _decided(e):
+        print("Stopped - %s." % ("module %s has no topic %s" % (a.module, a.topic) if e is None else "decide the outcome first (propose): the task is built for its final level"))
+        return 2
+    new = dict(x.get("proposed") or {})
+    new.update(tla=(el.tla(a.tla) or {}).get("key") or a.tla, how=a.how.strip(), fit=a.fit.strip().lower())
+    if a.fit_note:
+        new["fit_note"] = a.fit_note.strip()
+    else:
+        new.pop("fit_note", None)
+    used, before, _ = _tla_state(rows, i)
+    found, _ = el.task_problems(new, new["level"], used, before)
+    if not _filled(new["how"]):
+        found.append("the task is empty ('--how')")
+    if found:
+        print("Not saved - %s:" % e["where"])
+        for w in found:
+            print("  " + w)
+        return 2
+    x["proposed"] = new
+    _save(files(course)["review"], rev)
+    c = counts(course)
+    print("Saved - %s: %s. Tasks %d / %d." % (e["where"], new["tla"], c["tasked"], c["total"]))
+    return 0
+
+
+def status(course):
+    rev, rows = _elevation(course)
+    if rev is None:
+        print(rows)
+        return 2
+    for line in el.summary_lines(counts(course)):
+        print(line)
+    return 0
+
+
+def golden(a):
+    """The golden set: one outcome's question (--packet), or the answers scored against the reference (--answers)."""
+    items = _load(a.set)
+    if not isinstance(items, list):
+        print("Stopped - %s is not a golden set (a list of outcomes with their expected decision and level)." % a.set)
+        return 2
+    if a.packet:
+        it = next((i for i in items if str(i["ref"]) == str(a.packet)), None)
+        if not it:
+            print("Stopped - no outcome %s in the set. There are: %s" % (a.packet, ", ".join(str(i["ref"]) for i in items)))
+            return 2
+        print(el.outcome_packet(it["ref"], it["original_text"], el.LEVELS_BY_NAME.get(str(it.get("original_level", "")).lower()),
+                                heading="%s - %s" % (it.get("competence", ""), it.get("topic", ""))))
+        return 0
+    if not a.answers:
+        print("%d outcomes: %s" % (len(items), ", ".join(str(i["ref"]) for i in items)))
+        return 0
+    lines, ok = el.golden(items, _load(a.answers, {}) or {})
+    for line in lines:
+        print(line)
+    return 0 if ok else 2
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("draft", "check", "render", "expert"):
+    for name in ("draft", "check", "render", "expert", "next", "propose", "task", "status"):
         s = sub.add_parser(name)
         s.add_argument("--course", required=True)
+        if name == "draft":
+            s.add_argument("--elevation", action="store_true", help="move a review started before 2.142.0 to the raise-or-keep method")
         if name == "render":
             s.add_argument("--no-pdf", action="store_true")
         if name == "expert":
             for a in ("--module", "--topic", "--said", "--by"):
                 s.add_argument(a, required=True)
             s.add_argument("--level", type=int, required=True)
+        if name in ("propose", "task"):
+            s.add_argument("--module", required=True)
+            s.add_argument("--topic", required=True)
+        if name == "propose":
+            s.add_argument("--decision", required=True, choices=("raise", "keep"))
+            s.add_argument("--level", type=int, help="raise: 3-6")
+            s.add_argument("--text", help="raise: the re-worded outcome")
+            s.add_argument("--does", help="raise: what the learner does with this content at the new level")
+            s.add_argument("--codes", help="keep: one or more keep codes, comma-separated")
+            s.add_argument("--why", help="one or two sentences: why, for this outcome")
+            s.add_argument("--attention", help="why a wording check cannot be met - the row is saved flagged for the expert")
+            s.add_argument("--original-level", type=int, help="the original outcome's level, when its verb is not in the list")
+        if name == "task":
+            s.add_argument("--tla", required=True)
+            s.add_argument("--how", required=True)
+            s.add_argument("--fit", required=True)
+            s.add_argument("--fit-note")
+    g = sub.add_parser("golden")
+    g.add_argument("--set", required=True)
+    g.add_argument("--packet")
+    g.add_argument("--answers")
     x = ap.parse_args(argv)
+    if x.cmd == "golden":
+        return golden(x)
     course = workspace.work_folder(x.course)
     if x.cmd == "draft":
-        return draft(course)
+        return draft(course, elevation=x.elevation)
     if x.cmd == "expert":
         return record_expert(course, x.module, x.topic, x.level, x.said, x.by)
     if x.cmd == "render":
         return render(course, pdf=not x.no_pdf)
+    if x.cmd in ("next", "propose", "task", "status"):
+        return {"next": next_one, "status": status}[x.cmd](course) if x.cmd in ("next", "status") else {"propose": propose, "task": task}[x.cmd](course, x)
     probs, notes = check(course)
     for p in probs:
         print("  - " + p)
     for n in notes:
         print("  note: " + n)
+    rev = _load(files(course)["review"], {}) or {}
+    if rev.get("method") == el.METHOD:
+        c = counts(course)
+        print("Outcomes decided %d / %d, tasks %d / %d." % (c["decided"], c["total"], c["tasked"], c["total"]))
     print("Clean - the experts' documents can be written." if not probs else "%d thing(s) to do first." % len(probs))
     return 2 if probs else 0
 
