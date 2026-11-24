@@ -382,7 +382,10 @@ never from a lesser look; 30 frames a second with the CPU slowed 4x. → `course
 **L48 · The Bloom level is measured, and the tablet lifts it.** Owner, 2026-10-15: on paper and in Google Classroom
 almost every task was Remember; the tablet lets a trainee operate, find and decide. Every ILO's level is read from its
 verb, every task's from how it is answered; the Stage 2 and Stage 3 pages show where the course is, every task below
-its Sub-ILO, and the tablet task types that would lift it - suggestions in 2.25.0, never a stop. → `course-factory`
+its Sub-ILO, and the tablet task types that would lift it - suggestions in 2.25.0, never a stop. The verb of an outcome
+we write follows the pedagogy lead's Bloom Verb Guide (2.141.0, `bloom.json` `"verb_guide"`): the job task and the level
+first, the plainest observable verb last; the Stage 2 page notes a verb to avoid, a verb that sits at two levels, and an
+action of the hands or the team that needs no Bloom level. → `course-factory`
 (`knowledge/bloom.json`, `bloom/GUIDE.md`, `scripts/bloom_map.py`, 2.25.0)
 
 **L49 · 20 / 80 in class - the programme unchanged, every theory slide kept.** Owner, 2026-10-15: on paper the

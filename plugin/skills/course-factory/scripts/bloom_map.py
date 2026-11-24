@@ -22,6 +22,13 @@ The TASK, up to the level its outcome asks for - never the outcome. The job sets
 better outcome; what must be known by heart stays at Remember; there is no target share of higher-level outcomes. The
 module map also says when no practice moment reaches a Sub-ILO's level before it is checked (rule B5).
 
+THE VERB OF AN OUTCOME WE WRITE (2.141.0, knowledge/bloom.json "verb_guide" - the Bloom Verb Guide for Course Developers)
+The course map says three more things about a Sub-ILO written in English, where the operator approves it: it opens
+with a verb to avoid or replace (b_verb_avoid: discuss, demonstrate knowledge of, assess ...), with what to write
+instead; its verb sits at two levels and the list leaves it out (b_depends: select, check - with the guide's question
+that tells them apart); or it is an action of the hands or the team and needs no Bloom level at all (b_action: dons,
+orders, challenges - Bloom covers thinking only). A Main ILO is never asked to change.
+
 The same results are drawn on the Stage 2 architecture page (make_architecture_page.py) and on each
 Stage 3 review page (content_script.py render). The judgement a list cannot make is in bloom/GUIDE.md.
 Standard library only.
@@ -42,6 +49,7 @@ SKILL = os.path.dirname(HERE)
 _k = lambda n: json.load(io.open(os.path.join(SKILL, "knowledge", n), encoding="utf-8"))
 B, LABELS, MEDIA = _k("bloom.json"), _k("page-labels.json"), _k("media-and-tasks.json")
 LEVELS = {int(k): v for k, v in B["levels"].items()}
+VG = B["verb_guide"]
 APPLY = B["apply_level"]
 TASK_KINDS = ("self-check", "module-check", "final")
 
@@ -141,6 +149,52 @@ def ilo_level(text, lang="en"):
     strong = [h for h in lead if not h[2]]
     top = max(strong or lead, key=lambda h: h[1])
     return {"level": top[1], "verb": top[3], "weak": not strong, "verbs": [(h[3], h[1], h[2]) for h in lead]}
+
+
+# ------------------------------------------------------------------ the verb of an outcome we write (the Bloom Verb Guide)
+def opens_with(text, words):
+    """The entry of `words` an English outcome OPENS with, the longest first - "2.1 Dons ...", "To call out ...",
+    "Is familiar with ..." for the entry "be familiar with" - or "". Only the opening is read: a word deeper in the
+    sentence may be a noun, and nothing is guessed."""
+    low = (text or "").lower()
+    for w in sorted({x.strip().lower() for x in words if x and x.strip()}, key=lambda x: -len(x)):
+        if w.startswith("be "):
+            body = r"(?:is|are|be)\s+" + re.escape(w[3:]).replace(r"\ ", r"\s+")
+        else:
+            body = "(?:%s)" % "|".join(re.escape(x).replace(r"\ ", r"\s+") for x in _en_forms(w))
+        if re.match(r"[\W\d]*(?:to\s+)?" + body + r"(?!\w)", low):
+            return w
+    return ""
+
+
+def avoided(text):
+    """{"verb", "problem", "instead", "observable"} when an English outcome opens with a verb the guide says to avoid or to
+    replace (verb_guide "avoid"), else None. 'demonstrate knowledge of' wins over 'demonstrate'. observable False: no
+    assessor can see it happen (the guideline's C2); True: it can be watched and is only better written otherwise."""
+    rows = list(VG["avoid"]["rows"]) + list(VG["avoid"]["replace"])
+    v = opens_with(text, [w for r in rows for w in r["verbs"]])
+    for r in rows:
+        if v and v in r["verbs"]:
+            return {"verb": v, "problem": r["problem"], "instead": r["instead"], "observable": r.get("observable", True)}
+    return None
+
+
+def unread(n, s, lang):
+    """The finding for a Sub-ILO whose level the verb list does not give. In English: a verb that sits at two levels gets
+    the guide's question (b_depends); an action of the hands or the team needs no Bloom level (b_action - Bloom covers
+    thinking only). Otherwise, as before, it is judged and shown (b_unknown)."""
+    if s.get("lang") == "en":
+        d = opens_with(s["text"], [k for k in VG["depends"] if not k.startswith("_")])
+        if d:
+            x = VG["depends"][d]
+            return ("b_depends", {"m": n, "s": s["id"], "verb": d, "low": level_name(x["low"], lang),
+                                  "high": level_name(x["high"], lang), "how": x["how"]})
+        import activity_formats as af                  # here, not at the top: activity_formats reads this file
+        for x in VG["actions"]["sessions"].values():
+            a = opens_with(s["text"], af.action_verbs(x["task_type"]))
+            if a:
+                return ("b_action", {"m": n, "s": s["id"], "verb": a, "kind": x["outcome"]})
+    return ("b_unknown", {"m": n, "s": s["id"]})
 
 
 # ------------------------------------------------------------------ the level of a task
@@ -253,8 +307,11 @@ def course_map(prog, arch, lang=None):
                 asks[s["level"]] += 1
             if s["status"] == "main":
                 continue
+            av = avoided(s["text"]) if s.get("lang") == "en" and not s["weak"] else None      # a weak verb has its own note
+            if av:
+                found.append(("b_verb_avoid", {"m": n, "s": s["id"], "verb": av["verb"], "problem": av["problem"], "instead": av["instead"]}))
             if s["level"] is None:
-                found.append(("b_unknown", {"m": n, "s": s["id"]}))
+                found.append(unread(n, s, lang))
             elif s["weak"] and not s.get("stated"):
                 found.append(("b_weak_sub", {"m": n, "s": s["id"], "verb": s["verb"],
                                              "ex": "; ".join("%s (%s)" % ((LEVELS[k].get("examples") or {}).get(s["lang"]) or LEVELS[k]["examples"]["en"],

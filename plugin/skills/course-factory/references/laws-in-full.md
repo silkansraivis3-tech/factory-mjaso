@@ -751,6 +751,12 @@ explaining in detail what you want to see.' This will reduce failed attempts and
   stems; the highest verb that leads a clause), every task's from how the trainee answers it - its task type's usual
   level, or the level its author stated with a reason. A verb whose level depends on the sentence is not guessed:
   it is judged (`bloom/GUIDE.md` §2) and written on the Sub-ILO.
+- **The verb of an outcome we write (2.141.0).** The pedagogy lead's Bloom Verb Guide (`bloom.json` `"verb_guide"`,
+  `bloom/GUIDE.md` §2a): the job task and the level first, the verb last - the plainest at that level that an assessor
+  can see or score, with its condition and standard. The Stage 2 page notes a Sub-ILO that opens with a verb to avoid
+  or replace (discuss, demonstrate knowledge of, assess), one whose verb sits at two levels (select, check), and one
+  that is an action of the hands or the team and needs no Bloom level. Notes on the Bloom card; in an instructor-led
+  course a verb no assessor can see fails L68's item C2 as know and understand do. A regulator's wording never changes.
 - **Shown where the operator decides.** The Stage 2 page: what each module's ILOs ask for against what its planned
   task types reach. Each Stage 3 review page: every question's level, the share at *Apply* or higher (suggested at
   least half), every question below its Sub-ILO, every Sub-ILO the module check does not reach.

@@ -393,6 +393,10 @@ def module_check(course, mid, script, data, arch, prog, sheet, mods=None):
                        "that says so; the programme's wording stays (Bloom rule B4)" % (sid, bloom_map.level_name(level), why))
         if lv and lv.get("weak"):
             c2.append("%s: %r cannot be watched - re-express the Sub-ILO with a verb an assessor can see" % (sid, lv["verb"]))
+        elif bloom_map.lang_code(lang) == "en":     # 2.141.0 - the Bloom Verb Guide's own list of verbs no assessor can see
+            av = bloom_map.avoided(text_of.get(sid) or "")
+            if av and not av["observable"]:
+                c2.append("%s: %r %s - re-express the Sub-ILO with: %s" % (sid, av["verb"], av["problem"], av["instead"]))
         if r.get("task_type") not in TASK_TYPES:
             c2.append("%s: no task type - one of %s" % (sid, ", ".join(TASK_TYPES)))
         if "must_know" not in r:

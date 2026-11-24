@@ -87,6 +87,59 @@ def main():
     check("a strong verb beside a weak one is not weak", not lvl("Know and apply the procedure", "en")["weak"])
     check("the language may be given as a name", lvl("Aprakstīt kravas sistēmu", "Latvian")["level"] == 2)
 
+    print("\n-- the Bloom Verb Guide (2.141.0): the verbs to write with, to avoid, and the ones Bloom has no level for")
+    vg = bm.VG
+    left_out = {"select", "prepare"}           # sit at two levels: left out of the list, the question that tells them apart is shown
+    off = [(n, v, lvl("%s the thing" % v.capitalize(), "en")["level"]) for n in bm.LEVELS for v in bm.LEVELS[n]["write"]
+           if v not in left_out and lvl("%s the thing" % v.capitalize(), "en")["level"] != n]
+    check("every verb the guide writes a level with is read at that level", not off, off)
+    check("... all six levels carry the guide's row: when, verbs, example, what to assess with",
+          all(bm.LEVELS[n].get(k) for n in bm.LEVELS for k in ("use_when", "write", "example", "assess_with")))
+    check("... except select and prepare: two levels each, so asked and never guessed",
+          lvl("Selects the PPE", "en")["level"] is None and lvl("Prepares the tank for entry", "en")["level"] is None
+          and left_out <= set(vg["depends"]))
+    check("compare is Analyse - in all three languages",
+          [lvl("Compare the two loading plans", "en")["level"], lvl("Salīdzināt abus kravas plānus", "lv")["level"],
+           lvl("Сравнить два грузовых плана", "ru")["level"]] == [4, 4, 4])
+    check("the guide's own examples read at their level",
+          [lvl(bm.LEVELS[n]["example"], "en")["level"] for n in sorted(bm.LEVELS)] == [1, 2, 3, 4, 5, 6],
+          [lvl(bm.LEVELS[n]["example"], "en") for n in sorted(bm.LEVELS)])
+    check("five steps, five rules that each say where the factory carries them",
+          len(vg["steps"]) == 5 and sorted(vg["rules"]) == ["V1", "V2", "V3", "V4", "V5"] and all(r["rule"] and r["where"] for r in vg["rules"].values()))
+    dep = {k: v for k, v in vg["depends"].items() if not k.startswith("_")}
+    check("the verbs that change level with the task (the guide's six, and prepare), each with its two levels and the question that tells them apart",
+          sorted(dep) == ["calculate", "check", "describe", "explain", "identify", "prepare", "select"]
+          and all(1 <= v["low"] < v["high"] <= 6 and v["how"].endswith("?") for v in dep.values()), dep)
+    check("opens_with reads only the opening - after a number, 'to' or 'is'; the longest entry wins",
+          [bm.opens_with("2.1 Dons the SCBA set", ["don"]), bm.opens_with("To call out the readings", ["call out"]),
+           bm.opens_with("Is familiar with the SDS", ["be familiar with"]), bm.opens_with("States the correct order", ["order"]),
+           bm.opens_with("Demonstrates knowledge of pumps", ["demonstrate", "demonstrate knowledge of"])]
+          == ["don", "call out", "be familiar with", "", "demonstrate knowledge of"])
+    av = lambda t: (bm.avoided(t) or {}).get("verb")
+    check("a verb to avoid or replace is found at the opening, with what to write instead",
+          [av("Discusses the importance of teamwork"), av("Demonstrates knowledge of portable extinguishers"), av("Assesses the permit"),
+           av("Attends the fire drill"), av("Decides whether to allow entry"), av("States the limits and discusses them")]
+          == ["discuss", "demonstrate knowledge of", "assess", "attend", None, None]
+          and "explain, compare or justify" in bm.avoided("Discuss the plan")["instead"])
+    check("... and says whether an assessor could see it at all: discuss no; a hard word or 'assess' yes, only better written otherwise",
+          [bm.avoided(t)["observable"] for t in ("Discusses the plan", "Attends the drill", "Elucidates the plan", "Assesses the permit", "Demonstrates the donning")]
+          == [False, False, True, True, True])
+    check("every 'before' of the guide's rewrites is caught, and no 'after' is",
+          all(bm.avoided(r["weak"]) or lvl(r["weak"], "en")["weak"] for r in vg["before_after"]["rows"])
+          and not any(bm.avoided(r["rewritten"]) or lvl(r["rewritten"], "en")["weak"] for r in vg["before_after"]["rows"]))
+    import activity_formats as af
+    ses = vg["actions"]["sessions"]
+    check("the guide's hands and team verbs are the task type's verbs (instructor-led.json formats 'verbs')",
+          all(set(x["verbs"]) <= set(af.action_verbs(x["task_type"])) for x in ses.values()),
+          {k: sorted(set(x["verbs"]) - set(af.action_verbs(x["task_type"]))) for k, x in ses.items()})
+    check("... and each example outcome reads as its task type",
+          all(af.verb_type(x["example"])[0] == x["task_type"] for x in ses.values()), {k: af.verb_type(x["example"]) for k, x in ses.items()})
+    check("a verb that is often a noun decides the task type only when it opens the Sub-ILO",
+          af.verb_type("Orders helm and engine movements") == ("real_time_judgement", "orders")
+          and af.verb_type("States the correct order of the checks")[0] == "decision"
+          and af.verb_type("Completes the report in the correct order")[0] == "decision"
+          and af.verb_type("2.3 Confirms the order by read-back")[0] == "team_behaviour")
+
     print("\n-- the level of a task")
     check("choose one is Remember", bm.task_level("single_choice")["level"] == 1)
     check("operate the panel is Apply", bm.task_level("panel_operate")["level"] == 3)
@@ -164,7 +217,34 @@ def main():
     check("... and a level written on it (\"bloom\") is taken as judged", "b_weak_sub" not in keys(bm.course_map(prog, a3)["findings"]))
     a4 = copy.deepcopy(arch)
     a4["modules"][0]["sub_ilos"].append({"id": "1.1.e", "status": "added", "text": "Select the extinguishing agent", "why": "x"})
-    check("a Sub-ILO whose level cannot be read is said so", ("b_unknown", {"m": 1, "s": "1.1.e"}) in bm.course_map(prog, a4)["findings"])
+    f4 = bm.course_map(prog, a4)["findings"]
+    dp = [kw for k, kw in f4 if k == "b_depends"]
+    check("a Sub-ILO that opens with a two-level verb (select) is shown the guide's question - not a guessed level",
+          dp and dp[0]["s"] == "1.1.e" and dp[0]["verb"] == "select" and "trade-off" in dp[0]["how"] and "b_unknown" not in keys(f4), f4)
+    check("... worded for the operator, with the two levels it may be",
+          (dp[0]["low"], dp[0]["high"]) == (bm.level_name(3, "lv"), bm.level_name(5, "lv")) and dp[0]["how"] in bm.T("en", "b_depends", **dp[0]), dp)
+
+    def added(text, **more):
+        a = copy.deepcopy(arch)
+        a["modules"][0]["sub_ilos"].append(dict({"id": "1.1.z", "status": "added", "text": text, "why": "x"}, **more))
+        return [(k, kw) for k, kw in bm.course_map(prog, a)["findings"] if kw.get("s") == "1.1.z"]
+
+    check("a Sub-ILO whose level cannot be read is said so", added("Ensure the tank is safe") == [("b_unknown", {"m": 1, "s": "1.1.z"})],
+          added("Ensure the tank is safe"))
+    fa = added("Dons breathing apparatus in the correct sequence within the set time")
+    check("an action of the hands needs no Bloom level - said so, instead of 'could not be read'",
+          keys(fa) == ["b_action"] and fa[0][1]["verb"] == "don" and "hands" in fa[0][1]["kind"], fa)
+    check("... so does a team action and a real-time one",
+          keys(added("Challenges an unsafe order from a senior officer")) == ["b_action"]
+          and keys(added("Orders helm and engine movements in time")) == ["b_action"])
+    check("... and a level written on it (the thinking inside the drill) is taken as it is",
+          not added("Dons breathing apparatus and decides go or no-go", bloom=5))
+    fv = added("Discusses the importance of teamwork on the bridge")
+    check("a verb to avoid on a Sub-ILO is noted with what to write instead - a note, its level is still read",
+          keys(fv) == ["b_verb_avoid"] and "explain, compare or justify" in bm.T("en", "b_verb_avoid", **fv[0][1]), fv)
+    check("... a weak verb keeps its own note only, and a good verb gets none",
+          keys(added("Understands the hazards of enclosed space entry")) == ["b_weak_sub"]
+          and not added("Decides whether to allow entry from a completed permit, with reasons"))
     p_main = copy.deepcopy(prog); a5 = copy.deepcopy(arch)
     p_main["main_ilos"]["1"] = a5["main_ilos"][0]["text"] = "Zināt kravas operāciju drošības prasības"
     check("a weak Main ILO is noted - only noted", "b_weak_main" in keys(bm.course_map(p_main, a5)["findings"]))

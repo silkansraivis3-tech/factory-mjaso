@@ -73,7 +73,13 @@ invented (L4).
 - `tla` - the TLA names from the pool (`knowledge/instructor-led.json` `tla_pool`), as they go into the method column.
 
 A Sub-ILO whose verb cannot be watched ("understand", "be familiar with") is re-expressed through the ILO map with the
-operator's yes (L2, `bloom.json` `weak`) - the check names it, this file does not change it.
+operator's yes (L2, `bloom.json` `weak`) - the check names it, this file does not change it. How the new verb is chosen
+is the lead's Bloom Verb Guide (`bloom/GUIDE.md` §2a, 2.141.0): the job task and the level first, the verb last, with its
+condition and standard. C2 reads the guide's list of verbs no assessor can see, not only know and understand: a Sub-ILO
+that opens with "discusses", "demonstrates knowledge of", "attends", "is introduced to", "learns", "studies" or "reviews"
+is a NO until it is re-expressed or justified in one line. Its verbs for hands and team behaviour (dons, orders, challenges ...) are the ones the task type
+is read from; a verb that is as often a noun (order, hold, correct, reduce, report, confirm) decides only when it opens
+the Sub-ILO.
 
 **`practicals`** - keyed `"M04.A01"` (the module and the activity screen's id). Every simulator and real-equipment exercise
 has one; a classroom exercise only when it is a drill, a role-play, a team scenario or a project block (draft makes these

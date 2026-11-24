@@ -352,6 +352,21 @@ def main():
         m["rows"] = m["rows"][:3]
         cs.save(os.path.join(c, "working_claude", "ilo_map.json"), m)
 
+        def c2_for(text):                              # C2's lines about Sub-ILO 1.a when it is worded like this
+            m2 = json.loads(json.dumps(m))
+            m2["rows"][0]["sub_ilo"] = text
+            cs.save(os.path.join(c, "working_claude", "ilo_map.json"), m2)
+            got = [x for x in status(il.check(c)[0], "M01", "C2")[1] if x.startswith("1.a") and "task type" not in x]
+            cs.save(os.path.join(c, "working_claude", "ilo_map.json"), m)
+            return got
+
+        d = c2_for("Discusses the importance of gas testing")
+        check("C2 (2.141.0): a Sub-ILO that opens with a verb no assessor can see - the Bloom Verb Guide's list - is named, with what to write instead",
+              len(d) == 1 and "nobody can fail it" in d[0] and "explain, compare or justify" in d[0], d)
+        check("... 'demonstrates knowledge of' too; 'assesses', a hard word and a good verb are not",
+              len(c2_for("Demonstrates knowledge of the gas detector")) == 1 and not c2_for("Assesses the gas readings")
+              and not c2_for("Elucidates the entry limits") and not c2_for("Decides whether a tank may be entered"))
+
         bare = {"module": 3, "course_language": "English", "minutes_allocated": 10, "screens": [slide("s01", 6), TASKS[0], TASKS[1]]}
         res = il.module_check(c, "M03", bare, {}, *il.course_files(c))
         check("a module with no drill, run or scenario, and no must-pass criterion: n/a, never a yes",

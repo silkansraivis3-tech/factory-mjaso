@@ -61,10 +61,24 @@ def _verb_rx(v):
 
 
 _VERBS = [(tt, v, _verb_rx(v)) for tt in TASK_TYPES for v in F["verbs"].get(tt) or []]
+# 2.141.0 - the Bloom Verb Guide's simulator and human-factors verbs that are as often a noun or an adjective ("the
+# correct order"): they decide only when they OPEN the Sub-ILO, after its number ("2.1 Orders helm ...")
+_OPENING = [(tt, v, re.compile(r"^[\W\d]*(?:to\s+)?" + re.escape(v).replace(r"\ ", r"\s+") + r"(?:s|es|ed|d|ing)?(?![\w])", re.I))
+            for tt in TASK_TYPES for v in (F["verbs"].get("opening") or {}).get(tt) or []]
+
+
+def action_verbs(tt):
+    """Every verb of a task type - the list and the opening-only ones"""
+    return list(F["verbs"].get(tt) or []) + list((F["verbs"].get("opening") or {}).get(tt) or [])
 
 
 def verb_type(text):
-    """(task type, the verb that decided it) - the EARLIEST verb of formats "verbs" in the text; a decision when none"""
+    """(task type, the verb that decided it) - a verb of formats "verbs" "opening" the text opens with, else the EARLIEST
+    verb of formats "verbs" in the text; a decision when none"""
+    for tt, v, rx in _OPENING:
+        m = rx.search(text or "")
+        if m:
+            return tt, re.sub(r"^[\W\d]*(?:to\s+)?", "", m.group(0).lower())
     best = None
     for tt, v, rx in _VERBS:
         m = rx.search(text or "")

@@ -31,9 +31,9 @@ describes thinking and says nothing about what the hands must learn or how peopl
 | | Level | The trainee can … | Tablet task types that reach it |
 |---|---|---|---|
 | 1 | Remember | recall a fact, a name, a number | choose one, label, tap the part |
-| 2 | Understand | explain, sort, compare | match, sort into groups, order |
-| 3 | Apply | operate, set, measure, carry out | operate the panel, set the value, read the instrument |
-| 4 | Analyse | find the cause, the fault, the hazard | **find the fault**, find the hazards, **rebuild the incident**, a scenario |
+| 2 | Understand | give the reason or the meaning in their own words | match, sort into groups, order |
+| 3 | Apply | use a rule, a procedure or an aid: operate, set, measure, carry out | operate the panel, set the value, read the instrument |
+| 4 | Analyse | find what matters or what is wrong: the cause, the fault, the hazard; compare | **find the fault**, find the hazards, **rebuild the incident**, a scenario |
 | 5 | Evaluate | decide and say why; judge a decision | choose-and-justify, **spot the errors** in a filled-in document, **compare** the options, **build the plan** |
 | 6 | Create | make a plan, a procedure, a checklist | only **build the plan**, written for the situation, comes near; real creation is the practical exercise |
 
@@ -44,7 +44,13 @@ describes thinking and says nothing about what the hands must learn or how peopl
 - **A verb that is not in the list** (select, determine, check, ensure, определить …) depends on the
   sentence. Decide from what the trainee would be *seen doing*: "select the extinguishing agent for a
   class B fire" is *Apply*; "select the safer of two loading plans" is *Evaluate*. Write the level into
-  `architecture.json` on the Sub-ILO: `"bloom": 3`. Never guess silently.
+  `architecture.json` on the Sub-ILO: `"bloom": 3`. Never guess silently. For *select*, *check* and *prepare*
+  the Stage 2 page shows the question that tells the two levels apart (§2a).
+- **A verb of the hands or of the team** (dons, rigs, launches; orders, holds, aborts; briefs, calls out,
+  challenges) has **no Bloom level**: Bloom covers thinking only. The Stage 2 page says so instead of
+  "could not be read". Give a level only to the thinking inside it - the go or no-go decision inside a
+  drill - with `"bloom": n`; never force one onto the physical or behavioural part. Name the standard
+  instead: time, sequence, tolerance or must-pass step.
 - **A question can sit higher than its task type usually does.** A "choose one" built on a real
   situation, where the answer must be worked out, is *Analyse*. Then give the question
   `"bloom": 4, "bloom_why": "<what the trainee has to work out>"`. Say it only when it is true — the
@@ -56,6 +62,46 @@ describes thinking and says nothing about what the hands must learn or how peopl
   re-expressed with a verb that can be watched (status `re-expressed`, with `why`) — the operator
   approves it at the Stage 2 STOP. Choose the verb the programme's intent supports, never a higher
   one just to look better.
+
+## 2a · Choosing the verb of an outcome we write (2.141.0)
+
+The pedagogy lead's Bloom Verb Guide for Course Developers (23 Nov 2026) - `bloom.json` `"verb_guide"` and the
+`write` / `use_when` / `assess_with` fields of each level. It is for the outcomes **we** write: a Sub-ILO added or
+re-expressed beside a regulator's outcome, or an in-house outcome. **A regulator's wording is never changed.**
+
+**Choose the verb last.** (1) Name the job task in one line. (2) Set the level from that task. (3) Take the plainest
+verb in that level's row. (4) Finish the sentence: verb + object + condition + standard. (5) Test it: would two
+assessors agree, and does the assessment item ask for the same verb? If no verb in the row fits, the level is
+probably wrong - go back to step 2.
+
+| Level | Use when the job task is | Verbs to write with | Assess with |
+|---|---|---|---|
+| Remember | recalling a fact, limit, signal or step with no aid | state, list, name, label, recognise | short recall item, oral question |
+| Understand | giving the reason or the meaning in their own words | explain, describe, summarise, give an example of, classify | "explain why" question, teach-back |
+| Apply | using a rule, procedure or aid in a routine case | use, carry out, complete, calculate, operate, read, select | worked task with the aid in hand |
+| Analyse | finding what matters or what is wrong | compare, distinguish, diagnose, trace, sort, find the cause of | scenario item with data to interpret |
+| Evaluate | judging against criteria and committing to a decision | decide, judge, justify, prioritise, accept, refuse, recommend | scenario decision with justification, oral probe |
+| Create | producing a new plan or document | plan, draft, design, prepare, propose | product scored against a checklist |
+
+- **One verb per outcome.** "List and explain" is two outcomes, or one tagged at the higher level - which is how
+  `bloom_map.py` reads it.
+- **Plain verb over impressive verb.** English is a second language for most trainees and many instructors.
+- **Change the verb and as few other words as possible.** The topic and the scope stay as they were.
+- **Third person, present tense:** "States", "Uses", "Decides".
+- **Verbs that change level with the task** - identify, explain, describe, select, check, calculate. The *condition*
+  fixes the level, so always write it: "from a given list", "with the SDS in hand", "in an unfamiliar scenario". The
+  question that tells the two apart is in `"depends"` ("Was the answer taught as a fact, or must it be worked out?").
+- **Verbs to avoid** (`"avoid"`): understand, know, be aware of, be familiar with, demonstrate knowledge of, discuss,
+  participate in, attend, learn, study, review, and the hard words (elucidate, ascertain, appraise, synthesise,
+  formulate). Each hides a real verb - ask "what would the trainee do to show this?" and write that. **Replace rather
+  than tag:** *demonstrate* (name what the assessor sees: dons, launches, completes) and *assess* (judge or decide).
+  A Sub-ILO that opens with one gets a note on the Stage 2 page, with what to write instead. On the Bloom card it is
+  a note, never a stop. In an instructor-led course the ones no assessor can see (`"observable": false` - all but the
+  hard words, *demonstrate* and *assess*) fail checklist item C2 exactly as *know* and *understand* always did: the
+  Sub-ILO is re-expressed, or the module justifies it in one line.
+- **`prepare` is asked, like select and check.** The guide writes it at Create (a plan, a document); programmes also
+  use it for making equipment ready by a procedure (Apply). The Stage 2 page asks which, and the level is written on
+  the Sub-ILO.
 
 ## 3 · Lifting a task — the tablet patterns
 
