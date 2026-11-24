@@ -348,8 +348,18 @@ def pull_pedagogy(course, answers, ready):
         else:
             said.append("%s: an answer of a kind this version cannot take in (%s) - left in the editor" % (where, a["verdict"]))
             continue
+        note = (a.get("note") or "").strip()
+        own_task = note[5:].strip() if a["verdict"] == "ok" and about is None and a["item"] in topic_of and note.lower().startswith("task:") else ""
+        if own_task:
+            # 2.142.1 (the pedagogy lead, 2026-11-24: "accept the raise and its level, but the task is bad - let me fix
+            # only the task"): the editor sends it as OK with a note that starts "Task: ". The outcome and its level
+            # stand as proposed (taken above); the row's task becomes the expert's own words, at once - nothing is left
+            # to do, so the note is recorded as done. The checks of the task then only warn (pedagogy_review.py).
+            row.setdefault("proposed", {}).update(how=own_task, task_expert={"by": _who(a), "on": base["on"]})
+            row["expert_notes"].append(dict(base, said=note + older, done="The task is now your words."))
+            log.append((where, "%s [%s, editor mode]" % (note, _who(a)), "the task replaced by the expert's words"))
         # "take it / keep it, with a note on what to fix": the note is carried out like any other
-        if a["verdict"] in ("ok", "decision") and (a.get("note") or "").strip():
+        elif a["verdict"] in ("ok", "decision") and (a.get("note") or "").strip():
             row["expert_notes"].append(dict(base, said=a["note"].strip() + older, done=""))
             log.append((where, "%s [%s, editor mode]" % (a["note"].strip(), _who(a)), "to do"))
         for k in ("expert_review", "expert_notes"):

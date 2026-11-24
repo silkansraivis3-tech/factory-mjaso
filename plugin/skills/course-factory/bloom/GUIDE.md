@@ -221,6 +221,9 @@ that check. All outcomes first, then the tasks in syllabus order.
 - **The expert decides.** The original wording is always beside the proposed one. Take proposed ratifies the raise into
   the architecture as re-expressed, with its level written on the Sub-ILO; an expert's own wording or level is carried
   out as it is, and the checks only warn. A Main ILO is never re-worded (L2): its raise is the level and the task.
+- **"Accept the outcome, fix only the task" (2.142.1).** In the editor the expert may take the outcome and its level
+  and write the task themselves (an OK whose note starts `Task: `). `pull` puts their words in as the row's task at
+  once, by name; nothing is left for the factory to do, and the task's checks only warn.
 - **After any change to this method** (this section, `ilo-elevation.json`): run the golden set -
   `pedagogy_review.py golden --set <golden_set.json> --packet <ref>` asks one outcome, `--answers <file>` scores the
   26 answers against the reference (at least 21 decisions, no failed check). The set holds IMO text and is not in the

@@ -229,6 +229,27 @@ def main():
         check("an answer changed from 'change' to OK takes its open note away", "expert_notes" not in r13
               and [x["answer"] for x in r13["expert_review"]] == [a_ch["id"]], r13)
 
+        # 2.142.1 (the pedagogy lead): "accept the outcome and its level, but let me fix only the task" - OK with "Task: ..."
+        mine = "Each pair reads the general arrangement plan and marks the tank that leans on the hull."
+        as_it_was = io.open(pr.files(c)["review"], encoding="utf-8").read()       # put back below: the next checks count this row's answer
+        srv.answer("anna.liepa@novikontas.org", "2/1.3", "ok", "Task: " + mine)
+        out_of(cp.cmd_pull, c)
+        r13 = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))["modules"]["2"]["rows"]["1.3"]
+        check("OK with a note that starts 'Task:' - the row's task becomes the expert's own words, by name",
+              r13["proposed"]["how"] == mine and r13["proposed"]["task_expert"]["by"] == "Anna Liepa", r13["proposed"])
+        check("... and nothing is left to do: the note is recorded as carried out, so check does not stop on it",
+              r13["expert_notes"][-1]["said"].startswith("Task: ") and r13["expert_notes"][-1]["done"]
+              and not any("topic 1.3: Anna Liepa asked" in x for x in pr.check(c)[0]), r13.get("expert_notes"))
+        check("... the feedback log says so", "the task replaced by the expert's words" in io.open(os.path.join(c, "FEEDBACK_LOG.md"), encoding="utf-8").read())
+        srv.answer("anna.liepa@novikontas.org", "2/1.3", "ok", "The task should say which plan.")
+        out_of(cp.cmd_pull, c)
+        r13 = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))["modules"]["2"]["rows"]["1.3"]
+        check("... any other note with an OK is still a change for the factory to carry out",
+              r13["expert_notes"][-1]["done"] == "" and r13["proposed"]["how"] == mine, r13.get("expert_notes"))
+        srv.answer("anna.liepa@novikontas.org", "2/1.3", "ok")
+        out_of(cp.cmd_pull, c)
+        io.open(pr.files(c)["review"], "w", encoding="utf-8").write(as_it_was)
+
         rev = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))
         for x in rev["modules"]["1"]["rows"]["1.1.b"]["expert_notes"]:
             x["done"] = "the simulator runs' minutes are in the task"

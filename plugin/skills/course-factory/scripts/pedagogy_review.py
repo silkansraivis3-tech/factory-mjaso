@@ -334,8 +334,9 @@ def elevation_row(r, x, where, used, before):
     key = None
     if new.get("decision") in ("raise", "keep") and isinstance(b, int) and 1 <= b <= 6:
         found, key = el.task_problems(new, b, used, before)
+        theirs = new.get("expert") or new.get("task_expert")      # the expert's own task (2.142.1) is only warned about too
         for words in found:
-            (notes if new.get("expert") else probs).append("%s: %s" % (where, words) + (" - the expert's decision stands" if new.get("expert") else ""))
+            (notes if theirs else probs).append("%s: %s" % (where, words) + (" - the expert's decision stands" if theirs else ""))
         t = el.tla(new.get("tla"))
         if t and str(new.get("fit") or "").lower() == "strong" and not r["main"]:
             import activity_formats as af
