@@ -69,9 +69,9 @@ the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` 
 | `.lt-task2` · `.lt-tcopy` · `.lt-tab3d` (`.lt-photo`) · `.lt-tabimg` · `.lt-chips` | task opening: the words left with time, questions and alone / in teams as chips; on the right the exercise's photograph or the tablet render |
 | `.lt-path` | module check opening: the module's topics tick off towards the check |
 | `.lt-ask4` · `.lt-q2` · `.lt-tap` (its words in `data-label`) · `.lt-shine` | the summary: white cards on the pattern, each a question that opens on Next or a tap |
-| `.lt-work` · `.lt-meter` (`data-meter`, `data-max`) · `.lt-ans-over` · `.lt-ans-under` | worked example, then the room's turn, beside a meter that counts; beside a picture the answer opens over it on the last Next (`.lt-ans-over`); beside a kit figure the answer opens in a card under the drawing (`.lt-ans-under`, 2.115.0) |
+| `.lt-work` · `.lt-meter` (`data-meter`, `data-max`) · `.lt-ans-over` · `.lt-ans-under` | worked example, then the room's turn, beside a meter that counts; beside a picture the answer opens over it on the last Next (`.lt-ans-over`); beside a kit figure the answer opens in a card under the drawing (`.lt-ans-under`, 2.115.0); with `"band": true` a wide, short drawing runs as a band above the steps, which take the whole width (`.lt-band` on the `.lt-split`, 2.137.7) |
 | `.lt-walk` · `.lt-nlead` · `.lt-nled` | 2.125.1: a slide whose lines (words beside a photo, a table, plain words) walk one by one on Next, the lines not reached yet dimmed (`.lt-walk`); the intro line above step boxes or key-number cards (`.lt-nlead`), and the card body that holds one (`.lt-nled`) |
-| `.lt-tf` · `.lt-claim` · `.lt-vote` · `.lt-why` · `.lt-pic` | true or false, then why |
+| `.lt-tf` · `.lt-claim` · `.lt-vote` · `.lt-why` · `.lt-pic` · `.lt-tfk` | true or false, then why; beside a kit drawing (`.lt-tfk`, 2.137.4) why opens in the words' column under the claim, in the place of the vote, and the drawing keeps its column |
 | `.lt-opts` · `.lt-opt` (`.ok` / `.no`, `.fb`) | what would you do: a situation and its choices, then why each |
 | `.lt-name` | name the parts on a live scene (`.lt-tag.num`) |
 | `.lt-nbody` · `.lt-nums` | numbers to remember: the number first, then what it means |

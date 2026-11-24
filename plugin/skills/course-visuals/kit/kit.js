@@ -1837,6 +1837,19 @@
     return best;
   }
   function edgePoint(b, x, y) { return { x: Math.max(b.x, Math.min(b.x2, x)), y: Math.max(b.y, Math.min(b.y2, y)) }; }
+  /* does the straight line a - e pass through the inside of box b? (the line clipped to the box, side by side) */
+  function cuts(a, e, b) {
+    var t0 = 0, t1 = 1, dx = e.x - a.x, dy = e.y - a.y;
+    var side = [[-dx, a.x - b.x], [dx, b.x2 - a.x], [-dy, a.y - b.y], [dy, b.y2 - a.y]];
+    for (var i = 0; i < 4; i++) {
+      var p = side[i][0], d = side[i][1];
+      if (p === 0) { if (d <= 0) return false; continue; }
+      var t = d / p;
+      if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+      else { if (t < t0) return false; if (t < t1) t1 = t; }
+    }
+    return t1 - t0 > 1e-9;
+  }
 
   /* SOLVE - every label a clear place, in plain numbers, with no SVG in it: a 3D figure's projected outlines take the
      same solver for their label overlays (KIT.solveLabels).
@@ -1927,14 +1940,17 @@
       if (len < 4) return null;
       var own = words.filter(function (w) { var g2 = grown(w, P); return !(a.x > g2.x && a.x < g2.x2 && a.y > g2.y && a.y < g2.y2); });   // not a word the leader starts in
       var hits = 0, n = Math.ceil(len / CELL);
+      /* a leader keeps the full clearance from every word - the labels placed, and the words drawn in parts (a
+         detector's tag) - not just from the labels at half of it (2.52.0: IGF M07 s08, M09 s06). 2.142.3: judged on the
+         whole line, not on a point every CELL along it, and half a cell further out, as the grid keeps every label: a
+         line passing a word's corner slipped between two points and ran 4 px from the word, where its own half width
+         puts it inside the 4 px the drawing check keeps ("tank connection space" on the fuel storage hold's leader,
+         fuel_space_access in the 424 x 297 panel) */
+      for (var j = 0; j < taken.length + own.length; j++) {
+        if (cuts(a, e, grown(j < taken.length ? taken[j] : own[j - taken.length], P + q2))) return null;
+      }
       for (var i = 0; i <= n; i++) {
         var px = a.x + dx * i / n, py = a.y + dy * i / n, from = len * i / n;
-        /* a leader keeps the full clearance from every word - the labels placed, and the words drawn in parts (a
-           detector's tag) - not just from the labels at half of it (2.52.0: IGF M07 s08, M09 s06) */
-        for (var j = 0; j < taken.length + own.length; j++) {
-          var t = grown(j < taken.length ? taken[j] : own[j - taken.length], P);
-          if (px > t.x && px < t.x2 && py > t.y && py < t.y2) return null;
-        }
         if (from > 5 && len - from > 3 && grid.at(px, py)) hits++;
       }
       return { x1: a.x, y1: a.y, x2: e.x, y2: e.y, cost: hits * 3 + len * 0.15 };

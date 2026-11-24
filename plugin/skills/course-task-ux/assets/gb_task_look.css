@@ -38,9 +38,8 @@ body:has(.scr.on.th-n) .state .bar i{background:var(--tk-blue)}
 /* a document to check is taller than the screen once its verdicts open: the question and its hint stay under the bar
    while the lines scroll beneath (opaque, so a line is never cut through the heading) */
 /* 2.125.1: no longer sticky - stuck at --state-h it slid over the hint line on a page that had not scrolled (PM M02 q06);
-   after Check the verdict now opens above the document instead (gb_answer.js) */
-.scr[data-mech="spot_the_error"] .q{margin-top:0;padding:6px 0}
-.scr[data-mech="spot_the_error"] > .why.above,.scr[data-mech="categorise"] > .why.above{margin:6px auto 10px;grid-column:1/-1}
+   after Check the verdict now opens above the document instead (gb_answer.js). 2.142.3: the heading's and the verdict's
+   own spacing are sizes and places, so they are in gb_answer.css (its last lines); this file only colours */
 body:has(.scr.on.th-n) .scr[data-mech="spot_the_error"] .q{background:var(--tk-navy)}
 
 /* ---- the question ------------------------------------------------------- */
@@ -105,7 +104,7 @@ body:has(.scr.on.th-n) .scr[data-mech="spot_the_error"] .q{background:var(--tk-n
 /* 2.137.8 - a card dropped in a white label box on the drawing takes the drawing's dark ink: it kept the Navy screen's white
    words on the white box and could not be read (Aleksis, IT course M01 q03: "i dragged the answers and the words didnt
    change to black") */
-.th-n .ga .lbox.zone .chip:not(.right):not(.wrong):not(.fixed){color:var(--tk-navy, #0a2463);background:var(--tk-white, #fff);border-color:transparent}
+.th-n .ga .lbox.zone .chip:not(.right):not(.wrong):not(.fixed){color:var(--tk-navy);background:var(--tk-white);border-color:transparent}
 /* a card's verdict - right, wrong, moved to its place - keeps the engine's own colours on either ground */
 .th-n .row .name{background:var(--tk-glass-n);color:var(--tk-white);border-color:var(--tk-line-n)}
 .th-n .rows.order .name{background:var(--tk-blue);color:var(--tk-navy)}

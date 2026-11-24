@@ -15,6 +15,8 @@
   --up-a00045:rgba(0,0,0,.45);
   --up-a0005:rgba(0,0,0,.5);
   --up-a0006:rgba(0,0,0,.6);
+  --up-a10244635:rgba(10,24,46,.35);
+  --up-a10244655:rgba(10,24,46,.55);
   --up-a10369914:rgba(10,36,99,.14);
   --up-a10369918:rgba(10,36,99,.18);
   --up-a10369925:rgba(10,36,99,.25);
@@ -35,6 +37,7 @@
   --up-a201108088:rgba(20,110,80,.88);
   --up-a20110809:rgba(20,110,80,.9);
   --up-a2551079425:rgba(255,107,94,.25);
+  --up-a2551763255:rgba(255,176,32,.55);
   --up-a25525525504:rgba(255,255,255,.04);
   --up-a25525525505:rgba(255,255,255,.05);
   --up-a25525525506:rgba(255,255,255,.06);
@@ -69,6 +72,7 @@
   --up-ff3b30:#ff3b30;
   --up-ff6b5e:#ff6b5e;
   --up-ff8c82:#ff8c82;
+  --up-ffb020:#ffb020;
   --up-ffb3ab:#ffb3ab;
 }
 
@@ -312,8 +316,8 @@
 .slide[data-template^="photo-explain."].lt-zoom .photo-wrap > img{transform-origin:0 0;transition:transform 1.3s cubic-bezier(.3,.7,.2,1);animation:none!important}
 /* 2.137.2 - the marker: an amber frame round the part (a rounded box sized to it, or a circle), a dark edge so it reads on
    any photograph, the rest of the photo dimmed (Aleksis: "i like it, but it needs to look good") */
-.lt-zoom .lt-ring{position:absolute;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;border-radius:50%;border:4px solid #FFB020;
-  box-shadow:0 0 0 2px rgba(10,24,46,.55),inset 0 0 0 2px rgba(10,24,46,.35),0 0 0 2000px var(--up-a1171728),0 0 26px rgba(255,176,32,.55);
+.lt-zoom .lt-ring{position:absolute;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;border-radius:50%;border:4px solid var(--up-ffb020);
+  box-shadow:0 0 0 2px var(--up-a10244655),inset 0 0 0 2px var(--up-a10244635),0 0 0 2000px var(--up-a1171728),0 0 26px var(--up-a2551763255);
   opacity:0;transition:opacity .5s .7s,left 1.3s,top 1.3s,width 1.3s,height 1.3s,margin 1.3s,border-radius .6s;pointer-events:none}
 .lt-zoom .lt-ring.box{border-radius:18px}
 .lt-zoom .lt-ring.on{opacity:1}

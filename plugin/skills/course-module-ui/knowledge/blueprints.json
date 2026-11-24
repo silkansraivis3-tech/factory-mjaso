@@ -38,6 +38,7 @@
     {"id": "three-content-blocks.figure-left", "mirror": "three-content-blocks.with-figure"},
     {"id": "reference-table.with-figure", "for": "rows of values with a conclusion", "grid": ["i p", "x p"], "cols": "55fr 45fr", "rows": "3fr 1fr", "fill": {"i": ["Info", "lines 'cell | cell'"], "x": ["Text", "the line after the rows"], "p": ["Picture", "figure"]}, "ref": "slides#p13"},
     {"id": "reference-table.figure-left", "mirror": "reference-table.with-figure"},
+    {"id": "reference-table.text-only", "for": "rows of values with no picture (the table reads on its own)", "grid": ["i", "x"], "rows": "3fr 1fr", "fill": {"i": ["Info", "lines 'cell | cell'"], "x": ["Text", "the line after the rows"]}},
     {"id": "reading-with-figure.figure-right", "for": "a lot of text beside a picture (60-85 words)", "grid": ["x p"], "cols": "55fr 45fr", "fill": {"x": ["Text", "text, up to 85 words"], "p": ["Picture", "figure; a line and its part light together"]}, "ref": "slides#p8"},
     {"id": "reading-with-figure.figure-left", "mirror": "reading-with-figure.figure-right"},
     {"id": "content-in-parts.with-figure", "for": "more words than one view holds", "grid": ["x p", "i p"], "cols": "45fr 55fr", "rows": "5fr 1fr", "fill": {"x": ["Text", "text in parts of about 75 words"], "i": ["Info", "the parts' tabs"], "p": ["3D", "figure"]}, "ref": "slides#p10"},

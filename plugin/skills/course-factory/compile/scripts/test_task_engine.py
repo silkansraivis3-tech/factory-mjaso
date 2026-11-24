@@ -364,18 +364,50 @@ PROBE = r"""
     if (k) {
       q.kit = {mounted: !!k.__kit, n: k.__kit && k.__kit.n, steps: k.__kit && k.__kit.steps(), still: k.hasAttribute('data-kit-still'),
                motion: k.hasAttribute('data-motion'), want: k.getAttribute('data-kit-step'), inside: [], leaders: [], boxes: {}, hots: {}};
-      Object.keys(k.__kit.parts).forEach(function (id) { q.kit.boxes[id] = R(k.__kit.parts[id].g); });
+      /* 2.142.3 - a part as DRAWN: every shape, line and word of it, not the picture of its baked shadow (kit.js L65,
+         [data-kit-shade]), which comes a moment after the layout and is wider than the piece by its blur - with it in the
+         box this check passed or failed by whether the picture was in yet (1280 x 800 on one run, 1024 x 768 on the next) */
+      function D(g) {
+        var b = null;
+        [].forEach.call(g.querySelectorAll('*'), function (e) {
+          var t = e.tagName.toLowerCase(), r;
+          if (t === 'g' || t === 'tspan' || e.closest('[data-kit-shade]')) { return; }
+          r = e.getBoundingClientRect();
+          if (!r.width && !r.height) { return; }
+          b = b ? {l: Math.min(b.l, r.left), t: Math.min(b.t, r.top), r: Math.max(b.r, r.right), b: Math.max(b.b, r.bottom)}
+                : {l: r.left, t: r.top, r: r.right, b: r.bottom};
+        });
+        if (!b) { return R(g); }
+        b.w = b.r - b.l; b.h = b.b - b.t;
+        return b;
+      }
+      q.kit.shades = k.querySelectorAll('[data-kit-shade]').length;
+      Object.keys(k.__kit.parts).forEach(function (id) { q.kit.boxes[id] = D(k.__kit.parts[id].g); });
       /* a named place inside a part ("G.funnel", 2.52.0): its own shape */
       function shape(pid) { var d = pid.indexOf('.'), g = k.__kit.parts[d > 0 ? pid.slice(0, d) : pid].g;
                             return d > 0 ? g.querySelector('[data-kit-place="' + pid.slice(d + 1) + '"]') : g; }
       [].forEach.call(s.querySelectorAll('.hot[data-part]'), function (h) {
-        var pr = R(shape(h.getAttribute('data-part'))), hr = R(h);
+        var pr = D(shape(h.getAttribute('data-part'))), hr = R(h);
         if (h.getAttribute('data-part').indexOf('.') > 0) { q.kit.boxes[h.getAttribute('data-part')] = pr; }
         q.kit.hots[h.getAttribute('data-part')] = hr;
         q.kit.inside.push({part: h.getAttribute('data-part'), ok: hr.l <= pr.l + 1 && hr.r >= pr.r - 1 && hr.t <= pr.t + 1 && hr.b >= pr.b - 1 && hr.w >= 55 && hr.h >= 55});
       });
+      /* 2.142.3 - a baked shadow put beside the first tapped part (40 units wider all round, as kit.js does it) and the
+         areas placed again: the area is the size it was */
+      var h0 = s.querySelector('.hot[data-part]');
+      if (h0) {
+        var g0 = shape(h0.getAttribute('data-part')), bb = g0.getBBox(), w0 = R(h0), NS = 'http://www.w3.org/2000/svg';
+        var sg = document.createElementNS(NS, 'g'), sr = document.createElementNS(NS, 'rect');
+        sg.setAttribute('data-kit-shade', '');
+        sr.setAttribute('x', bb.x - 40); sr.setAttribute('y', bb.y - 40); sr.setAttribute('width', bb.width + 80); sr.setAttribute('height', bb.height + 80);
+        sr.setAttribute('fill', 'none'); sg.appendChild(sr); g0.insertBefore(sg, g0.firstChild);
+        window.dispatchEvent(new Event('resize'));
+        q.kit.shadeGrow = [R(h0).w - w0.w, R(h0).h - w0.h, R(g0).w - D(g0).w];
+        g0.removeChild(sg);
+        window.dispatchEvent(new Event('resize'));
+      }
       [].forEach.call(s.querySelectorAll('line[data-part]'), function (ln) {
-        var pr = R(shape(ln.getAttribute('data-part'))), g = R(ga), x = g.l + g.w * parseFloat(ln.getAttribute('x2')) / 100, y = g.t + g.h * parseFloat(ln.getAttribute('y2')) / 100;
+        var pr = D(shape(ln.getAttribute('data-part'))), g = R(ga), x = g.l + g.w * parseFloat(ln.getAttribute('x2')) / 100, y = g.t + g.h * parseFloat(ln.getAttribute('y2')) / 100;
         q.kit.leaders.push({part: ln.getAttribute('data-part'), ok: x >= pr.l - 2 && x <= pr.r + 2 && y >= pr.t - 2 && y <= pr.b + 2});
       });
     }
@@ -490,6 +522,10 @@ def figures_part(exe, tmp):
               k.get("mounted") and k.get("n") == 2 and k.get("steps") == 2 and k.get("still") and not k.get("motion"), k)
         check("%s: each tappable area covers its drawn part, at least 56 px (L42)" % tag,
               len(k.get("inside", [])) == 3 and all(x["ok"] for x in k["inside"]), k.get("inside"))
+        sg = k.get("shadeGrow") or [99, 99, 0]
+        check("%s: the picture of a part's baked shadow (wider than the part by its blur) does not make its tappable area larger "
+              "- an area placed before the shadow is in and one placed after are the same" % tag,
+              abs(sg[0]) <= 1 and abs(sg[1]) <= 1 and sg[2] > 20, k.get("shadeGrow"))
         check("%s: the kit drawing opens full screen only by its corner button" % tag, (qs.get("q04") or {}).get("corner") is True, qs.get("q04"))
     r = probe(exe, mc, tmp)
     qs = {q["id"]: q for q in r.get("qs", [])}

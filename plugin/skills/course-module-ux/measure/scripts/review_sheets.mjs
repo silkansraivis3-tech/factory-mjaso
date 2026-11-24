@@ -237,7 +237,7 @@ const SETTLE = `(function(){
   return 1; })()`;
 
 /* ------------------------------------------------------------------ the deck */
-async function deck(tiles) {
+async function deck(tiles, failures) {
   const page = join(MDIR, 'presentation', 'index.html');
   if (!existsSync(page)) return;
   await load(pathToFileURL(page).href);
@@ -260,13 +260,23 @@ async function deck(tiles) {
       if (f && f.steps && f.steps()) { try { f.go(f.steps(), true); } catch(e){} }
       var ps=s.querySelectorAll('.lt-part'), on=0; for (var j=0;j<ps.length;j++) if (ps[j].classList.contains('on')) on=j;
       var src=[].map.call(s.querySelectorAll('script[type="application/json"],img'),function(e){return e.tagName==='IMG'?e.getAttribute('src'):e.textContent;}).join('|');
-      return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0,
+      var stops=+s.getAttribute('data-stops')||0;       // the slide's own stops, counted as gb_steps.js counts them (walker)
+      if (!stops) [].forEach.call(s.querySelectorAll('[data-k]'),function(x){ stops=Math.max(stops,(+x.getAttribute('data-k')||0)+1); });
+      return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0, stops: stops,
                parts: ps.length, part: on + 1, lines: f && f.steps && f.steps() ? s.querySelectorAll('[data-i]').length : 0,
                last: !!(document.getElementById('btnNext')||{}).disabled, src: src }; })()`);
     if (!st) break;
     visits[st.id] = (visits[st.id] || 0) + 1;
     // a Next that never moves on (IGF M11 s11: 381 times); a figure's steps, its lines and its parts are one counter (2.63.3)
-    if (visits[st.id] > st.parts + st.steps + st.lines + 2) break;
+    // 2.142.3: and the slide's own stops (gb_steps.js: lines that walk one by one on Next since 2.125.1, a claim then its
+    // why, a worked example's steps). Without them a slide of three walked lines was "a Next that never moves on" at its
+    // third line, and the review ended there: every slide after it was missing from the sheets, with nothing said
+    if (visits[st.id] > st.parts + st.steps + st.lines + st.stops + 2) {
+      // on the last slide this is how the walk ends when its Next never turns off; on any other it is said, never
+      // silent: the slides after this one are not on the sheets
+      if (st.i < st.of) failures.push(`deck: Next did not leave slide ${st.i}/${st.of} (${st.id}) after ${visits[st.id] - 1} presses - the slides after it were not photographed`);
+      break;
+    }
     const id = 'deck/' + st.id + (st.part > 1 ? '#' + st.part : '');
     const key = keyOf[st.id] ? sha(keyOf[st.id] + '|' + st.i + '/' + st.of) : '';    // its place too: the deck shows "5 / 20"
     const label = `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.parts > 1 ? ` - part ${st.part} of ${st.parts}` : '')
@@ -916,7 +926,7 @@ try {
     throw null;
   }
   if (!opt['tasks-only']) {                   // 2.74.1 - a task redo looks at the task pages alone: no deck walk
-    await deck(tiles);
+    await deck(tiles, failures);
     lap('deck (all slides)');
   }
   await tasks(tiles, failures);

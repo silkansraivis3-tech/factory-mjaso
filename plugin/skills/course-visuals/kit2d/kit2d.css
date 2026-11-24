@@ -163,11 +163,17 @@
 :root{
   --k2-now:#FFB020;--k2-now-ink:#FFC85A;--k2-tr-done:#E6EEF8;--k2-tr-done-ink:#0C1E3A;--k2-tr-next:#2C4370;--k2-tr-next-ink:#8FA0BF;--k2-tr-line:#C9D6E6;
   --k2-pair-dont:rgba(255,140,130,.16);--k2-pair-dont-ink:#FFB3AB;--k2-pair-do:rgba(79,214,160,.16);--k2-pair-do-ink:#9FF0CC;
-  --k2-sea-band:#12345E;--k2-hull:#3A5A8C;--k2-super:#4C6EA3;--k2-wall:#FF5A4E}
-.k2-light{--k2-on-cat:#FFFFFF;
-  --k2-now:#F08C00;--k2-now-ink:#9A5700;--k2-tr-done:#1F3A68;--k2-tr-done-ink:#FFFFFF;--k2-tr-next:#E3E8F0;--k2-tr-next-ink:#5B6B85;--k2-tr-line:#1F3A68;
-  --k2-pair-dont:#FDECEA;--k2-pair-dont-ink:#8E1F14;--k2-pair-do:#E3F6EF;--k2-pair-do-ink:#0B5E46;
-  --k2-sea-band:#BFDDF6;--k2-hull:#1F3A68;--k2-super:#2C4A80;--k2-wall:#E5483B}
+  --k2-sea-band:#12345E;--k2-hull:#3A5A8C;--k2-super:#4C6EA3;--k2-wall:#FF5A4E;
+  --k2-l-on-cat:#FFFFFF;
+  --k2-l-now:#F08C00;--k2-l-now-ink:#9A5700;--k2-l-tr-done:#1F3A68;--k2-l-tr-done-ink:#FFFFFF;--k2-l-tr-next:#E3E8F0;--k2-l-tr-next-ink:#5B6B85;--k2-l-tr-line:#1F3A68;
+  --k2-l-pair-dont:#FDECEA;--k2-l-pair-dont-ink:#8E1F14;--k2-l-pair-do:#E3F6EF;--k2-l-pair-do-ink:#0B5E46;
+  --k2-l-sea-band:#BFDDF6;--k2-l-hull:#1F3A68;--k2-l-super:#2C4A80;--k2-l-wall:#E5483B}
+/* the light values are tokens of :root like every other light value of this file (--k2-l-*): a colour written here would
+   be a raw colour outside the token block, which the strict look check (audit_ui.py --strict) refuses */
+.k2-light{--k2-on-cat:var(--k2-l-on-cat);
+  --k2-now:var(--k2-l-now);--k2-now-ink:var(--k2-l-now-ink);--k2-tr-done:var(--k2-l-tr-done);--k2-tr-done-ink:var(--k2-l-tr-done-ink);--k2-tr-next:var(--k2-l-tr-next);--k2-tr-next-ink:var(--k2-l-tr-next-ink);--k2-tr-line:var(--k2-l-tr-line);
+  --k2-pair-dont:var(--k2-l-pair-dont);--k2-pair-dont-ink:var(--k2-l-pair-dont-ink);--k2-pair-do:var(--k2-l-pair-do);--k2-pair-do-ink:var(--k2-l-pair-do-ink);
+  --k2-sea-band:var(--k2-l-sea-band);--k2-hull:var(--k2-l-hull);--k2-super:var(--k2-l-super);--k2-wall:var(--k2-l-wall)}
 .k2-light [data-k2-holds] > .k2-outline-s{stroke:rgba(16,32,64,.16);stroke-width:2px}
 .k2-light .k2-lit{stroke:var(--k2-now);stroke-width:10}
 .k2-light .k2-arrow{stroke:#1F3A68;stroke-width:4.5}.k2-light .k2-arrow-head{fill:#1F3A68}

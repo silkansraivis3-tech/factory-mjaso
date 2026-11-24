@@ -989,7 +989,7 @@
       /* "G.funnel" (2.52.0): a named place drawn inside part G - its own shape (kit.js data-kit-place) */
       var pid = h.getAttribute('data-part') || '', dot = pid.indexOf('.'), part = svg.__kit.parts[dot > 0 ? pid.slice(0, dot) : pid];
       var node = part && (dot > 0 ? part.g.querySelector('[data-kit-place="' + pid.slice(dot + 1) + '"]') : part.g);
-      var r = node && node.getBoundingClientRect();
+      var r = node && drawnRect(node);
       if (!r || !r.width) { return; }
       var cx = r.left + r.width / 2 - g.left, cy = r.top + r.height / 2 - g.top;
       if (h.tagName.toLowerCase() === 'line') {                    /* a leader line ends on the middle of its part */
@@ -1021,13 +1021,36 @@
       h.style.width = (100 * Math.min(w, g.width) / g.width).toFixed(2) + '%'; h.style.height = (100 * Math.min(ht, g.height) / g.height).toFixed(2) + '%';
     });
   }
-  /* the screen box of what is painted of a kit part: its shapes and lines - not its words, not an unpainted tap area */
+  /* 2.142.3 - the screen box of a kit part WITHOUT the picture of its baked shadow. In a drawing with anything that moves
+     for ever kit.js swaps a piece's shadow for a picture of it (L65, a <g data-kit-shade> beside the piece), wider than
+     the piece by the shadow's blur all round and made a moment AFTER the layout: the part's own box grew by about 50 px
+     once it was in, so a tap area placed before it and one placed after it (a font arriving, the window turned) were
+     not the same size - the larger ones reach over their neighbours - and a leader line ended in the shadow, short of
+     the part. A part with no baked shadow is measured as it always was */
+  function drawnRect(node) {
+    var r = node.getBoundingClientRect();
+    if (!node.querySelector || !node.querySelector('[data-kit-shade]')) { return r; }
+    var box = null;
+    each($$('*', node), function (e) {
+      var tag = (e.tagName || '').toLowerCase();
+      if (!e.getBoundingClientRect || tag === 'g' || tag === 'tspan' || (e.closest && e.closest('[data-kit-shade]'))) { return; }
+      var b = e.getBoundingClientRect();
+      if (!b.width && !b.height) { return; }
+      box = box ? { left: Math.min(box.left, b.left), top: Math.min(box.top, b.top), right: Math.max(box.right, b.right),
+                    bottom: Math.max(box.bottom, b.bottom) } : { left: b.left, top: b.top, right: b.right, bottom: b.bottom };
+    });
+    if (!box) { return r; }
+    box.width = box.right - box.left; box.height = box.bottom - box.top;
+    return box;
+  }
+  /* the screen box of what is painted of a kit part: its shapes and lines - not its words, not an unpainted tap area,
+     not the picture of its baked shadow */
   function paintedBox(g) {
     var box = null;
     each($$('*', g), function (e) {
       var tag = (e.tagName || '').toLowerCase();
       if (!e.getBoundingClientRect || tag === 'g' || tag === 'text' || tag === 'tspan' || has(e, 'hit') ||
-          (e.closest && e.closest('.kit-lbl'))) { return; }
+          (e.closest && e.closest('.kit-lbl, [data-kit-shade]'))) { return; }
       var cs = W.getComputedStyle(e);
       if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0 || (cs.fill === 'none' && cs.stroke === 'none')) { return; }
       var r = e.getBoundingClientRect();

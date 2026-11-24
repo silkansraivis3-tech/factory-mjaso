@@ -8,7 +8,7 @@
     { "id": "F", "type": "space", "x": 200, "y": 162, "w": 108, "h": 118, "label": "Fuel\npreparation\nroom" },
     { "id": "X", "type": "space", "style": "enclosure", "x": 246, "y": 112, "w": 30, "h": 62, "label": "own\naccess", "labelAt": "above", "crosses": true },
     { "id": "Zh", "type": "zone", "zone": 1, "x": 316, "y": 162, "w": 234, "h": 118 },
-    { "id": "Hold", "type": "space", "x": 316, "y": 162, "w": 234, "h": 118, "label": "fuel storage hold\n(type C tank)", "labelAt": "below" },
+    { "id": "Hold", "type": "space", "x": 316, "y": 162, "w": 234, "h": 118, "label": "fuel storage hold (type C tank)", "labelAt": "below" },
     { "id": "K", "type": "tank", "x": 326, "y": 235, "w": 212, "h": 40, "value": 0.6 },
     { "id": "T", "type": "space", "x": 322, "y": 166, "w": 222, "h": 64, "label": "tank connection\nspace", "crosses": true },
     { "id": "H", "type": "hatch", "x": 330, "y": 134, "w": 44, "label": "bolted hatch", "state": false },
