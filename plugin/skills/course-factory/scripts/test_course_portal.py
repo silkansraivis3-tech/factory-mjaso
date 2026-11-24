@@ -232,8 +232,11 @@ def main():
         # 2.142.1 (the pedagogy lead): "accept the outcome and its level, but let me fix only the task" - OK with "Task: ..."
         mine = "Each pair reads the general arrangement plan and marks the tank that leans on the hull."
         as_it_was = io.open(pr.files(c)["review"], encoding="utf-8").read()       # put back below: the next checks count this row's answer
-        srv.answer("anna.liepa@novikontas.org", "2/1.3", "ok", "Task: " + mine)
+        a_task = srv.answer("anna.liepa@novikontas.org", "2/1.3", "ok", "Task: " + mine)
         out_of(cp.cmd_pull, c)
+        sent = cp.carried(c, pr.view(c))
+        check("... and that answer is sent back as carried out, so the row stays answered on the next version (2.142.2)",
+              {"id": a_task["id"], "item": "2/1.3"} in sent, sent)
         r13 = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))["modules"]["2"]["rows"]["1.3"]
         check("OK with a note that starts 'Task:' - the row's task becomes the expert's own words, by name",
               r13["proposed"]["how"] == mine and r13["proposed"]["task_expert"]["by"] == "Anna Liepa", r13["proposed"])

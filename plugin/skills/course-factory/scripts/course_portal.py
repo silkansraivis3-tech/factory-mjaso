@@ -238,7 +238,8 @@ def cmd_push_pedagogy(course):
         return 2
     v = pr.view(course)
     register(p["course_id"], course)
-    r = call("push", course_id=p["course_id"], kind="pedagogy", content=v["content"], items=v["items"], fingerprint=v["fingerprint"])
+    r = call("push", course_id=p["course_id"], kind="pedagogy", content=v["content"], items=v["items"], fingerprint=v["fingerprint"],
+             carried=carried(course, v))
     if r.get("unchanged"):
         print("Nothing new: the editor already has these words (version %d)." % r["document"]["version"])
     else:
@@ -246,6 +247,16 @@ def cmd_push_pedagogy(course):
               % (r["document"]["version"], r.get("rows", 0), r.get("answers_kept", 0)))
     print("  The experts' link: %s" % (EDITOR % p["course_id"]))
     return 0
+
+
+def carried(course, v):
+    """[{id, item}] - the answers the factory carried out (a Take proposed, a Keep as now, a decision with Claude, a
+    task the expert wrote) on rows whose words are still what carrying them out made them: the editor keeps each as the
+    row's answer on the new version, so the expert is not asked again what they decided. A row the factory changed
+    since is asked again."""
+    rev = pr._load(pr.files(course)["review"], {}) or {}
+    return [{"id": i, "item": c["item"]} for i, c in sorted((rev.get("carried") or {}).items())
+            if isinstance(c, dict) and v["items"].get(c.get("item")) == c.get("hash")]
 
 
 # ------------------------------------------------------------------ pull
@@ -374,6 +385,15 @@ def pull_pedagogy(course, answers, ready):
         log.append(("2 · pedagogy · Ready", "Ready - signed %s [editor mode]" % rev["ready"]["by"],
                     "%d change(s) to carry out" % changes if changes else "nothing to change"))
         docs.append(d["id"])
+    _save(f["review"], rev)
+    # 2.142.2 - what carrying the answers out made of each row: while the row stays so, the answer stands on the next
+    # version (an expert who fixed a task does not see it come back unanswered). The same record and the same words as
+    # the branch claude/expert-answers (2.138.0), so the two merge as one.
+    v2 = pr.view(course)
+    done = rev.setdefault("carried", {})
+    for a in answers:
+        if a["id"] in took and a["verdict"] in ("ok", "decision") and a["item"] in v2["items"]:
+            done[a["id"]] = {"item": a["item"], "hash": v2["items"][a["item"]]}
     _save(f["review"], rev)
     return took, docs, log, said
 
