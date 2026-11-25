@@ -1008,7 +1008,7 @@ def same_sub_ilo(a, b):
 # the task rules that are about a set or a module's questions as a trainee goes through them: with groups, each group's
 # path (the questions for everyone and the group's own) must meet them, never the mix of all groups no trainee sees
 GROUP_RULES = ("t_sc_small", "t_sc_big", "t_sc_mix", "t_no_challenge", "t_ab_order", "t_not_spaced", "t_mc_small", "m_mix",
-               "m_too_much_choice", "m_no_hands_on", "m_same_in_a_row")
+               "m_too_much_choice", "m_no_hands_on", "m_same_in_a_row", "t_family_run", "t_family_share", "t_few_families")
 
 
 def by_group(script, found, check):
@@ -1144,14 +1144,12 @@ def theory_check(script):
                     add(s["id"], "", FAIL, "t_sc_small", set=set_name(script, st), q=n, lo=R["self_check"]["min_questions"])
                 elif n > R["self_check"]["max_questions"]:
                     add(s["id"], "", NOTE, "t_sc_big", set=set_name(script, st), q=n, hi=R["self_check"]["max_questions"])
-                RS = R["self_check"]        # owner: of five, three rich tasks (3D, animation, a panel) and two basic
-                rich = sum(1 for q in st["questions"] if mech(q) in RS["rich"])
-                basic = sum(1 for q in st["questions"] if MEDIA["mechanics"].get(mech(q), {}).get("family") in RS["basic_families"])
+                RS = R["self_check"]        # owner: of five, three rich tasks and two basic
+                rich = sum(1 for q in st["questions"] if rich_task(q))
+                basic = sum(1 for q in st["questions"] if not rich_task(q) and family_of(q) in RS["basic_families"])
                 need = min(RS["rich_min"], max(0, n - RS["basic_max"]))
                 if basic > RS["basic_max"] or rich < need:
-                    # a subject with nothing to tap or operate says so on the task slide ("basic_why"): then a note
-                    add(s["id"], "", NOTE if str(s.get("basic_why") or "").strip() else FAIL, "t_sc_mix",
-                        set=set_name(script, st), b=basic, r=rich, q=n, lo=need)
+                    add(s["id"], "", FAIL, "t_sc_mix", set=set_name(script, st), b=basic, r=rich, q=n, lo=need)
                 # 2.74.0 (owner, 2026-10-28) - a self-check is Part A, checking what was taught before it in the module (Bloom
                 # 1-2), then Part B, a harder task the trainee solves alone (Bloom 3 or higher). Suggestions, never blocking.
                 lv = [bloom_map.task_level(mech(q), q.get("bloom"))["level"] for q in st["questions"]]
@@ -1206,7 +1204,97 @@ def theory_check(script):
                             add(q["id"], "question", FAIL, "t_no_worked_example", task=place(script, q["id"]),
                                 s=", ".join(subs) or "-")
             since_min = since_words = 0.0
-    return found, taught_on
+    return found + variety_check(script) + team_check(script) + clarity_check(script), taught_on
+
+
+# ------------------------------------------------------------------ the tasks vary, a team task, each task clear
+def family_of(q):
+    """how the trainee answers (media-and-tasks.json mechanics "family"): choose, decide, arrange, locate, operate,
+    investigate, build"""
+    return MEDIA["mechanics"].get(mech(q), {}).get("family") or mech(q) or ""
+
+
+def rich_task(q):
+    """a rich task (theory-rules.json self_check): one of the rich families, a choice with a consequence, or a question
+    on a 3D model, an animation or a simulator"""
+    RS = RULES["self_check"]
+    shown = MEDIA["visual_kinds"].get(parse_kind(q.get("visual_kind", "")), {}).get("family")
+    return family_of(q) in RS["rich_families"] or mech(q) in RS["rich_mechanics"] or shown in RS["rich_visual_families"]
+
+
+def finding(script, sid, field, level, key, **kw):
+    return {"where": place(script, sid) if sid else T(script, "s_the_module"), "screen": sid or "", "field": field,
+            "level": level, "rule": key, "detail": T(script, key, **kw), "fix": ""}
+
+
+def variety_check(script):
+    """every set varies how the trainee answers, counted by family, not by mechanic name (theory-rules.json task_variety):
+    no two neighbouring questions of one family, no family over its share, enough families. A self-check must; a module
+    check and a final are notes."""
+    V = RULES["task_variety"]
+    found = []
+    for st in plan_of(script)[1]:
+        qs, sid = st["questions"], st["opened_by"]
+        if not qs or not sid:
+            continue
+        level, name = FAIL if st["kind"] == "self-check" else NOTE, set_name(script, st)
+        fams = [family_of(q) for q in qs]
+        word = lambda f: T(script, "fam_" + f) if LABELS["en"].get("fam_" + f) else f
+        runs = [i for i in range(1, len(fams)) if fams[i] == fams[i - 1]]
+        if runs:
+            found.append(finding(script, sid, "", level, "t_family_run", set=name, fam=word(fams[runs[0]]),
+                                 pairs=", ".join("%d-%d" % (i, i + 1) for i in runs)))
+        if len(qs) < V["from_questions"]:
+            continue
+        most = max(1, int(V["max_family_share"] * len(qs) + 0.5))
+        for f in sorted(set(fams), key=fams.index):
+            if fams.count(f) > most:
+                found.append(finding(script, sid, "", level, "t_family_share", set=name, fam=word(f), n=fams.count(f),
+                                     q=len(qs), most=most, pct="%.0f" % (100 * V["max_family_share"])))
+        if len(set(fams)) < V["min_families"]:
+            found.append(finding(script, sid, "", level, "t_few_families", set=name, n=len(set(fams)), lo=V["min_families"],
+                                 fams=", ".join(word(f) for f in sorted(set(fams), key=fams.index))))
+    return found
+
+
+def team_check(script):
+    """a module of team_task.from_module_minutes or more plans a team task (a task slide with "team") - a note"""
+    if str(script.get("module")).lower() == "final":
+        return []
+    screens = script.get("screens", [])
+    total = float(script.get("minutes_allocated") or 0) or sum(minutes(s) for s in screens)
+    TT = RULES["team_task"]
+    if total < TT["from_module_minutes"] or any(s.get("kind") == "task-slide" and isinstance(s.get("team"), dict) for s in screens):
+        return []
+    return [finding(script, None, "", NOTE, "t_no_team", min="%g" % total, lo=TT["from_module_minutes"], roles=", ".join(TT["roles"]))]
+
+
+ROUNDING = re.compile(r"(?i)\b(round\w*|decimals?|nearest|whole|significant|d\.?p\.?|places?)\b")
+NEGATIVE = re.compile(r"(?<![\w'’-])(not|except)(?![\w'’-])", re.I)
+
+
+def clarity_check(script):
+    """the trainee sees at once what to do: a calculation says its unit and rounding, a question asks one thing, and a
+    negative question stresses its NOT"""
+    found = []
+    for q in script.get("screens", []):
+        if q.get("kind") not in TASKS:
+            continue
+        ask = str(q.get("question") or "")
+        if mech(q) == "calculate":
+            d = interact_formats.parse("calculate", q)[1] or {}
+            unit = str(d.get("unit") or "").strip()
+            has_unit = not unit or str(q.get("unit") or "").strip() or unit.lower() in ask.lower()
+            has_round = str(q.get("rounding") or "").strip() or ROUNDING.search(ask)
+            if not (has_unit and has_round):
+                found.append(finding(script, q["id"], "question", FAIL, "t_calc_unit", unit=unit or "-",
+                                     dec=d.get("dec", 0)))
+        if ask.count("?") >= 2:
+            found.append(finding(script, q["id"], "question", FAIL, "t_two_asks"))
+        neg = [x for x in NEGATIVE.findall(ask) if not x.isupper()]
+        if neg:
+            found.append(finding(script, q["id"], "question", NOTE, "t_not_stressed", word=neg[0], up=neg[0].upper()))
+    return found
 
 
 # ------------------------------------------------------------------ the text check, before HTML (2.16.1)

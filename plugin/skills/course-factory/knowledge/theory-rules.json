@@ -47,10 +47,21 @@
     "basic_max": 2,
     "rich_min": 3,
     "basic_families": ["choose", "arrange"],
-    "rich": ["hotspot", "label_diagram", "spot_the_hazard", "read_instrument", "set_value", "panel_operate", "find_the_fault",
-             "predict", "explore", "investigate", "line_up", "inspect_round", "take_apart", "test_atmosphere", "deck_round",
-             "dress_for_job", "lay_out"],
-    "_rich": "Owner: a self-check of five is three of the richest tasks (3D, animation, a control panel) and two basic (match, order, choose) - at most two basic questions (the choose and arrange families), and the rest rich up to three: a set of five 3 + 2, of three 1 + 2. A must-fix, unless the task slide that opens the set says why the subject has nothing to tap or operate (\"basic_why\": law, management, a calculation) - then a note."
+    "rich_families": ["locate", "operate", "investigate", "build"],
+    "rich_mechanics": ["scenario", "predict"],
+    "rich_visual_families": ["3d", "moving", "interactive", "video"],
+    "_rich": "Owner: a self-check of five is three rich tasks and two basic (match, order, choose) - at most two basic questions (the choose and arrange families), and the rest rich up to three: a set of five 3 + 2, of three 1 + 2. Rich is a task of the locate, operate, investigate or build family (media-and-tasks.json mechanics \"family\"), a scenario or a prediction (a choice with a consequence), or any question on a 3D model, an animation or a simulator. A subject with no equipment has rich tasks too: spot the error in a real document, check a colleague, find the fault, build the plan, fill the matrix, a scenario. Always a must-fix: \"basic_why\" no longer turns it into a note (the expert reviewer, 2026-11-25: 'not the same drag-and-drop tasks every time')."
+  },
+  "task_variety": {
+    "max_family_share": 0.4,
+    "min_families": 3,
+    "from_questions": 4,
+    "_why": "The expert reviewer, 2026-11-25: 'the tasks must vary much more - not the same drag-and-drop tasks every time'. Across four built courses 84-86 % of the questions were tap an option or drag cards, though the mechanic names varied: match, sort and order are three names and one way of answering. So variety is counted by family (media-and-tasks.json mechanics \"family\": choose, decide, arrange, locate, operate, investigate, build) in every set - each self-check, the module check, the final. No two neighbouring questions of one family; from from_questions questions on, no family takes more than max_family_share of the set (rounded to a whole question: two of four or five, four of ten) and the set uses at least min_families families. A must-fix in a self-check; a note in a module check or a final (content_script.py t_family_run, t_family_share, t_few_families)."
+  },
+  "team_task": {
+    "from_module_minutes": 90,
+    "roles": ["Leader", "Recorder", "Checker"],
+    "_why": "The expert reviewer, 2026-11-25: 'maybe group tasks instead of some self-checks' - none of four built courses had one, though the classroom splits a class into teams (classroom-system.json team_task). One team task a module where a Sub-ILO asks for Bloom 3 or higher: a team case, plan or drill with roles (leader, recorder, checker), in place of one self-check's Part B - a task slide with \"team\": {\"size\", \"roles\", \"scope\"} that opens its own set (TT1, TT2 ...). Module checks and finals stay individual. Planned at Stage 2 (make_architecture_page.py p_no_team); a note when a module of from_module_minutes or more has none (content_script.py t_no_team)."
   },
   "module_check": {
     "min_questions": 5,

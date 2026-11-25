@@ -198,6 +198,22 @@ def main():
         check("... and the page shows it under 'Suggestions - not required', not with the problems",
               EN["suggestions_title"] in page_of(cs_) and EN["problems_title"] not in page_of(cs_))
 
+        print("\n-- a team task where a Sub-ILO asks for Apply or higher")
+        tm = copy.deepcopy(ARCH); tm["course"]["operator_language"] = "en"
+        tm["modules"][0]["sub_ilos"][2]["bloom"] = 3
+        code, out = run("--course", write_course(os.path.join(tmp, "team"), PROGRAMME, tm), "--check")
+        line = next((x for x in out.splitlines() if "module 1: Sub-ILO" in x and "team task" in x), "")
+        check("a module with a Bloom-3 Sub-ILO and no team task gets a suggestion that proposes one, with roles",
+              code == 0 and line.strip().startswith("(suggestion)") and "1.1.b" in line and "Leader / Recorder / Checker" in line, out)
+        check("... a module whose Sub-ILOs stay below Apply gets none", "module 2: Sub-ILO" not in out, out)
+        tm["modules"][0]["self_checks"][1]["team"] = {"size": "3", "roles": ["Leader", "Recorder", "Checker"], "scope": "team"}
+        ct = write_course(os.path.join(tmp, "team2"), PROGRAMME, tm)
+        code, out = run("--course", ct, "--check")
+        check("... and none once a self-check's Part B is planned as a team task", "module 1: Sub-ILO" not in out, out)
+        run("--course", ct)
+        check("... which the module's tests show, with its size and roles",
+              en("test_team", size="3", roles="Leader, Recorder, Checker") in page_of(ct), page_of(ct)[-2000:])
+
         print("\n-- two languages that never mix")
         check("the page is in the operator's language (lv)", '<html lang="lv">' in page and LV["page_title"] in page)
         check("programme text is word for word, marked with the programme's language",

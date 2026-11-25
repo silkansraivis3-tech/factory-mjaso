@@ -94,6 +94,7 @@ html{scroll-padding-top:var(--state-h);scroll-padding-bottom:var(--dock-h)}
   .scr[data-pic="beside"]>.q,.scr[data-pic="beside"]>.why,.scr[data-pic="beside"]>.opts-say{grid-column:1/-1}
   .scr[data-pic="beside"] .instrument{grid-column:1;margin:0;max-width:none}
   .scr[data-pic="beside"] .instrument .ga{--gaw:min(100%,calc((100vh - 310px) * var(--ar,1.6)))}
+  .scr[data-pic="beside"]:has(>.opts-say:not(.do)) .instrument .ga{--gaw:min(100%,calc((100vh - 340px) * var(--ar,1.6)))}
   .scr[data-pic="beside"] .opts{grid-column:2;margin:0;max-width:none}
   /* sort / put in order / match with a picture (2.49.1, IGF M06 q09): the drop zones went under the Check bar when the
      photo sat above them. Sort: the picture (only as tall as the cards' row, 240 px at 1280 x 800) and the cards share
@@ -110,19 +111,21 @@ html{scroll-padding-top:var(--state-h);scroll-padding-bottom:var(--dock-h)}
   /* tap the place on a drawing that is not wide (2.46.0, IGF M03): the drawing takes the screen's whole height and the
      explanation sits beside it - it left half the screen empty, the explanation's room kept under it */
   .scr[data-pic="side"].on{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,320px);column-gap:20px;align-items:start}
-  .scr[data-pic="side"]>.q{grid-column:1/-1}
+  .scr[data-pic="side"]>.q,.scr[data-pic="side"]>.opts-say{grid-column:1/-1}
   .scr[data-pic="side"]>.stage{grid-column:1}
   .scr[data-pic="side"] .ga{--gaw:min(100%,calc((100vh - 250px) * var(--ar,1.6)))}
+  .scr[data-pic="side"]:has(>.opts-say) .ga{--gaw:min(100%,calc((100vh - 280px) * var(--ar,1.6)))}   /* the what-to-do line under the question */
   .scr[data-pic="side"]>.why{grid-column:2;margin:0;flex-direction:column;align-self:center}
   /* label the drawing, a drawing that is not wide (2.138.0, IT course M01 q03 / M03 q02, q09, check m01): the drawing
      takes the screen's whole height and the cards wait in a column beside it; the explanation takes the cards' place
      once they are placed - the drawing was a third of the screen, its labels tiny, its leaders long */
   .scr[data-pic="lab"].on{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,300px);column-gap:20px;align-items:start}
   .scr[data-pic="lab"]>.q,.scr[data-pic="lab"]>.opts-say{grid-column:1/-1}
-  .scr[data-pic="lab"]>.stage{grid-column:1;grid-row:2}
-  .scr[data-pic="lab"] .ga.lab{--gaw:min(100%,calc((100vh - 250px) * var(--ar,1.6)))}
-  .scr[data-pic="lab"]>.tray{grid-column:2;grid-row:2;margin:0;max-width:none;align-content:flex-start}
-  .scr[data-pic="lab"]>.why{grid-column:2;grid-row:2;margin:0;flex-direction:column;align-self:center}
+  .scr[data-pic="lab"]>.opts-say{grid-row:2}
+  .scr[data-pic="lab"]>.stage{grid-column:1;grid-row:3}
+  .scr[data-pic="lab"] .ga.lab{--gaw:min(100%,calc((100vh - 280px) * var(--ar,1.6)))}
+  .scr[data-pic="lab"]>.tray{grid-column:2;grid-row:3;margin:0;max-width:none;align-content:flex-start}
+  .scr[data-pic="lab"]>.why{grid-column:2;grid-row:3;margin:0;flex-direction:column;align-self:center}
   /* a long list to put in order, build or match (6 rows or more): the numbered places beside the cards, so the cards
      are on the screen without scrolling at 1280 x 800 (2.46.0, IGF M03 - 8 rows) */
   .scr[data-many="1"].on,.scr[data-many] .part.lay.on{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);

@@ -118,7 +118,7 @@ WORDS = {"en": {
     "pass": "Pass mark {pass} % – {need} of {total} right",
     "score": "Your score", "score_note": "Your score is for you only. Look at the questions below and ask your instructor about any you missed.",
     "again": "Start again", "start_self": "Start the self-check", "start_check": "Start the check",
-    "choose_all": "Choose all that are right.", "module_n_check": "Module {n} check",
+    "module_n_check": "Module {n} check",
     "gap_n": "Gap {n}", "cloze_say": "Tap a gap, then choose the words that fit it.",
     "your_action": "What you do", "your_reason": "Why",
     "step_n": "Step {n} of {of}",
@@ -135,6 +135,31 @@ WORDS = {"en": {
     "timeline_stop": "2. Now tap the event where it should have been stopped.",
     "panel_say": "Put every control in the position it must end in.",
     "matrix_say": "Tap a value, then tap the cells that take it. Tap a filled cell again to clear it.", "matrix_values": "Values",
+    # the line under the question that says what to do, for every way of answering (what_to_do)
+    "one_say": "Tap the one answer that is right.",
+    "choose_n": "Tap the {n} answers that are right.",
+    "instrument_say": "Read the display, then tap the answer that matches it.",
+    "hot_say": "Tap the right place on the picture.",
+    "hot_n_say": "Tap the {n} right places on the picture.",
+    "hazard_say": "Find the {n} hazards in the picture. Tap each one.",
+    "hazard_1_say": "Find the hazard in the picture and tap it.",
+    "label_say": "Drag each label to its place on the drawing. Or tap a label, then tap its place.",
+    "justify_say": "Tap what you would do. Then tap the reason why.",
+    "scenario_say": "Read each step and tap what you would do. The next step follows.",
+    "dial_say": "Drag the slider, or tap − and +, until it shows the value.",
+    "compare_say": "Compare the columns. Then tap the option you choose at the top of its column.",
+    "tf_say": "Is each card true or false? Flick it right for true, left for false – or tap a side.",
+    "critique_say": "Read each sentence. Keep it if it is right, or tap the correction that makes it right.",
+    "calc_say": "Work it out from what is on the screen. Give your answer in {unit}, {round}.",
+    "calc_say_plain": "Work it out from what is on the screen. Give your answer {round}.",
+    "round_0": "as a whole number", "round_1": "to 1 decimal place", "round_n": "to {n} decimal places",
+    "predict_say": "Drag the point to where you think it will be. Then hand it in to see the real data.",
+    "explore_say": "Change the model until it meets each challenge. Then lock it in.",
+    "investigate_say": "Open the sources and pin the ones that explain it. Then tap your conclusion.",
+    "lineup_say": "Open and shut the valves so it flows where the goal says. Then start the pump.",
+    "inspect_say": "Look around and tap each thing. Keep it as fine, or report a problem.",
+    "apart_say": "Turn the model and tap its parts to answer each step.",
+    "atmos_say": "Zero the meter in fresh air, sample every level, and record each reading.",
     "sure_ask": "How sure are you?", "sure0": "Guessing", "sure1": "Fairly sure", "sure2": "Certain",
     "grp_ask": "Which group are you in?", "grp_note": "Tap your group. You get the questions for your group.",
     "grp_change": "Change"},
@@ -147,7 +172,7 @@ WORDS = {"en": {
     "pass": "Ieskaites slieksnis {pass} % – {need} no {total} pareizi",
     "score": "Tavs rezultāts", "score_note": "Rezultāts ir tikai tev. Apskati jautājumus zemāk un pajautā instruktoram par tiem, kas neizdevās.",
     "again": "Sākt no jauna", "start_self": "Sākt paškontroli", "start_check": "Sākt pārbaudi",
-    "choose_all": "Izvēlies visas pareizās atbildes.", "module_n_check": "{n}. moduļa pārbaude",
+    "module_n_check": "{n}. moduļa pārbaude",
     "gap_n": "{n}. tukšā vieta", "cloze_say": "Pieskaries tukšajai vietai, tad izvēlies vārdus, kas tur der.",
     "your_action": "Ko tu dari", "your_reason": "Kāpēc",
     "step_n": "{n}. solis no {of}",
@@ -168,7 +193,7 @@ WORDS = {"en": {
     "pass": "Проходной балл {pass} % – {need} из {total} правильно",
     "score": "Твой результат", "score_note": "Результат — только для тебя. Посмотри вопросы ниже и спроси инструктора о тех, где была ошибка.",
     "again": "Начать заново", "start_self": "Начать самопроверку", "start_check": "Начать проверку",
-    "choose_all": "Выбери все правильные ответы.", "module_n_check": "Проверка по модулю {n}",
+    "module_n_check": "Проверка по модулю {n}",
     "gap_n": "Пропуск {n}", "cloze_say": "Коснись пропуска, затем выбери подходящие слова.",
     "your_action": "Что ты делаешь", "your_reason": "Почему",
     "step_n": "Шаг {n} из {of}",
@@ -763,6 +788,34 @@ def q_head(n, q):
             % (n, e(q.get("question"))))
 
 
+SAY = {"single_choice": "one_say", "read_instrument": "instrument_say", "label_diagram": "label_say",
+       "choose_and_justify": "justify_say", "scenario": "scenario_say", "set_value": "dial_say", "compare": "compare_say",
+       "true_false": "tf_say", "critique": "critique_say", "predict": "predict_say", "explore": "explore_say",
+       "investigate": "investigate_say", "line_up": "lineup_say", "inspect_round": "inspect_say", "take_apart": "apart_say",
+       "test_atmosphere": "atmos_say"}
+
+
+def what_to_do(q, w):
+    """the line under the question that says what the trainee does, for a way of answering whose controls do not say it
+    themselves - '' for those that have their own (order, sort, match, cloze, fault, errors, plan, matrix, panel,
+    timeline) and for a framed task, whose own page says it"""
+    m = cs.mech(q)
+    if m == "multi_select":
+        return w["choose_n"].format(n=len(cs.correct_letters(q)))
+    if m in ("hotspot", "spot_the_hazard"):
+        n = len(cs.answer_items(q)[1])
+        if m == "spot_the_hazard":
+            return w["hazard_1_say" if n == 1 else "hazard_say"].format(n=n)
+        return w["hot_n_say" if n > 1 else "hot_say"].format(n=n)
+    if m == "calculate":
+        d = ip.fm.parse(m, q)[1] or {}
+        dec = int(d.get("dec") or 0)
+        rnd = w["round_%d" % dec] if dec < 2 else w["round_n"].format(n=dec)
+        unit = str(d.get("unit") or "").strip()
+        return w["calc_say"].format(unit=unit, round=rnd) if unit else w["calc_say_plain"].format(round=rnd)
+    return w[SAY[m]] if m in SAY else ""
+
+
 def q_why(q):
     # 2.74.0 - "brief": the one short reason a wrong answer is given (never the right answer); the why is for a right one
     brief = (q.get("brief") or "").strip()
@@ -1113,6 +1166,9 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
     sid, m = q["id"], cs.mech(q)
     where ="%s (%s)" % (q.get("set") or "", sid)
     out = ['  <section class="scr" data-script="%s" data-mech="%s"%s>' % (sid, m, "%s"), q_head(n, q)]
+    todo = what_to_do(q, w)
+    if todo:
+        out.append('    <p class="opts-say">%s</p>' % e(todo))
     extra = ""
     if m in ip.TYPES:                                   # 2.74.0 - true or false, a colleague, work it out, predict, explore, investigate, 3D
         lines, extra = ip.question_html(n, q, b, mdir, figdir, probs, w, shuffle, opt_buttons)
@@ -1124,7 +1180,6 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out += picture(q, b, mdir, figdir, figs, probs, where)
     if m in ("single_choice", "multi_select"):
         if m == "multi_select":
-            out.append('    <p class="opts-say">%s</p>' % e(w["choose_all"]))
             extra = ' data-multi="1"'          # gb_answer.js keeps every tapped option only on data-multi="1"
         pic = picture(q, b, mdir, figdir, figs, probs, where)    # "what is this?" - a real photograph beside the choices
         if pic:

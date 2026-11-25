@@ -252,9 +252,26 @@ models, equipment in 3D, panorama, on-ship activities"*. The owner approved the 
   *inspection round*, *take it apart*, *test before entry*. Difficult because it is real, never difficult for its own
   sake (owner: "interestingly difficult").
 
-The mix is L38: a self-check has at most 2 basic tasks (choose, match, order) and the rest rich (a picture to tap,
-a panel, 3D) - 3 + 2 in a set of five. A set whose subject has nothing to tap or operate says why in `"basic_why"`,
-and the rule is then a note (`content_script.py` `t_sc_mix`).
+The mix is L38: a self-check has at most 2 basic tasks (choose, match, order) and the rest rich - 3 + 2 in a set of
+five (`content_script.py` `t_sc_mix`, always a must-fix). Rich is the locate, operate, investigate and build families,
+a scenario or a prediction, and anything on a 3D model or an animation. With no equipment to show, pick from: spot the
+error in a real document, check a colleague, find the fault, build the plan, fill the matrix, a scenario whose choice
+has a consequence.
+
+**Which task to pick - make it engaging** (the expert reviewer: "not the same drag-and-drop tasks every time"):
+- vary by **family**, not by name (match, sort and order are all dragging cards): in every set no two neighbours of one
+  family, no family over about 40 %, three families in a set of four or more (`t_family_run`, `t_family_share`,
+  `t_few_families` - a must-fix in a self-check, a note in a module check or a final);
+- Part B on the module's **running case** - the group's own ship or project;
+- a **consequence** for a choice (scenario, predict), a **real document or photograph** to work on;
+- **one team task a module** where a Sub-ILO is Bloom 3+: a team case, plan or drill with roles (leader, recorder,
+  checker) in place of one self-check's Part B (`"team"` on its task slide; `t_no_team` notes a module of 90+ minutes
+  without one).
+
+**Clear what to do** (the owner: "the trainee must easily understand what to do"): every task page says under the question
+what to do (`task_pages.py` `what_to_do`) - a multi-select how many to tap, a calculation its unit and rounding. The
+script check refuses a question that asks two things and a calculation without its unit or rounding, and notes a "not"
+or "except" that is not written in capitals.
 
 **The debrief rule (every task page).** A wrong answer says **Not right.**, the question's `brief` reason (one short
 line that never names the right answer - content_script.py refuses one that does) and *we will check this one together
