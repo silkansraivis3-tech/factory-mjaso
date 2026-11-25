@@ -268,6 +268,14 @@ def main():
         os.utime(cs_arch, (1, 1))
         check("... a named file not changed since the note's date leaves it open",
               any("names no course file changed since" in x for x in pr.check(c)[0]), pr.check(c)[0])
+        for x in rev["modules"]["1"]["rows"]["1.1.b"]["expert_notes"]:
+            x["done"] = "the simulator runs' minutes are in the task - pedagogy_review.json"
+        io.open(pr.files(c)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
+        check("... the review file itself does not count: writing 'done' changes it",
+              any("names no course file changed" in x for x in pr.check(c)[0]), pr.check(c)[0])
+        for x in rev["modules"]["1"]["rows"]["1.1.b"]["expert_notes"]:
+            x["done"] = "the simulator runs' minutes are in the task - architecture.json"
+        io.open(pr.files(c)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
         os.utime(cs_arch, None)
         pr.render(c, pdf=False)
         with zipfile.ZipFile(os.path.join(pr.files(c)["out"], "2_BLOOM_PROPOSED.docx")) as z:

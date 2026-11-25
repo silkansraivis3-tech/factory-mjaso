@@ -382,7 +382,9 @@ def changed_file(course, done, on=""):
         since = time.mktime(time.strptime(str(on or "")[:10], "%Y-%m-%d"))
     except ValueError:
         since = 0.0
-    names = FILE_NAMED.findall(done or "")
+    # the review file itself changes when "done" is written into it, so naming it proves nothing
+    own = os.path.basename(files(course)["review"]).lower() if course else "pedagogy_review.json"
+    names = [n for n in FILE_NAMED.findall(done or "") if os.path.basename(n.replace("\\", "/")).lower() != own]
     for name in names:
         if os.path.isabs(name):
             ways = [name]
