@@ -29,7 +29,8 @@ The course runs on two tablets, and the script is shown the same way:
 
 ENOUGH THEORY BEFORE ANY TASK (owner, 2026-09-30 - L36)
 knowledge/theory-rules.json sets the floors, and every finding is shown at the top of the review
-page: a slide too thin to teach from, instructor notes too thin to explain from, a module whose words
+page: more words on a slide than the trainee reads while listening (a note: short points, the full
+words to the instructor), instructor notes too thin or too long (a note), a module whose words
 do not fill its minutes, a self-check with too little theory before it, a question whose answer is
 not in the slides already taught, a task written onto a slide, minutes that do not add up to the
 programme's. For every question the page names the slide that teaches its answer.
@@ -848,15 +849,14 @@ def shape_problems(script):
                     probs.append("%s: the summary has %d lines and %d questions in \"asks\" - one question for each line"
                                  % (sid, len(ls), len(L("asks"))))
             if s.get("points"):
-                pts = L("points")
-                if not 2 <= len(pts) <= 6:
-                    probs.append("%s: \"points\" are 2-6 short points, one a line - it has %d" % (sid, len(pts)))
-                if any(wc(x) > 14 for x in pts):
-                    probs.append("%s: a point is short - 14 words or fewer; the full words stay in the text, for the instructor" % sid)
+                pts, P = L("points"), RULES["points"]
+                if not P["min"] <= len(pts) <= P["max"]:
+                    probs.append("%s: \"points\" are %d-%d short points, one a line - it has %d" % (sid, P["min"], P["max"], len(pts)))
+                if any(wc(x) > P["max_words_each"] for x in pts):
+                    probs.append("%s: a point is short - %d words or fewer; the full words stay in the text, for the instructor"
+                                 % (sid, P["max_words_each"]))
                 if wc(*pts) >= wc(s.get("text", "")):
                     probs.append("%s: the points say as much as the text - they are the short version of it" % sid)
-                if (s.get("visual_kind") or "none") == "none":
-                    probs.append("%s: short points go beside a picture (a 3D model or a photograph) - plan one in visual_kind" % sid)
             if s.get("claim"):
                 if str(s.get("claim_is", "")).strip().lower() not in ("true", "false"):
                     probs.append("%s: \"claim_is\" says whether the claim is true or false - \"true\" or \"false\"" % sid)
@@ -1005,15 +1005,6 @@ def theory_findings(script):
     return by_group(script, found, lambda sub: theory_check(sub)[0]), taught_on
 
 
-# the words an active slide shows besides its title and lines: they count toward its floor, so a situation can be
-# trimmed to fit without the slide turning thin
-SHOWN_TOO = ("ask", "reveal", "claim", "choices", "why")
-
-
-def active_shape(s):
-    return bool(s.get("choices") or s.get("claim") or (s.get("ask") and s.get("reveal")))
-
-
 def overfull(s):
     """[(the part, its words, the most it holds)] of a scenario or a worked example beside a picture: what the template
     holds on a 1024 x 768 tablet (theory-rules.json "beside_picture")"""
@@ -1047,24 +1038,21 @@ def theory_check(script):
     for s in screens:
         if s.get("kind") != "slide":
             continue
-        w_slide = wc(s.get("title", ""), s.get("text", ""))
+        w_slide = wc(s.get("title", ""), s.get("text", ""))      # a slide of short points says its text to the instructor
         w_notes = wc(s.get("notes", ""))
-        w_floor = w_slide + (wc(*[as_text(s.get(f)) for f in SHOWN_TOO]) if active_shape(s) else 0)
+        w_screen = wc(s.get("title", ""), as_text(s.get("points") or s.get("text", "")))
         if not s.get("active"):              # L49: the density is of PLAIN theory; an active slide's minutes are what the trainees do
             th_words += w_slide + w_notes
             th_min += minutes(s)
-        if s.get("recap"):
-            pass                              # L51: a recap is short on purpose - recap_findings checks its points
-        elif w_floor < R["slide"]["min_words"]:
-            add(s["id"], "text", NOTE, "t_thin_slide", w=w_floor, min=R["slide"]["min_words"])      # 2.116.0: a note at 30
-        elif w_slide > R["slide"]["max_words"]:
-            add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
+        if not s.get("recap") and w_screen > R["slide"]["target_words"]:      # L51: recap_findings checks a recap's points
+            add(s["id"], "text", NOTE, "t_long_points" if s.get("points") else "t_long_slide", w=w_screen,
+                max=R["slide"]["target_words"])
         for part, w, most in overfull(s):
             add(s["id"], "text", FAIL, "t_overfull", part=T(script, part), w=w, max=most)
         if w_notes < R["notes"]["min_words"]:
-            add(s["id"], "notes", FAIL, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
+            add(s["id"], "notes", NOTE, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
         elif w_notes > R["notes"]["max_words"]:
-            add(s["id"], "notes", FAIL, "t_long_notes", w=w_notes, max=R["notes"]["max_words"])
+            add(s["id"], "notes", NOTE, "t_long_notes", w=w_notes, max=R["notes"]["max_words"])
     if th_min and not final:
         rate = th_words / th_min
         if rate < R["module"]["min_words_per_theory_minute"]:
@@ -1334,8 +1322,8 @@ def paged_words(s, b=None):
     more than PARTS_FROM words becomes content-in-parts with numbered tabs), or 0: no picture, few words, a list of steps or a
     table (own templates), or the build sheet asks for / names a layout. Never cuts a word (L61) - it is the writer's finding"""
     b = b or {}
-    if s.get("kind") != "slide" or s.get("recap") or b.get("parts") or b.get("template"):
-        return 0
+    if s.get("kind") != "slide" or s.get("recap") or s.get("points") or b.get("parts") or b.get("template"):
+        return 0                                  # a slide of short points says its text to the instructor
     if picture_of(s)["kind"] == "none":
         return 0
     lines = lines_of(s.get("text"))
@@ -3507,7 +3495,7 @@ def cmd_status(course, module):
 
 
 def note_lines(text):
-    """Instructor notes as short points, one per line - '- ' added where the line has none."""
+    """Instructor notes one line each (Say:, Ask:, Show: ...) - '- ' added where the line has none."""
     out = []
     for x in (text or "").split("\n"):
         x = x.strip()
@@ -3517,8 +3505,8 @@ def note_lines(text):
 
 
 def instructor_notes_md(script):
-    """The module's instructor notes as the instructor's panel shows them (owner, 2026-09-30, 2.18.1): compact
-    points per slide, the OPEN TASK prompt at every task - in the course language, and never on a slide.
+    """The module's instructor notes as the instructor's panel shows them (owner, 2026-09-30, 2.18.1): the
+    labelled lines per slide (theory-rules.json "notes"), the OPEN TASK prompt at every task - in the course language, and never on a slide.
     Made from the content script, so the approved script stays the one source."""
     slide_no, sets, set_of = plan_of(script)
     ok = script.get("status") == "approved" and script.get("approved_hash") == content_hash(script)

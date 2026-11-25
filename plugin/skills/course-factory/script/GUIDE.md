@@ -153,15 +153,15 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   under pressure, or both
 ...", "visual_kind": "none", "notes": "...", "minutes": 2}` - 3 to 6 points, one line
   each, *"Short title - one sentence"*, 24 words or fewer, the module's main points in the words its slides used.
-  The slide word floor does not apply to it; the notes floor does. It is built in the one shared design (every
+  The slide word target does not apply to it; the notes range does. It is built in the one shared design (every
   module the same). Missing or misplaced, it is a must-fix - unless the person chose otherwise after hearing the
   risk (L26, `design_choices.py`), and then approval passes and names their choice.
 - **20 / 80 in class (L49, 2.26.0).** A slide where the trainees do something gets `"active"`:
   `explain-then-reveal`, `predict-then-reveal`, `worked-example`, `scenario` or `explore` (they work the
   model or diagram themselves) - and its notes say what they do. Never mark a slide that is only shown.
   The review page shows plain theory against active minutes (aim: 20 / 80). To get there, **keep every
-  theory slide** and give the plain ones fewer minutes - the words stay to be read - and the minutes to
-  activity; never shorten or remove good theory. Theory may be added.
+  theory slide** and give the plain ones fewer minutes and the minutes to activity; never remove good theory - its
+  words stay, on the screen or, as short points, said by the instructor. Theory may be added.
 - **Pick the slide for the information.** The templates hold no words of their own. Read what each
   piece of the module's information is, and write it in the shape its template needs - the compiler then builds that
   template (`course-module-ui/knowledge/layout-templates.json` "picking"). Every new word is drafted from this course's
@@ -170,7 +170,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 
   | The information | Write it as | The slide |
   |---|---|---|
-  | a long explanation beside a 3D model or a photo | `"points"`: 3-5 short points (14 words or fewer, shorter than the text); `text` keeps the full words - the instructor says them (`data-cue`) | short points + the picture |
+  | **the default for a plain slide** whose words on screen pass the target (`theory-rules.json` `slide`) - a long explanation, with a picture or without | `"points"`: short points, one a line, shorter than the text (`theory-rules.json` `points`); `text` keeps the full approved words - the instructor says them (`data-cue`) | short points, beside the picture or alone |
   | a calculation or a reading | `"active": "worked-example"`, lines `"what you do \| what you get"`, `"ask"` the room's turn, `"reveal"` its answer | worked example, then your turn |
   | a common wrong belief | `"claim"` the belief, `"claim_is"`: `"false"` (or `"true"`), the lines say why | true or false, then why |
   | what to do when something happens | `"active": "scenario"`, the lines the situation, `"ask"`, `"choices"` (2-4, one a line), `"why"` (one for each), `"right"` (its letter) | what would you do? |
@@ -186,9 +186,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   A picture and a short explanation, two pictures, numbered steps and three parts of one system keep the templates
   they had (`compile/GUIDE.md` §2, §2h). A drill comes after the
   module's last teaching slide; minutes are the module's as before (L1). `content_script.py` checks each shape
-  (`shape_problems`). Beside a picture a scenario's situation holds 60 words and its question, choices and whys 85;
-  a worked example's lines and question 85 (`theory-rules.json` `beside_picture`, `t_overfull`) - an active slide's
-  question, choices, whys and answer count toward its 50 words, so trim the situation, not the teaching.
+  (`shape_problems`). Beside a picture a scenario's situation, its question, choices and whys, and a worked example's
+  lines and question each hold a measured number of words (`theory-rules.json` `beside_picture`, `t_overfull`) - trim the situation
+  and give the explanation to the instructor (the notes' `Say:`), never cut the teaching.
 
   **The check reads the plain slides for you (2.127.0).** A slide left as ordinary lines beside its picture is read by
   `content_script.template_findings`: when its words already have the shape of a template - a question to the room, a
@@ -211,19 +211,22 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
   The review page then shows every question below its Sub-ILO and how the tablet would lift it.
   Aim the tasks at the Sub-ILO's level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`).
-- **Enough theory (L36, `knowledge/theory-rules.json`).** A slide carries the teaching itself - the facts,
-  numbers, names and reasons its Sub-ILO needs - not a headline (50-150 words, title included); the notes
-  carry what the instructor explains, adds or asks beyond it (30 words or more); the module's slides and
-  notes together fill its PLAIN theory minutes (25 words a minute or more - an active slide's minutes are
-  what the trainees do). A self-check comes only after a block of new theory (5 min and 125 words since the
-  last task - short cycles, L49), and every question's correct answer
-  must already be in the slides before it - write the slide that teaches it first, then the question.
-  A module with less theory than that has no self-check; its module check covers it.
+- **Less on the slide, the explanation in the notes (L36, `knowledge/theory-rules.json` - every number is there).**
+  The trainee looks at the slide and listens to the instructor at the same time: the slide shows the picture and the
+  key facts, numbers and names in clear, readable words; the notes carry the full explanation the instructor gives.
+  A plain slide whose words on screen pass the target becomes a slide of short points (`"points"`, the table above):
+  the full approved words stay in `text` and go to the instructor's panel - moved, never cut. The module's slides and
+  notes together fill its PLAIN theory minutes (an active slide's minutes are what the trainees do). A self-check
+  comes only after a block of new theory (short cycles, L49), and every question's correct answer must already be in
+  the slides before it - write the slide that teaches it first, then the question. A module with less theory than
+  that has no self-check; its module check covers it.
 - Course text (titles, text, questions, answers, feedback) is in COURSE_LANGUAGE; the notes on the
   page and in the Word file around it are in the operator's language.
-- **Instructor notes are short** (2.18.1): two to four points per slide, one per line starting `- `, 10-50 words -
-  what to ask, the one example to give, what to stress. The theory is on the slide. `render` writes them to
-  `to_review/M01_INSTRUCTOR_NOTES.md` for the instructor's panel; they are never on a slide.
+- **Instructor notes are labelled lines**, one a line, in the range `theory-rules.json` `notes` gives:
+  `Say:` the full explanation the instructor gives, `Ask:` the question to the room, `Show:` what to point at on the
+  picture: `"notes": "Say: <the explanation, in full sentences>\nAsk: <the question>\nShow: <the place on the
+  picture>"`. They reach the instructor's panel as the slide's
+  `data-cue` (`render` also writes `to_review/M01_INSTRUCTOR_NOTES.md` for the review); they are never on a slide.
 - Kinds: `slide`, `task-slide`, `activity` (instructor tablet); `self-check`, `module-check`, `final`
   (trainee tablet). Module checks are never graded (L27) and come at the end of the module; a
   final-assessment script (`--module final`, the last module, L34) holds a task slide and `final` questions.
@@ -269,9 +272,10 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   phase needs no agent (placeholders of this shape, compile/GUIDE.md 2g), and the course photo catalogue matches photos
   to it by `shows`. Must fix: an unknown kind, a kind the visual does not need, a photo or figure with no aspect, nothing
   it must show. A script from before 2.73.0 is read from `visual_kind` and `visual` (a reminder, never a block).
-- **The words a layout holds are a must-fix here**, not a build-time note: beside a picture a slide holds at most 85 words
-  (1024 x 768, layout-templates.json "budgets"; `compile/GUIDE.md` §2). The factory never pages or cuts words, so the writer
-  shortens them or gives the slide `"parts"` in the script.
+- **The words a layout holds are a must-fix here**, not a build-time note: beside a picture a slide holds at most
+  `layout-templates.json` `parts.auto_from_words` (1024 x 768, its "budgets"; `compile/GUIDE.md` §2). The factory never
+  pages or cuts words by itself, so the writer makes them short points (`"points"`, the full words to the instructor) or
+  gives the slide `"parts"` in the build sheet.
 - **The course's ship (2.73.0).** STANDARDS.md may carry a `## Ship profile` section - `- Pump arrangement: deepwell pumps`,
   `- Not on board: pump room, cargo pump room` - and render then says (a note) every screen that names what the course's
   ship does not have (chem advanced: four scripts written in parallel set scenes in a "pump room" on a deepwell-pump ship).

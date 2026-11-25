@@ -276,7 +276,10 @@ def main():
               and re.search(r"m01</span>.*?%s</dt><dd>%s" % (re.escape(lv("s_taught_on")), re.escape(lv("s_slide_n", n=4))), page, re.S) is not None)
         check("the module in numbers: minutes against the programme's, words per theory minute",
               lv("s_sum_alloc", a="23") in page and lv("s_sum_title") in page)
-        check("a clean module: the theory check found nothing", lv("s_theory_clean") in page and lv("s_textcheck_clean") in page)
+        th_card = page.split(lv("s_theory_title"), 1)[-1].split("</div>", 1)[0] if lv("s_theory_title") in page else ""
+        check("a clean module: the theory check found no must-fix - only its long slides' notes",
+              lv("s_textcheck_clean") in page and th_card.count(lv("s_textcheck_note")) == 3 and lv("s_textcheck_must") not in th_card,
+              th_card[:600])
         # 2.109.0 (F1): the three long fixture slides (90-99 words beside a picture) would be paged with number tabs - the
         # review page says so, and nothing else is found
         paged = cs.paged_findings(SCRIPT)
@@ -412,18 +415,51 @@ def main():
         check("... only discard removes it", not os.path.isfile(p["pending"]))
 
         print("\n-- enough theory before every task (L36)")
-        check("the example module is clean", rules_of(SCRIPT) == [], rules_of(SCRIPT))
+        TR = cs.RULES
+        check("the example module is clean but for its three long slides - the words on screen past the target are notes",
+              rules_of(SCRIPT) == ["t_long_slide"] * 3
+              and all(f["level"] == cs.NOTE for f in cs.theory_findings(SCRIPT)[0]), rules_of(SCRIPT))
         thin = copy.deepcopy(SCRIPT)
         screen(thin, "s03")["text"] = "Type A, B, C and membrane."
         screen(thin, "s03")["notes"] = "Show the cutaway."
-        check("a slide too thin to teach from is found - as a NOTE at 30 words (2.116.0; was a must-fix at 50)",
-              "t_thin_slide" in rules_of(thin) and all(f["level"] == cs.NOTE for f in cs.theory_findings(thin)[0] if f["rule"] == "t_thin_slide"),
-              rules_of(thin))
-        check("instructor notes too thin to explain from are found", "t_thin_notes" in rules_of(thin), rules_of(thin))
+        check("a short slide is no finding - there is no slide minimum any more",
+              not [f for f in cs.theory_findings(thin)[0] if f["screen"] == "s03" and f["field"] == "text"], cs.theory_findings(thin)[0])
+        check("instructor notes too thin to explain from are a NOTE",
+              [f["level"] for f in cs.theory_findings(thin)[0] if f["rule"] == "t_thin_notes"] == [cs.NOTE], rules_of(thin))
         long_ = copy.deepcopy(SCRIPT)
         screen(long_, "s03")["text"] = S03_TEXT + "\n" + S01_TEXT
-        f = [x for x in cs.theory_findings(long_)[0] if x["rule"] == "t_long_slide"]
-        check("a slide the room cannot read from the screen is a note, not a must-fix", f and f[0]["level"] == cs.NOTE, f)
+        f = [x for x in cs.theory_findings(long_)[0] if x["rule"] == "t_long_slide" and x["screen"] == "s03"]
+        check("a slide over the on-screen target is a note, not a must-fix, and it proposes short points",
+              f and f[0]["level"] == cs.NOTE and "points" in f[0]["detail"], f)
+        words = lambda n: " ".join("word%d" % i for i in range(n))
+        one = lambda **s: {"module": 1, "screens": [dict({"id": "s01", "kind": "slide", "title": "T", "minutes": 2,
+                                                         "notes": words(40)}, **s)]}
+        on_screen = lambda sc: [f["rule"] for f in cs.theory_findings(sc)[0] if f["field"] == "text"]
+        at = TR["slide"]["target_words"]
+        check("the target counts the title and the lines: %d words is no note, %d is" % (at, at + 1),
+              on_screen(one(text=words(at - 1))) == [] and on_screen(one(text=words(at))) == ["t_long_slide"],
+              (on_screen(one(text=words(at - 1))), on_screen(one(text=words(at)))))
+        check("a slide of short points counts its points, not its text - the text goes to the instructor",
+              on_screen(one(text=words(120), points="Cold\nUnder pressure\nOr both")) == []
+              and on_screen(one(text=words(120), points="\n".join(words(12) for _ in range(4)))) == ["t_long_points"],
+              on_screen(one(text=words(120), points="\n".join(words(12) for _ in range(4)))))
+        check("an active slide's question, choices and whys are counted on their own, not in the target",
+              on_screen(one(text=words(20), active="scenario", ask=words(15), choices="\n".join(words(10) for _ in range(3)),
+                            why="\n".join(words(10) for _ in range(3)), right="A")) == [])
+        nr = TR["notes"]
+        notes_rules = lambda n: [(f["rule"], f["level"]) for f in cs.theory_findings(one(text="Short.", notes=words(n)))[0]
+                                 if f["field"] == "notes"]
+        check("notes of %d-%d words are no finding; under or over is a NOTE" % (nr["min_words"], nr["max_words"]),
+              notes_rules(nr["min_words"]) == [] and notes_rules(nr["max_words"]) == []
+              and notes_rules(nr["min_words"] - 1) == [("t_thin_notes", cs.NOTE)]
+              and notes_rules(nr["max_words"] + 1) == [("t_long_notes", cs.NOTE)],
+              (notes_rules(nr["min_words"] - 1), notes_rules(nr["max_words"] + 1)))
+        rate = TR["module"]["min_words_per_theory_minute"]
+        full = (at + nr["max_words"]) // rate
+        dense = lambda m: "t_density" in [f["rule"] for f in cs.theory_findings(one(text=words(at - 1), notes=words(nr["max_words"]),
+                                                                                       minutes=m))[0]]
+        check("the density still counts slides and notes: a slide on target with the fullest notes fills %d minutes, not %d"
+              % (full, full + 1), not dense(full) and dense(full + 1), (dense(full), dense(full + 1)))
         slow = copy.deepcopy(SCRIPT)
         screen(slow, "s03")["minutes"] = 25
         check("a module whose words do not fill its minutes is found", "t_density" in rules_of(slow), rules_of(slow))
@@ -492,8 +528,8 @@ def main():
         code, out = cs_run("approve", cb, "--module", "1", "--by", "Anna", "--despite-findings")
         rec = cs.load(cs.paths(cb, 1)["script"])
         check("the operator may approve despite them (L26) - and that is recorded",
-              code == 0 and {"t_thin_notes"} <= {f["rule"] for f in rec.get("approved_despite_findings", [])}
-              and "t_thin_slide" not in {f["rule"] for f in rec.get("approved_despite_findings", [])}, out)     # 2.116.0: thin slide = note
+              code == 0 and {"t_density"} <= {f["rule"] for f in rec.get("approved_despite_findings", [])}
+              and not {"t_thin_notes", "t_long_slide"} & {f["rule"] for f in rec.get("approved_despite_findings", [])}, out)     # notes are notes
 
         print("\n-- 2.18.0: every slide leaves room for a named picture, and the tasks are varied (L37, L38)")
         mrules = lambda sc: [f["rule"] for f in cs.media_findings(sc)]
@@ -740,7 +776,7 @@ def main():
         finally:
             del os.environ["NOVIKONTAS_AUTO_BUILD"]
 
-        print("\n-- 2.18.1: the instructor notes are short, and live in their own .md file for the instructor's panel")
+        print("\n-- 2.18.1: the instructor notes live in their own .md file for the instructor's panel")
         code, out = cs_run("render", c, "--module", "1")
         md = io.open(p["notes_md"], encoding="utf-8").read()
         check("render writes the module's INSTRUCTOR_NOTES.md", p["notes_md"].endswith(os.path.join("to_review", "M01_INSTRUCTOR_NOTES.md")) and "INSTRUCTOR_NOTES.md" in out, out)
@@ -750,9 +786,11 @@ def main():
               and "**OPEN TASK** → Module check, 5 questions" in md)
         check("... in the course language, whatever the operator's", "instructor notes" in md and "slaids" not in md)
         longn = copy.deepcopy(SCRIPT)
-        screen(longn, "s02")["notes"] = S01_TEXT
+        screen(longn, "s02")["notes"] = "\n".join((S01_TEXT, S02_TEXT, S03_TEXT))
         f = [x for x in cs.theory_findings(longn)[0] if x["rule"] == "t_long_notes"]
-        check("notes that are a speech, not points, must be shortened", f and f[0]["level"] == cs.FAIL and f[0]["screen"] == "s02", f)
+        check("notes that are a text to read out, not a prompt, are a note", f and f[0]["level"] == cs.NOTE and f[0]["screen"] == "s02", f)
+        screen(longn, "s02")["notes"] = S01_TEXT
+        check("... a full explanation of a slide's words is not", "t_long_notes" not in rules_of(longn), rules_of(longn))
         shortn = copy.deepcopy(SCRIPT)
         screen(shortn, "s02")["notes"] = "- Draw it."
         check("notes with nothing to go on are found too", "t_thin_notes" in rules_of(shortn), rules_of(shortn))
@@ -834,6 +872,15 @@ def main():
         screen(good, "s03")["points"] = "Four ways to hold the cargo\nMembrane tanks lean on the hull"
         check("the summary's questions, the self-check list and short points are valid where they belong", cs.shape_problems(good) == [],
               cs.shape_problems(good))
+        bare_pts = copy.deepcopy(good)
+        screen(bare_pts, "s03").update(visual_kind="none", picture={"kind": "none"})
+        check("short points need no picture - a plain slide may be short points alone", cs.shape_problems(bare_pts) == [],
+              cs.shape_problems(bare_pts))
+        many = copy.deepcopy(good)
+        screen(many, "s03")["points"] = "\n".join("Point %d" % i for i in range(cs.RULES["points"]["max"] + 1))
+        check("... their number comes from theory-rules.json \"points\"",
+              any("\"points\" are %d-%d" % (cs.RULES["points"]["min"], cs.RULES["points"]["max"]) in p for p in cs.shape_problems(many)),
+              cs.shape_problems(many))
         check("... and only the fields a slide has are its boxes", ("asks", screen(good, "s04")["asks"]) in cs.fields_of(screen(good, "s04"))
               and not [f for f, _ in cs.fields_of(screen(good, "s01")) if f in cs.SLIDE_EXTRA])
         cb5 = new_course(tmp, "shapes", good)

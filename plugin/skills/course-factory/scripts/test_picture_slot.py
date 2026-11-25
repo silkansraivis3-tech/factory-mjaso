@@ -100,7 +100,7 @@ def main():
     screen(sc, "s02")["text"] = "A short opening line.\n" + long_line
     got = [f for f in cs.picture_findings(sc) if f["rule"] == "b_line"]
     check("a line of 80 words beside a picture is a must-fix that names the line and the budget",
-          len(got) == 1 and got[0]["level"] == cs.FAIL and "80" in got[0]["detail"] and "75" in got[0]["detail"]
+          len(got) == 1 and got[0]["level"] == cs.FAIL and "80" in got[0]["detail"] and str(cs.PART_WORDS) in got[0]["detail"]
           and got[0]["screen"] == "s02", got)
     check("... and it blocks approval", any(f["rule"] == "b_line" for f in cs.blocking(cs.all_findings(sc))))
     screen(sc, "s02")["visual_kind"] = "none"

@@ -190,12 +190,10 @@ colours, the official logo top right, Raleway bundled. What the compiler chooses
 | a drawing on a stage | `figure-stage` |
 | a picture beside up to 60 words | `explain-figure` `figure-right` (`figure-left` with `"figure_first"`) |
 | a picture beside more than 60 words | `reading-with-figure` - or `long-explanation` when the picture is 3D |
-| a picture beside more than 85 words | `reading-with-figure`, the words whole (2.116.0: never paged by the factory - the writer shortens them, `v_paged_slide`); `content-in-parts` (the lines in order, in parts of about 75 words, a tab each) only when the build sheet asks for it |
+| a picture beside more words than its column holds (`budgets` `beside_picture`) | `reading-with-figure`, the words whole (2.116.0: never paged by the factory - the writer makes them short points, `v_paged_slide`); `content-in-parts` (the lines in order, in parts of about `parts.part_words`, a tab each) only when the build sheet asks for it |
 
-**Word budgets (2.63.0, measured at 1024 x 768 with these templates and the larger logo - `layout-templates.json`
-`budgets`):** beside a picture 85 words, with a photo under the words 70, beside a photo column 85, under a photograph
-across the slide 70, on a full-screen photograph 50, beside a framed photograph 50, a part 75. The compiler chooses by
-them; a slide built over its layout's budget (a template asked for by name) is a `Note:` in the build's answer before
+**Word budgets (measured at 1024 x 768 with these templates, the larger logo and the 22 px body text -
+`layout-templates.json` `budgets`, the only place the numbers are).** The compiler chooses by them; a slide built over its layout's budget (a template asked for by name) is a `Note:` in the build's answer before
 the audit measures it.
 | lines numbered 1, 2, 3 ... | `procedure` (`with-figure`, or `text-only`) |
 | lines whose cells are separated by ` \| ` | `reference-table` - one row a line, the separator kept in the line (hidden) |
@@ -269,7 +267,7 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 - **No empty space.** A drawing, animation or 3D model gets the wider column (`fig-wide`) and the column's
   height; words are at reading size (`.copy`). Before showing a deck: `audit_compose.js` (every screen composed,
   none weak), `audit_deck.js` (no spill, no overfill, no tiny labels), `audit_collide.js` - at 1280 × 800 and
-  1024 × 768. Two floors: a label inside a drawing below 12.5 px on screen is fixed in the drawing; body text is at least 16 px.
+  1024 × 768. Two floors: a label inside a drawing below 12.5 px on screen is fixed in the drawing; body text is at least `course-module-ux/measure/knowledge/floor.json` `body_text` (set by `--lt-fs` in gb_layouts.css).
 - **Every drawing whole and clean (L54).** Also `audit_drawing.js`: no part pokes out of the hull, tank, room or box
   it sits in (draw the room along a sloping stern, or clip it), nothing is cut off at the drawing's frame, every label
   keeps 4 px clear of other shapes, lines and labels. A crossing that is meant is marked in the drawing:
@@ -657,7 +655,7 @@ photo of its own keeps the previous one, and the first photo (`"figure"`, or the
 `"zoom"`; a bad key or a file that is not a photograph is reported.
 
 **Content in parts is the writer's finding, not a layout trick (2.109.0; 2.116.0: the factory never pages by itself).** A slide
-with a picture and more than 85 words would need parts with number tabs (1 2 ...); the factory does not make them any more - no
+with a picture and more words than its column holds would need parts with number tabs (1 2 ...); the factory does not make them any more - no
 automatic `content-in-parts`, no automatic `points`, no pre-check fallback; trainees find the switching confusing (Aigars: "just 3-4
 bullet points"). The review page (`content_script.paged_findings`, rule `v_paged_slide`) lists such a slide as a must-fix: cut
 it to 3-4 short lines (by proposal - the build never cuts, L61), or keep the parts on purpose with `"parts"` (or
