@@ -86,8 +86,61 @@ def main():
     short_part()
     streak_part()
     walk_part()
+    pull_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
+
+
+def pull_part():
+    """a build pulls the experts' answers first (so the script's based-on check sees what the editor holds now); a pull
+    that asks which course in preparation it is stops the build; no key or no connection is a note; --no-pull skips it"""
+    import contextlib
+    import io
+    import shutil
+    import tempfile
+    import course_portal
+    import workspace
+    tmp = tempfile.mkdtemp(prefix="build_pull_")
+    real, seen, say = course_portal.cmd_pull, [], [0]
+    course_portal.cmd_pull = lambda c, *a: seen.append(c) or say[0]
+
+    class Out(io.StringIO):
+        def reconfigure(self, **kw):
+            pass
+
+    def build(*extra):
+        buf = Out()
+        with contextlib.redirect_stdout(buf):
+            code = b.main([tmp, "--module", "1"] + list(extra))
+        return code, buf.getvalue()
+    try:
+        code, out = build()
+        check("a course with no portal.json is not pulled", seen == [] and code == 2 and "Stopped" in out, (seen, out))
+        pj = workspace.claude_path(workspace.work_folder(tmp, create=False), "portal.json")
+        os.makedirs(os.path.dirname(pj), exist_ok=True)
+        io.open(pj, "w", encoding="utf-8").write("{}")
+        code, out = build()
+        check("a course in the training app is pulled before the build's first stage", len(seen) == 1 and "Not pulled" not in out
+              and "Stopped" in out, (seen, out))
+        say[0] = 2
+        code, out = build()
+        check("a pull that asks which course in preparation it is stops the build with its exit 2, building nothing",
+              code == 2 and len(seen) == 2 and "choose the course in preparation first" in out and "Stopped" not in out, (code, out))
+        say[0] = 3
+        code, out = build()
+        check("no key or no connection: a note, and the build goes on", len(seen) == 3 and "Not pulled" in out and "Stopped" in out, out)
+        course_portal.cmd_pull = lambda c, *a: (_ for _ in ()).throw(RuntimeError("no network"))
+        code, out = build()
+        check("a pull that breaks is a note too", "Not pulled" in out and "no network" in out and "Stopped" in out, out)
+        course_portal.cmd_pull = lambda c, *a: seen.append(c) or 2
+        n = len(seen)
+        code, out = build("--no-pull")
+        check("--no-pull skips it", len(seen) == n and "Stopped" in out, out)
+        code, out = build("--layout-round", "1")
+        check("a layout round of a build already pulled does not pull again", len(seen) == n, out)
+    finally:
+        course_portal.cmd_pull = real
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def blanks_part():

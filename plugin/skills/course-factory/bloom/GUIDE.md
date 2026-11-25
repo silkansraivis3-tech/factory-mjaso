@@ -272,11 +272,12 @@ the debrief starting from certain-but-wrong answers, ...).
 Plain words for a ship's officer, not for a pedagogue: no level jargon beyond the six names, no technique names in
 `how`.
 
-**The experts review them in the editor, not in files.** Once `render` is clean, put the course into the staging
-training app and send the documents there:
+**The experts review them in the editor, not in files.** Once `render` is clean, put the course into the training
+app (live, or `--site staging`) and send the documents there:
 
 ```
 python scripts/course_portal.py create --course <course>             # once: the course in preparation, under intake's course_name
+python scripts/course_portal.py link   --course <course> --site staging   # the same course on the other site, if wanted
 python scripts/course_portal.py push   --course <course> --pedagogy  # the same words as the Word files, topic by topic
 python scripts/course_portal.py pull   --course <course>             # the experts' answers and their Ready
 python scripts/course_portal.py status --course <course>

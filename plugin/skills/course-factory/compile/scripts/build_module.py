@@ -1174,6 +1174,28 @@ def short_audits(out):
     return lines
 
 
+def pull_first(course):
+    """Every build pulls the experts' answers first, so what the script is checked against is what the editor holds now.
+    A course with no portal.json has nothing to pull. -> 0 to go on, 2 when the pull asks which course in preparation it is
+    (the list is printed and the build stops), the pull's own code is never a stop: no key or no connection is a note."""
+    import workspace
+    if os.environ.get("NOVIKONTAS_TRIAL") == "1" or not os.path.isfile(workspace.claude_path(course, "portal.json")) \
+            or os.path.isfile(os.path.join(workspace.master_of(course), "FACTORY_TRIAL.json")):
+        return 0
+    try:
+        import course_portal
+        code = course_portal.cmd_pull(course)
+    except Exception as err:                       # noqa: BLE001 - a pull that could not run never stops a build
+        print("Not pulled from the training app before this build - %s" % err)
+        return 0
+    if code == 2:
+        print("Nothing is built: choose the course in preparation first (above), pull again, then build.")
+        return 2
+    if code:
+        print("Not pulled from the training app before this build (exit %d, said above) - the build goes on with the files as they are." % code)
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("course")
@@ -1206,6 +1228,8 @@ def main(argv=None):
                                                        "whose course-catalogue pick is good enough takes it, and the module is "
                                                        "built again once (visual_needs.py fill --auto)")
     ap.add_argument("--auto-round", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("--no-pull", action="store_true", help="no pull of the experts' answers from the training app before the "
+                                                           "build (offline work, tests)")
     ap.add_argument("--no-precheck", action="store_true", help="skip the pre-check (precheck.py: missing pictures, photographs "
                                                                "under 800 px, dense text with no picture ...) - 2.65.0")
     o = ap.parse_args(argv)
@@ -1214,6 +1238,10 @@ def main(argv=None):
     import workspace
     import content_script as cs
     course = workspace.work_folder(o.course, create=False)
+    if not (o.no_pull or o.slides or o.layout_round or o.auto_round):      # a round of a build already pulled
+        stop = pull_first(course)
+        if stop:
+            return stop
     import compile_module as cm
     mdir, why = cm.module_folder(course, o.module)
     if not mdir:
