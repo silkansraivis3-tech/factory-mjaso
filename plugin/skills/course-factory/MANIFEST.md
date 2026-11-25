@@ -7,6 +7,38 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.143.0 · The course office's complaints: photo shape, less text, the expert's change, theory before tasks, task variety, both editors (2026-11-25)
+
+The audit and its measurements: `_claude/AUDIT_raivis_complaints_2026-11-25.md` (four built courses).
+
+- **Photo shape.** `compile_module.py` `photo_aspect`, `photo_place`, `composition(aspect)`; `layout_fit.py`
+  `raster_aspect` (EXIF turn), `aspect()` reads raster images, `demand(photo=)`; the box choice applies to photos.
+  `layout-templates.json` boxes `photo_wide` 1.3, `photo_tall` 0.85, `photo_framed_max_aspect` 1.2. Contain kept:
+  spots sit in percent of the image.
+- **No forced parts.** `content_script.py` `parts_of` `max(1, …)`; `pick_template` ignores a bare `"parts"` that fits;
+  NOTE `t_merge_neighbours` (`theory-rules.json` `slide.merge_words` 45); `t_template_mix_none` says change in place;
+  `course-type.json` "one idea per screen, and one screen per idea".
+- **Less text on the slide (PROPOSED values, awaiting Raivis).** `theory-rules.json` `slide.target_words` 45 (NOTE,
+  min 30 / max 150 gone), `points` 2-6 × 14 words, `notes` 20-150 Say/Ask/Show (NOTE). Points without a picture
+  (`shape_problems`, `shaped_html`); the full words to `data-cue`. Body text `clamp(22px,2.75vmin,33px)`,
+  `floor.json` `body_text` 22; budgets re-measured (`measure_word_budgets.py`): beside picture 75, with inset 55,
+  photo column 75, under top photo 45, full photo 45, part 65. L36 / L49 wording revised.
+- **The expert's change reaches the work.** `course_gate.py` `basis`, `basis_changes`, `settled_levels`,
+  `basis_message`; `content_script.py` `cmd_approve` stores `based_on`, `status` / `render` / every build stop when
+  it changed; `bloom_of` uses the settled level. `pedagogy_review.py` `changed_file`: "done" names a course file
+  changed since the note (not the review file itself).
+- **Theory before the task.** `t_no_worked_example`, `t_term_not_shown`, question words judged when the answer is
+  only new numbers; `o_lost` beside `o_thinner` (L71 keeps the 60 % floor); `content_script.py readiness` and
+  `plugin/agents/task-readiness.md` (Haiku): the cold-trainee reviewer, also "is it obvious what to do".
+- **Task variety, clarity, team tasks.** `theory-rules.json` `task_variety` (0.4, 3 families, from 4 questions),
+  `team_task` (90 min; Leader / Recorder / Checker), rich = locate / operate / investigate / build + scenario /
+  predict / 3D; `variety_check`, `team_check`, `clarity_check` (`t_calc_unit`, `t_two_asks`, `t_not_stressed`);
+  `t_sc_mix` always a must-fix; `make_architecture_page.py` `p_no_team`; `task_pages.py` `what_to_do` / `SAY`.
+- **Both editors.** `course_portal.py` `SITES` live (lnd.novikontas.org) and staging, `factory_key(site)`,
+  `choose` / `gather` / `ask` (more than one preparation: a numbered list, exit 2, the choice saved as `"use"`),
+  `link`, watch on both queues; `build_module.py` `pull_first`, `--no-pull`. Open: `course_import.mjs` imports to
+  staging only; `list` is not in the factory key's actions, so same-family courses are probed by id.
+
 ## 2.138.0 · Every compiled course carries its overview for LND (2026-11-23)
 
 - `scripts/course_overview.py`: `build(course, title, record)` writes `modules\_course_shell\overview.json` (kind

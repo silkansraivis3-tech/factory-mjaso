@@ -1036,6 +1036,10 @@ def theory_findings(script):
     return by_group(script, found, lambda sub: theory_check(sub)[0]), taught_on
 
 
+def active_shape(s):
+    return bool(s.get("choices") or s.get("claim") or (s.get("ask") and s.get("reveal")))
+
+
 def overfull(s):
     """[(the part, its words, the most it holds)] of a scenario or a worked example beside a picture: what the template
     holds on a 1024 x 768 tablet (theory-rules.json "beside_picture")"""
