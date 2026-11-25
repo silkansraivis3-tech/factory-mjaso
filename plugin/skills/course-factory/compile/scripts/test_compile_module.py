@@ -545,6 +545,33 @@ def long_layouts_part(tmp):
           cm.composition(s, {}, True, True) == "wide-left" and cm.composition(dict(s, text="Gas as fuel."), {}, True, True) == "photo"
           and cm.composition(s, {"composition": "photo"}, True, True) == "photo"
           and cm.composition(s, {"composition": "two-col"}, True, True) == "two-col", cm.composition(s, {}, True, True))
+    from PIL import Image
+    pdir = os.path.join(tmp, "shape", "assets", "img")
+    os.makedirs(pdir)
+    Image.new("RGB", (1600, 900), "gray").save(os.path.join(pdir, "wide.jpg"))
+    Image.new("RGB", (900, 1600), "gray").save(os.path.join(pdir, "tall.jpg"))
+    Image.new("RGB", (1200, 1000), "gray").save(os.path.join(pdir, "near.jpg"))
+    mdir = os.path.join(tmp, "shape")
+    wa, ta, na = (cm.photo_aspect(mdir, "assets/img/%s.jpg" % n) for n in ("wide", "tall", "near"))
+    few, some, many = ({"layout": "split", "text": " ".join(["w"] * n) + "."} for n in (30, 60, 80))
+    check("a photograph's shape is read from the file", wa and ta and abs(wa - 16 / 9.0) < 1e-6 and ta < 0.6 and cm.photo_aspect(mdir, "x.jpg") is None, (wa, ta))
+    check("a wide photograph is never the framed (tall) photo: across the slide when the words allow it, else its own column",
+          cm.composition(few, {}, True, True, wa) == "stage" and cm.composition(some, {}, True, True, wa) == "stage"
+          and cm.composition(many, {}, True, True, wa) == "wide-left" and cm.composition(dict(few, layout=None), {}, True, True, wa) == "stage",
+          [cm.composition(x, {}, True, True, wa) for x in (few, some, many)])
+    check("a tall photograph goes in the side column, a near-square one keeps the script's layout (the framed photo)",
+          cm.composition(few, {}, True, True, ta) == "wide-left" and cm.composition(few, {}, True, True, 1.2 / 1.0 - 0.15) == "two-col"
+          and cm.composition(few, {}, True, True, None) == "two-col", cm.composition(few, {}, True, True, ta))
+    check("a build sheet's own composition still wins over the shape", cm.composition(few, {"composition": "two-col"}, True, True, wa) == "two-col")
+    lines = ["w w w w w w w w w w"] * 6
+    check("a photograph across the slide with more than the stage's words is the figure-top variant",
+          cm.auto_template(some, {}, "stage", True, True, lines[:6], False, False) == ("figure-stage", "figure-top")
+          and cm.auto_template(few, {}, "stage", True, True, lines[:3], False, False) == ("figure-stage", "figure"))
+    probs = []
+    fits = cm.pick_template(some, {"parts": [[1, 3]]}, "two-col", False, True, lines[:6], False, False, probs, "s", False)
+    over = cm.pick_template(many, {"parts": [[1, 3]]}, "two-col", False, True, ["w " * 30] * 4, False, False, [], "s", False)
+    check("a \"parts\" field on words that fit their layout is ignored; on words that do not, it asks for the parts",
+          fits[0] != "content-in-parts" and over[0] == "content-in-parts", (fits, over))
     os.makedirs(os.path.join(tmp, "rl"))
     screens = json.loads(json.dumps(SCREENS))
     screens[0]["text"] = M01_S01
@@ -1381,8 +1408,9 @@ def layouts_part(tmp):
           cm.DESCRIBES.search("pressurised") and cm.DESCRIBES.search("refrigerated")
           and not any(cm.DESCRIBES.search(w) for w in ("airlock", "manifold", "cable", "plan", "carrier")))
     pp = []
-    got = cm.pick_template({}, {"parts": [[1, 2], [3, 4]]}, "two-col", False, True, words90[:4], False, False, pp, "s22")
-    check("2.66.0: \"parts\" alone, beside a picture, is content-in-parts - no \"template\" needed (gas M02 s22: two runs)",
+    got = cm.pick_template({}, {"parts": [[1, 2], [3, 5]]}, "two-col", False, True, words90, False, False, pp, "s22")
+    check("2.66.0: \"parts\" alone, beside a picture, on words past its layout's budget is content-in-parts - no \"template\" needed "
+          "(gas M02 s22: two runs)",
           got[0] == "content-in-parts" and not pp, (got, pp))
     pp = []
     got = cm.pick_template({}, {"parts": [[1, 2], [3, 4]]}, "flow", False, False, words90[:4], False, False, pp, "s22")

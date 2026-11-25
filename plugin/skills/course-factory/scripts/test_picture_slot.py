@@ -120,6 +120,9 @@ def main():
     fits = ["%s." % " ".join(["w"] * n) for n in (30, 30, 30, 30)]
     check("parts: a slide the old cut already fits is cut the same as before (no rebuilt module changes its look)",
           cs.parts_of(fits) == [[1, 2], [3, 4]], cs.parts_of(fits))
+    check("parts: words that fit one part are one part - never forced into two",
+          cs.parts_of(["%s." % " ".join(["w"] * 20), "%s." % " ".join(["w"] * 30)]) == [[1, 2]],
+          cs.parts_of(["%s." % " ".join(["w"] * 20), "%s." % " ".join(["w"] * 30)]))
     check("parts: the build sheet's own ranges win", cs.parts_of(lines, [(1, 2), (3, 6)]) == [[1, 2], [3, 4, 5, 6]])
     one = ["%s." % " ".join(["w"] * 90), "Short."]
     check("parts: a line over the budget cannot be cut - it gets a part of its own, the rest beside it",

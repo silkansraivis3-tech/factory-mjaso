@@ -420,6 +420,21 @@ def main():
               "t_thin_slide" in rules_of(thin) and all(f["level"] == cs.NOTE for f in cs.theory_findings(thin)[0] if f["rule"] == "t_thin_slide"),
               rules_of(thin))
         check("instructor notes too thin to explain from are found", "t_thin_notes" in rules_of(thin), rules_of(thin))
+        pair = copy.deepcopy(SCRIPT)
+        screen(pair, "s01")["text"] = " ".join(["gas"] * 40) + "."
+        screen(pair, "s02")["text"] = " ".join(["gas"] * 40) + "."
+        mf = [f for f in cs.theory_findings(pair)[0] if f["rule"] == "t_merge_neighbours"]
+        check("two plain slides on one Sub-ILO that fit one slide together get a NOTE to merge them (never a must-fix)",
+              len(mf) == 1 and mf[0]["level"] == cs.NOTE and mf[0]["screen"] == "s02" and "s01" in mf[0]["detail"], mf)
+        screen(pair, "s02")["text"] = " ".join(["gas"] * 60) + "."
+        check("... not when together they are over the budget, nor when the second is another Sub-ILO or active",
+              "t_merge_neighbours" not in rules_of(pair), rules_of(pair))
+        screen(pair, "s02")["text"] = " ".join(["gas"] * 40) + "."
+        screen(pair, "s02")["sub_ilo"] = "1.2"
+        check("... another Sub-ILO is no neighbour", "t_merge_neighbours" not in rules_of(pair), rules_of(pair))
+        screen(pair, "s02")["sub_ilo"] = "1.1"
+        screen(pair, "s02")["active"] = True
+        check("... an active slide is no neighbour", "t_merge_neighbours" not in rules_of(pair), rules_of(pair))
         long_ = copy.deepcopy(SCRIPT)
         screen(long_, "s03")["text"] = S03_TEXT + "\n" + S01_TEXT
         f = [x for x in cs.theory_findings(long_)[0] if x["rule"] == "t_long_slide"]

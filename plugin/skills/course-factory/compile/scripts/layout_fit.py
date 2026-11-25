@@ -71,8 +71,28 @@ def names_shown(fig):
     return len({re.sub(r"<[^>]+>|\s+", " ", t).strip() for t in SVG_TEXT.findall(fig or "")} - {""})
 
 
+RASTER = (".jpg", ".jpeg", ".png", ".webp")
+
+
+def raster_aspect(path):
+    """width / height of a photograph as it is shown (the camera's turn applied), or None when it cannot be read"""
+    if not (path and path.lower().endswith(RASTER) and os.path.isfile(path)):
+        return None
+    try:
+        from PIL import Image, ImageOps
+        with Image.open(path) as im:
+            w, h = ImageOps.exif_transpose(im).size
+    except Exception:
+        return None
+    return float(w) / h if w > 0 and h > 0 else None
+
+
 def aspect(fig):
-    """width / height of the picture's own shape (a spec's "size", an SVG's viewBox), or None"""
+    """width / height of the picture's own shape (a raster image's file, a spec's "size", an SVG's viewBox), or None"""
+    if isinstance(fig, str) and "\n" not in fig and len(fig) < 1024:
+        a = raster_aspect(fig)
+        if a:
+            return a
     for d in specs(fig):
         try:
             w, h = [float(x) for x in d.get("size")][:2]
@@ -84,13 +104,16 @@ def aspect(fig):
     return float(m.group(1)) / float(m.group(2)) if m and float(m.group(2)) > 0 else None
 
 
-def demand(fig, three_d=False, spots=0):
-    """what the picture asks for: {"names", "share" (of the slide's width), "wide", "three_d"}"""
+def demand(fig, three_d=False, spots=0, photo=None):
+    """what the picture asks for: {"names", "share" (of the slide's width), "wide", "three_d"}.
+    photo: a photograph's file - its own shape decides: a wide one asks for the picture-wide box"""
     n = names_shown(fig) + (spots or 0)
     share = max(sh for lo, sh in BOX["need"] if n >= lo)
     if three_d:
         share = max(share, BOX["three_d"])
-    a = aspect(fig)
+    a = aspect(photo) if photo else aspect(fig)
+    if a and photo and a >= BOX["photo_wide"]:
+        share = max(share, picture_share("picture-wide"))
     return {"names": n, "share": share, "wide": bool(a and a >= BOX["wide_aspect"]), "three_d": bool(three_d)}
 
 
