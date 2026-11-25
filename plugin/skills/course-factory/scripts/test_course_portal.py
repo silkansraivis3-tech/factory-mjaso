@@ -15,7 +15,12 @@ pulled answers are not pulled again). Pinned:
     its 'done' says what was changed; Ready -> pedagogy_review.json "ready", and render signs the documents with the
     expert's name; what was taken is acknowledged and not taken twice; an answer changed from "change" to OK takes
     its open note away;
-  * the client knows only the staging project, and the key comes from the office PC, never from a course folder.
+  * the client knows the live and the staging project, and each site's key comes from the office PC, never from a course
+    folder;
+  * two sites (a stand-in server for each): an old portal.json reads as staging; create is on live unless told; link adopts;
+    more than one possible course -> exit 2 with a numbered list and nothing taken, the choice kept in portal.json; one
+    option with answers is used without asking; a failing site lets the other run; acks go to the answer's own site; the
+    watch builds the course on the site whose Ready queued it.
 """
 from __future__ import annotations
 
@@ -57,15 +62,21 @@ class Server:
 
     def __init__(self, courses=()):
         self.courses, self.preps, self.docs, self.answers, self.calls = set(courses), {}, [], [], []
+        self.adoptable = set()           # preps the office started in the editor: create takes them over
+        self.queue, self.done = [], None  # the courses whose Ready asked for a build; the last build-done
 
     def __call__(self, action, p):
         self.calls.append((action, p))
+        if p.get("course_id") and action in ("push", "pull", "ack", "status", "remove") and p["course_id"] not in self.preps:
+            raise cp.PortalError("No course in preparation with that id.", 404)
         if action == "name-check":
             i = slug(p["title"])
             free = i not in self.courses and i not in self.preps
             return {"title": p["title"], "id": i, "free": free, **({} if free else {"why": "the id %s is used." % i})}
         if action == "create":
             i = slug(p["title"])
+            if i in self.adoptable:
+                return {"course": self.preps[i], "adopted": True}
             if i in self.courses or i in self.preps:
                 raise cp.PortalError("A course with this id (%s) exists." % i, 409)
             self.preps[i] = {"id": i, "title": p["title"], "stage": "pedagogy"}
@@ -82,8 +93,10 @@ class Server:
             kept = [a for a in self.answers if p["items"].get(a["item"]) == a["item_hash"]]
             return {"document": {"id": d["id"], "version": d["version"]}, "rows": len(p["items"]), "answers_kept": len(kept)}
         if action == "pull":
-            return {"read_at": "2026-11-04T12:00:00Z", "answers": [dict(a) for a in self.answers if not a.get("pulled")],
-                    "ready": [dict(d) for d in self.docs if d["status"] == "ready" and not d.get("ready_pulled")]}
+            mine = lambda x: x.get("course_id", p["course_id"]) == p["course_id"]
+            return {"course": self.preps[p["course_id"]], "read_at": "2026-11-04T12:00:00Z",
+                    "answers": [dict(a) for a in self.answers if mine(a) and not a.get("pulled")],
+                    "ready": [dict(d) for d in self.docs if mine(d) and d["status"] == "ready" and not d.get("ready_pulled")]}
         if action == "ack":
             for a in self.answers:
                 if a["id"] in p["answer_ids"]:
@@ -97,6 +110,15 @@ class Server:
         if action == "remove":
             self.preps.pop(p["course_id"])
             return {"ok": True}
+        if action == "build-next":
+            return {"course": next((dict(c) for c in self.queue if c["stage"] == "build_requested"), None)}
+        if action == "build-claim":
+            q = next(c for c in self.queue if c["id"] == p["course_id"])
+            q["stage"] = "building"
+            return {"course": q}
+        if action == "build-done":
+            self.done = p
+            return {"course": {}}
         raise AssertionError(action)
 
     # what an expert does in the editor
@@ -106,7 +128,7 @@ class Server:
         if mine:
             mine[0].update(verdict=verdict, note=note, decision=decision, pulled=False)
             return mine[0]
-        a = dict(id=str(uuid.uuid4()), kind="pedagogy", module="", item=item, item_hash=d["items"][item], verdict=verdict,
+        a = dict(id=str(uuid.uuid4()), course_id=d["course_id"], kind="pedagogy", module="", item=item, item_hash=d["items"][item], verdict=verdict,
                  note=note, decision=decision, by_name=who.split("@")[0].replace(".", " ").title(), by_email=who, updated_at="2026-11-04T11:00:00Z")
         self.answers.append(a)
         return a
@@ -114,6 +136,23 @@ class Server:
     def ready(self, name):
         self.docs[-1].update(status="ready", ready_by_name=name, ready_by_email="anna.liepa@novikontas.org",
                              ready_at="2026-11-04T11:30:00Z")
+
+
+class Net:
+    """The two sites: each its own server; what was asked of which is kept; a site can be down."""
+
+    def __init__(self, live=None, staging=None):
+        self.servers = {"live": live or Server(), "staging": staging or Server()}
+        self.calls, self.down = [], set()
+
+    def __call__(self, site, action, p):
+        self.calls.append((site, action))
+        if site in self.down:
+            raise cp.PortalError("No connection to the training app: down")
+        return self.servers[site](action, p)
+
+    def asked(self, site, action=None):
+        return [a for s, a in self.calls if s == site and (action is None or a == action)]
 
 
 def workspace_master(c):
@@ -130,6 +169,182 @@ def out_of(fn, *a):
     return code, buf.getvalue()
 
 
+def fresh(tmp, name, course_name, pedagogy=True):
+    """a course folder with its course_name, and (pedagogy) the pedagogy done so that push and pull work"""
+    c = tap.write_course(os.path.join(tmp, name), tap.PROGRAMME, copy.deepcopy(tap.ARCH))
+    f = os.path.join(c, "intake.json")
+    intake = json.load(io.open(f, encoding="utf-8"))
+    intake["course_name"] = course_name
+    io.open(f, "w", encoding="utf-8").write(json.dumps(intake))
+    if pedagogy:
+        out_of(pr.draft, c)
+        tpr.complete(c)
+    return c
+
+
+def portal_file(c):
+    return cp.workspace.claude_path(c, cp.FILE)
+
+
+def edit_portal(c, **kw):
+    raw = json.load(io.open(portal_file(c), encoding="utf-8"))
+    for k, v in kw.items():
+        if v is None:
+            raw.pop(k, None)
+        else:
+            raw[k] = v
+    io.open(portal_file(c), "w", encoding="utf-8").write(json.dumps(raw))
+
+
+def sites_part(tmp):
+    print("\n-- two sites: live and staging")
+    stg, liv = Server(courses={"gas-basic"}), Server()
+    net = Net(live=liv, staging=stg)
+    cp.CALL = net
+    me = "anna.liepa@novikontas.org"
+
+    c3 = fresh(tmp, "sites_new", "GAS ADVANCED", pedagogy=False)
+    code, out = out_of(cp.cmd_create, c3)
+    p3 = cp.portal(c3)
+    check("create goes to live unless told otherwise, and prints the live editor's link",
+          code == 0 and list(p3["sites"]) == ["live"] and "gas-advanced" in liv.preps and not stg.preps and not net.asked("staging")
+          and "https://lnd.novikontas.org/classroom/editor/prep?course=gas-advanced" in out, (out, p3))
+    code, out = out_of(cp.cmd_create, c3, None, "staging")
+    check("create again says where the course is, and how to add the other site",
+          code == 0 and "Already in preparation on live" in out and "link --course <course> --site staging" in out and not stg.preps, out)
+
+    c = fresh(tmp, "sites_a", "GAS BASIC V2")
+    stg.preps["gas-basic-v2"] = {"id": "gas-basic-v2", "title": "GAS BASIC V2", "stage": "pedagogy"}
+    io.open(portal_file(c), "w", encoding="utf-8").write(json.dumps({
+        "course_id": "gas-basic-v2", "title": "GAS BASIC V2", "created_on": "2026-11-01",
+        "editor": "https://novikontas-staging.vercel.app/classroom/editor/prep.html?course=gas-basic-v2"}))
+    p = cp.portal(c)
+    check("a portal.json made before it had sites reads as staging",
+          list(p["sites"]) == ["staging"] and p["sites"]["staging"]["course_id"] == "gas-basic-v2" and p["title"] == "GAS BASIC V2", p)
+
+    print("-- link")
+    liv.preps["gas-basic-v2"] = {"id": "gas-basic-v2", "title": "GAS BASIC V2", "stage": "pedagogy"}
+    liv.adoptable.add("gas-basic-v2")              # the office started it in the live editor
+    code, out = out_of(cp.cmd_link, c, "live")
+    raw = json.load(io.open(portal_file(c), encoding="utf-8"))
+    check("link adopts the course the office started on the other site, and the next save has the new shape",
+          code == 0 and "Now on the live site" in out and set(raw["sites"]) == {"staging", "live"} and "course_id" not in raw
+          and raw["sites"]["live"]["editor"].startswith("https://lnd.novikontas.org/") and "create" in net.asked("live"), (out, raw))
+    code, out = out_of(cp.cmd_link, c, "live")
+    check("link again only says it is there", code == 0 and "Already on the live site" in out and len(net.asked("live", "create")) == 2, out)
+    code, out = out_of(cp.cmd_link, c3, "staging", "no-such-course")
+    check("link --course-id for a course that is not there stops", code == 2 and "no course in preparation no-such-course" in out
+          and "staging" not in cp.portal(c3)["sites"], out)
+
+    print("-- push, and what is chosen")
+    code, out = out_of(cp.cmd_push_pedagogy, c)
+    check("push with the course on two sites and no choice asks: a numbered list, nothing sent",
+          code == 2 and "1. live - gas-basic-v2" in out and "2. staging - gas-basic-v2" in out and "--site <live|staging>" in out
+          and not stg.docs and not liv.docs, out)
+    code, out = out_of(cp.cmd_push_pedagogy, c, "staging")
+    check("push --site staging sends there, and keeps the choice", code == 0 and len(stg.docs) == 1 and not liv.docs
+          and cp.portal(c)["use"] == {"site": "staging", "course_id": "gas-basic-v2"} and "novikontas-staging.pages.dev" in out, out)
+    out_of(cp.cmd_push_pedagogy, c)
+    check("the next push does not ask: it goes to the chosen one", len(stg.docs) == 1 and not liv.docs and not net.asked("live", "push"))
+    code, out = out_of(cp.cmd_push_pedagogy, c, "live")
+    check("--site changes the choice", code == 0 and len(liv.docs) == 1 and cp.portal(c)["use"]["site"] == "live", out)
+
+    print("-- pull: more than one option")
+    stg.answer(me, "1/1.1", "ok")
+    liv.answer("janis.berzins@novikontas.org", "1/1.1.b", "change", "Say how long the simulator runs are.")
+    edit_portal(c, use=None)
+    calls = len(net.calls)
+    code, out = out_of(cp.cmd_pull, c)
+    check("answers waiting on both sites: pull stops with exit 2 and a numbered list, one line an option",
+          code == 2 and out.count("\n  1. live - gas-basic-v2 \"GAS BASIC V2\" - https://lnd.novikontas.org/classroom/editor/prep?course=gas-basic-v2"
+                                  " - 1 answer(s) waiting, the newest from 2026-11-04") == 1
+          and "\n  2. staging - gas-basic-v2 \"GAS BASIC V2\" - https://novikontas-staging.pages.dev/" in out
+          and "Choose with: course_portal.py pull --course <course> --site <live|staging> [--course-id <id>]" in out, out)
+    check("... nothing was taken or acknowledged", not any(a.get("pulled") for s in (stg, liv) for a in s.answers)
+          and not [x for x in net.calls[calls:] if x[1] == "ack"] and "use" not in cp.portal(c))
+    code, out = out_of(cp.cmd_pull, c, "live")
+    check("pull --site live takes that site's answers, and only acknowledges them there",
+          code == 0 and "Taken from the live editor (gas-basic-v2): 1 answer(s)" in out and liv.answers[0].get("pulled")
+          and not stg.answers[0].get("pulled") and net.asked("live", "ack") == ["ack"] and not net.asked("staging", "ack"), out)
+    check("... and the choice is kept", cp.portal(c)["use"] == {"site": "live", "course_id": "gas-basic-v2"})
+    n = len(net.calls)
+    code, out = out_of(cp.cmd_pull, c)
+    check("the next pull does not ask: it looks at the chosen course only", code == 0 and "answer(s) - 0 OK" in out
+          and {s for s, _ in net.calls[n:]} == {"live"} and not stg.answers[0].get("pulled"), (out, net.calls[n:]))
+
+    print("-- pull: one option with answers, a site that fails")
+    edit_portal(c, use=None)
+    code, out = out_of(cp.cmd_pull, c)
+    check("only one of the options has answers waiting: it is used without asking, and said which",
+          code == 0 and "Using staging, gas-basic-v2" in out and stg.answers[0].get("pulled") and net.asked("staging", "ack") == ["ack"]
+          and "use" not in cp.portal(c), out)
+    stg.answer(me, "2/1.3", "ok")
+    net.down = {"live"}
+    code, out = out_of(cp.cmd_pull, c)
+    check("a site that fails gives a note, and the other still runs",
+          code == 0 and "live site not looked at" in out and "No connection to the training app" in out
+          and "Taken from the staging editor (gas-basic-v2): 1 answer(s)" in out, out)
+    net.down = {"live", "staging"}
+    code, out = out_of(cp.cmd_pull, c)
+    check("every site failing is exit 3", code == 3, out)
+    net.down = set()
+
+    print("-- pull: a course of the same family")
+    net2 = Net()
+    cp.CALL = net2
+    c5 = fresh(tmp, "sites_family", "GAS FAMILY V2")
+    out_of(cp.cmd_create, c5)
+    net2.servers["live"].preps["gas-family"] = {"id": "gas-family", "title": "GAS FAMILY", "stage": "pedagogy"}
+    for cid, day in (("gas-family", "2026-11-20"), ("gas-family-v2", "2026-11-22")):
+        net2.servers["live"].answers.append(dict(id=str(uuid.uuid4()), course_id=cid, kind="pedagogy", module="", item="1/1.1",
+                                                 item_hash="x", verdict="ok", note=None, decision=None, by_name="Anna Liepa",
+                                                 by_email=me, updated_at=day + "T10:00:00Z"))
+    code, out = out_of(cp.cmd_pull, c5)
+    check("two courses in preparation could be this course (gas-family, gas-family-v2): exit 2, both listed, nothing taken",
+          code == 2 and "1. live - gas-family-v2 " in out and "2. live - gas-family " in out and "the newest from 2026-11-22" in out
+          and not net2.asked("live", "ack") and "use" not in cp.portal(c5), out)
+    code, out = out_of(cp.cmd_pull, c5, None, "gas-family")
+    check("--course-id chooses one of them, and the choice is kept",
+          code == 0 and "Taken from the live editor (gas-family): 1 answer(s)" in out
+          and cp.portal(c5)["use"] == {"site": "live", "course_id": "gas-family"}, out)
+    n = len(net2.calls)
+    code, out = out_of(cp.cmd_pull, c5)
+    check("... and the next pull does not ask again", code == 0 and {a for _, a in net2.calls[n:]} == {"pull"}, (out, net2.calls[n:]))
+    cp.CALL = net
+
+    print("-- the build after Ready: the site whose Ready queued it")
+    old_env, real_blockers = dict(os.environ), cp.blockers
+    stub = os.path.join(tmp, "stub_sites.py")
+    io.open(stub, "w", encoding="utf-8").write(
+        "import os\nopen(os.path.join(os.environ['STUB_OUT'], 'ran_sites.txt'), 'w').write(os.getcwd())\nprint('AUTO BUILD DONE')\n")
+    os.environ.update(NOVIKONTAS_CLAUDE_CMD=json.dumps([sys.executable, stub]), STUB_OUT=tmp)
+    try:
+        cp.blockers = lambda course: ([], [])
+        edit_portal(c, use={"site": "staging", "course_id": "gas-basic-v2"})
+        liv.queue.append({"id": "gas-basic-v2", "title": "GAS BASIC V2", "stage": "build_requested", "build_requested_by": "Anna Liepa",
+                          "build_requested_at": "2026-11-24T10:00:00Z"})
+        out_of(cp.cmd_watch_once)
+        ran = io.open(os.path.join(tmp, "ran_sites.txt"), encoding="utf-8").read() if os.path.isfile(os.path.join(tmp, "ran_sites.txt")) else ""
+        check("watch --once looks at both queues, builds the course queued on live, claims it there and nowhere else",
+              net.asked("live", "build-next") and net.asked("staging", "build-next") and net.asked("live", "build-claim") == ["build-claim"]
+              and not net.asked("staging", "build-claim") and ran and os.path.samefile(ran, workspace_master(c)), (ran, net.calls[-8:]))
+        check("... the build's own pulls go there too (portal.json use), and an importer that cannot reach live says so in the live editor",
+              cp.portal(c)["use"] == {"site": "live", "course_id": "gas-basic-v2"} and liv.done and "staging site only" in liv.done["error"], (cp.portal(c), liv.done))
+        cp.register("gas-basic-v9", c)
+        liv.queue.append({"id": "gas-basic-v9", "title": "GAS BASIC V9", "stage": "build_requested", "build_requested_by": "Anna Liepa",
+                          "build_requested_at": "2026-11-25T10:00:00Z"})
+        liv.done = None
+        out_of(cp.cmd_watch_once)
+        check("a queued course this folder is not known as on that site is unclear: no build, and the editor says why",
+              len(net.asked("live", "build-claim")) == 1 and liv.done and "link --course <course> --site live --course-id gas-basic-v9" in liv.done["error"],
+              liv.done)
+    finally:
+        cp.blockers = real_blockers
+        os.environ.clear()
+        os.environ.update(old_env)
+        cp.CALL = net
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="portal_")
     real_appdata = os.environ.get("APPDATA")
@@ -139,31 +354,33 @@ def main():
         c = tap.write_course(os.path.join(tmp, "course"), tap.PROGRAMME, arch)
         io.open(os.path.join(c, "FEEDBACK_LOG.md"), "w", encoding="utf-8").write(
             "| # | Date | Stage · module · where | said | changed | fact |\n|---|---|---|---|---|---|\n| 1 | | | | | no |\n")
-        srv = Server(courses={"gas-basic"})
-        cp.CALL = srv
+        srv = Server(courses={"gas-basic"})          # the staging site
+        net = Net(staging=srv)
+        cp.CALL = net
 
-        print("-- name and create")
-        code, out = out_of(cp.cmd_name, "GAS BASIC")
+        print("-- name and create (on staging here: the one-site flow of before)")
+        code, out = out_of(cp.cmd_name, "GAS BASIC", "staging")
         check("a name the training app already has is taken", code == 2 and "Taken" in out, out)
-        code, out = out_of(cp.cmd_name, "GAS BASIC 3")
+        code, out = out_of(cp.cmd_name, "GAS BASIC 3", "staging")
         check("a new name is free, and says the id it will have", code == 0 and "gas-basic-3" in out, out)
-        code, out = out_of(cp.cmd_create, c)
+        code, out = out_of(cp.cmd_create, c, None, "staging")
         check("create without a course name stops and asks intake question 9", code == 2 and "question 9" in out, out)
         intake = json.load(io.open(os.path.join(c, "intake.json"), encoding="utf-8"))
         intake["course_name"] = "GAS BASIC"
         io.open(os.path.join(c, "intake.json"), "w", encoding="utf-8").write(json.dumps(intake))
-        code, out = out_of(cp.cmd_create, c)
+        code, out = out_of(cp.cmd_create, c, None, "staging")
         check("create refuses a name already used", code == 2 and "another name" in out and not cp.portal(c), out)
         intake["course_name"] = "GAS BASIC 3"
         io.open(os.path.join(c, "intake.json"), "w", encoding="utf-8").write(json.dumps(intake))
-        code, out = out_of(cp.cmd_create, c)
+        code, out = out_of(cp.cmd_create, c, None, "staging")
         p = cp.portal(c)
         check("create makes the course in preparation under intake's course_name, with the experts' link",
-              code == 0 and p and p["course_id"] == "gas-basic-3" and "prep.html?course=gas-basic-3" in out, (out, p))
+              code == 0 and p and list(p["sites"]) == ["staging"] and p["sites"]["staging"]["course_id"] == "gas-basic-3"
+              and "novikontas-staging.pages.dev/classroom/editor/prep?course=gas-basic-3" in out, (out, p))
         check("portal.json never holds the key", p and not any("key" in k for k in p), p)
-        code, out = out_of(cp.cmd_create, c)
+        code, out = out_of(cp.cmd_create, c, None, "staging")
         check("create again only says where it is", code == 0 and "Already in preparation" in out and len(srv.preps) == 1, out)
-        check("a second course with the same name is refused", out_of(cp.cmd_name, "GAS  basic 3")[0] == 2)
+        check("a second course with the same name is refused", out_of(cp.cmd_name, "GAS  basic 3", "staging")[0] == 2)
 
         print("\n-- push")
         pr.draft(c)
@@ -379,9 +596,10 @@ def main():
         os.environ.update(NOVIKONTAS_CLAUDE_CMD=json.dumps([sys.executable, stub]), NOVIKONTAS_NODE=json.dumps([sys.executable, imp]),
                           STUB_OUT=tmp)
         queue = []
-        orig = srv.__call__
 
-        def build_server(action, p):
+        def build_server(site, action, p):
+            if site != "staging":
+                return net(site, action, p)
             if action == "build-next":
                 return {"course": queue[0] if queue else None}
             if action == "build-claim":
@@ -390,11 +608,11 @@ def main():
             if action == "build-done":
                 srv.done = p
                 return {"course": {}}
-            return orig(action, p)
+            return net(site, action, p)
         cp.CALL = build_server
         try:
             check("nothing queued: watch does nothing", cp.cmd_watch_once() == 0 and not os.path.isfile(os.path.join(tmp, "args.json")))
-            out_of(cp.cmd_create, c)
+            out_of(cp.cmd_create, c, None, "staging")
             queue.append({"id": "gas-basic-3", "title": "GAS BASIC 3", "stage": "build_requested", "build_requested_by": "Anna Liepa"})
             srv.done = None
             code = cp.cmd_watch_once()
@@ -486,7 +704,7 @@ def main():
 
             print("\n-- the scheduled task runs pythonw: no console")
 
-            def boom(action, p):
+            def boom(site, action, p):
                 raise RuntimeError("the server's answer was not understood")
             cp.CALL = boom
             check("an error nobody expected: the watch ends with its own code, the traceback in watch.log",
@@ -519,24 +737,41 @@ def main():
             check("... and runs the newest plugin's watch, ending 0 when nothing is queued (the task's Last Result 0)",
                   run.returncode == 0, (run.returncode, run.stderr[-300:]))
         finally:
-            cp.CALL = srv
+            cp.CALL = net
             os.environ.clear()
             os.environ.update(old_env)
 
         print("\n-- the key and the address")
         src = io.open(os.path.join(HERE, "course_portal.py"), encoding="utf-8").read()
-        check("the client knows only the staging project", "mgkhdbkxfaldfxyvfqrl" in src and "vapnxststhoxadhhdyty" not in src)
+        check("the client knows the two projects, live and staging, and their editors",
+              "mgkhdbkxfaldfxyvfqrl" in src and "vapnxststhoxadhhdyty" in src and cp.ORDER == ("live", "staging")
+              and cp.editor_link("live", "gas-basic-v2") == "https://lnd.novikontas.org/classroom/editor/prep?course=gas-basic-v2"
+              and cp.editor_link("staging", "x") == "https://novikontas-staging.pages.dev/classroom/editor/prep?course=x")
         old = dict(os.environ)
-        os.environ.pop("NOVIKONTAS_FACTORY_KEY", None)
+        for k in [k for k in os.environ if k.startswith("NOVIKONTAS_FACTORY_KEY")]:
+            os.environ.pop(k)
         os.environ["APPDATA"] = os.path.join(tmp, "nowhere")
         try:
-            cp.factory_key()
+            cp.factory_key("live")
             check("no key on this PC: it says where to put it", False)
         except cp.PortalError as e:
-            check("no key on this PC: it says where to put it", "factory.key" in str(e) and "nowhere" in str(e), e)
-        finally:
-            os.environ.clear()
-            os.environ.update(old)
+            check("no key on this PC: it names the site and says where to put it",
+                  "factory.live.key" in str(e) and "nowhere" in str(e) and str(e).startswith("live:"), e)
+        keys = os.path.join(tmp, "keys")
+        os.makedirs(os.path.join(keys, "novikontas"))
+        os.environ["APPDATA"] = keys
+        io.open(os.path.join(keys, "novikontas", "factory.key"), "w").write("common-file\n")
+        check("the common key file serves both sites", cp.factory_key("live") == "common-file" == cp.factory_key("staging"))
+        io.open(os.path.join(keys, "novikontas", "factory.staging.key"), "w").write("staging-file\n")
+        check("a site's own key file comes before the common one",
+              cp.factory_key("staging") == "staging-file" and cp.factory_key("live") == "common-file")
+        os.environ["NOVIKONTAS_FACTORY_KEY"] = "common-env"
+        check("... and the common variable before the common file, the site's own file before it",
+              cp.factory_key("live") == "common-env" and cp.factory_key("staging") == "staging-file")
+        os.environ["NOVIKONTAS_FACTORY_KEY_LIVE"] = "live-env"
+        check("... and a site's own variable before everything", cp.factory_key("live") == "live-env" and cp.factory_key("staging") == "staging-file")
+        os.environ.clear()
+        os.environ.update(old)
         repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(HERE))))
         found = [os.path.join(r, n) for r, _, ns in os.walk(repo) if ".git" not in r for n in ns if n == "factory.key"]
         check("no factory.key anywhere in the repository", not found, found)
@@ -544,6 +779,7 @@ def main():
         check("remove asks for --yes", code == 2 and cp.portal(c))
         code, out = out_of(cp.cmd_remove, c, True)
         check("remove takes the course out and forgets it", code == 0 and not cp.portal(c) and "gas-basic-3" not in srv.preps, out)
+        sites_part(tmp)
     finally:
         cp.CALL = cp._http
         if real_appdata is None:

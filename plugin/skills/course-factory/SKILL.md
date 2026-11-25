@@ -215,7 +215,7 @@ Corrections arrive in the operator's words ("too much text on screen 4"): act on
 1. **Experts first (L69).** Bloom now, Bloom proposed and the activities, per topic, in `to_review\pedagogy\` (Word,
    HTML, PDF): judge each topic in `pedagogy_review.json` by `bloom/GUIDE.md` §5 - **one outcome at a time**:
    `pedagogy_review.py next`, answer that one with `propose` (raise, or keep with a code), then its `task`; never
-   two at once, never a decision typed into the file - then `pedagogy_review.py check` and `render`; the experts answer in the training app's editor (`course_portal.py create`, `push --pedagogy`, `pull`).
+   two at once, never a decision typed into the file - then `pedagogy_review.py check` and `render`; the experts answer in the training app's editor, live or staging (`course_portal.py create`, `push --pedagogy`, `pull`). **When `pull` (or `push`, or a build) prints a numbered list of courses in preparation, stop and ask the user which one - read them the list - then run again with `--site` / `--course-id`; never choose for them.**
 2. **Simulators (L66), unasked.** `coverage/scripts/sim_coverage.py needed <course>`; where needed, the maps and GAP
    drafts from `coverage/SIMULATORS.md`, and `sim_coverage.py check` passes before "next".
 3. **One page:** `python scripts/make_architecture_page.py --course <course> --check`, then without `--check`. It
@@ -286,7 +286,9 @@ script (`build_module.py`).
 
 ## Auto build — after the expert's Ready (L70)
 
-A run from `course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobody to answer:
+The watch looks at the queues of both sites, live and staging, and builds the course whose Ready queued it there; every
+build (`build_module.py`) pulls the experts' answers first (`--no-pull` for offline work). A run from
+`course_portal.py watch --once` (`NOVIKONTAS_AUTO_BUILD=1`) has nobody to answer:
 
 - Carry out every expert note (`pedagogy_review.py check`) and write its `done`. Pass every STOP with the expert's name:
   `--approve --by "<expert> (Ready in editor)"`, `content_script.py approve ... --by "<expert> (Ready in editor)"`; the
