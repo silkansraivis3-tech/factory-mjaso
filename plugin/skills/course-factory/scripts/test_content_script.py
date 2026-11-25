@@ -468,15 +468,62 @@ def main():
         opener = next(x for x in plain["screens"] if x.get("opens") and
                       any(f["rule"] == "t_sc_mix" and f["screen"] == x["id"] for f in cs.theory_findings(plain)[0]))
         opener["basic_why"] = "maritime law: nothing to tap or operate"
-        check("... and is a note when its task slide says why the subject has nothing to tap or operate (basic_why)",
-              any(f["rule"] == "t_sc_mix" and f["level"] == cs.NOTE for f in cs.theory_findings(plain)[0])
-              and not any(f["rule"] == "t_sc_mix" and f["level"] == cs.FAIL for f in cs.theory_findings(plain)[0]), rules_of(plain))
+        check("... and stays a must-fix when its task slide says the subject has nothing to tap (basic_why waives nothing)",
+              any(f["rule"] == "t_sc_mix" and f["level"] == cs.FAIL for f in cs.theory_findings(plain)[0]), rules_of(plain))
         five = copy.deepcopy(SCRIPT)
         at = next(i for i, x in enumerate(five["screens"]) if x["id"] == "q03") + 1
-        five["screens"][at:at] = [dict(screen(SCRIPT, "q03"), id=i, mechanic=m) for i, m in (("q06", "critique"), ("q07", "panel_operate"))]
-        check("... of five, two basic and two rich and a critique must be fixed - three rich", "t_sc_mix" in rules_of(five), rules_of(five))
-        screen(five, "q06")["mechanic"] = "read_instrument"
-        check("... two basic and three rich is the owner's mix", "t_sc_mix" not in rules_of(five), rules_of(five))
+        five["screens"][at:at] = [dict(screen(SCRIPT, "q03"), id=i, mechanic=m) for i, m in (("q06", "choose_and_justify"), ("q07", "panel_operate"))]
+        check("... of five, two basic, two rich and a choice with no consequence must be fixed - three rich", "t_sc_mix" in rules_of(five), rules_of(five))
+        screen(five, "q06")["mechanic"] = "critique"
+        check("... a critique is rich (investigate): a subject with no equipment has rich tasks", "t_sc_mix" not in rules_of(five), rules_of(five))
+        for m in ("spot_the_error", "build_the_plan", "fill_matrix", "find_the_fault", "scenario", "predict"):
+            screen(five, "q06")["mechanic"] = m
+            check("... %s is a rich task" % m, "t_sc_mix" not in rules_of(five), rules_of(five))
+        screen(five, "q06").update(mechanic="single_choice", visual_kind="model_3d")
+        check("... and so is any question on a 3D model", "t_sc_mix" not in rules_of(five), rules_of(five))
+
+        print("\n-- the tasks vary by family in every set; a team task; every task clear")
+        fam = lambda sc, rule: [(f["screen"], f["level"]) for f in cs.theory_findings(sc)[0] if f["rule"] == rule]
+        check("the example's sets vary: no neighbours of one family, no family over 40 %, three families",
+              not [f for f in cs.theory_findings(SCRIPT)[0] if f["rule"].startswith("t_family") or f["rule"] == "t_few_families"],
+              rules_of(SCRIPT))
+        drag = copy.deepcopy(SCRIPT)
+        screen(drag, "q01").update(mechanic="match", answer="LNG = about -162 °C\nPropane = about -42 °C")
+        check("match then sort in a self-check - two drag tasks side by side - must be fixed, though the names differ",
+              fam(drag, "t_family_run") == [("t01", cs.FAIL)], fam(drag, "t_family_run"))
+        mc = copy.deepcopy(SCRIPT)
+        screen(mc, "m02").update(mechanic="order", answer="LNG\nEthylene\nPropane")
+        screen(mc, "m04").update(mechanic="categorise", answer="Cold: LNG\nPressure: LPG")
+        f_run, f_share = fam(mc, "t_family_run"), fam(mc, "t_family_share")
+        check("... in a module check it is a note: drag, drag, drag (match, order, sort) in a row",
+              f_run == [("t02", cs.NOTE)], f_run)
+        check("... and four of five questions dragging cards is over 40 % - a note", f_share == [("t02", cs.NOTE)], f_share)
+        check("... and a set of five with two kinds of task uses too few families - a note",
+              fam(mc, "t_few_families") == [("t02", cs.NOTE)], fam(mc, "t_few_families"))
+        big = copy.deepcopy(SCRIPT)
+        big["minutes_allocated"] = 90
+        check("a module of 90 minutes with no team task gets a note", fam(big, "t_no_team") == [("", cs.NOTE)], fam(big, "t_no_team"))
+        screen(big, "t01")["team"] = {"size": "3", "roles": ["Leader", "Recorder", "Checker"], "scope": "team"}
+        check("... and none once a task slide plans one", fam(big, "t_no_team") == [], fam(big, "t_no_team"))
+        check("a short module needs none", fam(SCRIPT, "t_no_team") == [], fam(SCRIPT, "t_no_team"))
+        clear = copy.deepcopy(SCRIPT)
+        screen(clear, "q01")["question"] = "Which cargo is carried coldest? And why?"
+        check("a question that asks two things must be fixed", fam(clear, "t_two_asks") == [("q01", cs.FAIL)], fam(clear, "t_two_asks"))
+        screen(clear, "m02")["question"] = "Which of these is not mostly methane?"
+        check("a negative question with 'not' unstressed is a note", fam(clear, "t_not_stressed") == [("m02", cs.NOTE)], fam(clear, "t_not_stressed"))
+        screen(clear, "m02")["question"] = "Which of these is NOT mostly methane?"
+        check("... NOT in capitals is stressed", fam(clear, "t_not_stressed") == [], fam(clear, "t_not_stressed"))
+        calc = {"id": "q03", "sub_ilo": "1.1", "kind": "self-check", "set": "SC1", "mechanic": "calculate", "bloom": 3,
+                "question": "How much boil-off does the tank lose a day?", "answer": "0.15 % vol ± 0.01\n! Boil-off meter: 0.006 % vol per hour",
+                "feedback": "0.006 x 24 = 0.144, about 0.15 % a day."}
+        q3 = screen(clear, "q03")
+        q3.clear()
+        q3.update(calc)
+        check("a calculation that does not say its unit or rounding must be fixed", fam(clear, "t_calc_unit") == [("q03", cs.FAIL)], fam(clear, "t_calc_unit"))
+        screen(clear, "q03")["question"] = "How much boil-off does the tank lose a day, in % vol to 2 decimal places?"
+        check("... and passes when the question says both", fam(clear, "t_calc_unit") == [], fam(clear, "t_calc_unit"))
+        screen(clear, "q03").update(question="How much boil-off does the tank lose a day?", unit="% vol", rounding="2 decimal places")
+        check("... or gives them as \"unit\" and \"rounding\"", fam(clear, "t_calc_unit") == [], fam(clear, "t_calc_unit"))
         cb = new_course(tmp, "thin", thin)
         code, out = cs_run("render", cb, "--module", "1")
         tpage = io.open(cs.paths(cb, 1)["review"], encoding="utf-8").read()

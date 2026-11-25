@@ -102,7 +102,7 @@ bending or changing a law, or when a request seems to collide with one, read it 
 | **L35** | **Two tablets** — slides on the instructor's, tasks only on the trainee's, opened with **OPEN TASK** |
 | **L36** | **Enough theory before any task** (`knowledge/theory-rules.json`, `content_script.py`) |
 | **L37** | **Every slide's picture slot is named** — kind, what it shows, who makes it — or `none` when its words read on their own (`knowledge/media-and-tasks.json`) |
-| **L38** | **Tasks varied and hands-on, no typing**; a self-check has at most 2 basic tasks (choose, match, order), the rest rich (a picture to tap, a panel, 3D) — 3 + 2 in a set of five; a set whose subject has nothing to tap or operate says why in `"basic_why"` and the rule is a note (`content_script.py` `t_sc_mix`) |
+| **L38** | **Tasks varied and hands-on, no typing**; a self-check has at most 2 basic tasks (choose, match, order), the rest rich (locate, operate, investigate, build, a scenario, 3D) — 3 + 2 in a set of five (`content_script.py` `t_sc_mix`); every set varies by family - no two neighbours of one family, none over ~40 %, 3+ families in a set of 4+ (`t_family_*`, theory-rules.json `task_variety`); one team task a module (`t_no_team`) |
 | **L39** | **A colleague gets only the HTML**; the real-tablet test is the owner's, at the end |
 | **L40** | **The factory works in `course\`**; the master folder's source files, knowledge base and old course are read only (`hooks/guard_writes.py` refuses a write) |
 | **L41** | **The old course is the foundation** — read whole at intake (`scripts/old_course.py`); each module says what it keeps, modernises and adds |

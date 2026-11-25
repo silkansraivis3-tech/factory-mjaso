@@ -311,7 +311,11 @@ one line per item, `*` marking what is right:
 
 **Part A, then Part B (owner, 2026-10-28 - 2.74.0).** Write each self-check as Part A - quick questions that check what
 was taught (Bloom 1-2), at least one of them on a Sub-ILO from an earlier block - then Part B: one harder task the
-trainee works out alone (Bloom 3+). A self-check has at most 2 basic tasks, the rest rich - 3 + 2 of five; a set whose subject has nothing to tap or operate says why in "basic_why" and the rule is a note. Every question gets a `"brief"`: one short line said when the answer is wrong - why
+trainee works out alone (Bloom 3+). A self-check has at most 2 basic tasks (choose, arrange), the rest rich - 3 + 2 of five.
+Rich is a task that locates, operates, investigates or builds, a scenario or a prediction, or anything on a 3D model or
+an animation; a subject with no equipment has rich tasks too (spot the error in a real document, check a colleague, find
+the fault, build the plan, fill the matrix, a scenario whose choice has a consequence) - "basic_why" no longer excuses it.
+Every question gets a `"brief"`: one short line said when the answer is wrong - why
 it is not right, never which answer is ("That is the boiling point of another cargo.", not "It is -42 °C."). The right
 answer is shown in the debrief, where the class checks it together. Add `"confidence": true` to a Part A choice to ask
 how sure the trainee is. The ten interactive types, how each looks on the tablet and an example of each:
@@ -322,6 +326,27 @@ name their picture (`visual_kind`, `visual`). A self-check uses 2+ mechanics, a 
 `single_choice` is at most 40 % of the module, and every module has a hands-on one (locate, read, set,
 operate, scenario). Prefer the one that looks like the job: a valve line-up for a valve question, a
 detector display for a reading, the GA drawing for "where is it".
+
+**Vary by family, not by name (theory-rules.json `task_variety`).** Match, sort and order are three names and one way
+of answering - dragging cards. In every set (self-check, module check, final) no two neighbouring questions are of one
+family (choose, decide, arrange, locate, operate, investigate, build - media-and-tasks.json), no family takes more than
+about 40 % of a set, and a set of 4 or more uses at least 3 families. A must-fix in a self-check, a note in a module check
+or a final.
+
+**Make it engaging.**
+- Part B works on the module's running case - the group's own ship, project or company - not a new example each time.
+- A choice has a consequence: a scenario that shows what happens, a prediction against the real data.
+- Give them something real to work on: a filled-in document with errors, a photograph to inspect, a reading to take.
+- Mix the families across the module: a document to check, a plan to build, a picture to tap, a value to set.
+- One team task a module where a Sub-ILO is Bloom 3+ (a module of 90 minutes or more without one gets a note,
+  `t_no_team`): a team case, plan or drill with roles (Leader, Recorder, Checker), in place of one self-check's Part B -
+  a task slide with `"team": {"size": "3", "roles": ["Leader", "Recorder", "Checker"], "scope": "team"}` that opens its
+  own set (`TT1`). Module checks and the final are answered by each trainee alone.
+
+**Clear what to do.** The task page says under every question what the trainee does (a multi-select how many to tap, a
+calculation its unit and rounding). The question itself asks one thing (two question marks are a must-fix), a
+calculation names its unit and how to round in the question or in `"unit"` and `"rounding"` (a must-fix), and a negative
+question writes NOT or EXCEPT in capitals (a note).
 
 ## 2 · Show it to the operator
 

@@ -132,7 +132,8 @@ def self_check_list(am):
     for x in sc:
         q = int(x.get("questions") or RULES["self_check"]["min_questions"])
         out.append({"questions": q, "minutes": num(x.get("minutes")) or q * RULES["self_check"]["minutes_per_question"],
-                    "after": x.get("after", ""), "mechanics": list(x.get("mechanics") or [])})
+                    "after": x.get("after", ""), "mechanics": list(x.get("mechanics") or []),
+                    "team": x.get("team") if isinstance(x.get("team"), dict) else None})
     return out
 
 
@@ -320,8 +321,16 @@ def analyse(prog, arch, plan=None):
     if tr and (abs(num(tr.get("theory")) - tot_th) > 0.01 or abs(num(tr.get("practical")) - tot_pr) > 0.01):
         problems.append(("p_total_row", {"th": fmt_h(tot_th), "pr": fmt_h(tot_pr),
                                          "pth": fmt_h(num(tr.get("theory"))), "ppr": fmt_h(num(tr.get("practical")))}))
+    bloom = bloom_map.course_map(prog, arch)
+    # a team task in every module where a Sub-ILO asks for Apply or higher, in place of one self-check's Part B
+    by_n = {m["n"]: m for m in modules}
+    for bm in bloom["modules"]:
+        m = by_n.get(int(bm["n"] or 0))
+        high = [s["id"] for s in bm["subs"] if (s.get("level") or 0) >= 3]
+        if m and m["arch"] and high and not m["assessment"] and not any(s["team"] for s in m["sc"]):
+            suggestions.append(("p_no_team", {"m": m["n"], "s": ", ".join(high), "roles": " / ".join(RULES["team_task"]["roles"])}))
     return {"ahm": ahm, "ahm_assumed": ahm_assumed, "modules": modules, "problems": problems, "suggestions": suggestions,
-            "tot_th": tot_th, "tot_pr": tot_pr, "outcomes": outcomes, "bloom": bloom_map.course_map(prog, arch), "split": split_found, "waiting": waiting}
+            "tot_th": tot_th, "tot_pr": tot_pr, "outcomes": outcomes, "bloom": bloom, "split": split_found, "waiting": waiting}
 
 
 def gate_of(course, prog, arch):
@@ -746,7 +755,10 @@ def build(prog, arch, a, g=None):
             out.append("</table>")
         items = []
         for k, s in enumerate(m["sc"], 1):
-            items.append("<li>%s%s</li>" % (e(P.t("test_sc", k=k, q=s["questions"])),
+            roles = (s["team"] or {}).get("roles") or RULES["team_task"]["roles"]
+            team = ("<br><b>%s</b>" % e(P.t("test_team", size=s["team"].get("size", "3"), roles=", ".join(
+                roles.split("|") if isinstance(roles, str) else roles)))) if s["team"] else ""
+            items.append("<li>%s%s%s</li>" % (e(P.t("test_sc", k=k, q=s["questions"])), team,
                                             ("<br><span class=\"note\">%s: %s</span>" % (e(P.t("how_answered")), e(", ".join(ml(x) for x in s["mechanics"])))) if s["mechanics"] else ""))
         if not m["sc"]:
             items.append("<li>%s</li>" % e(P.t("test_no_sc", min=rb["min_minutes"])))
