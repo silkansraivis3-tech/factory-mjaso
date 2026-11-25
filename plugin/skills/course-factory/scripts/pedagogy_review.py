@@ -55,6 +55,7 @@ import json
 import os
 import re
 import sys
+import time
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -283,7 +284,7 @@ def check(course):
                                  "this course reaching it" % (where, level(b), level(r["asks"])))
             if b == 6:
                 notes.append("%s: Create is reached by a practical exercise, not a tablet task - say which one" % where)
-            probs += open_notes(x, where)
+            probs += open_notes(x, where, course)
             rw = (new.get("revised_outcome") or "").strip()
             if rw and r["main"]:
                 probs.append("%s: a Main ILO is never re-worded (L2) - empty its 'revised_outcome'" % where)
@@ -304,8 +305,8 @@ def check(course):
             if (str(n), i) not in known:
                 probs.append("module %s, topic %s: not a topic of the architecture any more - remove the row" % (n, i))
     for n, m in mods.items():
-        probs += open_notes(m or {}, "module %s" % n)
-    probs += open_notes(rev, "the whole course")
+        probs += open_notes(m or {}, "module %s" % n, course)
+    probs += open_notes(rev, "the whole course", course)
     return probs, notes
 
 
@@ -372,12 +373,50 @@ def counts(course):
     return el.summary([{"orig": original_of(e["r"], e["x"])[1], "p": e["x"].get("proposed") or {}, "main": e["r"]["main"]} for e in rows])
 
 
-def open_notes(x, where):
+FILE_NAMED = re.compile(r"[\w.\-\\/:]*\w\.(?:json|md|html|docx|xlsx|pptx|pdf|py|js|css|txt|csv)\b", re.I)
+
+
+def changed_file(course, done, on=""):
+    """the course file a note's 'done' names that was changed on or after the note's date ("on"), or None"""
+    try:
+        since = time.mktime(time.strptime(str(on or "")[:10], "%Y-%m-%d"))
+    except ValueError:
+        since = 0.0
+    names = FILE_NAMED.findall(done or "")
+    for name in names:
+        if os.path.isabs(name):
+            ways = [name]
+        else:
+            ways = [os.path.join(course, name), workspace.claude_path(course, name)]
+        for p in ways:
+            if os.path.isfile(p) and os.path.getmtime(p) >= since:
+                return p
+    want = {os.path.basename(n.replace("\\", "/")).lower() for n in names}
+    for root, _, fs in os.walk(course) if want and course else ():
+        for f in fs:
+            if f.lower() in want and os.path.getmtime(os.path.join(root, f)) >= since:
+                return os.path.join(root, f)
+    return None
+
+
+def open_notes(x, where, course=None):
     """An expert's 'needs change' from editor mode is carried out before the stage goes on: until its 'done' says
-    what the factory changed, it stops the approval."""
-    return ["%s: %s asked in editor mode: \"%s\" - carry it out, then write in its 'done' what was changed"
-            % (where, n.get("by") or "the expert", n.get("said", "")) for n in (x.get("expert_notes") or [])
-            if isinstance(n, dict) and not _filled(n.get("done"))]
+    what the factory changed and names the course file it changed (changed on or after the note's date), it stops the
+    approval. The expert's own task (a note "Task: ...", carried out at the pull) is done as it is."""
+    out = []
+    own_task = bool((x.get("proposed") or {}).get("task_expert"))
+    for n in x.get("expert_notes") or []:
+        if not isinstance(n, dict):
+            continue
+        who, said = n.get("by") or "the expert", n.get("said", "")
+        if not _filled(n.get("done")):
+            out.append("%s: %s asked in editor mode: \"%s\" - carry it out, then write in its 'done' what was changed "
+                       "and the file it was changed in" % (where, who, said))
+        elif course and not (own_task and said.lower().startswith("task:")) and not changed_file(course, n["done"], n.get("on")):
+            out.append("%s: the 'done' of %s's note (\"%s\") names no course file changed%s - carry the change out, and "
+                       "name the file it is in (architecture.json, pedagogy_review.json, a module's script ...)"
+                       % (where, who, said, " since %s" % n["on"][:10] if _filled(n.get("on")) else ""))
+    return out
 
 
 def fingerprint(course):

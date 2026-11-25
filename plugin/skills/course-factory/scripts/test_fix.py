@@ -101,7 +101,8 @@ def slide_html(n, x, strong_first=False):
             w = ln.split(" ")
             body = "<strong>%s</strong> %s" % (e(" ".join(w[:2])), e(" ".join(w[2:])))
         lines.append('      <p data-script-field="text">%s</p>\n' % body)
-    kind = "Task" if x["kind"] == "task-slide" else "Theory"
+    lines += ['      <p data-script-field="%s">%s</p>\n' % (f, e(x[f])) for f in ("ask", "reveal") if x.get(f)]
+    kind ="Task" if x["kind"] == "task-slide" else "Theory"
     return ('  <section class="slide" id="sl%02d" data-script="%s" data-kind="%s" data-title="%s" data-cue="%s">\n'
             '    <div class="slide-kind">%s</div>\n    <h2 data-script-field="title">%s</h2>\n    <div class="body">\n%s    </div>\n'
             '  </section>\n' % (n, x["id"], kind, html.escape(x["title"], quote=True), html.escape(cue(x.get("notes")), quote=True),

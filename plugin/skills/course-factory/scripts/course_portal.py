@@ -422,7 +422,7 @@ def cmd_pull(course):
     if later:
         print("  %d answer(s) on the scripts wait in the editor for the scripts' pull." % later)
     if n_change:
-        print("Carry out every change asked (pedagogy_review.py check lists them), write in its 'done' what was changed, "
+        print("Carry out every change asked (pedagogy_review.py check lists them), write in its 'done' what was changed and in which file, "
               "then render and push again.")
     return 0
 

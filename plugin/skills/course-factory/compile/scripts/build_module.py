@@ -1233,6 +1233,13 @@ def main(argv=None):
                                                                                        if code == 1 else "not measured"))
         print("\n".join(lines))
         return code
+    if not o.draft and os.path.isfile(cs.paths(course, o.module)["script"]):
+        script = cs.load(cs.paths(course, o.module)["script"])
+        changed = cs.basis_changes(course, script) \
+            if script.get("status") == "approved" and script.get("approved_hash") == cs.content_hash(script) else []
+        if changed:                  # the expert changed a Sub-ILO or the outcome review after the script was approved
+            print(cs.course_gate.basis_message(o.module, changed, "built"))
+            return 2
     blanks = [] if o.draft else starter_blanks(course, o.module)
     if blanks:                       # 2.52.0: nothing is built on a sheet with the starter's blanks in it
         print("FAIL %s - nothing built: the build sheet %s still has the starter's blanks - fill %s (or let Phase A hold "

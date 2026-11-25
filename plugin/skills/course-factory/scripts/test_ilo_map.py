@@ -71,7 +71,7 @@ def main():
               a1["where_taught"] == "; ".join("slide %d %s" % (i, s["title"]) for i, s in
                                              [(n, x) for n, x in enumerate([y for y in script["screens"] if y["kind"] in ("slide", "task-slide", "activity")], 1)
                                               if x.get("kind") == "slide" and x.get("sub_ilo") == "1.1"]) and "slide 1 Why gas tankers are different" in a1["where_taught"]
-              and len(t11) == 2, a1["where_taught"])
+              and len(t11) == 3, a1["where_taught"])
         check("... a slide's id is kept too, and the second Sub-ILO is its own slide", a1["taught_on"] == [s["id"] for s in t11] and a2["taught_on"] == ["s03"], (a1, a2))
         check("checked_by lists the questions per set: self-check 1, then the module check",
               a1["checked_by"].startswith("SC1 q01, q02, q03 · MC ") and "m02" in a1["checked_by"] and a2["checked_on"] == ["m01", "m03"], a1["checked_by"])

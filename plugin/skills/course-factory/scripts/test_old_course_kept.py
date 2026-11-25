@@ -11,6 +11,8 @@ its words and asked its first question before the slide that taught it):
   * an old slide that taught something (20 words or more) and no module cites is a must-fix, unless the script's
     "dropped_old" says why; another module citing it is enough;
   * the module's slides showing under 60 % of the words of the old slides they replace is a must-fix, under 80 % a note;
+  * compact, never cut: a number or key term of an old slide that the new slides citing it no longer carry (on screen or
+    in the cue of a slide of short points) is a must-fix;
   * many slides from no old slide is a note; a course with no old course has none of these findings;
   * the room's own question (ask / reveal) whose answer no slide up to it shows is a must-fix;
   * a task's answer said only in the instructor's notes is not taught - the trainee never sees the notes.
@@ -100,12 +102,30 @@ def main():
         thin = copy.deepcopy(base)
         for s in thin["screens"]:
             s["text"] = "Pressure\nCold\nBoth"
-        check("slides showing under 60 % of the old slides' words are a must-fix (GAS BASIC M01: 35 %)",
+        check("slides showing under 60 % of the old slides' words are a must-fix (GAS BASIC M01: 35 %; L71)",
               ("o_thinner", cs.FAIL, "") in rules(c, thin), rules(c, thin))
         some = copy.deepcopy(base)
         for s in some["screens"]:
             s["text"] = " ".join(["the tank holds the cargo liquid under pressure"] * 8)
         check("... under 80 % a note", ("o_thinner", cs.NOTE, "") in rules(c, some), rules(c, some))
+        old_text = ("Type C tanks are pressure vessels designed for about 18 bar. The IGC Code lets a Type C tank carry LPG "
+                    "at ambient temperature; the tank needs no secondary barrier and no refrigeration plant.")
+        ct = os.path.join(tmp, "text")
+        os.makedirs(os.path.join(ct, "working_claude", "script"))
+        inv = {"sections": [{"section": "1", "files": [{"file": DECK, "slides": [
+            {"n": 3, "title": "Type C", "words": len(old_text.split()), "text": old_text}]}]}]}
+        io.open(os.path.join(ct, "working_claude", "old_course_inventory.json"), "w", encoding="utf-8").write(json.dumps(inv))
+        compact = {"module": 1, "operator_language": "en", "screens": [slide("s01", old_text, "slide 3", points="Pressure vessel\n18 bar\nNo barrier")]}
+        check("compact, not cut: the old slide's words kept in the cue of a slide of short points - nothing lost",
+              rules(ct, compact) == [], rules(ct, compact))
+        cut = copy.deepcopy(compact)
+        cut["screens"][0]["text"] = "Type C tanks are pressure vessels. They carry LPG and need no secondary barrier."
+        cut["screens"][0]["points"] = "Pressure vessel\nNo barrier"
+        lost = [f for f in cs.old_course_findings(ct, cut) if f["rule"] == "o_lost"]
+        check("an old slide's number or key term the new slides no longer carry is a must-fix, naming them (18, IGC)",
+              lost and lost[0]["level"] == cs.FAIL and "18" in lost[0]["detail"] and "IGC" in lost[0]["detail"], lost)
+        check("... an inventory from before the old slides' words were kept: nothing to compare, nothing said",
+              not [f for f in cs.old_course_findings(c, base) if f["rule"] == "o_lost"])
 
         fresh = copy.deepcopy(base)
         fresh["screens"] += [slide("s1%d" % i, long_, "") for i in range(3)]
