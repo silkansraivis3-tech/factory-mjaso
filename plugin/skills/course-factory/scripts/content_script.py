@@ -1065,6 +1065,14 @@ def theory_check(script):
             add(s["id"], "notes", FAIL, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
         elif w_notes > R["notes"]["max_words"]:
             add(s["id"], "notes", FAIL, "t_long_notes", w=w_notes, max=R["notes"]["max_words"])
+    prev = None
+    for s in screens:                     # plain neighbours on one Sub-ILO that fit one slide together
+        plain = s.get("kind") == "slide" and not (s.get("active") or active_shape(s) or s.get("recap")) and bool(sub_ilos_of(s))
+        if plain and prev and sub_ilos_of(prev) == sub_ilos_of(s) and prev.get("kind") == "slide":
+            together = wc(prev.get("title", ""), prev.get("text", "")) + wc(s.get("text", ""))
+            if together <= R["slide"]["merge_words"]:
+                add(s["id"], "text", NOTE, "t_merge_neighbours", prev=prev["id"], w=together, max=R["slide"]["merge_words"])
+        prev = s if plain else None
     if th_min and not final:
         rate = th_words / th_min
         if rate < R["module"]["min_words_per_theory_minute"]:
@@ -1724,7 +1732,7 @@ def parts_of(lines, ranges=None, part_words=None):
     pw = part_words or PART_WORDS
     w = [wc(x) for x in lines]
     total = sum(w)
-    k = max(2, -(-total // pw))
+    k = max(1, -(-total // pw))
     target = total / float(k)
     parts, cur, acc = [], [], 0
     for i, n in enumerate(w, 1):

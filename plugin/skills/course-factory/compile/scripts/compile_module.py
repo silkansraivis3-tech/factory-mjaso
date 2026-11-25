@@ -187,6 +187,8 @@ def word_budget(tid, variant, inset=False):
 STAGE_WORDS = LAYOUTS["variety"]["stage_max_words"]
 TOP_WORDS = LAYOUTS["variety"]["picture_top_max_words"]
 VARIETY_WINDOW = LAYOUTS["variety"]["window"]
+PHOTO_WIDE, PHOTO_TALL = LAYOUTS["boxes"]["photo_wide"], LAYOUTS["boxes"]["photo_tall"]
+PHOTO_FRAMED_MAX = LAYOUTS["boxes"]["photo_framed_max_aspect"]
 DARK_SHARE = 0.2            # 2.62.1 - 80 / 20 (owner, 2026-10-21): at most a fifth of a module's slides on the dark ground
 PHOTO_LONG, PHOTO_LOW = 1600, 800        # L62: a photograph is shipped at 1600 px on its long side or more; under 800 is low
 FIGURE_FREE = {("explain-figure", "text-only"), ("procedure", "text-only"), ("opening", "statement"), ("key-numbers", "cards"),
@@ -2203,12 +2205,35 @@ def exercise_problems(course, script):
 
 
 # ------------------------------------------------------------------ one slide
-def composition(s, b, is_photo, has_fig):
+def photo_aspect(mdir, rel):
+    """width / height of the photograph a slide shows, as it is shown; None when there is none or it cannot be read"""
+    return layout_fit.raster_aspect(os.path.join(mdir, rel.replace("\\", "/"))) if mdir and rel else None
+
+
+def photo_place(words, aspect):
+    """where a photograph of this shape goes, by the words beside it: "stage" (across the slide, the words under it),
+    "wide-left" (its own column), "two-col" (the framed photo, a tall slot) - or None when its shape is not known"""
+    if not aspect:
+        return None
+    if aspect >= PHOTO_WIDE and words <= TOP_WORDS:
+        return "stage"
+    if aspect >= PHOTO_FRAMED_MAX or aspect <= PHOTO_TALL or words > BUDGETS["photo_framed"]:
+        return "wide-left"
+    return "two-col"
+
+
+def composition(s, b, is_photo, has_fig, aspect=None):
     c = b.get("composition")
     if c:
         return c
     lay = s.get("layout")
+    # a photograph that is wide or tall is placed by its shape; one near square keeps the script's layout below
+    shaped = is_photo and has_fig and aspect and (aspect >= PHOTO_FRAMED_MAX or aspect <= PHOTO_TALL)
+    if shaped and lay != "visual_full":
+        return photo_place(cs.wc(s.get("text", "")), aspect)
     if lay == "visual_full":
+        if shaped and aspect <= PHOTO_TALL:
+            return "wide-left"
         # 2.52.0 - words over a full-screen photograph sit in a fixed column on a scrim: past STAGE_MAX_WORDS they spill off
         # the slide (IGF M01 s01, 70 words: 18 px at 1280 x 800, 42 px at 1024 x 768, every benchmark build; M02 s01, 82
         # words: 8 / 32 px), and M03-M15 each set "two-col" by hand. A long one is the photo beside the words.
@@ -2318,7 +2343,7 @@ def auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col):
             return "reference-table", "text-only"
         return ("procedure", "text-only") if is_steps(lines) else ("explain-figure", "text-only")
     if comp == "stage":
-        return "figure-stage", "figure"
+        return "figure-stage", "figure-top" if is_photo and words > STAGE_WORDS else "figure"
     if is_table(lines):
         return "reference-table", "with-figure"
     if is_steps(lines):
@@ -2377,7 +2402,9 @@ def pick_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col, 
     # 2.116.0: `in_parts` (2.67.0, the layout's own spill) no longer makes content-in-parts - only a build sheet that asks does
     # 2.66.0 - "parts" asks for the words in parts: content-in-parts, without naming it too (the timed gas M02 build: s22's
     # "parts" did nothing beside a picture until "template" said it as well - two runs)
-    if not want and b.get("parts") and auto[0] != "content-in-parts":
+    budget = word_budget(auto[0], auto[1])
+    fits = bool(budget) and cs.wc(" ".join(lines)) <= budget[0]       # words that fit their layout are not built in parts
+    if not want and b.get("parts") and auto[0] != "content-in-parts" and not fits:
         if has_fig:
             want = "content-in-parts"
         else:
@@ -3309,7 +3336,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         out = shaped_html(script, s, b, shaped[0], shaped[1], fig, lines, base, m, n, total, mdir, figdir, probs, where, vkind)
         if out:
             return out
-    comp = composition(s, b, is_photo, bool(fig))
+    pic_rel = (b.get("figure") or "") if is_photo else ""
+    comp = composition(s, b, is_photo, bool(fig), photo_aspect(mdir, pic_rel))
     if comp not in COMPOSITIONS + ("photo",):
         probs.append("%s: the build sheet asks for the layout \"%s\" - the layouts are %s" % (where, comp, ", ".join(COMPOSITIONS)))
         comp = "flow"
@@ -3380,6 +3408,12 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                 or (grown and split is not None and split > fitc["text"]):
             split = fitc["text"]                            # the picture's room comes first; words past it go in parts
         part_w = layout_fit.PART_WORDS * layout_fit.BOX[fitc["box"]]["words"] / float(layout_fit.BOX[dflt]["words"])
+    if photo_col and pic_rel and split is None:
+        # a wide photograph in its own column takes the picture-wide box when the words fit beside it; the words never go in parts
+        need = layout_fit.demand(fig, False, len(b.get("spots") or []), photo=os.path.join(mdir, pic_rel.replace("\\", "/")))
+        pick = layout_fit.choose(nwords_all, need, b.get("box") if b.get("box") in layout_fit.ORDER else None)
+        if pick["action"] == "box" and pick["box"] != layout_fit.BOX["default"]:
+            split = pick["text"]
     if tid == "opening" and variant == "photo":            # the opening's photograph is the screen, the title over it
         comp = "photo"
     # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat

@@ -70,6 +70,28 @@ def main():
               all(lf.BOX[b]["words"] <= lf.BOX[c]["words"] for c in lf.ORDER[:lf.ORDER.index(b)]))
     check("every need step is a share a box (or the whole slide) can give",
           all(any(lf.picture_share(b) >= sh for b in lf.ORDER) or sh == 1.0 for _, sh in lf.BOX["need"]))
+    print("\n-- a photograph's own shape")
+    import os
+    import tempfile
+    from PIL import Image
+    tmp = tempfile.mkdtemp(prefix="lf_")
+    wide, tall, turned = (os.path.join(tmp, n) for n in ("wide.jpg", "tall.jpg", "turned.jpg"))
+    Image.new("RGB", (1600, 900), "gray").save(wide)
+    Image.new("RGB", (900, 1600), "gray").save(tall)
+    im = Image.new("RGB", (1600, 900), "gray")       # a camera held upright: pixels wide, shown tall
+    ex = Image.Exif()
+    ex[274] = 6
+    im.save(turned, exif=ex)
+    check("aspect() reads a photograph's pixel shape", abs(lf.aspect(wide) - 1600 / 900.0) < 1e-6 and abs(lf.aspect(tall) - 900 / 1600.0) < 1e-6,
+          (lf.aspect(wide), lf.aspect(tall)))
+    check("... as it is shown: the camera's turn is applied", lf.aspect(turned) < 1, lf.aspect(turned))
+    check("... and a file that is not there has no shape", lf.aspect(os.path.join(tmp, "none.jpg")) is None)
+    w_need, t_need = lf.demand("", photo=wide), lf.demand("", photo=tall)
+    check("a wide photograph asks for the picture-wide box, a tall one for no more than the default",
+          w_need["share"] >= lf.picture_share("picture-wide") and t_need["share"] <= lf.picture_share(lf.BOX["default"]), (w_need, t_need))
+    check("so a wide photograph with 60 words beside it gets the picture-wide box, 80 words fall back to parts or the larger box",
+          lf.choose(60, w_need)["box"] == "picture-wide" and lf.choose(80, w_need)["action"] != "box", (lf.choose(60, w_need), lf.choose(80, w_need)))
+    check("a tall photograph keeps the default box", lf.choose(60, t_need)["box"] != "picture-wide", lf.choose(60, t_need))
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
 

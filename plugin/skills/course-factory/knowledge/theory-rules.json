@@ -4,6 +4,8 @@
   "slide": {
     "min_words": 30,
     "max_words": 150,
+    "merge_words": 85,
+    "_merge_words": "Two plain theory slides in a row on one Sub-ILO whose words together are this many or fewer (the beside-a-picture budget) fit one slide: a note suggests the one slide.",
     "_2_116_0": "2.116.0 (operator, 2026-11-09): min_words 50 -> 30 and a NOTE, never a fail - a short slide is fine when it teaches.",
     "_why": "A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a headline for the instructor to fill in. The title counts. Under min_words the slide may be too thin to teach from (a note - a short slide is fine when it teaches). Over max_words the room cannot read it from the classroom screen: split it into two slides (a note, not a must - NEW_ENTRANT wants more slides, L28)."
   },

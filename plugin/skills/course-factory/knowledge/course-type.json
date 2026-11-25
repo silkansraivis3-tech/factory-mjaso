@@ -5,7 +5,7 @@
 
   "NEW_ENTRANT": {
     "who": "trainees with no prior knowledge of the subject",
-    "theory": "more of it, and explained more: definitions before use, one idea per screen, step-by-step build-up from what a trainee can see to what they must understand",
+    "theory": "more of it, and explained more: definitions before use, one idea per screen, and one screen per idea, step-by-step build-up from what a trainee can see to what they must understand",
     "screens": "more screens rather than denser ones - when in doubt, explain more; missing an important point is worse than one extra slide",
     "worked_examples": "many: a worked example before every first own attempt, then a faded example, then the trainee alone",
     "active_learning": "self-check after every key concept; explain-then-reveal and predict-then-reveal to turn explanation into activity (L5)",
