@@ -254,6 +254,8 @@ by each Sub-ILO's task type (L68, 2.128.0) - write the activities in them; a mod
 must-fix.
 
 - **Proved (L4):** one `fact-checker` agent per module; approval is refused while a claim is unjudged or unproved.
+- **Read cold:** one `task-readiness` agent per module (Haiku) answers each question from the slides before it only;
+  what it cannot answer, or where it would not know what to do, is a must-fix until cleared (`script/GUIDE.md` §2).
 - **Checked:** the theory, slide-text, pictures-and-tasks and ILO-map checks head the review page; a must-fix blocks
   approval (`--despite-findings` only on the operator's word). Questions carry `"sub_ilo"`, and `"bloom"` + `"bloom_why"`
   when written above their task type's level.

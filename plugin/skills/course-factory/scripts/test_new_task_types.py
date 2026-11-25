@@ -173,7 +173,8 @@ def main():
 
         def build(drop=None, flip=None):
             deck = "".join('<section class="slide" data-script="%s"><h2 data-script-field="title">%s</h2>%s</section>' % (
-                x["id"], x["title"], "".join('<p data-script-field="text">%s</p>' % l for l in x["text"].split("\n")))
+                x["id"], x["title"], "".join('<p data-script-field="text">%s</p>' % l for l in x["text"].split("\n"))
+                + "".join('<p data-script-field="%s">%s</p>' % (f, x[f]) for f in ("ask", "reveal") if x.get(f)))
                 for x in sc["screens"] if x["kind"] in cs.INSTRUCTOR)
             io.open(os.path.join(mdir, "module.html"), "w", encoding="utf-8").write("<html><body>%s</body></html>" % deck)
             io.open(os.path.join(mdir, "tasks", "t1.html"), "w", encoding="utf-8").write("<html><body>%s</body></html>" % "".join(

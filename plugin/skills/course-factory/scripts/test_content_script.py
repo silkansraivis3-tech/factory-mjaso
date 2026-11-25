@@ -96,7 +96,18 @@ SCRIPT = {
          "visual": "Photograph of a membrane LNG carrier alongside", "picture": {"kind": "photo", "aspect": "4:3", "shows": "A membrane LNG carrier alongside"}, "notes": S01_NOTES, "minutes": 5},
         {"id": "s02", "sub_ilo": "1.1", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "model_3d",
          "visual": "3D model of a semi-refrigerated tank - turn it and cut it open to see its insulation and its cooling coil",
-         "picture": {"kind": "3d", "aspect": "4:3", "shows": "A semi-refrigerated tank, cut open"}, "notes": S02_NOTES, "minutes": 5},
+         "picture": {"kind": "3d", "aspect": "4:3", "shows": "A semi-refrigerated tank, cut open"}, "notes": S02_NOTES, "minutes": 4},
+        {"id": "s06", "sub_ilo": "1.1", "kind": "slide", "active": "worked-example", "title": "Setting the carriage temperature, worked",
+         "text": "Cargo: propane on a fully refrigerated ship | look up its boiling point\n"
+                 "Propane boils at -42 °C at atmospheric pressure | the tank is held just above it\n"
+                 "Set the cargo temperature | about -42 °C",
+         "ask": "Your turn: at what temperature is butane carried on a fully refrigerated ship?",
+         "reveal": "Just above its boiling point: about -0.5 °C.", "visual_kind": "schematic",
+         "visual": "A thermometer scale with the boiling points of propane and butane marked",
+         "picture": {"kind": "figure", "aspect": "4:3", "shows": "A thermometer scale with the boiling points of propane and butane"},
+         "notes": "- Work the propane line with the room, step by step, on the scale.\n- Then the room's turn: butane, alone, "
+                  "before the answer opens.\n- Ask why the tank is held just above the boiling point, not below it.",
+         "minutes": 1},
         {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - keeping the cargo liquid",
          "text": "A short self-check opens on your tablet now: three questions on why gas is carried cold or under pressure.",
          "notes": "Press OPEN TASK. Give three minutes and watch who hesitates.", "minutes": 3},
@@ -233,6 +244,137 @@ def groups_part():
     check("the Word file marks each question's group too", sum("Only for: Ship navigators" in x for x in labels) == 3, labels[-12:])
 
 
+def theory_before_task_part():
+    """a task that works something out comes after a worked example of it on its Sub-ILO; a calculation's own words are
+    judged when its answer brings only new numbers; a slide of short points teaches its full words, its points show the term"""
+    print("\n-- theory before the task: a worked example before a sum (PM M03 q16: the rule stated, the sum never worked)")
+    rule = "Cash balance is the money in at the start, plus the receipts, minus the payments of the month."
+
+    def sl(sid, text, sub="3.1", **kw):
+        return dict({"id": sid, "kind": "slide", "sub_ilo": sub, "title": "Cash balance", "text": text, "notes": "- n", "minutes": 3}, **kw)
+
+    def mod(*screens):
+        return {"module": 3, "course_language": "English", "operator_language": "en", "screens": list(screens) + [
+            {"id": "t09", "kind": "task-slide", "opens": "MC", "title": "Module check", "text": "It opens now.", "notes": "- Go.", "minutes": 5}]}
+
+    def q(sid, **kw):
+        return dict({"id": sid, "kind": "module-check", "set": "MC", "sub_ilo": "3.1", "feedback": "See the slide."}, **kw)
+    q16 = q("q16", mechanic="calculate", bloom=3, answer="-3000 EUR ± 0",
+            question="The project starts the month with EUR 2,000, receives EUR 5,000 and pays EUR 10,000. What is the cash balance at the end of the month?")
+    found = lambda m: [(f["rule"], f["screen"]) for f in cs.theory_check(m)[0] if f["rule"] in ("t_no_worked_example", "t_not_taught", "t_term_not_shown")]
+    check("a calculation after the rule alone, never worked, is a must-fix: no worked example before it",
+          found(mod(sl("s15", rule), q16)) == [("t_no_worked_example", "q16")], found(mod(sl("s15", rule), q16)))
+    worked = sl("s14", "Start: EUR 1,000 | plus receipts EUR 4,000 | minus payments EUR 6,000\nEnd of the month | EUR -1,000",
+                active="worked-example", ask="Your turn: start EUR 500, receipts EUR 700, payments EUR 2,000?", reveal="EUR -800.")
+    check("... a worked example of it on the same Sub-ILO before the task: nothing to say", found(mod(sl("s15", rule), worked, q16)) == [],
+          found(mod(sl("s15", rule), worked, q16)))
+    check("... a worked example on another Sub-ILO does not count",
+          ("t_no_worked_example", "q16") in found(mod(sl("s15", rule), dict(worked, sub_ilo="3.2"), q16)))
+    ev = q("q17", mechanic="calculate", bloom=3, answer="1200 EUR ± 0",
+           question="Earned value: the work package is 40 % complete against a planned budget of EUR 3,000. What is its earned value?")
+    check("a calculation whose answer is only new numbers is judged on the question's own words - untaught words are found",
+          ("t_not_taught", "q17") in found(mod(sl("s15", rule), worked, ev)), found(mod(sl("s15", rule), worked, ev)))
+    pick = q("q18", mechanic="single_choice", question="What does the cash balance add to the money at the start?",
+             options=["The receipts", "The invoices", "The budget"], correct="A")
+    pts = sl("s15", rule, points="Money at the start\nPlus what comes in\nMinus what goes out")
+    check("a slide of short points: its full words count as taught (the instructor says them), but a key term on no point is a must-fix",
+          found(mod(pts, pick)) == [("t_term_not_shown", "q18")], found(mod(pts, pick)))
+    pts["points"] = "Money at the start\nPlus the receipts\nMinus the payments"
+    check("... the term on a point: nothing to say", found(mod(pts, pick)) == [], found(mod(pts, pick)))
+
+
+def readiness_part():
+    """the cold trainee (agents/task-readiness.md): its packets hold the slides before each question and never the answer;
+    what it records is a must-fix until cleared"""
+    print("\n-- the cold trainee: only the slides before the task, never the answer; its findings block until cleared")
+    tmp = tempfile.mkdtemp(prefix="cs_cold_")
+    try:
+        c = new_course(tmp, "c")
+        code, out = cs_run("readiness", c, "--module", "1")
+        packets = json.loads(out)
+        q01 = next(x for x in packets if x["id"] == "q01")
+        m02 = next(x for x in packets if x["id"] == "m02")
+        check("a packet per question: the slides before its task only, the question, the options unmarked",
+              code == 0 and len(packets) == 8 and len(q01["slides"]) == 3 and len(m02["slides"]) == 5
+              and q01["items"] == screen(SCRIPT, "q01")["options"], (code, out[:300]))
+        q02 = next(x for x in packets if x["id"] == "q02")
+        check("... never the answer: no feedback, no '*', a sort's groups and cargoes in no telling order, a value to set offers nothing",
+              "feedback" not in out and "*" not in json.dumps(q02) and "Fully pressurised" in q02["items"]
+              and next(x for x in packets if x["id"] == "q03")["items"] == [], q02)
+        f = os.path.join(tmp, "cold.json")
+        cs.save(f, [{"id": "m04", "kind": "unclear", "what": "the unit is not said", "fix": "say: in bar"}])
+        code, out = cs_run("readiness", c, "--module", "1", "--record", f)
+        found = [x for x in cs.all_findings(cs.load(cs.paths(c, 1)["script"]), c) if x["rule"] == "r_cold"]
+        check("its findings are recorded and each is a must-fix on that question", code == 0 and len(found) == 1
+              and found[0]["level"] == cs.FAIL and found[0]["screen"] == "m04" and found[0]["fix"] == "say: in bar", (out, found))
+        code, out = cs_run("approve", c, "--module", "1", "--by", "Aleksis")
+        check("... approval waits for it", code == 1 and "the unit is not said" in out, out)
+        rec = cs.load(cs.readiness_path(c, 1))
+        rec["findings"][0]["cleared"] = "m04 now asks for the pressure in bar"
+        cs.save(cs.readiness_path(c, 1), rec)
+        check("... cleared, it is gone", not [x for x in cs.all_findings(cs.load(cs.paths(c, 1)["script"]), c) if x["rule"] == "r_cold"])
+        cs.save(f, [{"id": "zz", "kind": "missing", "what": "x", "fix": "y"}])
+        check("a finding on no question, or without its fix, is not recorded", cs_run("readiness", c, "--module", "1", "--record", f)[0] == 1)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def expert_change_part():
+    """the expert's change after the ILO review reaches the work: an approved script stops status, render and the build"""
+    print("\n-- the expert changed an outcome after the script was approved: status, render and the build stop")
+    tmp = tempfile.mkdtemp(prefix="cs_basis_")
+    try:
+        c = new_course(tmp, "c")
+        rp = os.path.join(c, "working_claude", "pedagogy_review.json")
+        cs.save(rp, {"modules": {"1": {"rows": {"1.1": {"proposed": {"level": 2}}, "1.2": {"proposed": {"level": 2}}}}}})
+        code, out = cs_run("approve", c, "--module", "1", "--by", "Aleksis")
+        script = cs.load(cs.paths(c, 1)["script"])
+        check("approve records what the script is written against (based_on: the Sub-ILOs and the review's rows)",
+              code == 0 and set(script["based_on"]["sub_ilos"]) == {"1.1", "1.2"} and set(script["based_on"]["review"]) == {"1.1", "1.2"}, out)
+        code, out = cs_run("status", c, "--module", "1")
+        check("... nothing changed: approved", code == 0 and "approved by Aleksis" in out, out)
+        rev = cs.load(rp)
+        rev["modules"]["1"]["rows"]["1.1"]["proposed"]["level"] = 4
+        cs.save(rp, rev)
+        code, out = cs_run("status", c, "--module", "1")
+        check("the level the review settled on changed after approval: status stops, naming the Sub-ILO and the review row",
+              code == 1 and "Sub-ILO 1.1" in out and "row 1.1" in out and "Sub-ILO 1.2" not in out, out)
+        code, out = cs_run("render", c, "--module", "1")
+        check("... render stops too", code == 2 and "Sub-ILO 1.1" in out, out)
+        code, out = run(os.path.join(HERE, "..", "compile", "scripts", "compile_module.py"), c, "--module", "1")
+        check("... and the build stops before anything is built", code == 2 and "Sub-ILO 1.1" in out, out)
+        os.makedirs(os.path.join(c, "modules", "module01"), exist_ok=True)
+        code, out = run(os.path.join(HERE, "..", "compile", "scripts", "build_module.py"), c, "--module", "1")
+        check("... build_module too, before its first stage", code == 2 and "Sub-ILO 1.1" in out, out)
+        rev["modules"]["1"]["rows"]["1.1"]["proposed"]["level"] = 2
+        cs.save(rp, rev)
+        ap = os.path.join(c, "working_claude", "architecture.json")
+        arch = cs.load(ap)
+        arch["modules"][0]["sub_ilos"][1]["text"] = "Identify the cargo containment systems and explain the secondary barrier each needs."
+        cs.save(ap, arch)
+        code, out = cs_run("status", c, "--module", "1")
+        check("a Sub-ILO re-worded after approval: status stops, naming it", code == 1 and "Sub-ILO 1.2" in out and "1.1" not in out, out)
+        arch["modules"][0]["sub_ilos"][1]["text"] = gate_fixture.DEFAULT_SUBS[1]["text"]
+        cs.save(ap, arch)
+        rev["modules"]["1"]["rows"]["1.2"]["expert_notes"] = [{"said": "Say which tank.", "on": "2026-11-20", "done": "done"}]
+        cs.save(rp, rev)
+        check("the expert's note on a row is a change too", cs_run("status", c, "--module", "1")[0] == 1)
+        rev["modules"]["1"]["rows"]["1.2"]["expert_notes"][0]["done"] = "the task names the tank - working_claude/script/M01.json"
+        cs.save(rp, rev)
+        check("... the factory's own 'done' on it is not", cs.basis_changes(c, cs.load(cs.paths(c, 1)["script"])) == ["the outcome review's row 1.2 "
+              "(pedagogy_review.json): the proposal or the experts' answer changed"], cs.basis_changes(c, cs.load(cs.paths(c, 1)["script"])))
+        script = cs.load(cs.paths(c, 1)["script"])
+        script.pop("based_on")
+        cs.save(cs.paths(c, 1)["script"], script)
+        code, out = cs_run("status", c, "--module", "1")
+        check("a script approved before based_on was recorded gets a note, not a stop", code == 0 and "note:" in out, out)
+        lv = cs.bloom_of(c, dict(SCRIPT, operator_language="en"))
+        check("the Bloom map takes the level the review settled on, not the verb's",
+              {s["id"]: s["level"] for s in lv["subs"]} == {"1.1": 2, "1.2": 2}, lv["subs"])
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="cs_")
     try:
@@ -273,7 +415,7 @@ def main():
         check("one question per screen, numbered within its task", lv("s_question_n", q=2, of=3) in page and lv("s_question_n", q=5, of=5) in page)
         check("each question shows the slide that teaches its answer",
               re.search(r"q01</span>.*?%s</dt><dd>%s" % (re.escape(lv("s_taught_on")), re.escape(lv("s_slide_n", n=1))), page, re.S) is not None
-              and re.search(r"m01</span>.*?%s</dt><dd>%s" % (re.escape(lv("s_taught_on")), re.escape(lv("s_slide_n", n=4))), page, re.S) is not None)
+              and re.search(r"m01</span>.*?%s</dt><dd>%s" % (re.escape(lv("s_taught_on")), re.escape(lv("s_slide_n", n=5))), page, re.S) is not None)
         check("the module in numbers: minutes against the programme's, words per theory minute",
               lv("s_sum_alloc", a="23") in page and lv("s_sum_title") in page)
         check("a clean module: the theory check found nothing", lv("s_theory_clean") in page and lv("s_textcheck_clean") in page)
@@ -482,7 +624,7 @@ def main():
         tpage = io.open(cs.paths(cb, 1)["review"], encoding="utf-8").read()
         check("the findings are at the top of the review page, before the slides",
               0 < tpage.find(lv("s_theory_title")) < tpage.find(lv("s_part1")) and lv("s_textcheck_must") in tpage)
-        check("render reports them, naming the slide", "The theory check found" in out and "[must fix] Slide 4" not in out and LV["s_slide_n"].format(n=4) in out, out)
+        check("render reports them, naming the slide", "The theory check found" in out and "[must fix] Slide 5" not in out and LV["s_slide_n"].format(n=5) in out, out)
         tdoc = zipfile.ZipFile(cs.paths(cb, 1)["docx"]).read("word/document.xml").decode("utf-8")
         check("... and they are in the Word file too", html.escape(LV["s_theory_title"], quote=False) in tdoc)
         code, out = cs_run("read", cb, "--module", "1")
@@ -522,8 +664,8 @@ def main():
         many = copy.deepcopy(SCRIPT)
         extra = [dict(screen(SCRIPT, "s03"), id="s1%d" % i, visual_kind="photo", picture={"kind": "photo", "aspect": "4:3"})
                  for i in range(4)]
-        many["screens"][6:6] = extra
-        for x in ("s01", "s02", "s03"):
+        many["screens"][7:7] = extra
+        for x in ("s01", "s02", "s06", "s03"):
             screen(many, x)["visual_kind"] = "photo" if x != "s03" else "step_animation"
             screen(many, x)["picture"] = {"kind": "photo" if x != "s03" else "figure", "aspect": "4:3"}   # 2.73.0: the slot follows
         f = [x for x in cs.media_findings(many) if x["rule"] == "v_few_kinds"]
@@ -721,7 +863,7 @@ def main():
             rp = os.path.join(nc, "working_claude", "pedagogy_review.json")
             rev = json.load(io.open(rp, encoding="utf-8")) if os.path.isfile(rp) else {}
             rev["ready"] = {"by": "Anna Liepa", "on": "2026-11-04"}
-            rev["modules"] = {"1": {"rows": {"1.1": {"proposed": {"level": 3}}, "1.2": {"proposed": {"level": 2}}}}}
+            rev["modules"] = {"1": {"rows": {"1.1": {"proposed": {"level": 2}}, "1.2": {"proposed": {"level": 2}}}}}
             io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
             code, out = cs_run("approve", nc, "--module", "1", "--by", "Anna Liepa (Ready in editor)")
             check("a Ready over topic rows the expert never answered is not a review: no approval (GAS BASIC: 0 of 124 answered)",
@@ -745,7 +887,7 @@ def main():
         md = io.open(p["notes_md"], encoding="utf-8").read()
         check("render writes the module's INSTRUCTOR_NOTES.md", p["notes_md"].endswith(os.path.join("to_review", "M01_INSTRUCTOR_NOTES.md")) and "INSTRUCTOR_NOTES.md" in out, out)
         check("... one short section per slide, its notes as points", "## Slide 1 · Why gas tankers are different · 5 min" in md
-              and "- Ask who has sailed on a gas tanker, and with which cargo." in md and md.count("## Slide ") == 6)
+              and "- Ask who has sailed on a gas tanker, and with which cargo." in md and md.count("## Slide ") == 7)
         check("... and the OPEN TASK prompt where each task opens", "**OPEN TASK** → Self-check 1, 3 questions, on every trainee tablet." in md
               and "**OPEN TASK** → Module check, 5 questions" in md)
         check("... in the course language, whatever the operator's", "instructor notes" in md and "slaids" not in md)
@@ -884,7 +1026,7 @@ def main():
         before = io.open(p["script"], encoding="utf-8").read()
         code, out = cs_run("read", c, "--module", "1")
         check("typed text is found - named by its slide, and only the changed words",
-              LV["s_slide_n"].format(n=4) + " (s03), the slide text" in out and '"rely on" becomes "are supported by"' in out, out)
+              LV["s_slide_n"].format(n=5) + " (s03), the slide text" in out and '"rely on" becomes "are supported by"' in out, out)
         check("a tracked change is read as if accepted, and said to be tracked, by whom",
               'answer B becomes "At ambient temperature, under pressure"' in out and "tracked changes in q01.opt.B" in out and "Anna" in out, out)
         check("a question is named by its task and number", LV["s_question_in"].format(set=LV["s_sc_name"].format(k=1), q=1) + " (q01)" in out, out)
@@ -1065,6 +1207,7 @@ def main():
         os.makedirs(os.path.join(mdir, "tasks"))
         def slide(x, extra=""):
             lines = "".join('<p data-script-field="text">%s</p>' % l for l in x["text"].split("\n"))
+            lines += "".join('<p data-script-field="%s">%s</p>' % (f, x[f]) for f in ("ask", "reveal") if x.get(f))
             return ('<section class="slide" data-script="%s" data-cue="instructor only"><div class="slide-kind">Theory · A1</div>'
                     '<h2 data-script-field="title">%s</h2>%s<svg><text>label</text></svg><p class="src">Source: SIGTTO</p>%s</section>'
                     % (x["id"], x["title"], lines, extra))
@@ -1369,6 +1512,9 @@ def main():
     check("... and only a space the page has: words glued in the page still read glued (the check is not loosened)",
           [csm.norm(x) for x in col2.screens["s05"]["fields"]["text"]] == ["Fueltank"], col2.screens["s05"])
     groups_part()
+    theory_before_task_part()
+    readiness_part()
+    expert_change_part()
     print("\n" + "=" * 72)
     print("%d passed, %d failed" % (len(PASS), len(FAIL)))
     if FAIL:

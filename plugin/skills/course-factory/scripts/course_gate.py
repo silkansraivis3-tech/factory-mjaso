@@ -24,11 +24,16 @@ and date, and for yes / built a folder that IS a knowledge base now. The older i
 knowledge base still being built, and the gate and --approve both passed on it). A module whose
 script was approved before this gate existed keeps its approval: nothing here touches a script.
 
+After the ILO review an expert may still change a Sub-ILO's words, its Bloom level or a row of the
+review. An approved script carries "based_on" (basis): what it was written against. status, render and
+every build stop while basis_changes names a row that changed since, until the script is approved again.
+
 Standard library only.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import json
 import os
@@ -135,6 +140,79 @@ def problems(course, module=None):
         if p:
             out.append(p)
     return out
+
+
+def _h(x):
+    return hashlib.sha256(json.dumps(x, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:10]
+
+
+def _no_done(x):
+    """the row as the experts and the review left it - without the factory's own 'done' on a note"""
+    if isinstance(x, dict):
+        return {k: _no_done(v) for k, v in x.items() if k != "done"}
+    if isinstance(x, list):
+        return sorted((_no_done(v) for v in x), key=lambda v: json.dumps(v, ensure_ascii=False, sort_keys=True))
+    return x
+
+
+def review_rows(course, module):
+    """{Sub-ILO id: its row of the outcome review} - pedagogy_review.json, the module's rows"""
+    rev = _load(workspace.claude_path(course, "pedagogy_review.json")) or {}
+    mod = ((rev.get("modules") or {}).get(str(ilo_map.mkey(module))) or {})
+    return {str(i): x for i, x in (mod.get("rows") or {}).items() if isinstance(x, dict)}
+
+
+def settled_levels(course, module):
+    """{Sub-ILO id: the Bloom level the outcome review settled on} - the proposed level of each row of
+    pedagogy_review.json (the expert's own decision, a raise or keep, or the proposal the review was approved with)"""
+    out = {}
+    for i, x in review_rows(course, module).items():
+        lvl = (x.get("proposed") or {}).get("level")
+        if isinstance(lvl, int) and not isinstance(lvl, bool) and 1 <= lvl <= 6:
+            out[i] = lvl
+    return out
+
+
+def basis(course, module):
+    """What a module's script is written against, stored on approval as "based_on": each Sub-ILO of the module (its
+    words, status and the level the review settled on) and each of its rows of the outcome review (the proposal, the
+    experts' answers and notes), as short hashes by id."""
+    prog, arch = ilo_map.course_files(course)
+    k = ilo_map.mkey(module)
+    rows = [r for r in ilo_map.derive(prog, arch)[0] if ilo_map.mkey(r.get("module")) == k] if arch else []
+    am = next((m for m in (arch or {}).get("modules", []) or [] if ilo_map.mkey(m.get("module")) == k), {})
+    stated = {str(s.get("id")): s.get("bloom") for s in am.get("sub_ilos") or [] if isinstance(s, dict)}
+    lv = settled_levels(course, module)
+    subs = {str(r.get("sub_ilo_id")): _h([r.get("sub_ilo_status", ""), (r.get("sub_ilo") or "").strip(),
+                                          lv.get(str(r.get("sub_ilo_id"))) or stated.get(str(r.get("sub_ilo_id")))])
+            for r in rows}
+    review = {i: _h(_no_done({f: x.get(f) for f in ("proposed", "expert_review", "expert_notes")}))
+              for i, x in review_rows(course, module).items()}
+    return {"sub_ilos": subs, "review": review}
+
+
+def basis_changes(course, module, based_on):
+    """What changed under an approved script since its approval - plain lines, each naming the row; [] = nothing"""
+    now, out = basis(course, module), []
+    for part, name, what in (("sub_ilos", "Sub-ILO %s", "its words, status or Bloom level changed"),
+                             ("review", "the outcome review's row %s (pedagogy_review.json)",
+                              "the proposal or the experts' answer changed")):
+        was, cur = (based_on or {}).get(part) or {}, now[part]
+        for i in sorted(set(was) | set(cur)):
+            if i not in cur:
+                out.append(name % i + " is gone")
+            elif i not in was:
+                out.append(name % i + " is new")
+            elif was[i] != cur[i]:
+                out.append(name % i + ": " + what)
+    return out
+
+
+def basis_message(module, changes, what="built"):
+    return ("Stopped - module %s's approved script was written against outcomes that have changed since it was approved "
+            "(the expert's change reaches the work):\n%s\n  Read what changed (architecture.json, pedagogy_review.json), "
+            "change the script to match (content_script.py propose / apply), and approve it again; then it can be %s."
+            % (module, "\n".join("  - " + c for c in changes), what))
 
 
 def sim_note(course):

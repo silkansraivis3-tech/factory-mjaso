@@ -220,7 +220,7 @@ def score_module(course, m, no_browser=False):
             st = fact_check.status(course, m, script)
             row["claims"], row["claims_unproven"], row["claims_unchecked"] = st["claims"], len(st["unproven"]), len(st["unchecked"])
         old = cs.old_course_findings(course, script)
-        for rule in ("o_moved", "o_dropped", "o_thinner"):
+        for rule in ("o_moved", "o_dropped", "o_thinner", "o_lost"):
             row[rule.replace("o_", "old_")] = sum(1 for f in old if f["rule"] == rule)
         row["must_fix_left"] = len(cs.blocking(cs.all_findings(script, course)))
     rev = load(workspace.claude_path(course, "pedagogy_review.json"), {}) or {}
@@ -242,7 +242,7 @@ def score_module(course, m, no_browser=False):
 
 
 LOWER_IS_BETTER = ("cut_or_cropped_slides", "claims_unproven", "claims_unchecked", "old_moved", "old_dropped", "old_thinner",
-                   "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row")
+                   "old_lost", "must_fix_left", "bloom_lifts_over_one", "same_template_in_a_row")
 
 
 def compare(now, before):
@@ -281,7 +281,7 @@ def report(home, run_dir=None, no_browser=False):
             break
     print("FACTORY TRIAL - course-factory %s, started %s" % (card["plugin"], card["started"]))
     keys = [k for k in ("built", "build_says", "cut_or_cropped_slides", "claims", "claims_unproven", "claims_unchecked", "old_moved",
-                        "old_dropped", "old_thinner", "must_fix_left", "bloom_lifts_over_one", "templates", "same_template_in_a_row",
+                        "old_dropped", "old_thinner", "old_lost", "must_fix_left", "bloom_lifts_over_one", "templates", "same_template_in_a_row",
                         "simulator_exercises")]
     for r in card["modules"]:
         print("\nModule %d" % r["module"])

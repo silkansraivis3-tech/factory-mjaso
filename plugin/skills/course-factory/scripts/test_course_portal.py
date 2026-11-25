@@ -257,7 +257,18 @@ def main():
         for x in rev["modules"]["1"]["rows"]["1.1.b"]["expert_notes"]:
             x["done"] = "the simulator runs' minutes are in the task"
         io.open(pr.files(c)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
-        check("with every change carried out, check is clean again", pr.check(c)[0] == [], pr.check(c)[0])
+        check("a 'done' that names no changed course file is not done - the note is still open",
+              any("names no course file changed" in x for x in pr.check(c)[0]), pr.check(c)[0])
+        for x in rev["modules"]["1"]["rows"]["1.1.b"]["expert_notes"]:
+            x["done"] = "the simulator runs' minutes are in the task - architecture.json"
+        cs_arch = pr.files(c)["arch"]
+        io.open(cs_arch, "a", encoding="utf-8").write("\n")
+        io.open(pr.files(c)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
+        check("with every change carried out, and the file it is in named, check is clean again", pr.check(c)[0] == [], pr.check(c)[0])
+        os.utime(cs_arch, (1, 1))
+        check("... a named file not changed since the note's date leaves it open",
+              any("names no course file changed since" in x for x in pr.check(c)[0]), pr.check(c)[0])
+        os.utime(cs_arch, None)
         pr.render(c, pdf=False)
         with zipfile.ZipFile(os.path.join(pr.files(c)["out"], "2_BLOOM_PROPOSED.docx")) as z:
             word = z.read("word/document.xml").decode("utf-8")

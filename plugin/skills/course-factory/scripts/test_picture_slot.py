@@ -58,6 +58,7 @@ def main():
     screen(sc, "s01")["picture"] = {"kind": "photo", "aspect": "16:9", "shows": "A membrane LNG carrier alongside"}
     screen(sc, "s02")["picture"] = {"kind": "figure", "aspect": "4:3", "shows": "The propane line with the three ship types"}
     screen(sc, "s03")["picture"] = {"kind": "3d", "shows": "The four tank types in a hull section"}
+    screen(sc, "s06")["picture"] = {"kind": "figure", "aspect": "4:3", "shows": "A thermometer scale with two boiling points"}
     check("a script with every slot written: nothing to say", rules(sc) == [], rules(sc))
     screen(sc, "s01")["picture"]["kind"] = "drawing"
     check("an unknown kind is a must-fix", ("p_kind", cs.FAIL) in rules(sc, "s01"), rules(sc, "s01"))

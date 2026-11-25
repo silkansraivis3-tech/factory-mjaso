@@ -5811,6 +5811,11 @@ def main(argv=None):
             print("Stopped - the build sheet is already there; it is changed with the Edit tool, never replaced:\n    %s" % bp)
             return 2
         gate = cs.course_gate.problems(o.course, o.module)      # belt and braces (2.42.0): content_script.py stops first
+        if not gate and script.get("status") == "approved" and script.get("approved_hash") == cs.content_hash(script):
+            changed = cs.basis_changes(o.course, script)
+            if changed:
+                print(cs.course_gate.basis_message(o.module, changed, "built"))
+                return 2
         if gate:
             print(cs.course_gate.stop_message(o.module, gate, "built"))
             return 2
@@ -5890,6 +5895,10 @@ def main(argv=None):
         print("Stopped - the content script of module %s is not approved (or changed after approval).\n"
               "  The deck is built only from approved words (L29). For a preview, add --draft." % o.module)
         return 2
+    changed = cs.basis_changes(o.course, script) if approved and not o.draft else []
+    if changed:                                         # a Sub-ILO or the outcome review changed after the approval
+        print(cs.course_gate.basis_message(o.module, changed, "built"))
+        return 2
     build = cs.load(bp) if os.path.isfile(bp) else {}
     mdir, why = module_folder(o.course, o.module, o.module_dir)
     if not mdir:
@@ -5897,6 +5906,8 @@ def main(argv=None):
         return 2
     code, say = ensure_design(mdir)         # 2.49.2: the module's design files are the factory's, or this says what it did
     print(say + "\n" if code == 0 else say)
+    if changed is None:
+        print(cs.BASIS_NOTE)
     if code != 0:
         return 2
     out = os.path.join(mdir, "presentation", "index.html")

@@ -22,6 +22,11 @@ Then, before the first screen is written, read — in this order, and only these
    programme topic and the **Main ILO verbatim (L2)**, every **Sub-ILO** the module owes (kept /
    re-expressed / added), and the model-course items under the topic. The same module in
    `working_claude/architecture.json` says how they were planned (active learning, media, tasks).
+   **The outcome review of the module** - its rows in `working_claude/pedagogy_review.json`: the level each outcome was
+   raised to or kept at (`proposed.level` - the level the module teaches and checks to, not the verb's), the task
+   decided for it (`proposed.how`, the expert's own when `task_expert`), and the experts' answers and notes. An approved
+   script records what it was written against (`based_on`); when a Sub-ILO or a row changes after that, `status`,
+   `render` and every build stop and name it - change the script to match and approve it again.
 2. **The model-course items it owes** — the course's transcribed syllabus (`working_claude/*syllabus*.json`,
    `coverage/GUIDE.md` §1), the items listed by `ilo_map.py show`. They are the outcomes *inside* the topic;
    `coverage/` checks them later against everything built.
@@ -32,7 +37,7 @@ Then, before the first screen is written, read — in this order, and only these
    the delivery around it. The check says it (`old_course_findings`): a slide earlier than the old order needs
    `"moved_why"` with the expert's reason; an old slide that taught something and is left out goes in the script's
    `"dropped_old"` (`[{"from": "<deck>.pptx, slide 27", "why": "..."}]`); the slides must show at least 60 % of the
-   old slides' words.
+   old slides' words, and every number and key term of each old slide they cite (on screen or in the cue).
 4. **The course libraries first** (`intake.json` → `subject_library`; the Gas Library for every gas course,
    then Common): `python <course-visuals>/scripts/subject_library.py
    find "<the slide's subject>" --course "<course>"` — the shared topic and which module of each course teaches it, the
@@ -161,7 +166,21 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   model or diagram themselves) - and its notes say what they do. Never mark a slide that is only shown.
   The review page shows plain theory against active minutes (aim: 20 / 80). To get there, **keep every
   theory slide** and give the plain ones fewer minutes - the words stay to be read - and the minutes to
-  activity; never shorten or remove good theory. Theory may be added.
+  activity; never cut or remove good theory. Theory may be added.
+- **Compact, never cut** (owner: "compact, don't shorten"). When a slide holds more than its screen does, keep every
+  fact and change its form: short points with the full words in the instructor's cue (`"points"`, the text stays), a
+  table (`"value | what it means"`), a labelled figure, numbered steps, or a second slide (`"parts"`). Never drop a
+  number, a name or a reason to make it fit. A course rebuilt from an old one is checked for it: every number and key
+  term of an old slide (its numbers, its abbreviations, the words it says twice) still appears in the new slides that
+  cite it, on screen or in the cue (`o_lost`, a must-fix), and the slides still show at least 60 % of the old slides'
+  words (L71).
+- **A worked example before every task that works something out.** A calculation, a value to set, or any task at
+  Apply or higher (`bloom_map.task_level`) comes after a slide on the same Sub-ILO that works one with the room - a
+  worked example (`"active": "worked-example"`, `"ask"`, `"reveal"`), or a scenario with the why of each choice. The
+  rule stated alone is not enough (Project Management M03: the cash-balance rule on a slide, the sum never worked, then
+  a task asking for a balance of -3,000). Missing, it is a must-fix: "no worked example before ..." (`t_no_worked_example`).
+  A calculation's own words are judged too when its answer is only new numbers. A slide of short points teaches its full
+  words - the instructor says them - but a task's key term must be on one of its points (`t_term_not_shown`).
 - **Pick the slide for the information.** The templates hold no words of their own. Read what each
   piece of the module's information is, and write it in the shape its template needs - the compiler then builds that
   template (`course-module-ui/knowledge/layout-templates.json` "picking"). Every new word is drafted from this course's
@@ -271,7 +290,8 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   it must show. A script from before 2.73.0 is read from `visual_kind` and `visual` (a reminder, never a block).
 - **The words a layout holds are a must-fix here**, not a build-time note: beside a picture a slide holds at most 85 words
   (1024 x 768, layout-templates.json "budgets"; `compile/GUIDE.md` §2). The factory never pages or cuts words, so the writer
-  shortens them or gives the slide `"parts"` in the script.
+  makes them compact - points with the full words in the cue, a table, a labelled figure, numbered steps - or gives the
+  slide `"parts"` in the script; every fact stays (compact, never cut, §1).
 - **The course's ship (2.73.0).** STANDARDS.md may carry a `## Ship profile` section - `- Pump arrangement: deepwell pumps`,
   `- Not on board: pump room, cargo pump room` - and render then says (a note) every screen that names what the course's
   ship does not have (chem advanced: four scripts written in parallel set scenes in a "pump room" on a deepwell-pump ship).
@@ -326,6 +346,16 @@ detector display for a reading, the GA drawing for "where is it".
 ## 2 · Show it to the operator
 
 **First, proved in the sources (L4).** Once a module's script is written, the `fact-checker` agent (one per module, in parallel) proves every claim in the course's knowledge base: `scripts/fact_check.py` finds the claims and proves what a source says word for word, the agent judges the rest found / partly / not found from the source passages only, and leaves a change list that cuts what no source says and corrects what it says otherwise - proposed with `content_script.py propose`, shown like any correction (an unattended build applies it itself, `fixes --apply`, each change logged for the expert). Approval is refused while a claim is not judged or one not proved is still in the script (a course with no knowledge base is not checked).
+
+**Then, read cold (owner: "not theory about addition and then a test on multiplication and division").** The
+`task-readiness` agent (one per module, beside the fact-checker; it runs on Haiku - cheap) is a trainee who read only
+the slides before each self-check and module-check question: `content_script.py readiness <course> --module 1` gives it,
+per question, those slides' words and the question, never the answer. It tries to answer each one and lists what it
+cannot answer from those slides alone, with the missing piece, and where it would not know what to do (the action not
+said, a multi-select without how many, a calculation without its unit or rounding, two asks in one, a NOT not stressed,
+an option that gives the answer away), each with its fix; `readiness --record` keeps them beside the script
+(`working_claude/script/M01.readiness.json`). Each is a must-fix in the theory check of the review page until the writer
+changes the script and runs the agent again (or writes in the finding's `cleared` what was changed).
 
 
 ```

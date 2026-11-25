@@ -8,6 +8,7 @@
     content_script.py apply    <course> --module 1 --confirmed [--confirmed-by "<name>"]   apply PENDING - only after the operator said yes
     content_script.py approve  <course> --module 1 --by "<name>"         the operator's "next" - the operator's own act (--by is the person)
     content_script.py status   <course> --module 1
+    content_script.py readiness <course> --module 1 [--record findings.json]   the cold trainee's packets / its findings (agents/task-readiness.md)
 
 WHY THIS EXISTS
 Until 2.16.0 the operator saw the real words of a module for the first time in finished HTML, and
@@ -32,7 +33,11 @@ knowledge/theory-rules.json sets the floors, and every finding is shown at the t
 page: a slide too thin to teach from, instructor notes too thin to explain from, a module whose words
 do not fill its minutes, a self-check with too little theory before it, a question whose answer is
 not in the slides already taught, a task written onto a slide, minutes that do not add up to the
-programme's. For every question the page names the slide that teaches its answer.
+programme's. For every question the page names the slide that teaches its answer. A task that has the
+trainee work something out (a calculation, a value to set, anything at Apply or higher) comes after a
+worked example on its Sub-ILO; a slide of short points teaches its full words (the instructor says them),
+its points show the term a task asks. The cold trainee (agents/task-readiness.md) reads only the slides
+before each task and says what it could not answer, or where it would not know what to do.
 
 WHERE IT GOES IN THE CLASSROOM (owner, 2026-10-05 - L45, knowledge/classroom-system.json)
 Each slide becomes a .slide in module01/presentation/index.html with its title as data-title and its instructor notes as
@@ -974,6 +979,32 @@ def shown_terms(s):
     return terms(shown_text(s))
 
 
+def taught_terms(s):
+    """what a slide teaches: what it shows, and on a slide of short points its full words too - the instructor says them
+    (the instructor's cue, compile_module.py). A task's key term must still be on the screen (t_term_not_shown)."""
+    return terms(shown_text(s) + ("\n" + s.get("text", "") if s.get("points") else ""))
+
+
+# a task that has the trainee work something out - a sum, a value to set, anything at Apply or higher - comes after a
+# slide on its Sub-ILO that works one with the room (owner: "not theory about addition and then a test on multiplication")
+WORK_OUT = ("calculate", "set_value")
+
+
+def works_it_out(q):
+    return mech(q) in WORK_OUT or bloom_map.task_level(mech(q), q.get("bloom"))["level"] >= 3
+
+
+def worked_example(s):
+    """a slide that works an example with the room: a worked example, a question to the room with its answer, or a
+    scenario with the why of each choice"""
+    return s.get("kind") == "slide" and bool(s.get("active") == "worked-example" or (s.get("ask") and s.get("reveal"))
+                                             or (s.get("choices") and s.get("why")))
+
+
+def same_sub_ilo(a, b):
+    return any(x == y or x.startswith(y + ".") or y.startswith(x + ".") for x in a for y in b)
+
+
 # the task rules that are about a set or a module's questions as a trainee goes through them: with groups, each group's
 # path (the questions for everyone and the group's own) must meet them, never the mix of all groups no trainee sees
 GROUP_RULES = ("t_sc_small", "t_sc_big", "t_sc_mix", "t_no_challenge", "t_ab_order", "t_not_spaced", "t_mc_small", "m_mix",
@@ -1084,8 +1115,8 @@ def theory_check(script):
                 # the room's own question: its answer comes from this slide's lines and the slides before it
                 # (GAS BASIC M01 s05 asked what cooling gains a ship one slide before semi-refrigerated ships were taught)
                 before = seen_slides + [dict(s, ask="", reveal="")]
-                share = taught_share(as_text(s.get("reveal")), (set().union(*[shown_terms(x)[0] for x in before]),
-                                                                set().union(*[shown_terms(x)[1] for x in before])))
+                share = taught_share(as_text(s.get("reveal")), (set().union(*[taught_terms(x)[0] for x in before]),
+                                                                set().union(*[taught_terms(x)[1] for x in before])))
                 if share is not None and share < R["answers_taught_first"]["min_share"]:
                     add(s["id"], "reveal", FAIL, "t_room_not_taught", share="%d" % round(share * 100))
             for field, said in (("reveal", as_text(s.get("reveal"))), ("text", s.get("text", "") if s.get("claim") else "")):
@@ -1145,14 +1176,27 @@ def theory_check(script):
                             applying = int(q.get("bloom") or 0) >= 3      # applies a taught rule to new cases: judge words, not new numbers
                         except (TypeError, ValueError):
                             applying = False
-                        each = [(taught_share(answer, shown_terms(x), others, applying) or 0, x) for x in seen_slides]
-                        union = (set().union(*[shown_terms(x)[0] for x in seen_slides]) if seen_slides else set(),
+                        each = [(taught_share(answer, taught_terms(x), others, applying) or 0, x) for x in seen_slides]
+                        union = (set().union(*[taught_terms(x)[0] for x in seen_slides]) if seen_slides else set(),
+                                 set().union(*[taught_terms(x)[1] for x in seen_slides]) if seen_slides else set())
+                        shown = (set().union(*[shown_terms(x)[0] for x in seen_slides]) if seen_slides else set(),
                                  set().union(*[shown_terms(x)[1] for x in seen_slides]) if seen_slides else set())
-                        share = taught_share(answer, union, others, applying)
+                        share = by_answer = taught_share(answer, union, others, applying)
+                        work = works_it_out(q)
+                        if share is None and work:           # its own numbers: the question's key words are judged
+                            share = taught_share(q.get("question", ""), union, (), True)
                         best = sorted([e for e in each if e[0] >= 0.3], key=lambda e: -e[0])[:2]
                         taught_on[q["id"]] = sorted(slide_no[x["id"]] for _, x in best)
                         if share is not None and share < R["answers_taught_first"]["min_share"]:
                             add(q["id"], "question", FAIL, "t_not_taught")
+                        elif by_answer and union != shown and not taught_share(answer, shown, others, applying):
+                            # taught only in the instructor's words of a slide of short points: its points show no key term
+                            add(q["id"], "question", FAIL, "t_term_not_shown")
+                        subs = sub_ilos_of(q)
+                        if work and not any(worked_example(x) and (not subs or same_sub_ilo(subs, sub_ilos_of(x)))
+                                            for x in seen_slides):
+                            add(q["id"], "question", FAIL, "t_no_worked_example", task=place(script, q["id"]),
+                                s=", ".join(subs) or "-")
             since_min = since_words = 0.0
     return found, taught_on
 
@@ -1862,7 +1906,7 @@ def ship_findings(course, script):
 
 # ------------------------------------------------------------------ a retrofit keeps the old course
 # a course rebuilt from an old one: the new module follows the old course's order, keeps every slide that taught
-# something, and carries at least as much theory - the old order was good and only its Bloom level needed lifting
+# something, carries at least as much theory and every fact of it - the old order was good and only its Bloom level needed lifting
 OLD_REF = re.compile(r"([^;]+?\.pptx)\s*,?\s*slides?\s+([0-9][0-9\s,\-\u2013]*(?:\s*and\s*[0-9]+)*)", re.I)
 OLD_RULES = {"back": 2, "content_words": 20, "thin_fail": 0.6, "thin_note": 0.8, "new_share": 0.3, "min_old_words": 200}
 
@@ -1880,9 +1924,26 @@ def old_refs(text):
     return out
 
 
+def slide_words(s):
+    """every word a slide carries for the room - on the screen, or in the instructor's cue - never its notes"""
+    return "\n".join(as_text(s.get(f)) for f in ("title", "text", "points", "ask", "reveal", "claim", "choices", "why") if s.get(f))
+
+
+def key_terms(text):
+    """(numbers, abbreviations, subject words) of an old slide: every number, every abbreviation (LNG, IGC, CO2) and the
+    words it says twice or more"""
+    nums = terms(text)[0]
+    abbr = sorted(set(re.findall(r"(?<!\w)(?=\w*[A-Z]\w*[A-Z])[A-Z0-9][A-Za-z0-9]{1,9}(?!\w)", text or "")))
+    seen = {}
+    for w in re.findall(r"[^\W\d_]{4,}", (text or "").lower(), re.UNICODE):
+        if w not in STOP:
+            seen.setdefault(w[:5], [0, w])[0] += 1
+    return nums, abbr, sorted(v[1] for v in seen.values() if v[0] >= 2)
+
+
 def old_decks(course):
-    """{deck file name (lower case): {slide number: (title, words)}} from working_claude/old_course_inventory.json - None when
-    the course has no old course"""
+    """{deck file name (lower case): {slide number: (title, words, text)}} from working_claude/old_course_inventory.json - None
+    when the course has no old course"""
     try:
         inv = json.load(io.open(workspace.claude_path(course, "old_course_inventory.json"), encoding="utf-8"))
     except (OSError, ValueError, TypeError):
@@ -1891,14 +1952,16 @@ def old_decks(course):
     for sec in inv.get("sections") or []:
         for f in sec.get("files") or []:
             if f.get("slides"):
-                out[str(f.get("file", "")).split("/")[-1].lower()] = {x["n"]: (x.get("title", ""), x.get("words", 0)) for x in f["slides"]}
+                out[str(f.get("file", "")).split("/")[-1].lower()] = {x["n"]: (x.get("title", ""), x.get("words", 0), x.get("text", ""))
+                                                                     for x in f["slides"]}
     return out
 
 
 def old_course_findings(course, script):
     """the old course, kept: a slide that moves earlier than the old order (MUST, unless "moved_why" says the expert agreed),
     an old slide that taught something and no module cites (MUST, unless the script's "dropped_old" says why), theory thinner
-    than the old slides it replaces (MUST under 60 %, a note under 80 %), and a note when many slides are new"""
+    than the old slides it replaces (MUST under 60 %, a note under 80 %), a number or key term of an old slide that the new
+    slides citing it no longer carry, on screen or in the cue (MUST), and a note when many slides are new"""
     decks = old_decks(course) if course else None
     if not decks or str(script.get("module")).lower() == "final":
         return []
@@ -1948,12 +2011,28 @@ def old_course_findings(course, script):
             if n in have and have[n][1] >= R["content_words"] and n not in cited.get(deck, ()):
                 add(None, FAIL, "o_dropped", deck=deck, n=n, title=have[n][0][:60], w=have[n][1])
     new_words = sum(wc(shown_text(x)) for x in slides if refs[x["id"]])
-    if old_words >= R["min_old_words"]:
+    if old_words >= R["min_old_words"]:                 # L71: the slides show at least 60 % of the old slides' words
         share = new_words / float(old_words)
         if share < R["thin_fail"]:
             add(None, FAIL, "o_thinner", new=new_words, old=old_words, pct=round(share * 100))
         elif share < R["thin_note"]:
             add(None, NOTE, "o_thinner", new=new_words, old=old_words, pct=round(share * 100))
+    # compact, never cut: the form may change (points, a table, a labelled figure, numbered steps, the full words in the
+    # instructor's cue), every number and key term of an old slide stays in the new slides that cite it
+    for deck, nums in mine.items():
+        have = decks.get(deck) or {}
+        new_text = "\n".join(slide_words(x) for x in slides if deck in refs[x["id"]])
+        new_n, new_w = terms(new_text)
+        new_n = {y.lstrip("-") for y in new_n}
+        for n in sorted(set(nums)):
+            if n not in have or have[n][1] < R["content_words"] or not have[n][2]:
+                continue
+            old_n, abbr, subj = key_terms(have[n][2])
+            lost = sorted(x for x in old_n if x.lstrip("-") not in new_n) \
+                + [a for a in abbr if not re.search(r"(?<!\w)%s(?!\w)" % re.escape(a), new_text)] \
+                + [w for w in subj if not any(s.startswith(w[:5]) or w[:5].startswith(s) for s in new_w)]
+            if lost:
+                add(None, FAIL, "o_lost", deck=deck, n=n, title=have[n][0][:60], lost=", ".join(lost[:8]) + (" ..." if len(lost) > 8 else ""))
     fresh = [x["id"] for x in slides if not refs[x["id"]]]
     if slides and len(fresh) > R["new_share"] * len(slides):
         add(None, NOTE, "o_new_share", n=len(fresh), all=len(slides), ids=", ".join(fresh[:8]))
@@ -2064,6 +2143,87 @@ def proof_findings(course, script):
         found.append({"where": place(script, sid), "screen": sid, "field": "", "level": FAIL, "rule": "c_unproven",
                       "detail": T(script, "c_unproven", text=text[:120], verdict=verdict.replace("_", " ")), "fix": ""})
     return found
+
+
+# ------------------------------------------------------------------ the cold trainee (agents/task-readiness.md)
+# A reviewer that knows only the slides before a task and the task itself tries to answer it, and says what it could not
+# answer from them, or where it would not know what to do. Its findings are must-fix until the writer clears them.
+def readiness_path(course, module):
+    return os.path.join(paths(course, module)["dir"], mid(module) + ".readiness.json")
+
+
+def cold_items(q):
+    """what the trainee's screen offers: the options or the items, the right ones not marked and in no telling order"""
+    if q.get("options"):
+        return [as_text(x) for x in q["options"]]
+    if mech(q) in ("calculate", "set_value", "predict"):
+        return []                                   # the trainee types or sets the value
+    out = []
+    for x in lines_of(as_text(q.get("answer"))):
+        x = x.replace("*", "").strip()
+        if "=>" in x:
+            head, tail = x.split("=>", 1)
+            out.append(head.strip() + (" => " + " | ".join(sorted(c.strip() for c in tail.split("|") if c.strip())) if "|" in tail else ""))
+        elif " = " in x:
+            out += [p.strip() for p in x.split(" = ", 1)]
+        elif ":" in x and ";" in x:
+            g, items = x.split(":", 1)
+            out += [g.strip()] + [i.strip() for i in items.split(";") if i.strip()]
+        else:
+            out.append(x)
+    return sorted(set(o for o in out if o))
+
+
+def readiness_packets(script):
+    """[{id, where, mechanic, slides, question, items}] - for each self-check and module-check question, the words of every
+    slide before its task opens (on screen, or the instructor's cue of a slide of short points) and the question as the
+    trainee sees it - never its answer"""
+    slide_no, sets, set_of = plan_of(script)
+    out, seen = [], []
+    for s in script.get("screens", []):
+        if s.get("kind") == "slide":
+            seen.append("Slide %d: %s" % (slide_no[s["id"]], slide_words(s)))
+        elif s.get("kind") == "task-slide":
+            st = set_of.get(s.get("opens"))
+            for q in st["questions"] if st and st["kind"] in ("self-check", "module-check") else []:
+                out.append({"id": q["id"], "where": place(script, q["id"]), "mechanic": mech(q), "slides": list(seen),
+                            "question": as_text(q.get("question")), "items": cold_items(q)})
+    return out
+
+
+def readiness_findings(course, script):
+    """MUST: every finding of the cold trainee (agents/task-readiness.md) the writer has not cleared"""
+    p = readiness_path(course, script.get("module")) if course and str(script.get("module")).lower() != "final" else ""
+    if not p or not os.path.isfile(p):
+        return []
+    found = []
+    for f in (load(p).get("findings") or []):
+        if isinstance(f, dict) and not str(f.get("cleared") or "").strip():
+            found.append({"where": place(script, f.get("id")) if screen_of(script, f.get("id")) else T(script, "s_the_module"),
+                          "screen": f.get("id") or "", "field": "question", "level": FAIL, "rule": "r_cold",
+                          "detail": T(script, "r_cold_" + ("unclear" if f.get("kind") == "unclear" else "missing"),
+                                      what=str(f.get("what") or "").strip()), "fix": str(f.get("fix") or "").strip()})
+    return found
+
+
+def cmd_readiness(course, module, record=None):
+    """no --record: the packets for the cold trainee, as JSON; --record <file>: its findings kept beside the script"""
+    script = load(paths(course, module)["script"])
+    if not record:
+        print(json.dumps(readiness_packets(script), ensure_ascii=False, indent=1))
+        return 0
+    got = load(record)
+    ids = {q["id"] for q in readiness_packets(script)}
+    bad = [f for f in got if not (isinstance(f, dict) and f.get("id") in ids and f.get("kind") in ("missing", "unclear")
+                                  and str(f.get("what") or "").strip() and str(f.get("fix") or "").strip())] if isinstance(got, list) else [got]
+    if bad:
+        print("Not recorded - each finding is {\"id\": a question's id, \"kind\": \"missing\" or \"unclear\", \"what\", \"fix\"}:\n"
+              + "\n".join("  - " + json.dumps(f, ensure_ascii=False)[:200] for f in bad[:8]))
+        return 1
+    save(readiness_path(course, module), {"script_hash": content_hash(script), "on": date.today().isoformat(), "findings": got})
+    print("Recorded - %d finding(s) for module %s; each is a must-fix on the review page until the script is changed and the "
+          "reviewer run again (or its 'cleared' says what was changed)." % (len(got), script.get("module")))
+    return 0
 
 
 def recap_findings(script):
@@ -2184,6 +2344,7 @@ def ilo_findings(course, script):
     taught = {t for s in screens if s.get("kind") in ("slide", "activity") for t in sub_ilos_of(s)}
     checked = {t for s in qs for t in sub_ilos_of(s)}
     practised = practised_sub_ilos(course, script)
+    settled = course_gate.settled_levels(course, script.get("module"))      # the level the outcome review settled on
     for r in rows:
         sid = str(r.get("sub_ilo_id"))
         if sid not in ilo_map.leaves(rows):
@@ -2191,7 +2352,7 @@ def ilo_findings(course, script):
         if sid not in taught:
             add("", "sub_ilo", "i_not_taught", s=sid, text=short(r.get("sub_ilo", ""), 90))
         elif sid not in practised:
-            lv = doing_level(r, script)
+            lv = doing_level(dict(r, bloom=settled[sid]) if sid in settled else r, script)
             if lv:
                 add("", "sub_ilo", "i_not_practised", s=sid, verb=lv["verb"], level=bloom_map.level_name(lv["level"]),
                     text=short(r.get("sub_ilo", ""), 90))
@@ -2277,7 +2438,7 @@ def all_findings(script, course=None):
     th, _ = theory_findings(script)
     return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script) \
         + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script) \
-        + activity_findings(course, script)
+        + activity_findings(course, script) + readiness_findings(course, script)
 
 
 # ------------------------------------------------------------------ varied practical-activity formats (2.128.0, L68)
@@ -2426,10 +2587,15 @@ def split_html(e, script):
 
 
 def bloom_of(course, script):
-    """The Bloom map of this module (L48) - its Sub-ILOs from working_claude/architecture.json when there is one."""
+    """The Bloom map of this module (L48) - its Sub-ILOs from working_claude/architecture.json when there is one, each at
+    the level the outcome review settled on (pedagogy_review.json) where it settled one."""
     rd = lambda n: load(workspace.claude_path(course, n)) if course and os.path.isfile(workspace.claude_path(course, n)) else None
     arch, prog = rd("architecture.json"), rd("programme.json")
     am = next((m for m in (arch or {}).get("modules", []) if str(m.get("module")) == str(script.get("module"))), None)
+    settled = course_gate.settled_levels(course, script.get("module")) if am and course else {}
+    if settled:
+        am = dict(am, sub_ilos=[dict(s, bloom=settled[str(s.get("id"))]) if isinstance(s, dict) and str(s.get("id")) in settled
+                                else s for s in am.get("sub_ilos") or []])
     return bloom_map.module_map(script, am, prog, arch, mech=mech, where=lambda sid: place(script, sid))
 
 
@@ -2638,6 +2804,7 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
     title = T(script, "s_page_title", m=script.get("module"))
     slide_no, sets, set_of = plan_of(script)
     th_found, taught_on = theory_findings(script)
+    th_found = th_found + readiness_findings(course, script)       # the cold trainee's (agents/task-readiness.md)
     o = ['<!DOCTYPE html><html lang="%s"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
          '<title>%s</title><style>%s</style></head><body><div class="wrap">' % (e(script.get("operator_language", "en")), e(title), css),
          "<h1>%s</h1><p class=\"sub\">%s · <b>%s</b></p><p class=\"lead\">%s</p>" % (e(title), V(script.get("title", "")), e(status), e(T(script, "s_intro")))]
@@ -3487,7 +3654,8 @@ def cmd_approve(course, module, by, despite=False):
               % (len(must), "\n".join("  - %s%s: %s" % (f["where"], (", " + f["field"]) if f["field"] else "", f["detail"]) for f in must)))
         return 1
     script["approved_despite_findings"] = [dict(f, date=date.today().isoformat()) for f in must] if must else []
-    script.update({"status": "approved", "approved_by": by, "approved_on": date.today().isoformat(), "approved_hash": content_hash(script)})
+    script.update({"status": "approved", "approved_by": by, "approved_on": date.today().isoformat(), "approved_hash": content_hash(script),
+                   "based_on": course_gate.basis(course, script.get("module"))})
     script.pop("since_approval", None)
     if not lenient or not ilo:                       # the ILO map and sources rules were checked in full (or the script meets them)
         script["approved_checks"] = sorted(set(script.get("approved_checks") or []) | {ILO_CHECK})
@@ -3497,12 +3665,30 @@ def cmd_approve(course, module, by, despite=False):
     return 0
 
 
+def basis_changes(course, script):
+    """what changed under an approved script since it was approved (course_gate.basis): [] when nothing, None for a
+    script approved before "based_on" was recorded"""
+    b = script.get("based_on")
+    return course_gate.basis_changes(course, script.get("module"), b) if isinstance(b, dict) else None
+
+
+BASIS_NOTE = ("  note: this script was approved before the factory recorded what it was written against (\"based_on\") - a "
+              "change to its Sub-ILOs or the outcome review since then is not seen. Approve it again to record it.")
+
+
 def cmd_status(course, module):
     p = paths(course, module)
     script = load(p["script"])
     ok = script.get("status") == "approved" and script.get("approved_hash") == content_hash(script)
     print("Module %s: %s%s" % (script.get("module"), "approved by %s on %s" % (script.get("approved_by"), script.get("approved_on")) if ok else "draft - not approved",
                                "; understood changes are waiting for confirmation" if os.path.isfile(p["pending"]) else ""))
+    if ok:
+        ch = basis_changes(course, script)
+        if ch:
+            print(course_gate.basis_message(script.get("module"), ch, "built"))
+            return 1
+        if ch is None:
+            print(BASIS_NOTE)
     return 0 if ok else 1
 
 
@@ -3562,7 +3748,7 @@ def render(course, module, quiet=False):
         if probs:
             print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
         th, _ = theory_findings(script)
-        for head, found in (("The theory check", th), ("The pictures-and-tasks check", media_findings(script)),
+        for head, found in (("The theory check", th + readiness_findings(course, script)), ("The pictures-and-tasks check", media_findings(script)),
                             ("The text check", text_findings(script)), ("The ILO map and sources check", ilo_findings(course, script)),
                             ("The ship profile check (STANDARDS.md)", ship_findings(course, script))):
             if found:
@@ -3588,10 +3774,12 @@ def render(course, module, quiet=False):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("render", "read", "propose", "apply", "discard", "approve", "status"):
+    for name in ("render", "read", "propose", "apply", "discard", "approve", "status", "readiness"):
         s = sub.add_parser(name)
         s.add_argument("course")
         s.add_argument("--module", required=True)
+        if name == "readiness":
+            s.add_argument("--record", help="the cold trainee's findings, a JSON list (agents/task-readiness.md)")
         if name == "read":
             s.add_argument("--docx"); s.add_argument("--pdf")
         if name == "propose":
@@ -3618,11 +3806,18 @@ def main(argv=None):
         if probs:
             print(course_gate.stop_message(a.module, probs, "started" if a.cmd == "render" else "approved"))
             return 2
+        ch = basis_changes(a.course, script) if a.cmd == "render" and approved else []
+        if ch:
+            print(course_gate.basis_message(script.get("module"), ch, "rendered"))
+            return 2
+        if ch is None:
+            print(BASIS_NOTE)
     return {"render": lambda: render(a.course, a.module), "read": lambda: cmd_read(a.course, a.module, a.docx, a.pdf),
             "propose": lambda: cmd_propose(a.course, a.module, a.changes, a.proposed_by),
             "apply": lambda: cmd_apply(a.course, a.module, a.confirmed, a.confirmed_by),
             "discard": lambda: cmd_discard(a.course, a.module),
-            "approve": lambda: cmd_approve(a.course, a.module, a.by, a.despite_findings), "status": lambda: cmd_status(a.course, a.module)}[a.cmd]()
+            "approve": lambda: cmd_approve(a.course, a.module, a.by, a.despite_findings), "status": lambda: cmd_status(a.course, a.module),
+            "readiness": lambda: cmd_readiness(a.course, a.module, a.record)}[a.cmd]()
 
 
 if __name__ == "__main__":
