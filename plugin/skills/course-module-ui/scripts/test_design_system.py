@@ -311,6 +311,12 @@ def main():
           (fg, bg, round(contrast(fg, bg), 2) if fg.startswith("#") and bg.startswith("#") else None))
     check("gb_steps.js finds a slide by its marks, not by its id",
           "getElementById" not in steps and "[data-stop]" in steps and "data-stops" in steps)
+    body = json.load(io.open(os.path.join(SKILLS, "course-module-ux", "measure", "knowledge", "floor.json"),
+                             encoding="utf-8"))["body_text"]
+    fs = {k: re.search(r"--%s:([^;]+);" % k, lay).group(1) for k in ("lt-fs", "lt-fs-lead")}
+    at = {(k, v): css_px(fs[k], *map(int, v.split("x"))) for k in fs for v in body["at"]}
+    check("a slide's body text is at least floor.json body_text (%g px) at %s" % (body["min_px"], ", ".join(body["at"])),
+          all(px is not None and px >= body["min_px"] for px in at.values()), at)
     node = shutil.which("node")
     if node:
         r = subprocess.run([node, "-e", "new Function(require('fs').readFileSync(process.argv[1],'utf8'))",

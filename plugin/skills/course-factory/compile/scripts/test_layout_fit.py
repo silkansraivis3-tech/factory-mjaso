@@ -45,15 +45,15 @@ def main():
     few, mid, busy, crowded, packed = (lf.demand(kit(n)) for n in (4, 8, 12, 18, 25))
     check("a picture of a few names keeps the even box beside 60 words", lf.choose(60, few) ==
           dict(lf.choose(60, few), action="box", box="even"), lf.choose(60, few))
-    got = lf.choose(90, few)
-    check("90 words beside a simple picture: the words' column grows, not the parts", (got["action"], got["box"]) == ("box", "text-wide"), got)
-    got = lf.choose(60, busy)
-    check("12 names: the picture grows to picture-wide, 60 words still beside it", (got["action"], got["box"]) == ("box", "picture-wide"), got)
-    got = lf.choose(80, busy)
-    check("12 names and 80 words: picture-wide, the words in 2 parts (one more than beside the even box)",
+    got = lf.choose(80, few)
+    check("80 words beside a simple picture: the words' column grows, not the parts", (got["action"], got["box"]) == ("box", "text-wide"), got)
+    got = lf.choose(55, busy)
+    check("12 names: the picture grows to picture-wide, 55 words still beside it", (got["action"], got["box"]) == ("box", "picture-wide"), got)
+    got = lf.choose(70, busy)
+    check("12 names and 70 words: picture-wide, the words in 2 parts (one more than beside the even box)",
           (got["action"], got["box"], got["parts"]) == ("parts", "picture-wide", 2), got)
-    got = lf.choose(200, crowded)
-    check("18 names and 200 words: growing the picture would take the words from 3 parts to 5 - another kind of picture",
+    got = lf.choose(190, crowded)
+    check("18 names and 190 words: growing the picture would take the words from 3 parts to 5 - another kind of picture",
           got["action"] == "swap" and "picture-large" in got["why"], got)
     got = lf.choose(40, packed)
     check("25 names and 40 words: the picture alone on the stage", got["action"] == "stage" and got["box"] is None, got)

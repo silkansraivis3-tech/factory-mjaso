@@ -50,8 +50,8 @@
   --lt-gap:min(4vmin,32px);
   --lt-pad-x:min(8vmin,64px);
   --lt-top:min(10.5vmin,84px);
-  --lt-fs:clamp(15px,2.5vmin,30px);
-  --lt-fs-lead:clamp(16px,2.6vmin,31px);
+  --lt-fs:clamp(22px,2.75vmin,33px);       /* the body text: never under course-module-ux measure/knowledge/floor.json "body_text" */
+  --lt-fs-lead:clamp(23px,2.85vmin,34px);
   --lt-ring:#C7D3DF;
   --lt-on-photo:#D5E2EE;
   --lt-box:#EEF5FB;

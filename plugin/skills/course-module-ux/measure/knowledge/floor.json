@@ -6,6 +6,12 @@
     "applies_to": "every rendered text node, anywhere in the document — including the footer, corner tags, the landing screen and inside SVG",
     "svg_rule": "effective px = declared font-size x (rendered width / viewBox width). Never the declared value."
   },
+  "body_text": {
+    "min_px": 22,
+    "at": ["1024x768", "1280x800"],
+    "applies_to": "a slide's body text - its lines, points, steps and answers (--lt-fs in course-module-ui/templates/gb_layouts.css) - at the classroom and tablet sizes; labels, tags and the footer keep text_size",
+    "_why": "PROPOSED, awaiting Raivis's confirmation (the owner and the course office, 2026-11-25: 'clear readable text, so the trainee can look at it and listen to the instructor at the same time'). It was about 19-20 px. test_design_system.py checks the stylesheet against this number."
+  },
   "contrast": {
     "standard": "WCAG AA",
     "normal_text_ratio": 4.5,
@@ -26,7 +32,7 @@
     "spill": "none — no element may escape its slide body",
     "document_h_scroll": "none — documentElement.scrollWidth must not exceed innerWidth",
     "wide_content": "on a task page, a wide table, diagram or code block scrolls inside its own overflow-x container; the page body never scrolls sideways",
-    "slide_scroll": "none - owner, 2026-10-16: 'no scrollbar at all allowed'. Nothing on a projected slide scrolls, down or sideways, at any step: what does not fit is laid out again (a smaller picture, a picture beside its drawing, words moved to the notes), never put behind a scrollbar. audit_drawing.js reports it as 'scrolls' at every compile",
+    "slide_scroll": "none - owner, 2026-10-16: 'no scrollbar at all allowed'. Nothing on a projected slide scrolls, down or sideways, at any step: what does not fit is laid out again (a smaller picture, a picture beside its drawing) or written by the writer as short points with the full words for the instructor (course-factory theory-rules.json \"points\"), never put behind a scrollbar. audit_drawing.js reports it as 'scrolls' at every compile",
     "collision": "no element may overlap the header band or another element; run the collision probe as well as the fill probe — see traps.json#flex-centred-overflow"
   },
   "fill": {

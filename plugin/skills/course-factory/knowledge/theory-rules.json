@@ -2,22 +2,26 @@
   "_authority": "How much theory a module carries, and how much must be taught before a trainee is asked anything (L36). The owner, 2026-09-30: 'slide text is too small ... with that low info can [the] topic/ILO be taught?' and 'before [a self-check] there should be enough theory so the trainee can actually do that task and understand it - not 100 words of theory and the task already.' Read by scripts/content_script.py (Stage 3 - every finding is shown on the review page and must be fixed before approval, unless the operator approves despite it, L26) and scripts/make_architecture_page.py (Stage 2 - whether the planned self-checks fit the module's theory time). Change a number here and both follow; nothing else restates them.",
 
   "slide": {
-    "min_words": 30,
-    "max_words": 150,
-    "merge_words": 85,
-    "_merge_words": "Two plain theory slides in a row on one Sub-ILO whose words together are this many or fewer (the beside-a-picture budget) fit one slide: a note suggests the one slide.",
-    "_2_116_0": "2.116.0 (operator, 2026-11-09): min_words 50 -> 30 and a NOTE, never a fail - a short slide is fine when it teaches.",
-    "_why": "A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a headline for the instructor to fill in. The title counts. Under min_words the slide may be too thin to teach from (a note - a short slide is fine when it teaches). Over max_words the room cannot read it from the classroom screen: split it into two slides (a note, not a must - NEW_ENTRANT wants more slides, L28)."
+    "target_words": 45,
+    "merge_words": 45,
+    "_merge_words": "Two plain theory slides in a row on one Sub-ILO whose words together are this many or fewer (the slide's target) fit one slide: a note suggests the one slide.",
+    "_why": "PROPOSED, awaiting Raivis's confirmation (the owner and the course office, 2026-11-25: 'less text on slides - we can put it in the instructor notes; the presentation must be more visual with clear readable text, so the trainee can look at it and listen to the instructor at the same time'; it replaces the 2026-09-30 decision that the theory sits on the slide). What the trainee sees counts - the title and the lines, or on a slide of short points the title and the points. An active slide's question, choices, whys and answer are counted on their own (beside_picture). Over target_words is a NOTE: write a plain slide as short points (\"points\") - the full words stay in \"text\" and go to the instructor's panel, said, never cut. There is no minimum: a short slide is fine when its picture and the instructor teach. The hard fit limits are the layout budgets (course-module-ui knowledge/layout-templates.json \"budgets\")."
+  },
+  "points": {
+    "min": 2,
+    "max": 6,
+    "max_words_each": 14,
+    "_why": "A slide of short points (\"points\", one a line) shows the points and keeps its \"text\" - the full approved words - for the instructor's panel (data-cue). It is the shape for a plain slide over slide.target_words, with a picture or without. The points are shorter than the text, never a copy of it."
   },
   "notes": {
-    "min_words": 10,
-    "max_words": 50,
-    "_why": "Owner, 2026-09-30 (2.18.1): the instructor notes are compact - two to four short points, one per line starting '- ' - because they live on the instructor's panel, in the module's own INSTRUCTOR_NOTES.md file, never on a slide. What to ask the room, the one example to give, what to stress. Under min_words there is nothing to go on; over max_words it is a speech, not a prompt - the theory belongs on the slide (both must fix). Before 2.18.1 the floor was 30 words and there was no ceiling."
+    "min_words": 20,
+    "max_words": 150,
+    "_why": "PROPOSED, awaiting Raivis's confirmation (2026-11-25, with slide.target_words: the words leave the slide and the instructor says them). The notes are short labelled lines, one a line: 'Say:' the full explanation the instructor gives, 'Ask:' the question to the room, 'Show:' what to point at on the picture. They reach the instructor's panel as the slide's data-cue, never the classroom screen. Under min_words there is too little to teach from; over max_words it is a text to read out, not a prompt (both NOTES)."
   },
   "module": {
     "min_words_per_theory_minute": 25,
     "_plain_only": "Owner, 2026-10-15 (L49, 2.26.0): counted over PLAIN theory only - the slides without \"active\". A slide where the trainees predict, explain, explore or work an example fills its minutes with what they do, not with words.",
-    "_why": "Across a module, the slides' own words plus the instructor notes, divided by the slides' minutes. Under this the module's hours are claimed but not filled: the instructor runs out of material long before the time does (must fix). 25 words a minute, now that the notes are short points and the teaching sits on the slide (2.18.1; it was 40 while the notes were long)."
+    "_why": "Across a module, the slides' own words (title and text - a slide of short points says its text to the instructor) plus the instructor notes, divided by the slides' minutes. Under this the module's hours are claimed but not filled: the instructor runs out of material long before the time does (must fix). The words that leave the screen are counted in the notes, so moving them never drops a module under this: a slide of target_words and notes of max_words fill about 7.8 minutes."
   },
   "before_self_check": {
     "min_minutes": 5,
@@ -30,10 +34,11 @@
     "_why": "An answer the room's question opens, or the why a true-or-false opens after the vote, is the answer - two or three sentences. Past this it is new theory hidden in a reveal, and it does not fit: it opens over the picture's column, about 120 words at 1280 x 800 and fewer on a 1024 x 768 tablet. The rest is taught on a slide before."
   },
   "beside_picture": {
-    "situation": 60,
-    "choices": 85,
-    "steps": 85,
-    "_why": "What a slide with a picture beside its words holds on a 1024 x 768 tablet, measured by the fit gate on the first factory trial's four modules. A scenario: its situation under the picture (situation), its question, choices and whys in the other column (choices). A worked example: its steps and the room's question (steps); the answer opens over the picture. Past these the words are cut on the tablet (must fix): trim the lines, or move a part to the slide before. An active slide's question, choices, whys and answer count toward the slide's min_words, so trimming never makes it thin."
+    "situation": 53,
+    "choices": 75,
+    "steps": 75,
+    "_22px": "2026-11-25: 60 / 85 / 85 lowered in proportion to the measured beside-picture budget (85 -> 75 words) when the body text rose to 22 px (course-module-ux measure/knowledge/floor.json \"body_text\") - the fit gate measures every build.",
+    "_why": "What a slide with a picture beside its words holds on a 1024 x 768 tablet, measured by the fit gate on the first factory trial's four modules. A scenario: its situation under the picture (situation), its question, choices and whys in the other column (choices). A worked example: its steps and the room's question (steps); the answer opens over the picture. Past these the words are cut on the tablet (must fix): trim the lines, or move a part to the slide before or to the notes (Say:)."
   },
   "answers_taught_first": {
     "min_share": 0.6,
@@ -74,11 +79,11 @@
     "max_points": 6,
     "max_words_per_point": 24,
     "_what": "L51 (owner, 2026-10-15): every teaching module closes with ONE recap slide - \"what to take away\" - straight before the task slide that opens the module check, in the same animated design in every module (course-module-ui gb_compose.css section 11, markup in course-module-ux build/GUIDE.md). In the script it is a slide with \"recap\": true; its text is the points, one line each, \"Short title - one sentence\". Its visual_kind is none - the design is the picture.",
-    "_why": "The owner: each module should end in the module check, but before it a beautiful summary in the same design - boxes, the main points to take away from this module - and all modules the same closing slide design. A recap is short on purpose, so the slide word floor (slide.min_words) does not apply to it; its notes still do."
+    "_why": "The owner: each module should end in the module check, but before it a beautiful summary in the same design - boxes, the main points to take away from this module - and all modules the same closing slide design. A recap is short on purpose and is checked by its points, not by slide.target_words; its notes are checked like every slide's."
   },
   "split": {
     "_authority": "Owner, 2026-10-15 (L49, 2.26.0): 'now most courses are 80/20 - 80 theory, 20 practical. On paper, in the programmes and IMO model courses it stays as it is. But we want to at least come close to 20/80 - 20 plain raw theory, 80 practical: simulators, active learning theory, self-checks, tablet interactive tasks ... first it needs to be reviewed by the person who uses the plugin.' The programme's hours never change (L1); what changes is how the class spends them. Measured on the Stage 2 page and every Stage 3 review page. A suggestion, not a rule, in 2.26.0.",
-    "_keep_theory": "Owner, 2026-10-15: 'still you need enough theory ... that does not mean you don't need raw theory at all, you can still add it, and don't remove existing good theory, because each instructor can skip each slide faster; on paper we have that theory, if someone needs he can read it - but the main teaching activities, how the trainee will gain this knowledge, are in active learning.' So 20/80 is reached with TIME, never by cutting theory: every good theory slide stays (more may be added), its minutes shrink - the instructor moves through it faster and the words stay to be read - and the minutes it frees go to active learning. No suggestion ever says to remove a slide or shorten its text. The slide and density floors still apply.",
+    "_keep_theory": "Owner, 2026-10-15: 'still you need enough theory ... that does not mean you don't need raw theory at all, you can still add it, and don't remove existing good theory, because each instructor can skip each slide faster; on paper we have that theory, if someone needs he can read it - but the main teaching activities, how the trainee will gain this knowledge, are in active learning.' So 20/80 is reached with TIME, never by cutting theory: every good theory slide stays (more may be added), its minutes shrink - the instructor moves through it faster and the words stay to be read - and the minutes it frees go to active learning. No suggestion ever says to remove a slide or cut its teaching: words that leave the screen go to the instructor (short points, the full text to the panel; or the notes' Say:), never out of the module. The density floor still applies.",
     "target_active_share": 0.8,
     "_counts": "PLAIN = minutes of slides without \"active\" (the instructor explaining). ACTIVE = slides with \"active\" (one of the techniques below) + task slides (self-checks, module check, team tasks) + activities (practice, simulator, equipment). Stage 2: plain = the module's theory minutes less its self-checks, module check and the planned theory-as-activity minutes; active = those + the programme's practical minutes.",
     "active_techniques": ["explain-then-reveal", "predict-then-reveal", "worked-example", "scenario", "explore"],

@@ -2908,10 +2908,8 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
     body = None
 
     if tid == "long-explanation":
-        # short points on the slide, the full approved words in the instructor's notes (data-cue) - said, never cut
-        if not fig:
-            probs.append("%s: \"points\" go beside the slide's picture (a 3D model, a photograph) - it has none, so its points "
-                         "stand alone" % where)
+        # short points on the slide, beside its picture or alone; the full approved words in the instructor's notes
+        # (data-cue) - said, never cut
         d["data-cue"] = "\n".join(x for x in ("%s %s" % (w["full"], " ".join(lines)), base.get("data-cue")) if x and x.strip())
         pts = "".join('\n        <li data-k="%d" data-script-field="points">%s</li>' % (j, marked(x)) for j, x in enumerate(lt("points")))
         you = ""
@@ -3407,7 +3405,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if b.get("box") in layout_fit.ORDER or (split is None and fitc["box"] != dflt) \
                 or (grown and split is not None and split > fitc["text"]):
             split = fitc["text"]                            # the picture's room comes first; words past it go in parts
-        part_w = layout_fit.PART_WORDS * layout_fit.BOX[fitc["box"]]["words"] / float(layout_fit.BOX[dflt]["words"])
+        part_w = layout_fit.PART_WORDS * layout_fit.BOX[fitc["box"]]["words"] // layout_fit.BOX[dflt]["words"]   # whole words: parts_of counts parts with it
     if photo_col and pic_rel and split is None:
         # a wide photograph in its own column takes the picture-wide box when the words fit beside it; the words never go in parts
         need = layout_fit.demand(fig, False, len(b.get("spots") or []), photo=os.path.join(mdir, pic_rel.replace("\\", "/")))

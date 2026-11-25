@@ -34,7 +34,7 @@
   "deck": {
     "slide": "<section class=\"slide\" id=\"s07\" data-title=\"...\" data-kind=\"Theory\" data-day=\"1\" data-block=\"A1\" data-cue=\"...\">",
     "required_on_every_slide": ["class slide", "data-title"],
-    "data_cue": "the instructor notes of that slide (2.18.1: short points) - the instructor's panel shows them; the projector never does. This, not a .md file, is how the notes reach the panel: the importer skips .md files.",
+    "data_cue": "the instructor notes of that slide (Say / Ask / Show lines, theory-rules.json \"notes\"; on a slide of short points its full text too) - the instructor's panel shows them; the projector never does. This, not a .md file, is how the notes reach the panel: the importer skips .md files.",
     "task_slide": "data-kind=\"Task\" data-activity=\"SC1\" data-task-href=\"../tasks/sc1_keeping_the_cargo_liquid.html\" data-title=\"SC1 — Keeping the cargo liquid\", with <p class=\"act-code\">SC1</p><h2 class=\"act-title\">...</h2> - the panel shows ▶ Start and opens exactly that page on every trainee tablet (L35's OPEN TASK)",
     "check_slide": "data-kind=\"Check\" data-activity=\"MC\" data-task-href=\"../assessment/check.html\"",
     "room_slide": "work on paper or in the room: data-kind=\"Task\" data-activity=\"P1\", NO data-task-href, data-link-hint=\"Work in pairs at the simulator\"",

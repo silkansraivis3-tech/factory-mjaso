@@ -182,9 +182,9 @@ def main():
                   choices="The oxygen analyser, then the flammable gas detector, then ammonia tubes\nThe personal monitors only",
                   why="Right: oxygen first, then flammable vapour, then the toxic cargo.\nThey are for the people inside.", right="A")]}
         rules_ = [f["rule"] for f in cs.theory_check(short)[0]]
-        check("a scenario trimmed to fit is not thin: its question, choices and whys count toward the slide's %d words "
-              "(the factory trial: trimming fought the floor)" % cs.RULES["slide"]["min_words"],
-              "t_thin_slide" not in rules_ and "t_overfull" not in rules_, rules_)
+        check("a scenario trimmed to fit has no finding: there is no slide minimum, and its question, choices and whys are "
+              "not counted toward the on-screen target of %d words" % cs.RULES["slide"]["target_words"],
+              "t_long_slide" not in rules_ and "t_overfull" not in rules_, rules_)
         check("the words on screen: the points of a slide of short points, never its notes",
               "insulation" in cs.shown_text({"title": "T", "text": "long words", "points": "insulation", "notes": "secret"})
               and "secret" not in cs.shown_text({"title": "T", "text": "x", "notes": "secret"})

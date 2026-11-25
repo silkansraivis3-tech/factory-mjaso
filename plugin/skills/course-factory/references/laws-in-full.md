@@ -466,9 +466,8 @@ that little information can the topic be taught?"* And: *"Before a self-check th
 theory so the trainee can actually do that task and understand it - not 100 words of theory and the task
 already."*
 
-- A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a
-  headline for the instructor to fill in; the instructor notes carry what the instructor explains, adds or
-  asks beyond it.
+- A slide shows the teaching - the key facts, numbers and names the Sub-ILO needs, in few, readable words beside
+  its picture; the instructor notes carry the full explanation the instructor gives (revised 2026-11-25, below).
 - A module's words fill its minutes; a self-check comes only after a block of new theory; every question's
   answer is in the slides the trainee has already seen; a module too short for a self-check has only its
   module check.
@@ -477,7 +476,7 @@ already."*
   them since (L49, 2026-10-15: shorter cycles before a self-check, words per minute over plain theory only). Every finding is shown on the review page; approval is refused while a must-fix one
   stands, unless the operator approves despite it (L26), which is recorded.
 - This refines `course-module-ux`'s compactness budgets: those govern the instructor's *working* screens
-  during a session (runner cards, pre-flight), not a theory slide, which must carry the theory.
+  during a session (runner cards, pre-flight), not a theory slide, which shows the theory.
 - → `scripts/content_script.py` (`theory_findings`), `scripts/make_architecture_page.py` (whether the
   planned self-checks fit).
 
@@ -488,6 +487,14 @@ example to give, what to stress. The theory itself is on the slide. `content_scr
 `instructor_notes/M01_INSTRUCTOR_NOTES.md` from the script - one section per slide, the OPEN TASK prompt at every task -
 for the instructor's panel; the publisher treats `*_INSTRUCTOR_NOTES.md` as instructor-only, and the word-for-word
 check fails a slide that carries the notes. The density floor became 25 words a theory minute, because the long notes no longer count towards them.
+
+**Revised 2026-11-25 (proposed by the owner and the course office, awaiting Raivis's confirmation of the numbers):
+less text on the slide, the explanation in the notes.** *"Less text on slides - we can put it in the instructor
+notes; the presentation must be more visual with clear readable text, so the trainee can look at it and listen to the
+instructor at the same time."* This reverses 2.18.1's "the theory itself is on the slide": a slide over the on-screen
+word target is written as short points, its full approved words said by the instructor from the panel (`data-cue`) -
+moved, never cut; the notes are labelled lines, Say / Ask / Show; the density still counts slides and notes together.
+The numbers are in `knowledge/theory-rules.json` (`slide`, `points`, `notes`); every one of them is a note, not a stop.
 
 ### Added by the owner after reviewing the rebuilt example pages (2026-09-30, 2.18.0)
 
@@ -780,9 +787,9 @@ explaining in detail what you want to see.' This will reduce failed attempts and
   measured). Stage 2 counts a module's theory minutes less its tasks and its theory-as-activity minutes; Stage 3
   counts the script's own minutes.
 - **Theory is never removed to get there.** Every good theory slide stays and more may be added; a plain slide
-  keeps its words - they can be read, on the screen and later - and gives up minutes, because the instructor moves
-  through it faster. The minutes go to activity. No suggestion ever says to remove a slide or shorten its text; the
-  slide and notes floors of L36 still apply.
+  keeps its words - on the screen, or as short points whose full words the instructor says (L36, revised 2026-11-25) -
+  and gives up minutes, because the instructor moves through it faster. The minutes go to activity. No suggestion ever
+  says to remove a slide or cut its teaching; L36's density floor still applies.
 - **Short cycles.** L36 amended: about 5 minutes and 125 words of new theory before a self-check (was 10 and 250); the
   words-per-minute floor counts plain theory only, since an active slide's minutes are what the trainees do. Every
   answer is still taught before its question.

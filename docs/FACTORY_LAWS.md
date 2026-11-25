@@ -316,8 +316,8 @@ task opens on every trainee tablet by itself. No task list, no browsing, no "all
 tasks". The trainee sees their own score on self-checks and module checks. Supersedes `course-task-ux`'s
 trainee task list. → `course-factory` (`scripts/content_script.py`, 2.17.0); the app change list in step 6
 
-**L36 · Enough theory before any task.** A slide carries the teaching; the notes carry the explanation;
-the words fill the minutes; a self-check only after a block of new theory; every answer taught before
+**L36 · Enough theory before any task.** A slide shows the teaching in few, readable words; the notes carry the full
+explanation the instructor gives; slides and notes together fill the minutes; a self-check only after a block of new theory; every answer taught before
 its task opens. Floors in `course-factory/knowledge/theory-rules.json`, checked on the content script.
 Amended by L49 (2.26.0): ~5-minute cycles; the density counts plain theory only.
 → `course-factory` (`scripts/content_script.py`, 2.17.0)
@@ -331,7 +331,8 @@ and who makes it - the factory, the image/video generator (context only), the so
 check, "choose one" at most 40 %, a hands-on question in every module. Widens `course-task-ux` §2.
 → `course-factory` (`knowledge/media-and-tasks.json`, `scripts/content_script.py`, 2.18.0); built by `course-task-ux` (step 6)
 *(2.18.1: L37 has no quota - pictures, animation and realistic 3D wherever they show the theory; the picture floors are
-suggestions. Instructor notes are short points in their own .md file for the instructor's panel.)*
+suggestions. Instructor notes reach the instructor's panel, never a slide - since 2026-11-25 (proposed, awaiting the
+owner's confirmation) they carry the full explanation as labelled lines, Say / Ask / Show, `theory-rules.json` `notes`.)*
 
 **L39 · Who tests where.** Every file is made ready for the tablet system; a colleague gets only the HTML, to check in
 their own browser; the real-tablet test - by touch, every task type, the results the app records - is the owner's, at

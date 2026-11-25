@@ -393,6 +393,11 @@ REVEAL_SCREENS = [
      "points": "The pressure is rising\nThe vent mast is there", "ask": "Vote: may the ship vent the vapour to the air?",
      "reveal": "No - the reliquefaction plant keeps the pressure down.", "notes": "- Every trainee votes first.", "minutes": 3},
 ] + [x for x in SCREENS if x["id"] in ("t01", "q01", "t02", "m01")]
+REVEAL_SCREENS.insert(1, {"id": "s44", "kind": "slide", "title": "Boil-off", "visual_kind": "none",
+                          "text": "Heat leaks into the tank through its insulation all the time, so some of the cargo always boils "
+                                  "off.\nThe boil-off gas is burnt in the engines or reliquefied and returned to the tank.",
+                          "points": "Heat always leaks in\nBoil-off is burnt or reliquefied",
+                          "notes": "Say: the heat comes through the insulation.\nAsk: where does the gas go?", "minutes": 2})
 
 
 def reveal_part(tmp):
@@ -420,6 +425,13 @@ def reveal_part(tmp):
     check("short points and the room's turn under them: both on the slide, the answer on the last Next",
           'data-variant="points"' in p and p.count('data-script-field="points"') == 2 and 'data-script-field="ask">Vote: may' in p
           and 'data-script-field="reveal">No - the reliquefaction' in p and 'data-stops="4"' in p, p[:1600])
+    a = section(page, "s44")
+    check("short points with no picture: the points alone across the slide, no build problem for it",
+          'data-variant="points"' in a and a.count('data-script-field="points"') == 2 and "--cols:1fr" in a
+          and "<img" not in a and "s44" not in "".join(x for x in out.splitlines() if "points" in x), (a[:1200], out[-800:]))
+    check("... and the instructor's panel still gets the full approved words and the notes (data-cue)",
+          re.search(r'data-cue="[^"]*Heat leaks into the tank through its insulation[^"]*returned to the tank\.[^"]*'
+                    r'Say: the heat comes through the insulation\.', a) is not None, a[:1200])
     # the question carries class "ask", so the last Next can hide it or keep it (gb_upgrade.css .lt-work li.you .ask) - without
     # it the answer was added under the question and cut on all 37 GAS BASIC reveals at 1280 x 800
     check("the room's question carries class \"ask\" (the stylesheet's hook for the last Next)",
@@ -1384,12 +1396,14 @@ def layouts_part(tmp):
     check("budgets (2.116.0): 90 words beside a picture are never content-in-parts by themselves (was the rule; the column holds 85 - "
           "the writer's v_paged_slide shortens them)",
           cs.wc(" ".join(words90)) > 85 and cm.auto_template({}, {}, "two-col", False, True, words90, False, False)[0] != "content-in-parts")
-    check("... and its parts hold 75 words or fewer (a part of 85 spilled 68 px)",
-          all(cs.wc(" ".join(words90[i - 1] for i in ix)) <= 80 for ix in cm.auto_parts(words90)) and cm.PART_WORDS == 75)
+    check("... and its parts hold the measured part budget (a part of 85 spilled 68 px; at 22 px body text one of 75 spilled 37)",
+          all(cs.wc(" ".join(words90[i - 1] for i in ix)) <= cm.PART_WORDS + 5 for ix in cm.auto_parts(words90))
+          and cm.PART_WORDS == cm.BUDGETS["part"])
     top = lambda n: [o["key"][0] for o in cm.layout_options("explain-figure", "figure-right", True, n, {}, "two-col", False, False)]
-    check("... a photograph across the top only up to 70 words (102 spilled 66 px on IGF M04 s05; was up to 110)",
-          "picture-top" in top(70) and "picture-top" not in top(80), (top(70), top(80)))
-    check("... a photo under the words beside a picture: about 70 (was 86)", cm.INSET_MAX_WORDS["two-col"] == 70)
+    check("... a photograph across the top only up to its budget (102 spilled 66 px on IGF M04 s05; was up to 110)",
+          "picture-top" in top(cm.TOP_WORDS) and "picture-top" not in top(cm.TOP_WORDS + 10), (top(cm.TOP_WORDS), top(cm.TOP_WORDS + 10)))
+    check("... a photo under the words beside a picture: its measured budget (was 86)",
+          cm.INSET_MAX_WORDS["two-col"] == cm.BUDGETS["beside_picture_with_inset"])
     check("... a long photograph's column keeps its words whole past 85 (2.116.0: no automatic parts)",
           cm.auto_template({}, {}, "wide-left", True, True, words90, False, True) == ("photo-explain", "column")
           and cm.auto_template({}, {}, "wide-left", True, True, words90[:3], False, True) == ("photo-explain", "column"))
@@ -1422,7 +1436,8 @@ def layouts_part(tmp):
     cs.save(os.path.join(c2, "working_claude", "script", "M01.build.json"), sheet_b)
     code_b, out_b = run(COMPILE, c2, "--module", "1", "--force")
     check("... a layout asked for by name over its budget is an early warning at compile, with the budget",
-          re.search(r"Note: Slide \d+ \(s05\) - \d+ words beside a picture; the layout holds about 85 at 1024 x 768", out_b), out_b[-900:])
+          re.search(r"Note: Slide \d+ \(s05\) - \d+ words beside a picture; the layout holds about %d at 1024 x 768"
+                    % cm.BUDGETS["beside_picture"], out_b), out_b[-900:])
     import contextlib
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):            # the studio and figure_fit compile one deck many times in one process
@@ -1430,7 +1445,7 @@ def layouts_part(tmp):
             cm.compile_deck(cs.load(os.path.join(c2, "working_claude", "script", "M01.json")), sheet_b, md2,
                             os.path.join(c2, "working_claude", "figures", "M01"), "x", True)
     check("... and said once in a process, however often the deck is compiled (IGF M01 v263: 84 times in one build)",
-          buf.getvalue().count("holds about 85") == 1, buf.getvalue().count("holds about 85"))
+          buf.getvalue().count("holds about %d" % cm.BUDGETS["beside_picture"]) == 1, buf.getvalue()[-600:])
     # 2.63.2 (item 1; IGF M06 s08 / s10 / s13, M05 s03 / s07-s09, M08 s01 in the 2.63.0 full-course build) - a split or wide
     # photograph slide past the framed photo's 50-word budget is the photo in its own column, unasked
     long_text = "\n".join(["The fuel preparation room holds the pumps, the vaporiser and the valves that feed the engines."] * 6)
@@ -1895,7 +1910,9 @@ def fixes_part(tmp):
     check("C7: a 640 x 390 drawing keeps ~47 % of its panel under an inset (the M06 measure: 197 of 417 px); a square one keeps more",
           sh and round(sh[0], 2) == 0.47 and round(sh[1]) == 416 and sh2 and sh2[0] > cm.UNDER_MIN_SHARE and cm.under_share("<p>none</p>") is None, (sh, sh2))
     os.makedirs(os.path.join(tmp, "c7"))
-    c, md = new_course(os.path.join(tmp, "c7"), script())
+    short4 = json.loads(json.dumps(SCREENS))         # within the words a photo under the words leaves (budgets, inset)
+    short4[3]["text"] = "\n".join(short4[3]["text"].split("\n")[:2])
+    c, md = new_course(os.path.join(tmp, "c7"), script(screens=short4))
     io.open(os.path.join(c, "working_claude", "figures", "M01", "ind.kit.json"), "w", encoding="utf-8").write(json.dumps(
         {"size": [640, 390], "parts": [{"id": "t", "type": "tank", "x": 20, "y": 50, "w": 150, "h": 110, "value": 0.3}]}))
     build_of(c, lambda s: s["screens"].update(s04={"figure": "ind.kit.json", "dark": True, "inset": {"photo": "assets/img/ship.jpg", "under": "figure"}}))
@@ -3299,9 +3316,11 @@ def review_fixes_part(tmp):
           "notes": "- n", "minutes": 2}
     sc = script(screens=[sl])
     f = cs.paged_findings(sc)
-    check("F1: a slide with a picture and over 85 words is a must-fix: it would show in parts with number tabs",
+    check("F1: a slide with a picture and over parts.auto_from_words is a must-fix: it would show in parts with number tabs",
           len(f) == 1 and f[0]["level"] == cs.FAIL and f[0]["rule"] == "v_paged_slide" and "parts" in f[0]["detail"]
-          and "85" in f[0]["detail"], f)
+          and str(cs.PARTS_FROM) in f[0]["detail"] and "points" in f[0]["detail"], f)
+    check("F1: ... and never a slide of short points - its text goes to the instructor",
+          not cs.paged_findings(script(screens=[dict(sl, points="Line one\nLine two")])))
     check("F1: ... not when the build sheet asks for parts (\"parts\" or a named template)",
           not cs.paged_findings(sc, {"screens": {"s60": {"parts": [[1, 3], [4, 6]]}}})
           and not cs.paged_findings(sc, {"screens": {"s60": {"template": "content-in-parts.v1"}}}))
