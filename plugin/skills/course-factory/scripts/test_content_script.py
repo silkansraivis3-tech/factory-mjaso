@@ -717,6 +717,8 @@ def main():
         check("... and passes when the question says both", fam(clear, "t_calc_unit") == [], fam(clear, "t_calc_unit"))
         screen(clear, "q03").update(question="How much boil-off does the tank lose a day?", unit="% vol", rounding="2 decimal places")
         check("... or gives them as \"unit\" and \"rounding\"", fam(clear, "t_calc_unit") == [], fam(clear, "t_calc_unit"))
+        thin = copy.deepcopy(thin)
+        screen(thin, "s02")["text"] = "Four tank types carry LNG."      # too few words for the theory minutes (t_density)
         cb = new_course(tmp, "thin", thin)
         code, out = cs_run("render", cb, "--module", "1")
         tpage = io.open(cs.paths(cb, 1)["review"], encoding="utf-8").read()

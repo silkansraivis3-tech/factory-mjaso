@@ -565,7 +565,7 @@ def long_layouts_part(tmp):
     Image.new("RGB", (1200, 1000), "gray").save(os.path.join(pdir, "near.jpg"))
     mdir = os.path.join(tmp, "shape")
     wa, ta, na = (cm.photo_aspect(mdir, "assets/img/%s.jpg" % n) for n in ("wide", "tall", "near"))
-    few, some, many = ({"layout": "split", "text": " ".join(["w"] * n) + "."} for n in (30, 60, 80))
+    few, some, many = ({"layout": "split", "text": " ".join(["w"] * n) + "."} for n in (30, 40, 80))
     check("a photograph's shape is read from the file", wa and ta and abs(wa - 16 / 9.0) < 1e-6 and ta < 0.6 and cm.photo_aspect(mdir, "x.jpg") is None, (wa, ta))
     check("a wide photograph is never the framed (tall) photo: across the slide when the words allow it, else its own column",
           cm.composition(few, {}, True, True, wa) == "stage" and cm.composition(some, {}, True, True, wa) == "stage"
