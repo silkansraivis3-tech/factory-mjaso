@@ -7,8 +7,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_writes.py\"",
-            "timeout": 10
+            "command": "python -S \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_writes.py\"",
+            "timeout": 30
           }
         ]
       }

@@ -7,6 +7,10 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.143.1 · The write guard answers in time (2026-11-26)
+
+`hooks/hooks.json` runs `guard_writes.py` as `python -S` with a 30 s limit (was plain `python`, 10 s). The guard needs only the standard library; skipping the `site` import cut its run from 3.9-5.6 s to 1.6-2.2 s on a busy Windows PC, where it had passed 10 s and Claude Code let the write through unchecked ("didn't answer in time").
+
 ## 2.143.0 · The course office's complaints: photo shape, less text, the expert's change, theory before tasks, task variety, both editors (2026-11-25)
 
 The audit and its measurements: `_claude/AUDIT_raivis_complaints_2026-11-25.md` (four built courses).
