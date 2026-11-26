@@ -331,7 +331,7 @@ h2.bigcall{font-size:clamp(28px,6vmin,86px);line-height:1.02}
 .q-opt{text-align:left;border:1.5px solid var(--line-l);background:var(--white);
   border-radius:var(--r-m);padding:min(1.9vmin,19px) min(2.2vmin,22px);cursor:pointer;
   font-size:clamp(12.5px,1.82vmin,25.5px);color:var(--ink);font-weight:500;line-height:1.4;
-  transition:border-color .14s ease,background .14s ease;min-height:52px;
+  transition:border-color .14s ease,background .14s ease;min-height:56px;
   display:flex;gap:.9em;align-items:center;font-family:var(--font)}
 .q-opt .mk{width:1.85em;height:1.85em;border-radius:8px;background:var(--grey);color:var(--steel);
   display:flex;align-items:center;justify-content:center;font-weight:700;flex:none;

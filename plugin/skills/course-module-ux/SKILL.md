@@ -5,10 +5,8 @@ description: Use whenever building, converting or signing off the delivered HTML
 
 # Course module UX — one page, press Next to the end
 
-> **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
+> **Every reply to the operator** (L25): three parts as short points - **Done · Check now · Next** -
 > in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
-
-**v1 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 **The acceptance test.** A person who has never seen the material opens the module's one HTML
 file, presses **Start**, and presses **Next** until the session is over — and a real class gets
@@ -33,18 +31,11 @@ This is a **delivery-UX skill**. It never decides what a module teaches.
 
 ---
 
-## The person decides the design — L26 (course-factory, 2.30.0)
+Design is the person's (L26): tell them the risk first, then record their choice with `design_choices.py add` (course-factory); it is never changed back.
 
-Every rule in this skill about how a course **looks or behaves** is a rule for the factory's own choices. When the
-person asks for something else: if nothing conflicts, just do it; if it goes against a rule here, say which rule and
-the risk in one or two plain sentences and ask **once** - *your way* / *the factory's way*; on *your way*, do it fully,
-record it (`course-factory/scripts/design_choices.py add <course> --rule <id> ...`), and **never change it back** - not
-in a later build, fix or session, and not because a check flagged it. The course material (programme, Main ILOs,
-hours, sources, the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
+## Where a module lives, and how it starts (L43)
 
-## Where a module lives, and how it starts (L43, owner 2026-10-01)
-
-*(2.21.0, L45: the folder is `course\modules\module01\` and the deck `presentation\index.html` - every screen a `.slide`
+*(L45: the folder is `course\modules\module01\` and the deck `presentation\index.html` - every screen a `.slide`
 with `data-title`, the instructor notes in `data-cue`, a task slide with `data-activity` + `data-task-href`;
 `course-factory/knowledge/classroom-system.json` is the authority.)* Every module is built into its own folder, with everything it needs inside it
 (`presentation\`, `tasks\`, `instructor\`, `assets\` - styles and scripts copied in). **`START_HERE.html` opens the
@@ -53,32 +44,13 @@ every task, the module plan, the instructor notes. `course-factory/scripts/check
 
 ## Pick the mode, then read one lane
 
-Read this router fully. Then read **only** the lane the task needs. The lanes never run
-together, and loading two means the mode was not decided.
+Read only the lane the task needs: `build/GUIDE.md` (a module page from scratch, or more screens) ·
+`convert/GUIDE.md` (off the old multi-page model; `measure/GUIDE.md` at its step 9) · `runscript/GUIDE.md`
+(the instructor's running order from the deck) · `measure/GUIDE.md` (measuring, auditing, sign-off).
 
-| Mode — what the task actually is | Read |
-|---|---|
-| Building a module page from scratch, or adding screens to one | `build/GUIDE.md` |
-| Bringing a module off the old chained / multi-page model | `convert/GUIDE.md` |
-| Generating or regenerating the instructor's running order from the deck | `runscript/GUIDE.md` |
-| Measuring, auditing, or signing anything off | `measure/GUIDE.md` |
-
-Converting also finishes with a measurement pass — read `convert/GUIDE.md` first and
-`measure/GUIDE.md` at step 9, not both up front.
-
-### Deliberately outside this bundle — point at these, never copy them
-
-| Concern | Skill that owns it |
-|---|---|
-| The **look** — palette, typography, light and dark/photo modes, the header band, cards, pills, the takeaway, semantic status colour, every token | **`course-module-ui`** |
-| Trainee task screens: what a task may contain, how a trainee answers, two-stage tap on card grids, photographs, the task floor | `course-task-ux` |
-| The deck template engine, House Rules, slide roles, copy budgets, `build.py` | `novikontas-presentations` |
-| The offline start page / delivery package / "which file do I open first" | `novikontas-course-start-page` |
-| Exercise design, course intake, ILOs, pedagogy, assessment design | the `novikontas-*` course-design family |
-
-If a task is really one of those, stop and load that skill instead. A copy of org knowledge
-goes stale the moment the original is revised, and nobody finds out until it is wrong in front
-of a trainee.
+Not here, point at them: the look → `course-module-ui` · trainee task screens → `course-task-ux` · deck engine, House
+Rules, copy budgets → `novikontas-presentations` · start page / delivery package → `novikontas-course-start-page` ·
+exercises, ILOs, pedagogy → the `novikontas-*` family.
 
 ---
 
@@ -110,55 +82,43 @@ because it now hides the thing you need *and* looks finished. A set point, a lim
 maritime term in a visible line is the content, not clutter. Compact never overrides an operator
 who asks for more explanation (L26): the extra explanation goes onto **more screens**, not denser ones.
 
-**4 · Navigate; do not narrate.** Say what to open, what the trainees do, and when it is
-finished. Do not write out what the instructor should say — they know their subject and their
-room, speech scripts double the length of everything and get skipped in delivery.
-*Finished when* is the highest-value line there is: without it nobody knows when to press Next,
-and that is the whole mechanism. The instructor notes in an approved content script (L29) are key
-points and cues on the instructor's channel — this law is about not writing speeches, never about
-leaving out what the operator asked the instructor to be told.
+**4 · Navigate on the screen; explain in the notes.** The projected screen says what to open, what the
+trainees do, and when it is finished. *Finished when* is the highest-value line there is: without it nobody
+knows when to press Next, and that is the whole mechanism. The full explanation goes to the instructor's channel
+(`data-cue`, L29) as **Say / Ask / Show**, 20-150 words (`course-factory/knowledge/theory-rules.json`).
 
-**5 · Paperless.** Nothing in the delivery path may require a printer. Purge the wording as
-well as the behaviour — "print one per group", `☐ yes ☐ no` glyphs, blank ruled rows,
-"photograph the filled screen". Print stylesheets may exist; **no workflow may depend on
-them.** A factual reference to a source document that is itself printed stays: that describes
-the source, not the workflow.
+**5 · Paperless.** The lesson itself needs no printer on its delivery path: every screen, task and run step works
+from the tablets and the projector. Purge the wording as well as the behaviour — "print one per group",
+`☐ yes ☐ no` glyphs, blank ruled rows, "photograph the filled screen". Print stylesheets may exist; **no lesson step
+may depend on them.** Paper items (laminated cards, handouts, additional-materials) are extras the factory also
+writes; the lesson runs without them. A factual reference to a source document that is itself printed stays.
 
 **6 · The deck runs on the instructor tablet (1280 × 800) and the classroom screen; tasks run on the
 trainee tablet** (L35). The tablet (1280 × 800 landscape) is judged first, 1024 × 768 is stated, and the
-projector (1920 × 1080) is checked once at the end — `measure/knowledge/floor.json` → viewports. A finger first: touch targets **≥ 44 px**, no hover-only affordance, ES5 in shared engines, a
+projector (1920 × 1080) is checked once at the end — `measure/knowledge/floor.json` → viewports. A finger first: no hover-only affordance, ES5 in shared engines, a
 sticky action bar with `env(safe-area-inset-bottom)`, and `:has()` mirrored with a class
-because old Android WebViews lack it.
+because old Android WebViews lack it. The type-size and touch-target floors are listed once, in `course-task-ux` §11.
 
-**7 · "Why is this here?" means explain it — it does not mean delete it.** When a reader
-cannot see the point of something, that is a report about the presentation, not proof the thing
-is useless. Find its job first. If it has one, keep it, say its job in plain words, and move it
-to where that job happens. **Cutting usable material to satisfy a complaint is a worse defect
-than the clutter was**, because the clutter was visible and the loss is not. The three moves:
-a safety-critical document becomes a ticked line in the work's own pre-flight; an audit code
-becomes a collapsed labelled disclosure plus a footer mapping; a number with no delivery use
-goes to the footer. This law is for a *question or a complaint*. When the operator **tells** you to
-remove something, remove it (L26) — grep first for what depends on it (L7) and say in one line what
-else that touched.
+**7 · "Why is this here?" means explain it — it does not mean delete it.** A reader who cannot see the point of
+something has reported on the presentation, not proved the thing useless. Find its job first; if it has one, keep
+it, say its job in plain words and move it to where that job happens (a safety document becomes a ticked pre-flight
+line; an audit code a collapsed disclosure plus a footer mapping; a number with no delivery use goes to the footer).
+When the operator **tells** you to remove something, remove it (L26) — grep first for what depends on it (L7).
 
 **Do not restyle.** When a module feels wrong the cause is almost always information
 architecture or word count, not colour. Diff the design tokens before touching them.
 
-And when the look genuinely *is* the question — a new deck's palette, a screen that does not
-match Module 1, "which radius", "why do these two modules look different" — that is
-`course-module-ui`'s, not this skill's. This skill owns the **floor**: contrast ≥ 4.5, text
-≥ 12.5 px, targets ≥ 44 px, fill, overflow. A floor is a minimum, not an identity — two people
-can pass every check in `measure/knowledge/floor.json` and ship modules that look unrelated.
-Load `course-module-ui` before writing the first stylesheet of a new module; it is step 8 of
-`course-factory`'s build order and it is required, not optional.
+When the look genuinely *is* the question — a new deck's palette, a screen that does not
+match Module 1, "which radius" — that is `course-module-ui`'s. This skill owns the **floor**
+(`measure/knowledge/floor.json`: contrast, fill, overflow, sizes); a floor is a minimum, not an identity. Load
+`course-module-ui` before writing the first stylesheet of a new module (build step 8, required).
 
 ---
 
 ## The gate — the screen inventory, approved before anything is built
 
-Building or converting a module page is the expensive step: one module went from 6 screens to
-18, and every screen carries markup, graphics and measurement. Changing a row in a table is
-free; rebuilding fourteen screens is not.
+Building or converting a module page is the expensive step: every screen carries markup, graphics and
+measurement. Changing a row in a table is free; rebuilding fourteen screens is not.
 
 So before writing any HTML, work out **one table**. When the module is compiled from an approved content
 script, the table is printed for the record and the build goes on - no stop. Wait for approval only for a
@@ -170,7 +130,7 @@ hand-built module with no approved script:
 Every row of the timetable must appear. A block with no row is the 90-missing-minutes defect,
 and the table is the only place it is cheap to notice.
 
-Since 2.16.0 this table is **derived from the module's approved content script** (`course-factory`
+This table is **derived from the module's approved content script** (`course-factory`
 `script/GUIDE.md`, L29) — one row per script screen, in its order — and is not a second approval of
 the words. Build every screen with `data-script="<id>"` and the approved text in
 `data-script-field` elements; `check_script_match.py` proves the deck says exactly that. A block of
@@ -178,25 +138,14 @@ the timetable the script has no screen for is still the defect above: send it ba
 
 ---
 
-## Honesty markers — the set, and where they land
+## Honesty markers
 
-Never fill a gap plausibly. Use exactly these four, spelled exactly this way:
-
-| Marker | Means |
-|---|---|
-| `UNKNOWN` | Asked, the operator did not know. Record that it was asked. |
-| `PLACEHOLDER` | Structure is right, real content is missing. |
-| `PROVISIONAL` | Content exists but depends on something unapproved. |
-| `[VERIFY: <what to check>]` | Asserted from a source that could not be confirmed. Always carries its payload. |
-
-Never invent regulatory content, a quoted criterion, a set point, or a QR code.
-
-Markers live in `data-` attributes, `data-cue` or the delivery notes - never in visible text on a trainee or
-projected page (`course-factory/knowledge/slide-text-rules.json` → honesty_markers). **Every marker you write
-into an artefact must also land in the delivery notes.** Copy
-`templates/DELIVERY_NOTES.md` next to the module and fill it during the run, not afterwards —
-including its final section of feedback on this skill, which is the only channel through which
-real use reaches it.
+The marker set and its rules are in `novikontas-course-start`. Never fill a gap plausibly; never invent regulatory
+content, a quoted criterion, a set point, or a QR code. Markers live in `data-` attributes, `data-cue` or the
+delivery notes - never in visible text on a trainee or projected page
+(`course-factory/knowledge/slide-text-rules.json` → honesty_markers). **Every marker you write into an artefact must
+also land in the delivery notes:** copy `templates/DELIVERY_NOTES.md` next to the module and fill it during the run,
+not afterwards.
 
 ---
 
@@ -223,26 +172,13 @@ slide the deck's Next leaves with steps still to show.
 
 ## Verify before reporting done
 
-Run the checks; do not assert them. The probes, their exit codes and the measurement traps
-that make a clean report untrustworthy are all in `measure/GUIDE.md` — read it **when you reach
-sign-off**, not before, so a build or conversion does not carry it through the structural work.
-It matters because a report of "zero contrast failures across all 16 slides" once turned
-out to be 40 failures including body text at 1.08:1, and the reason was a 0.42 s CSS
-transition, not the design.
-
-Report what failed as plainly as what passed. If something cannot be verified in the session,
-say so and name what would verify it.
-
-### Static is not enough. Run the deck.
-
-Three distinct layers, and passing one says nothing about the others:
-
-| layer | tool | what only it can see |
-|---|---|---|
-| STATIC | `measure/scripts/check_static.py all <module.html>`, `measure/scripts/check_navigation.py <course>` | minutes, links inside slides, missing nav, missing back hook, declared tap sizes |
-| RUNTIME | `measure/scripts/audit_drive.js` (+ `audit_deck.js`, `audit_collide.js` loaded first), `measure/scripts/audit_drawing.js` (inside a drawing: parts in their containers, nothing cut off, labels' safe zone - L54), `course-visuals/scripts/verify_figures.js` | contrast as painted, real laid-out size, spill, overlap, anything under the chrome, whether a figure rendered at all, whether a control can actually be tapped |
-| COMPOSITION | `measure/scripts/audit_compose.js` | whether the screen is COMPOSED or merely fits — see below |
-| HUMAN | `measure/scripts/walk_review.py` (the walk review); `course-visuals/review/GUIDE.md` for figures; the side-by-side against the reference deck | whether it teaches |
+Run the checks; do not assert them. The probes, their exit codes and the measurement traps that make a clean report
+untrustworthy are in `measure/GUIDE.md` — read it **when you reach sign-off**, not before. Passing one layer says
+nothing about the others: STATIC (`measure/scripts/check_static.py`, `check_navigation.py`) · RUNTIME
+(`audit_drive.js` with `audit_deck.js` and `audit_collide.js` loaded first, `audit_drawing.js`,
+`course-visuals/scripts/verify_figures.js`) · COMPOSITION (`audit_compose.js`) · HUMAN (`walk_review.py`,
+`course-visuals/review/GUIDE.md`). Report what failed as plainly as what passed; if something cannot be verified in
+the session, say so and name what would.
 
 Serve over http — `measure/scripts/serve_fresh.py <course>`, a fresh port after every edit — then
 in the page:
@@ -271,13 +207,8 @@ right to the space from what it contains. It reports:
 | `focal` / `focalW` | the largest single element, by area and by width |
 | verdict | COMPOSED · REVIEW · WEAK |
 
-Two calibrations worth knowing, both learned the hard way:
-
-- **Vertical drift is the one the eye notices first.** The first version checked only x, and a
-  deck whose content stopped at 60 % of every screen passed.
-- **Area alone is a landscape assumption.** A wide drawing at the full width of an 800 × 1280
-  portrait screen covers 20 % of its area and is using the screen as well as it can. A figure is
-  undersized only when it is small in its own dominant axis too.
+Vertical drift is checked as well as x, and a figure is undersized only when it is small in its own dominant axis
+too (area alone is a landscape assumption).
 
 A WEAK verdict is a defect. A REVIEW is a call for a human to look, not an automatic failure —
 `data-compose="sparse"`, or a named composition on the body, declares intent and the ink floor
@@ -286,9 +217,5 @@ is not applied.
 Run it at **1280 × 800** (the viewport that judges; `measure/knowledge/floor.json` → viewports). The defaults already match the canonical shell
 (`.slide`, `active`, `#startBtn`, `#btnNext`), so a deck built on it needs no CONFIG edit.
 
-The first real pilot passed every static check and shipped with 75 runtime failures, including
-seventeen headings at contrast 1.00, a figure whose step buttons sat below the fold behind the
-chrome, and a dismissed landing screen that was still swallowing taps across the lower half of
-every slide. None of that is visible in the source.
-
-**A number in a report is a finding.** `linksInsideSlides: 17` was printed and read past.
+Static checks cannot see contrast as painted, a control under the chrome, or a dismissed screen still swallowing
+taps. **A number in a report is a finding:** `linksInsideSlides: 17` was printed and read past.

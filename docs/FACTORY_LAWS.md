@@ -1,20 +1,13 @@
 # Factory laws
 
-The rules that hold across the **whole** Course Factory. Each names the skill that owns and
-enforces it; the detail lives there, never here.
+The rules that hold across the **whole** Course Factory: seventy-six laws, L1 to L76. Each names the skill that owns
+and enforces it; the detail lives there.
 
-> **This file is documentation, not enforcement — and that is deliberate.**
->
-> It used to live at `plugin/CLAUDE.md`. Claude Code does not load a plugin-root `CLAUDE.md` as
-> project context, and `claude plugin validate --strict` fails on one that exists
-> (finding **F-1**, confirmed by the official validator on 2026-09-10). A file that looks
-> authoritative and is never read is exactly the class of defect this project keeps recording, so
-> in Phase 3 it was moved here and the two laws that had no enforcing skill were given one.
->
-> **Every law below is enforced by a skill that does load.** This page exists so a human can read
-> the whole set on one screen. Changing a law here changes nothing; change it in the owning skill.
-
----
+> **This file is the record, not the enforcement.** Claude Code does not load a plugin-root `CLAUDE.md`, so the laws
+> live here for a human to read in one place. Every law is enforced by a skill that does load, and **where this file and
+> the owning skill disagree, the owning skill wins** - its table `Owner decisions in force` in
+> `plugin/skills/course-factory/SKILL.md` is the one-line form of every law. Changing a law here changes nothing;
+> change it in the owning skill. Who asked for a law, when and in what words: `docs/LAW_HISTORY.md`.
 
 ---
 
@@ -23,8 +16,9 @@ An academic hour is whatever the programme says — never assume 60. Built teach
 allocated minutes exactly. Overflow goes to the handout; class time is fixed. → `course-factory`
 
 **L2 · Main ILOs are copied verbatim and never edited, renumbered or improved.**
-Sub-ILOs may be re-expressed, are marked `PROVISIONAL` until ratified, and are never renumbered
-anywhere a trainee can see. A semantic change is proposed explicitly. → `course-factory`
+A Sub-ILO's wording is never re-worded by the factory except through the expert-reviewed elevation of L69; a
+re-expressed Sub-ILO is marked `PROVISIONAL` until ratified and is never renumbered anywhere a trainee can see. A
+semantic change is proposed explicitly. → `course-factory`
 
 **L3 · Official hours are never changed to fit scheduling,** and the factory never fabricates
 attendance, delivered contact time or a compliance record. → `course-factory`
@@ -242,13 +236,13 @@ what a stylesheet is.
 
 ## Phase 5 — the owner's decision record (2026-09-30)
 
-**Where any older rule disagrees with one of these, this one wins**, from 2.12.0 on, before the step
-that builds each one out has landed. The full text of each is in
+Where an older rule in this file disagrees with one of these, this one wins; the owning skill's table row still wins
+over this file. The full text of each is in
 `plugin/skills/course-factory/references/laws-in-full.md` — inside the plugin, because this `docs/`
 folder is not installed with it.
 
 **L26 · The operator's request wins. The material keeps four hard limits; the design is the person's, after one
-warning** *(design part revised 2026-10-15, 2.30.0)*. Everything a colleague asks for about the material — content,
+warning**. Everything a colleague asks for about the material — content,
 structure, emphasis, number of slides, examples, tasks, wording — is done. Four hard limits, all on the material side:
 the programme and its Main ILOs · the official hours · no source, no maritime claim (a fact the operator states is a
 source) · the offline tablet; hitting one: one or two plain sentences why, the closest option that works, then do it.
@@ -256,10 +250,9 @@ The design — brand colours, typeface and logo use, shell and components, layou
 picture viewer, text size, space (`knowledge/design-rules.json`) — is the person's: nothing conflicts,
 do it; it goes against a rule, say the rule and the risk once and ask, their way or the factory's; their way is done,
 recorded in `STANDARDS.md` (`scripts/design_choices.py`), reported by every check as their choice and never changed
-back. Owner: *"claude should tell person about this risk, but still after person reviews and tells that he wants his
-way, plugin listens to that."* → `course-factory` (`SKILL.md`, `references/laws-in-full.md`,
+back. → `course-factory` (`SKILL.md`, `references/laws-in-full.md`,
 `knowledge/design-rules.json`, `scripts/design_choices.py`, `retrofit/knowledge/routing.json` edit mode,
-`content-lock.json`, `expert-edits.json`; the same block near the top of every skill)
+`content-lock.json`, `expert-edits.json`)
 
 **L27 · Three test levels, and only the final assessment is graded.** Self-check in the presentation
 and the module check at the end of every module are **ungraded**; the final assessment is the only
@@ -369,15 +362,14 @@ classroom: COURSE.html, `_course_shell\course_map.js`, `module01\` ... with `pre
 pages report `gb-task-done`; module checks show the score only - no pass mark, no verdict (2.63.0). Proved by the
 classroom's own importer. → `course-factory` (`knowledge/classroom-system.json`, `scripts/check_course_package.py`, 2.21.0)
 
-**L46 · 3D where it makes sense - at full quality, and smooth on the tablet.** *(2.118.0: no share and no cap - 3D only where its why is spatial.)*
-Owner, 2026-10-07: not on every slide, never at a lower quality, only where it makes sense. 3D for what has a shape, an
+**L46 · 3D where it makes sense - at full quality, and smooth on the tablet.** 3D has no share and no cap: it is
+used only where the figure's why is spatial, never on every slide, never at a lower quality. 3D for what has a shape, an
 inside or a layout in space; speed from how scenes run - one shared
 renderer, scenes built and freed with their slide, no frame while nothing moves, shadows worked out once while still -
 never from a lesser look; 30 frames a second with the CPU slowed 4x. → `course-factory` (`knowledge/media-and-tasks.json` three_d,
-`scripts/content_script.py`, `scripts/check_course_package.py`, 2.22.0)
+`scripts/content_script.py`, `scripts/check_course_package.py`)
 
-**L47 · A generated picture only within the budget the person said yes to.** About €0.10 a picture (owner,
-2026-10-14): A generated picture only within the budget the operator said yes to: one yes per course at Stage 2, with the count and the euros (`intake.json` `picture_budget`, 2.73.2). Each place keeps its brief (`picture_briefs.py`); the count and cost are reported every time; nothing is generated past the budget without a new yes, and a redo counts against it. Outside a course build (a single deck or picture) the person still describes each picture and says yes to it (`nano-banana`). → `course-factory` (`scripts/picture_briefs.py`, `knowledge/media-and-tasks.json` generation_brief) and
+**L47 · A generated picture only within the budget the person said yes to.** About €0.10 a picture. One yes per course at Stage 2, with the count and the euros (`intake.json` `picture_budget`). Each place keeps its brief (`picture_briefs.py`); the count and cost are reported every time; nothing is generated past the budget without a new yes, and a redo counts against it. Outside a course build (a single deck or picture) the person still describes each picture and says yes to it (`nano-banana`). → `course-factory` (`scripts/picture_briefs.py`, `knowledge/media-and-tasks.json` generation_brief) and
 `nano-banana` 1.2.0 (`approved_by_user`, the usage log)
 
 **L48 · The Bloom level is measured, and the tablet lifts it.** Owner, 2026-10-15: on paper and in Google Classroom
@@ -539,26 +531,39 @@ declined with the operator's reason, once. Every Sub-ILO is taught on a slide an
 listed source. A script approved before the law keeps its approval; its gaps are reported. → `course-factory`
 (`scripts/ilo_map.py`, `scripts/course_gate.py`, `kb/scripts/kb_tool.py`, `script/GUIDE.md` §0), 2.42.0
 
-**L60 · No 3D scene is picked unasked** (2.118.0). 3D only where a slide's why is spatial; `declined_3d` is an optional
+**L60 · No 3D scene is picked unasked.** 3D only where a slide's why is spatial; `declined_3d` is an optional
 note. A slide with `"photo_wanted": "<who asked, why>"` (build sheet, script screen, or the script's top-level
-`"photo_wanted"`) is never turned 3D (Aleksis, 2026-10-22, after IGF M02 s07 became a scene on the slide where the
-instructors asked for a photo; 2.63.2).
-→ `course-factory` (`scripts/content_script.py` `best_3d`, `build_findings`; `compile/scripts/compile_module.py`), 2.49.7
+`"photo_wanted"`) is never turned 3D.
+→ `course-factory` (`scripts/content_script.py` `best_3d`, `build_findings`; `compile/scripts/compile_module.py`)
 
-**L61 · Every slide is one of the owner's layout templates, in the brandbook's colours, with the official logo.** The
-owner, 2026-10-20: *"Implement the layout templates. All slides for all modules that will be made need to be in this style, it's a RULE. Configure the compiler so it does this style - of course the logo should be our official one, and the colours from the brandbook."* The thirteen owner-reviewed templates of `design/course-layout-templates/` (explain-figure,
+**L61 · Every slide is one of the owner's layout templates, in the brandbook's colours, with the official logo.** The thirteen owner-reviewed templates of `design/course-layout-templates/` (explain-figure,
 figure-stage, photo-explain, compare-two, procedure, task-launch, recap, opening, long-explanation, three-content-blocks,
 reference-table, reading-with-figure, content-in-parts) are a production contract - and seven more, each
 for one kind of information (worked-example, true-false, scenario, name-parts, key-numbers, before-after, drill; `layout-templates.json` "picking"); every compiled slide names its
 template and variant, chosen from the approved script and the build sheet or asked for by name, and an unknown or
 unsuitable one is a problem. The look is `gb_layouts.css`: brandbook colours only (the reference's amber is Novikontas
 Blue), the official logo file top right (a white plate on dark slides), Raleway bundled for the offline classroom. Words are never cut, moved or paged by the factory (`v_paged_slide` is the writer's must-fix); a figure gets 40 % up
-to the whole slide (`layout_fit.py`); a slide may have no picture when its words read on their own (2.118.0). → `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui`
-(`knowledge/layout-templates.json`, `templates/gb_layouts.css`), 2.52.0
+to the whole slide (`layout_fit.py`); a slide may have no picture when its words read on their own. → `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui`
+(`knowledge/layout-templates.json`, `templates/gb_layouts.css`)
 
-**L63 · Physical equipment is drawn as it looks on board.** Aleksis, 2026-10-20, approving a plain-vs-realistic mock-up of
-the figure kit: *"yes we like this new kit styling"*, then *"also do the Parts added from courses"* and *"make the ship look
-realistic aswell, look at real images of it"*. (1) Every kit part that is a physical thing - a tank, a pipe, a valve, a
+**L62 · Look variety and the light ground are notes; a larger logo; no blocky photographs.** The compiler never changes
+a slide's layout to avoid a repeat of a look, and a dark share over a fifth or fewer than 80 % light slides is a note
+(since 2.118.0), not a problem: a slide keeps the ground it has and varies its shape. A slide on the Navy ground or a
+photograph framed on it counts as dark; a full-screen photograph (its own background) does not. A slide's look is what the eye
+sees - its shape (picture right, picture left, a photograph across the top with the words in two columns under it, a
+photograph full or framed on the dark ground, text only, the task, recap and opening screens) and its ground (light, or
+dark / photo). Only a photograph or a figure-kit drawing moves to the dark ground - a drawing or a widget made for a white
+page keeps the light one, so its own controls stay readable; a light panel stays white, with dark words, on a dark slide;
+the task launches, the module check and the recap are light unless the build sheet asks `"dark": true`. The official logo
+shows larger: its artwork about 10.5 vmin tall, its built-in clear space running into the slide's margin, the file
+unchanged; on a dark (blue) or photo slide the white version, no plate - the official file with its one colour switched
+to white (plugin/resources/brand/novikontas_logo_white.svg; the brand note allows white on a dark ground when asked), and
+over a full photograph the corner behind it is darkened, never the logo. A photograph smaller than 1600 px on its long
+side is enlarged once in the module (Lanczos and a light sharpening, at most four times), its original kept in
+working_claude/photo_originals/; one under 800 px is listed - find a larger original.
+→ `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui` (`templates/gb_layouts.css`)
+
+**L63 · Physical equipment is drawn as it looks on board.** (1) Every kit part that is a physical thing - a tank, a pipe, a valve, a
 pump, an exchanger, an engine, a vent, a hose, a coupling, a ship - is drawn in its material (cladding, brushed
 stainless, cast or painted metal, rubber, a ship's painted plating), with light and shade, and with the real features a
 trainee recognises on board: flanges at its joints, saddles, a dome, a bonnet and what works it (an actuator on an
@@ -571,18 +576,7 @@ A new part declares its `look` (`equipment`, `screen` or `diagram`) and an equip
 `KIT.h.body` / `KIT.h.equip` and the kit's materials; `check_kit.py` refuses one that does not. →
 `course-visuals` (`kit/kit.js` materials, `KIT.h.body`, `equip`, `flange`; `kit/kit.css` `--mat-*`; `SPEC.md` "Rules of
 the look"; `PARTS.md`; `scripts/check_kit.py`), `course-module-ux` (`audit_drawing.js` judges one piece of equipment as
-one object, `data-kit-body`), 2.56.0 (built as 2.52.0 / L61 on its own branch, renumbered at the merge with the owner's L61,
-and L62 -> L63 at the merge with the owner's L62)
-
-**L62 · Never the same look twice in a row; a larger logo; no blocky photographs.** The owner, 2026-10-21, after the
-gas course's Module 1 came out with 29 of 33 slides in one layout: *"Check module 1 - it is now done with the new templates, see how bad it is. Optimise the factory so the logo looks bigger and better, and images are upscaled, not this pixel stuff. Also make sure that two types of slides never repeat in a row - now 6-7 slides are exactly the same layout, and it hurts the eyes."* *(2.118.0: repeats of a look and a dark share over a fifth are notes; the compiler never changes a slide's layout to avoid a repeat.)* A slide's look is what the eye sees - its shape (picture right, picture left, a photograph across the top with the words in two columns under it, a photograph full or framed on the dark ground, text only, the task, recap and opening screens) and its ground (light, or dark / photo). Only a photograph or a figure-kit drawing moves to the dark ground - a drawing or a widget made for a white page keeps the light one, so its own controls stay readable; a light panel stays white, with dark words, on a dark slide. The official logo shows larger: its artwork about 8 vmin tall, its built-in clear space running into the slide's margin, the file unchanged. A photograph smaller than 1600 px on its long side is enlarged once in the module (Lanczos and a light sharpening, at most four times), its original kept in working_claude/photo_originals/; one under 800 px is listed - find a larger original. Then (owner, same day: "bigger logo, and on blue slides the logo should be white without background"): the artwork about 10.5 vmin tall; on a dark (blue) or photo slide the white version, no plate - the official file with its one colour switched to white (plugin/resources/brand/novikontas_logo_white.svg; the brand note allows white on a dark ground when asked), and over a full photograph the corner behind it is darkened, never the logo.
-**80 / 20** (the owner, 2026-10-21, after the IGF instructors' review: *"A lot of dark slides"*; Raivis: 80 / 20 for the
-background colour, so 80 % light slides): at least 80 % of a module's slides are on the light ground. The ground is no
-longer a way to vary - a slide keeps the ground it has and varies its shape; the task launches, the module check and the
-recap are light unless the build sheet asks `"dark": true`; a slide on the Navy ground or a photograph framed on it counts
-as dark, a full-screen photograph (its own background) does not; more than a fifth dark is a note (2.118.0).
-→ `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui` (`templates/gb_layouts.css`), 2.53.0 on main, 2.62.0 here (the owner's number was taken by the 2.53.0-2.61.0 line
-built the same days on its own branch)
+one object, `data-kit-body`)
 
 **L64 · A module in 30-40 minutes, its fixes in 20: what would fail is caught before the build, photographs are found
 large, and a rebuild is a fix.** The owner, 2026-10-26: *"How can we optimise the time of a build - cut some time and usage off, with the quality the same or even better? ... Build points 1 and 2"*, then *"when I want to rebuild or fix something, it does not go through the same thing, it goes through the fix process"* and *"we want to aim for 30-40 minutes per module + 20 minutes for possible fixes, that is our gold standard"*. (1) Every build and every
@@ -628,16 +622,16 @@ is asked, never assumed. → `course-factory` (`coverage/SIMULATORS.md`, `covera
 `coverage/knowledge/sim_coverage.schema.json`, `coverage/scripts/sim_coverage.py` - `check` fails an incomplete map;
 `scripts/course_gate.py` says it on every module start, never a stop), 2.82.0
 
-**L67 · Every slide moves on Next where its picture has something to show; 2D and 3D are drawn with a reason.** (2.118.0: the 3D share and "never a flat line drawing" are removed; a 3D model of a flat idea is a must-fix, `v_3d_flat`.) The owner, 2026-11-03,
-reviewing the template gallery ("svg SUCKS"): the upgraded templates are the frame of
+**L67 · Every slide moves on Next where its picture has something to show; 2D and 3D are drawn with a reason.** There is no 3D share and no cap, and no "never a flat line drawing": the figure's
+kind follows its why, and a 3D model of a flat idea is a must-fix (`v_3d_flat`). The upgraded templates are the frame of
 L61 with a better body (`design/slide-templates/`, 28 live slides): two-column large figure, step boxes, live 3D picture
 boxes, short points with the full words in the instructor notes, photo spots and zoom, the question that opens, the
 summary that asks before it opens, six learning layouts (worked example, true or false, what would you do, name the
 parts, numbers to remember, spot the difference), quick drills before the module check in every second or third module,
 and a "before the self-check" list. Dark slides and photographs stand on Navy, never Pitch Black; the NA pattern only
 where nobody reads. → `course-module-ui` (`templates/gb_upgrade.css`, `references/vocabulary.md` §0b),
-`course-module-ux` (`assets/gb_steps.js`), `course-visuals` (`scene/gb_scene.js`), 2.88.0; the compiler writes the
-upgraded bodies (`course-factory/compile/GUIDE.md` §2h), 2.89.0
+`course-module-ux` (`assets/gb_steps.js`), `course-visuals` (`scene/gb_scene.js`); the compiler writes the
+upgraded bodies (`course-factory/compile/GUIDE.md` §2h)
 
 **L68 · Every instructor-led module meets the Instructor-Led Course Development Guideline.** The guideline's twelve rules,
 its TLA pool and its review checklist are `course-factory/knowledge/instructor-led.json`; it adds no parallel set of
@@ -664,12 +658,13 @@ passive share, the cycle rows and the register's columns, `compile/scripts/addit
 2.97.0
 
 **L69 · The experts get the pedagogy first.** Before any content script is written, the course experts receive three documents, topic by topic and module by module: **Bloom now** - the level each learning outcome asks for and the level the old course really reached, how it taught the topic and how, if at all, it checked it, with the file and slides; **Bloom proposed** - for each topic **kept** or **lifted**, decided by the factory: the aim is the level the outcome asks, not the highest level; a topic the old course already teaches to its outcome is kept; a lift is one level toward the outcome (L71) and says why; above the outcome only with the task on board that needs it (`above_why`), never to raise the numbers; Remember stays where the outcome asks for it, and a lift never removes the recall question; a topic left below its outcome says what stops it (`limit`); an expert's decision is carried out as it is (`pedagogy_review.py expert`); never below the old course; how the trainee reaches it and why; **Teaching and learning activities** - the `active_learning` proposals of each topic with their status, and the course-wide pedagogy upgrades - each as Word (to review and sign), HTML and PDF in `to_review\pedagogy\`. The judgement is `working_claude/pedagogy_review.json`; the outcomes' words are read from the architecture and never written there, so no document can change one (L1, L2). The Stage 2 page is not approved until the documents are clean and written from the current files. A proposal below what the outcome asks, and Create, are notes, never stops (L48). The experts review them in the training app's editor instead of in files (`course_portal.py`): for each topic keep it as now, take the proposal or decide with Claude, OK or a note on the activities, Ready signed with their name and surname; every change they ask is carried out, and its `done` written, before the stage goes on.
-From 2.142.0 (owner, 2026-11-24) a new review follows the pedagogy lead's ILO elevation method: every outcome raised to
-Apply or higher, or kept with a keep code and a reason - one outcome at a time, each answer checked by code (the verb
-changed and as little else as possible), one TLA of the pool per outcome with variety counted by code; and the three
-frameworks are enforced for such a course at the Stage 2 approval, the module script and the course package. It
-replaces "one level a course" and "a proposal never re-words an outcome" for those reviews; one started before
-finishes by the rules it was started with (`knowledge/ilo-elevation.json`, `scripts/ilo_elevation.py`).
+A new review follows the pedagogy lead's ILO elevation method: every outcome raised to Apply or higher, or kept with a
+keep code and a reason - one outcome at a time, each answer checked by code (the verb changed and as little else as
+possible), one TLA of the pool per outcome with variety counted by code; and the three frameworks are enforced for such
+a course at the Stage 2 approval, the module script and the course package. This expert-reviewed elevation is the one
+way a Sub-ILO's wording changes (L2); a Main ILO is never re-worded. It replaces "one level a course" for those
+reviews; a review started under the older rules finishes by them (`knowledge/ilo-elevation.json`,
+`scripts/ilo_elevation.py`).
 → `course-factory` (`scripts/pedagogy_review.py` draft / check / render, `bloom/GUIDE.md` §5,
 `scripts/make_architecture_page.py --approve`, `scripts/course_portal.py`), 2.99.0, 2.100.0, 2.101.0
 
@@ -685,12 +680,35 @@ draft release; the office publishes it. A build that stops says why in the edito
 → `course-factory` (`scripts/course_portal.py` watch / import / install-task, `scripts/course_import.mjs`, SKILL.md
 *Auto build*; the training app's course-prep and course-import functions, migrations 032-033), 2.102.0
 
-**L71 · Kept, lifted one level, seen whole.** A course rebuilt from an old one keeps the old course's order and what each old slide explained, and lifts it: a slide moves only with the expert's reason (`moved_why`), an old slide is left out only with one (`dropped_old`), and the slides show at least 60 % of the old slides' words. A topic is lifted one Bloom level a course; more only by the expert's decision. The outcomes stay the programme's: the factory never proposes a re-worded one. A question asks only what the slides up to it have shown - never what only the instructor's notes say. Every value on a slide is in a source the course holds (L4), and every claim of a script is proved there by the `fact-checker` agent before it is approved - what no source says is cut, what a source says otherwise is corrected. One photograph shows one thing: several of a sort are each their own picture, checked against what was asked before it is placed. Every word and picture is seen whole at every step, the last Next included - the build walks the deck with Next in a browser (Playwright) and stops on anything cut. An expert's Ready approves the scripts of an unattended build only when every topic row has their answer.
+**L71 · Kept, lifted one level, seen whole.** A course rebuilt from an old one keeps the old course's order and what each old slide explained, and lifts it: a slide moves only with the expert's reason (`moved_why`), an old slide is left out only with one (`dropped_old`), and the slides show at least 60 % of the old slides' words. A topic is lifted one Bloom level a course; more only by the expert's decision. The outcomes stay the programme's: the factory never re-words one, except a Sub-ILO through the expert-reviewed elevation of L69 (L2). A question asks only what the slides up to it have shown - never what only the instructor's notes say. Every value on a slide is in a source the course holds (L4), and every claim of a script is proved there by the `fact-checker` agent before it is approved - what no source says is cut, what a source says otherwise is corrected. One photograph shows one thing: several of a sort are each their own picture, checked against what was asked before it is placed. Every word and picture is seen whole at every step, the last Next included - the build walks the deck with Next in a browser (Playwright) and stops on anything cut. An expert's Ready approves the scripts of an unattended build only when every topic row has their answer.
 → `course-factory` (`scripts/content_script.py` old_course_findings, fact_findings, the taught check on what the slides show, `picture.items`; `scripts/pedagogy_review.py` check; `scripts/picture_briefs.py` place --seen; `course-module-ux/measure/scripts/fit_gate.py` in `build_module.py`; `agents/fact-checker.md`, `scripts/fact_check.py`), 2.105.0, 2.106.0
 
-**All seventy-one laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L71 are enforced first through `course-factory/SKILL.md`'s
-"Owner decisions in force" block, and each is built out in the step named beside it.
+**L72 · Every finished course goes into the Course Libraries, with all its material.** `scripts/finished_course.py
+<course>` writes `Course Libraries\Finished courses\<Course name>\`: `trainee\` (only what a trainee sees or uses),
+`complete\` (everything delivered, instructor material included) and `00_READ_ME.md`; run again after every release or
+fix. → `course-factory`
+
+**L73 · A doing outcome is practised, not only shown.** A Sub-ILO whose verb asks for Apply or higher needs an activity
+screen tagged to it, or an exercise in `assessment_map.json` where the trainee does it; slides and questions alone are a
+must-fix (`i_not_practised`, `content_script.py`); the admin's ILO map marks it "Slides only". → `course-factory`
+
+**L74 · No script before its sources.** Every Sub-ILO of a module has a passage in the knowledge base (the programme,
+study plan and brief only name it) before its script is written; a gap stops `course_gate.py --module N` until sources
+are added and the knowledge base built again, or the operator accepts it in their words (`kb_coverage.py check` /
+`accept --why --by`). → `course-factory`
+
+**L75 · Project work arrives with the course, only where the course has it.** A course whose teams draw project cards
+gets `working_claude\project_work.json` at Stage 2 (`project_work.py init`); its approved cards ship as Word / PDF and as
+the package's `classroom\projects.json`; a course with no project work gets no file and no check. → `course-factory`
+
+**L76 · Every compiled course carries its overview for LND.** The compile writes `_course_shell\overview.json` (programme
+outline with hours, main ILOs, list of materials) and `_course_shell\materials\` (programme document, project work
+cards, course plan, day sheets); instructor-side only, never on a trainee tablet; the package check refuses a course
+without them (`course_overview.py`). → `course-factory`
+
+**All seventy-six laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when `course-visuals` was
+built; L26–L76 are enforced first through `course-factory/SKILL.md`'s "Owner decisions in force" table, and each is
+built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:
 `plugin/skills/course-factory/org/ORG_DEPENDENCIES.md`.

@@ -5,7 +5,7 @@ description: The locked LOOK of a course module - the token set every deck, task
 
 # The look of a module
 
-> **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
+> **Every reply to the operator** (L25): three parts as short points - **Done · Check now · Next** -
 > in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
 
 `course-module-ux` owns whether a screen **works** — fill, overflow, contrast ratio, tap
@@ -13,14 +13,7 @@ targets. It is a floor, not an identity: two people can pass every check in `flo
 produce courses that look nothing alike. That happened. This skill owns what a screen **looks
 like**, so they cannot.
 
-## The person decides the design — L26 (course-factory, 2.30.0)
-
-Every rule in this skill about how a course **looks or behaves** is a rule for the factory's own choices. When the
-person asks for something else: if nothing conflicts, just do it; if it goes against a rule here, say which rule and
-the risk in one or two plain sentences and ask **once** - *your way* / *the factory's way*; on *your way*, do it fully,
-record it (`course-factory/scripts/design_choices.py add <course> --rule <id> ...`), and **never change it back** - not
-in a later build, fix or session, and not because a check flagged it. The course material (programme, Main ILOs,
-hours, sources, the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
+Design is the person's (L26): tell them the risk first, then record their choice with `design_choices.py add` (course-factory); it is never changed back.
 
 ## When this skill runs
 
@@ -41,16 +34,14 @@ task class and every token, by name and when to use it. That page *is* the desig
 the style files hold nothing a builder needs beyond it. `scripts/design_system.py check <module>`
 proves the copies are still identical, and runs at verify. A module's copy is never edited: a
 genuinely shared gap is fixed in the canonical file here, course-specific styling goes in the
-module's own stylesheet loaded after them. *(2.11.1 — this replaced reading ~82 KB of style files.)*
+module's own stylesheet loaded after them.
 
 ## The one law
 
 **Module 1's `:root` is the reference. Every other screen matches it.**
 
-The owner ruled this on 2026-09-01 for interface, and it holds for the visual layer too. When
-a value here disagrees with a shipped deck, the deck is wrong — but see *Known drift* before
-changing anything, because three shipped modules disagree and that is the owner's call, not
-yours.
+When a value here disagrees with a shipped deck, the deck is wrong — but see *Known drift* before
+changing anything, because three shipped modules disagree and that is the owner's call, not yours.
 
 Canonical values live in `knowledge/tokens.json`. That file is the authority; this guide points
 at it rather than restating it, so there is one place to change a colour.
@@ -108,9 +99,9 @@ it**, never the one that matches the last screen you wrote.
 
 `--txt-d` is body text on a dark slide. There is no `--txt-l`; light slides use `--ink`.
 
-## The upgraded templates - 2.88.0 (owner, 2026-11-03, L67)
+## The upgraded templates (L67)
 
-The owner approved a new body for every L61 template, and six new ones, in the template gallery; the reference is
+Every L61 template has the upgraded body, plus six new ones; the reference is
 `design/slide-templates/` - open `presentation/index.html` and press Next through 28 slides. The frame is unchanged
 (top line, the logo 48 px from the top and the right, title, bottom line, Raleway). What is new:
 
@@ -130,8 +121,8 @@ The owner approved a new body for every L61 template, and six new ones, in the t
   go to the instructor notes (`data-cue`). Summary questions, drill prompts and the self-check list are words like any
   other: written and approved in the content script, never made up by the compiler.
 
-Every class is in `references/vocabulary.md` §0b. `gb_upgrade.css` and `gb_steps.js` load in every compiled deck; since
-2.89.0 the compiler writes the summary, the task slide, step boxes, compare boxes, the two-column figure and photo spots
+Every class is in `references/vocabulary.md` §0b. `gb_upgrade.css` and `gb_steps.js` load in every compiled deck; the
+compiler writes the summary, the task slide, step boxes, compare boxes, the two-column figure and photo spots
 and zoom (`course-factory/compile/GUIDE.md` §2h).
 
 ## Where to look
@@ -149,36 +140,10 @@ and zoom (`course-factory/compile/GUIDE.md` §2h).
 
 ### L17 · Every screen must look intentionally composed
 
-A screen is not finished because it fits. **A big empty box is not a composition.** The fix is not
-a percentage rule — it is a vocabulary, and it lives in `templates/gb_compose.css`. Put the
-composition on the slide body:
-
-| composition | when | what it does |
-|---|---|---|
-| `opener` | a cover, a day opener, a question left hanging | one statement, vertically centred, deliberately spare |
-| *(none)* | lead → cards → takeaway | the ordinary flow. The same composition three times running is a note to reconsider, never a failure and never fixed by adding filler |
-| `two-col` (+`wide-left`/`wide-right`) | explanation beside a visual | the single most useful one; it is what stops a figure being adrift in a wide screen |
-| `stage` | one dominant teaching visual | the drawing is `flex:1` and eats every pixel the caption and controls leave |
-| `activity` | announcing a task, drill or practical | centred, the code set large, **nothing clickable** |
-| `checkbody` | a knowledge check | one big question, centred |
-| `sum` | the closing grid | one column per block |
-
-Every one of them shares a single mechanic: **the composition claims the stage.** `flex:1`,
-`min-height:0`, content placed deliberately. Nothing is left where the normal flow happened to drop
-it.
-
-Pick the one the CONTENT needs. Different learning needs get different compositions; a module built
-from one repeated card grid is a different failure from a badly balanced screen and just as visible.
-ETPB3 arrived with 14 of 37 screens in default flow, most of them a lead sentence over a row of
-cards.
-
-**Sparse is allowed** when the sparsity IS the composition — one statement, one question, one
-dominant visual, one activity code. It never means a cluster in a corner. Choosing a named
-composition declares intent; `data-compose="sparse"` declares it for a flow screen.
-
-Checked at runtime by `course-module-ux/measure/scripts/audit_compose.js`, which measures
-**meaningful content** — headings, copy, diagrams, controls — and never the container rectangles a
-fill percentage counts.
+A big empty box is not a composition. Pick the composition the CONTENT needs (the list, when to use each and its
+classes: `references/vocabulary.md` §1; the CSS: `templates/gb_compose.css`). A named composition declares intent;
+`data-compose="sparse"` does it for a flow screen. `course-module-ux/measure/scripts/audit_compose.js` measures
+meaningful content (never container boxes) and fails a WEAK screen.
 
 ### The three surfaces, and who owns what
 
@@ -208,12 +173,9 @@ Fixtures for the last two are in `scripts/fixtures/`. Run them if you change the
 
 ## Boundaries
 
-| Not this skill | Whose |
-|---|---|
-| Fill, overflow, contrast ratio, tap size, run script | `course-module-ux` |
-| How a trainee answers, typed input, completion | `course-task-ux` |
-| Logo, print identity, brand colour across the company | `novikontas-brandbook` |
-| Hours, ILOs, build order | `course-factory` |
+Not this skill: fill, overflow, contrast, tap size, run script → `course-module-ux` · how a trainee answers →
+`course-task-ux` · logo, print identity, company brand colour → `novikontas-brandbook` · hours, ILOs, build order →
+`course-factory`.
 
 `novikontas-brandbook` owns the company's identity — Raleway, the logo, the corporate palette.
 This skill owns what that becomes on the 1280 × 800 tablet and the classroom screen (`course-module-ux` `measure/knowledge/floor.json` → viewports). Where
@@ -222,7 +184,7 @@ the brandbook has no opinion about, which is most of a deck.
 
 ## Known drift — read before "fixing" anything
 
-Measured across the eight GAS BASIC modules on 2026-09-09:
+Measured across the eight GAS BASIC modules:
 
 - Modules **04, 07, 08** match Module 1 exactly.
 - Modules **03, 05, 06** run a second dialect: `--blue-soft-*` / `--amber-soft-*` instead of
@@ -241,7 +203,7 @@ reference set has none. Adding them is an owner decision, not a fix to apply qui
 
 ## Honesty markers
 
-Same set as the rest of the family. The visual layer earns two of its own:
+The shared set is in `novikontas-course-start`. The visual layer adds two of its own:
 
 - **MEASURED** — a value read out of a shipped file by a script, not from memory.
 - **DRIFTED** — two shipped modules disagree and neither has been ruled canonical yet.

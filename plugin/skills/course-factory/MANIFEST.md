@@ -7,6 +7,17 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.143.2 · Fewer, consistent rules to read; style checks are notes; answer controls 56 px (2026-11-26)
+
+`variety_check` (`t_family_run`, `t_family_share`, `t_few_families`) and `t_two_asks` are notes in every set; the writer's
+guide asks for them, the build is not stopped. `t_no_worked_example` and `t_calc_unit` stay must-fixes.
+
+The nine script-stage files shrank 19 %: history, `_why` and dated keys moved to `knowledge/HISTORY.md`,
+`knowledge/HISTORY_media.md`, `course-module-ui/knowledge/HISTORY.md` and `docs/LAW_HISTORY.md`; the operator how-to is
+`script/OPERATOR.md`; duplicated blocks are pointers. Contradictions settled once (notes Say / Ask / Show 20-150 words,
+paperless, 3D uncapped, one slide-word table, L2 / L69 / L71). `.opt` and the other answer controls are 56 px (L42).
+No check, threshold or severity changed beyond the two notes above.
+
 ## 2.143.1 · The write guard answers in time (2026-11-26)
 
 `hooks/hooks.json` runs `guard_writes.py` as `python -S` with a 30 s limit (was plain `python`, 10 s). The guard needs only the standard library; skipping the `site` import cut its run from 3.9-5.6 s to 1.6-2.2 s on a busy Windows PC, where it had passed 10 s and Claude Code let the write through unchecked ("didn't answer in time").

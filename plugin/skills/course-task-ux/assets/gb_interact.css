@@ -87,7 +87,7 @@
 .sw-nav{grid-area:nav;display:flex;align-items:center;justify-content:space-between}
 .sw-recap{grid-column:1/-1;grid-row:1;list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .gi-swipe:has(.sw-recap) .sw-deck,.gi-swipe:has(.sw-recap) .sw-side{display:none}
-.sw-recap li{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 14px;border-radius:var(--r-m);border:2px solid var(--line-l);background:var(--white);color:var(--navy);font-size:17px;line-height:1.35}
+.sw-recap li{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px;border-radius:var(--r-m);border:2px solid var(--line-l);background:var(--white);color:var(--navy);font-size:17px;line-height:1.35}
 .sw-recap li.ok{border-color:var(--good);background:var(--good-wash-l)}
 .sw-recap li.no{border-color:var(--warn);background:var(--warn-wash-l)}
 .sw-recap i{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-style:normal;font-weight:700;color:var(--white);background:var(--good)}
@@ -205,7 +205,7 @@
 .iv-empty{margin:80px 0 0;text-align:center;color:var(--dim-l);font-size:18px}
 .iv-vh{display:flex;align-items:center;gap:12px;margin-bottom:8px}
 .iv-vh h4{flex:1;margin:0;font-size:20px;color:var(--navy)}
-.iv-pin{min-height:52px;padding:0 16px;border-radius:var(--r-m);border:2px solid var(--amber);background:var(--amber-wash-l);font:inherit;font-weight:800;color:var(--amber-ink)}
+.iv-pin{min-height:56px;padding:0 16px;border-radius:var(--r-m);border:2px solid var(--amber);background:var(--amber-wash-l);font:inherit;font-weight:800;color:var(--amber-ink)}
 .iv-pin.on{background:var(--amber);color:var(--ink)}
 .iv-t{width:100%;border-collapse:collapse;font:16px var(--mono);font-variant-numeric:tabular-nums}
 .iv-t th,.iv-t td{padding:7px 8px;border-bottom:1px solid var(--line-l);text-align:left}
@@ -224,7 +224,7 @@
 .lu-orders li{margin:2px 0}
 .lu-valves{display:none}
 .lu-list{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.lu-v{display:flex;align-items:center;justify-content:space-between;min-height:52px;padding:0 10px;border-radius:12px;border:2px solid var(--line-l);background:var(--white);font:600 15px var(--mono)}
+.lu-v{display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 10px;border-radius:12px;border:2px solid var(--line-l);background:var(--white);font:600 15px var(--mono)}
 .lu-v.sel{border-color:var(--amber)}
 .lu-v i{font-style:normal;font-family:var(--font);font-size:12px;font-weight:800;padding:3px 8px;border-radius:99px}
 .lu-v i.o{background:var(--good-wash-l);color:var(--good)}

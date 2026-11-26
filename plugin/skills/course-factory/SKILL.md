@@ -36,111 +36,103 @@ what it opens in) · **Next** (what happens next and what the factory needs from
 
 ## The operator's request wins — L26
 
-**The course material** (content, structure, emphasis, slides, examples, tasks, wording) is **done as asked** — never
-refused, watered down or quietly ignored; their request in chat is the authorisation L18 asks for, and it reaches
-expert-edited regions too (L24). Four hard limits stay: **the programme and its Main ILOs (L1, L2) · the official
-hours (L1, L3) · no source, no maritime claim (L4) · the offline tablet (L6)**. A fact the operator states is a source:
-use it, record it as theirs, list it in that module's script review. When a request hits a limit: one or two plain
-sentences why, the closest option that works, and do that.
+**Course material** (content, structure, slides, tasks, wording) is done as asked, expert-edited regions too (L24); chat
+is the authorisation L18 asks for. Four limits stay: **programme and Main ILOs (L1, L2) · official hours (L1, L3) · no
+source, no maritime claim (L4) · the offline tablet (L6)**. A fact the operator states is a source: record it as theirs.
+At a limit: one or two plain sentences why, then the closest option that works.
 
-**The design** (colours, type, logo, shell, layouts, animation, recap, viewer, text size, space —
-`knowledge/design-rules.json`) **is the person's to decide**:
-
-1. Nothing conflicts → do it.
-2. It goes against a factory rule → name the rule and the risk in one or two sentences (`design_choices.py rules`),
-   ask **once**: *your way* / *the factory's way*.
-3. Their way → do it fully and record it: `scripts/design_choices.py add <course> --rule <id> --choice "..." --said
-   "<their words>" --risk "..."`. Every check then reports it as **their choice**; no build, fix or session changes it
-   back, and it is never asked again.
-4. The factory's way → keep the rule; their words go into `FEEDBACK_LOG.md`.
-
-A check is never a reason to undo a person's wish. Every other "never" here governs the factory's own choices.
+**Design** (colours, type, logo, layouts, animation, text size, space — `knowledge/design-rules.json`) is the person's.
+If it breaks a factory rule, name the rule and risk once (`design_choices.py rules`) and ask *your way* / *the factory's
+way*. Their way: do it and record it (`design_choices.py add <course> --rule <id> --choice "..." --said "..." --risk
+"..."`) - checks then report it as their choice and nothing changes it back. The factory's way: their words go into
+`FEEDBACK_LOG.md`. A check is never a reason to undo a person's wish.
 
 ## Owner decisions in force — every law, one line
 
-Where any other text in this factory disagrees with a row below, **this table wins**. Most rows are a check that stops
-the build; where a row is a default, it says what the exception needs. Use judgement for what no row covers. Before
-bending or changing a law, or when a request seems to collide with one, read it in full: L27 onwards in
-`references/owner-decisions.md` (grep `## L45`), the older laws with their reasons in `references/laws-in-full.md`.
+Where any other text in this factory disagrees with a row below, **this table wins**. A row naming a script is that
+script's rule: its finding is what you act on. Where a row is a default, it says what the exception needs. Use judgement
+for what no row covers. Before bending a law, or when a request seems to collide with one, read it in full: L27 onwards
+in `references/owner-decisions.md` (grep `## L45`), the older laws in `references/laws-in-full.md`; every law with its
+reasons is in `docs/FACTORY_LAWS.md`, its history in `docs/LAW_HISTORY.md`.
 
 | | The rule |
 |---|---|
 | **L1** | **The approved programme is law; minutes are its units.** An academic hour is what the programme says (never assume 60); each module's teaching time equals its allocated minutes exactly; what does not fit goes to the handout. `hours/scripts/check_hours.py` before believing any plan |
-| **L2** | **Main ILOs copied verbatim** — never edited, renumbered or improved. Sub-ILOs may be re-expressed, `PROVISIONAL` until ratified, never renumbered where a trainee sees them. The programme governs; the IMO model course guides |
+| **L2** | **Main ILOs copied verbatim** — never edited, renumbered or improved. A Sub-ILO's wording is never re-worded by the factory except through the expert-reviewed elevation of L69; a re-expressed one is `PROVISIONAL` until ratified and never renumbered where a trainee sees it. The programme governs; the IMO model course guides |
 | **L3** | **Official hours never changed to fit a schedule**; no attendance, contact time or compliance record is ever made up |
 | **L4** | **No source, no maritime claim.** Never fill a gap from memory; a stated gap is a good answer. Every claim proved in the course's knowledge base by the `fact-checker` before approval (`fact_check.py`) |
-| **L5** | **Theory delivered as active learning** — aim for 80 % learner-active minutes (Track B, `data-active`); the programme's theory/practice split (Track A, `data-track`, `check_balance.py`) never changes; theory is never removed; never reach the target by renaming screens |
+| **L5** | **Theory delivered as active learning** — aim for 80 % learner-active minutes (Track B, `data-active`); the programme's theory/practice split (Track A, `check_balance.py`) never changes; theory is never removed; never reach the target by renaming screens |
 | **L6** | **Tablet-first, touch-first, offline** — targets ≥ 44 px, no hover-only control, nothing at class time needs a network |
-| **L7** | **Nothing is useless until you have grepped** its id, class, label and filename across both terminals, the course and every generated script |
-| **L8** | **Explain and relocate; do not delete** on a complaint. When the operator tells you to remove something, remove it (after L7) |
-| **L9** | **Edit approved inputs; do not write them again from scratch** — a content script, a figure spec or a photo record is changed in place; built output is regenerated from them (L11) |
+| **L7** | Nothing is useless until you have grepped its id, class, label and filename across both terminals, the course and every generated script |
+| **L8** | Explain and relocate; do not delete on a complaint. When the operator says remove it, remove it (after L7) |
+| **L9** | Edit approved inputs in place; built output is regenerated from them (`content_script.py apply`) |
 | **L10** | **Visible must be sufficient**: a line that refers to something names it on the same line; this outranks any word budget |
-| **L11** | **A generated file is never hand-edited** — change its input or its generator and regenerate |
-| **L12** | **Every asset has provenance, a licence and a look** (open every image); unclear rights are `RIGHTS_REVIEW_REQUIRED` and never ship |
-| **L13** | **A visual explains** a mechanism, state change, relationship, flow, sequence or cause and effect — never decoration |
-| **L14** | **Read only:** the reference course and the Android app; the master folder's sources are L40's |
-| **L15** | **A green exit is not proof** — read the output and the line for what you changed; report failures as plainly as passes |
-| **L16** | **The factory builds and reports; the owner approves, commits, publishes and installs** |
-| **L17** | **Every screen looks composed** — a big empty box or a huddle in a corner is a defect, however green the checks |
+| **L11** | A generated file is never hand-edited (`DO NOT HAND-EDIT` header) — change its input or generator |
+| **L12** | **Every asset has provenance, a licence and a look** (open every image); unclear rights are `RIGHTS_REVIEW_REQUIRED` and never ship (`check_assets.py`) |
+| **L13** | A visual explains something, never decorates (`figure_why.py`, `check_kit.py`) |
+| **L14** | Read only: the reference course and the Android app (`hooks/guard_writes.py`) |
+| **L15** | A green exit is not proof — read the output; report failures as plainly as passes |
+| **L16** | **The factory builds and reports; the owner approves, commits, publishes and installs** (exception: L70) |
+| **L17** | Every screen looks composed (`audit_compose.js`) — a big empty box or a huddle in a corner is a defect |
 | **L18** | **Content is locked, delivery is free** (`retrofit/knowledge/content-lock.json`): meaning, ILOs, hours, assessment intent, exercises, terms, facts and language need authorisation; screens, layout, visuals, animation, interaction and code are rebuilt freely. An old visual is a teaching decision: keep the decision, rebuild the implementation |
-| **L19** | **Every course is in English**, never asked; the programme stays in its own language and is quoted in English; chat and notes follow the operator. `retrofit/scripts/check_language.py` |
-| **L20** | **A figure that claims to move is proved alive** (moves or responds; static is a defect for a dynamic idea) by a probe that can see |
+| **L19** | **Every course is in English**, never asked; the programme stays in its own language and is quoted in English; chat and notes follow the operator (`retrofit/scripts/check_language.py`) |
+| **L20** | A figure that claims to move is proved alive (`GBVerifyFigures`); static is a defect for a dynamic idea |
 | **L21** | **The Android app is a publish target, not a workspace** — read only until a person approves that course and version in their own words: *"Approved. Publish this course to the NOVIKONTAS training app."* (`publish.py --approved-by`) |
-| **L22** | **A slide is not an internal document** — no file talk, sources or review notes on what a trainee reads (`check_slide_text.py`) |
-| **L23** | **A slide that has a picture leads with it** — the visual above the prose, looked for before the words are set; a slide whose words read on their own needs none (L61) |
-| **L24** | **An expert's change is content** (`retrofit/scripts/detect_expert_edits.py`, evidence or ask): restyled, never rewritten by the factory; the operator may still change it |
+| **L22** | A slide is not an internal document — no file talk, sources, review notes or honesty markers on what a trainee reads (`check_slide_text.py`) |
+| **L23** | A slide that has a picture leads with it; a slide whose words read on their own needs none (`check_visual_first.py`, L61) |
+| **L24** | An expert's change is content: restyled, never rewritten by the factory; the operator may still change it (`detect_expert_edits.py`) |
 | **L25** | **The reader does not work in IT** — see *Every reply to the operator* |
 | **L26** | **The operator's request wins** — see above |
 | **L27** | Three test levels, all on the **trainee tablet**: a self-check shows the trainee's own score; the **module check** shows the score - no pass mark and no PASSED / NOT PASSED; the **final assessment** is the only one with the pass mark (70 %) and is blind |
-| **L28** | **Course type** `NEW_ENTRANT` / `EXPERIENCED` from intake shapes the build; never easier names — the professional terms, explained; every model-course instrument is assumed available; which simulators the school has comes from `coverage/knowledge/simulators.json` (L66) |
+| **L28** | **Course type** `NEW_ENTRANT` / `EXPERIENCED` from intake shapes the build; never easier names — the professional terms, explained; every model-course instrument is assumed available; the school's simulators come from `coverage/knowledge/simulators.json` |
 | **L29** | **A word-for-word content script** per module is approved before any HTML; the slides say exactly that (`check_script_match.py`) |
-| **L30** | **Module 1 is the pilot when a course is built module by module** — approved before the next is started; a build with agents or after the expert's Ready (L70) follows the Stage 2 `build_mode` answer instead, and every module needs its own PASS and walk review (L71) |
-| **L31** | **Ask like a colleague** — questions batched into one pop-up with options at the next STOP; honesty markers in `factory-notes.md`, never on a slide |
-| **L32** | **The course remembers** — see below |
-| **L33** | **Pictures: found before made** — knowledge base → old course → source files → internet → generated; small ones enlarged; equipment a trainee must recognise is a real photograph or a drawing, never a generated picture; a real photo still missing is listed in `PHOTOS_TO_TAKE.md` — a list, never a stop and never a question to the operator |
+| **L30** | Module 1 is the pilot when built module by module; with agents or after the expert's Ready (L70) the Stage 2 `build_mode` answer rules (law text: `docs/FACTORY_LAWS.md`) |
+| **L31** | Ask like a colleague — questions batched in one pop-up with options at the next STOP; honesty markers in `factory-notes.md`, never on a slide |
+| **L32** | The course remembers — see below |
+| **L33** | **Pictures: found before made** — knowledge base → old course → source files → internet → generated; small ones enlarged; equipment a trainee must recognise is a real photograph or a drawing, **never a generated picture**; a real photo still missing goes in `PHOTOS_TO_TAKE.md` — a list, never a stop or a question |
 | **L34** | **One module per programme topic**, in its order, with its hours; never merged or split; the final assessment is the last module |
 | **L35** | **Two tablets** — slides on the instructor's, tasks only on the trainee's, opened with **OPEN TASK** |
-| **L36** | **Enough theory before any task** (`knowledge/theory-rules.json`, `content_script.py`) |
-| **L37** | **Every slide's picture slot is named** — kind, what it shows, who makes it — or `none` when its words read on their own (`knowledge/media-and-tasks.json`) |
-| **L38** | **Tasks varied and hands-on, no typing**; a self-check has at most 2 basic tasks (choose, match, order), the rest rich (locate, operate, investigate, build, a scenario, 3D) — 3 + 2 in a set of five (`content_script.py` `t_sc_mix`); every set varies by family - no two neighbours of one family, none over ~40 %, 3+ families in a set of 4+ (`t_family_*`, theory-rules.json `task_variety`); one team task a module (`t_no_team`) |
-| **L39** | **A colleague gets only the HTML**; the real-tablet test is the owner's, at the end |
-| **L40** | **The factory works in `course\`**; the master folder's source files, knowledge base and old course are read only (`hooks/guard_writes.py` refuses a write) |
-| **L41** | **The old course is the foundation** — read whole at intake (`scripts/old_course.py`); each module says what it keeps, modernises and adds |
-| **L42** | **Tasks usable with zero tablet experience** — tap and drag, big controls, instant feedback (`course-task-ux` §0) |
-| **L43** | **Every module in its own folder**, complete and offline (`scripts/check_module_folder.py`) |
-| **L44** | **Three places in `course\`**: `to_review\`, `modules\`, `working_claude\` (`workspace.py tidy`) |
-| **L45** | **The classroom system's own rules** (`knowledge/classroom-system.json`, `check_course_package.py`) |
-| **L46** | **3D only where the figure's why is spatial, at full quality and smooth on the tablet** — no share and no cap (L67) |
+| **L36** | Enough theory before any task (`knowledge/theory-rules.json`, `content_script.py`) |
+| **L37** | Every slide's picture slot is named — kind, what it shows, who makes it — or `none` when its words read on their own (`media-and-tasks.json`) |
+| **L38** | **Tasks varied and hands-on, no typing**; every set varies by family - no two neighbours of one family, none over ~40 %, 3+ families in a set of 4+; a self-check has at most 2 basic tasks (choose, match, order); one team task a module (`content_script.py` `t_family_*`, `t_sc_mix`, `t_no_team`; `theory-rules.json` `task_variety`) |
+| **L39** | A colleague gets only the HTML; the real-tablet test is the owner's, at the end |
+| **L40** | **The factory works in `course\`**; the master folder's sources, knowledge base and old course are read only (`hooks/guard_writes.py`) |
+| **L41** | The old course is the foundation — read whole at intake (`old_course.py`); each module says what it keeps, modernises and adds |
+| **L42** | Tasks usable with zero tablet experience (`course-task-ux` §0, `check_task_pages.py`) |
+| **L43** | Every module in its own folder, complete and offline (`check_module_folder.py`) |
+| **L44** | Three places in `course\`: `to_review\`, `modules\`, `working_claude\` (`workspace.py tidy`) |
+| **L45** | The classroom system's own rules (`knowledge/classroom-system.json`, `check_course_package.py`) |
+| **L46** | **3D only where the figure's why is spatial, at full quality and smooth on the tablet** — no share and no cap |
 | **L47** | **A generated picture only within the budget the operator said yes to** — one yes per course at Stage 2 (`intake.json` `picture_budget`); outside a course build the person says yes to each picture (`nano-banana`) |
-| **L48** | **Bloom measured, and lifted by the tablet** — one level a course toward the outcome (`bloom/GUIDE.md`, `bloom_map.py`) |
-| **L49** | **20 / 80 in class, every theory slide kept** — theory-as-activity proposed per sub-topic at Stage 2 (`active/GUIDE.md`) |
-| **L50** | **A fix is not a build** — find every place, one list, one yes, change, one check (`fix/GUIDE.md`, `fix.py`); **after any fix the walk review runs on every touched slide** (`fix.py check --kind walk`, 2.118.0) |
-| **L51** | **Every picture opens full screen; every module closes with the same recap** before its module check |
-| **L52** | **As many real photographs as possible**; a source-book figure only once a named person cleared it (`check_assets.py clear`) |
-| **L53** | **Good padding; free space is a note** — decks pass the overflow / collide audits and the figure's own EMPTY check; the 45 % "ink" floor is a note only (2.118.0) |
-| **L54** | **Every drawing whole and clean** (`audit_drawing.js`) |
-| **L55** | **Kit first, custom allowed - and every figure has a teaching reason** (2.118.0): diagrams come from the figure kits (`course-visuals/kit/SPEC.md`, `kit2d`, `kit3d`); when no kit part shows the idea well, a custom figure (`"custom_figure"`, a self-contained offline file whose steps Next drives) is allowed; every kit figure, 3D model and custom figure carries `"why"` + `"why_text"` its steps serve (`figure_why.py`, `v_why`, `check_kit.py`); a good custom figure is offered to the kit afterwards |
-| **L56** | **A photograph carries what it shows and its credit into the full-screen view** — no credit on the slide |
-| **L57** | **A drawing of real things carries their real photographs** when the build sheet lists them (`"photo_row"`) or the figure's why is real-thing-recognition - never unasked under every drawing (2.118.0) |
-| **L58** | **Every photograph once in the whole course** - a repeat is allowed when its slide says why (`"reuse_why"`, 2.118.0) |
+| **L48** | Bloom measured, and lifted by the tablet — one level a course toward the outcome (`bloom/GUIDE.md`, `bloom_map.py`) |
+| **L49** | 20 / 80 in class, every theory slide kept — theory-as-activity proposed per sub-topic at Stage 2 (`active/GUIDE.md`) |
+| **L50** | A fix is not a build — find every place, one list, one yes, change, one check (`fix/GUIDE.md`, `fix.py`); after any fix the walk review runs on every touched slide (`fix.py check --kind walk`) |
+| **L51** | Every picture opens full screen; every module closes with the same recap before its module check |
+| **L52** | As many real photographs as possible; a source-book figure only once a named person cleared it (`check_assets.py clear`) |
+| **L53** | Good padding; free space is a note — decks pass the overflow / collide audits and the figure's own EMPTY check (`audit_deck.js`, `audit_compose.js`) |
+| **L54** | Every drawing whole and clean (`audit_drawing.js`) |
+| **L55** | **Kit first, custom allowed, every figure has a teaching reason** — diagrams come from the figure kits (`course-visuals/kit/SPEC.md`); when no kit part shows the idea, a `"custom_figure"` is allowed; every figure carries `"why"` + `"why_text"` (`figure_why.py`, `check_kit.py`) |
+| **L56** | A photograph carries what it shows and its credit into the full-screen view — no credit on the slide |
+| **L57** | A drawing of real things carries their real photographs when the build sheet lists them (`"photo_row"`) or its why is real-thing-recognition - never unasked |
+| **L58** | Every photograph once in the whole course - a repeat only when its slide says why (`"reuse_why"`) |
 | **L59** | **No module before its map** — ILO map approved and the knowledge-base decision recorded (`course_gate.py`) |
-| **L60** | **No 3D scene is picked unasked** (2.118.0): the factory no longer proposes a scene in every module - 3D only where the slide's why is spatial; `declined_3d` stays an optional note |
-| **L61** | **Every slide is one of the layout templates** (`course-module-ui/knowledge/layout-templates.json`), chosen by the compiler; a figure gets the share it needs (40 % up to the whole slide, `layout_fit.py`) or is made another kind - never squeezed. **The compiler never cuts, moves or pages the words by itself** (2.118.0): no automatic content-in-parts or points - the writer moves a long slide's words to the instructor as short points (`theory-rules.json` `slide`, `points`); `v_paged_slide` is the writer's must-fix; no picture quota - a slide may have no picture when its words read on their own (dense text, "two in a row" are gone) |
-| **L62** | **Repeats of a look, the dark share and the 80 % light ground are notes** (2.118.0) — the compiler never flips a slide's layout to avoid a repeat |
-| **L63** | **Equipment drawn as it looks on board** (`course-visuals/kit/PARTS.md`) |
-| **L64** | **A module in 30-40 min, its fixes in 20** — the pre-check first (`precheck.py`); a rebuild is a fix (`fix.py rebuild`); the minutes are a measure, never a reason to skip a check |
+| **L60** | No 3D scene is picked unasked - only where the slide's why is spatial (law text: `docs/FACTORY_LAWS.md`) |
+| **L61** | **Every slide is one of the layout templates** (`course-module-ui/knowledge/layout-templates.json`), chosen by the compiler; a figure gets the share it needs (`layout_fit.py`), never squeezed. The compiler never cuts, moves or pages the words: the writer moves a long slide's words to the instructor as short points (`v_paged_slide`); no picture quota |
+| **L62** | Repeats of a look, the dark share and the 80 % light ground are notes - the compiler never flips a layout to avoid a repeat (law text: `docs/FACTORY_LAWS.md`) |
+| **L63** | Equipment drawn as it looks on board (`course-visuals/kit/PARTS.md`) |
+| **L64** | A module in 30-40 min, its fixes in 20 — the pre-check first (`precheck.py`); a rebuild is a fix (`fix.py rebuild`); the minutes are a measure, never a reason to skip a check |
 | **L65** | **A drawing that moves stays smooth** (`audit_motion.js`) |
-| **L66** | **Every item a simulator can train is trained on one** (`coverage/SIMULATORS.md`, `sim_coverage.py check`) |
-| **L67** | **Every slide moves on Next where its picture has something to show; 3D and 2D are drawn with a reason** (2.118.0: the 60-80 % 3D share and "never a flat line drawing" are gone - the figure's kind follows its `why`; a 3D model of a flat idea is a must-fix; `gb_upgrade.css`, `gb_steps.js`) |
-| **L68** | **The Instructor-Led Course Development Guideline** — active means every trainee commits to an output; a passive run at most 15 min and 20 % of theory, or a one-line reason (`instructor-led/GUIDE.md`, `instructor_led.py check`); every course gets day sheets and the course on one page - what is done each day, in order, never a clock time (§4, `day_sheets.py`) |
-| **L69** | **The experts get the pedagogy first** — Bloom now, Bloom proposed and the activities, before any script (`pedagogy_review.py`, `bloom/GUIDE.md` §5). From 2.142.0 every outcome is **raised or kept, one at a time** (`pedagogy_review.py next` / `propose` / `task`, `knowledge/ilo-elevation.json`), and the three frameworks are **enforced** for such a course |
+| **L66** | Every item a simulator can train is trained on one (`coverage/SIMULATORS.md`, `sim_coverage.py check`) |
+| **L67** | Every slide moves on Next where its picture has something to show; a 3D model of a flat idea is a must-fix (law text: `docs/FACTORY_LAWS.md`) |
+| **L68** | The Instructor-Led Guideline — active means every trainee commits to an output; a passive run at most 15 min and 20 % of theory, or a one-line reason (`instructor_led.py check`); every course gets day sheets and the course on one page, never a clock time (`day_sheets.py`) |
+| **L69** | **The experts get the pedagogy first** — Bloom now, Bloom proposed and the activities, before any script (`pedagogy_review.py`, `bloom/GUIDE.md` §5); every outcome is **raised or kept, one at a time** (`pedagogy_review.py next` / `propose` / `task`, `knowledge/ilo-elevation.json`) |
 | **L70** | **Built after the expert's Ready** — the office PC builds unattended; see *Auto build* |
-| **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done - and (2.118.0) not done without the **walk review**: an AI reviewer who did not build it looks at the contact sheet of every slide's stops as a trainee does (`walk_review.py`, `compile/GUIDE.md` 2i; the whole-course workflow's walk judge runs it; two rounds, then the operator accepts on record or has it fixed) |
-| **L72** | **Every finished course goes into the Course Libraries, with all its material** — `scripts/finished_course.py <course>` writes `Course Libraries\Finished courses\<Course name>\`: `trainee\` (only what a trainee sees or uses - give this to the trainee side), `complete\` (everything delivered, instructor material included), `00_READ_ME.md`; run again after every release or fix |
-| **L73** | **A doing outcome is practised, not only shown** — a Sub-ILO whose verb asks for Apply or higher (build, prepare, perform, plan ...) needs an activity screen tagged to it or an exercise in `assessment_map.json` where the trainee does it; slides and questions alone are a must-fix (`i_not_practised`, `content_script.py`); the admin's ILO map marks it "Slides only" |
-| **L74** | **No script before its sources** — every Sub-ILO of a module has a passage in the knowledge base, the programme, study plan and brief left out (they only name it), before its script is written; a gap stops `course_gate.py --module N` until sources are added and the knowledge base built again, or the operator accepts it in their words (`kb_coverage.py check` / `accept --why --by`) |
-| **L75** | **Project work arrives with the course - only where the course has it** — a course whose teams draw project cards gets `working_claude\project_work.json` at Stage 2 (`project_work.py init`); its approved cards ship as Word / PDF and as the package's `classroom\projects.json`, so the tablet app's group page draws the projects and makes the trainee folders; a course with no project work gets no file and no check (Aleksis, 2026-11-17: "remember not all courses have these projects") |
-| **L76** | **Every compiled course carries its overview for LND** — the compile writes `_course_shell\overview.json` (programme outline with hours, main ILOs, list of materials) and `_course_shell\materials\` (the programme document, project work cards, course plan, day sheets) for the lecturer's and reviewer's whole picture; instructor-side only, never on a trainee tablet; the package check refuses a course without the overview or without its programme document (`course_overview.py`) |
+| **L71** | **Kept, lifted one level, seen whole** — the old course's order and theory kept; every claim proved; the build walks every Next (`fit_gate.py`); a module with no PASS is not done, nor without the **walk review** by an AI reviewer who did not build it (`walk_review.py`; two rounds, then the operator accepts on record or has it fixed) |
+| **L72** | **Every finished course goes into the Course Libraries, with all its material** — `scripts/finished_course.py <course>` writes `Course Libraries\Finished courses\<Course name>\` (`trainee\`, `complete\`, `00_READ_ME.md`); run again after every release or fix |
+| **L73** | **A doing outcome is practised, not only shown** — a Sub-ILO whose verb asks for Apply or higher needs an activity screen tagged to it or an exercise in `assessment_map.json`; slides and questions alone are a must-fix (`i_not_practised`, `content_script.py`) |
+| **L74** | **No script before its sources** — every Sub-ILO of a module has a passage in the knowledge base (the programme, study plan and brief only name it); a gap stops `course_gate.py --module N` until sources are added, or the operator accepts it in their words (`kb_coverage.py check` / `accept --why --by`) |
+| **L75** | Project work arrives with the course, only where the course has it — `working_claude\project_work.json` at Stage 2 (`project_work.py init`); a course with no project work gets no file and no check |
+| **L76** | Every compiled course carries its overview for LND — `_course_shell\overview.json` and `_course_shell\materials\`, instructor-side only; the package check refuses a course without them (`course_overview.py`) |
 
 ## The course remembers — L32
 
@@ -250,7 +242,7 @@ task begins; **part 2, the trainee tablet** — each task, one question a screen
 score. Begin from the module's ILO map rows (`ilo_map.py show`), the old course's keep / modernise / add and the
 knowledge base (`kb_tool.py search`). Before scripts are written in parallel, `STANDARDS.md` gets the course's
 `## Ship profile`. Before each module is drafted, `instructor_led.py plan <course> --module N` picks its activity formats
-by each Sub-ILO's task type (L68, 2.128.0) - write the activities in them; a module that comes out one direction is a
+by each Sub-ILO's task type (L68) - write the activities in them; a module that comes out one direction is a
 must-fix.
 
 - **Proved (L4):** one `fact-checker` agent per module; approval is refused while a claim is unjudged or unproved.
@@ -275,7 +267,7 @@ must-fix.
 `knowledge/build-order.json` is the authority for the order; the compiler keeps it for a module built from its approved
 script (`build_module.py`).
 
-- **Two phases (2.73.0):** Phase A with no agent — placeholders of each picture slot's shape and every check that does
+- **Two phases:** Phase A with no agent — placeholders of each picture slot's shape and every check that does
   not need the pictures (`compile/scripts/phase_a.py`); Phase B fills the pictures from `MNN_VISUAL_NEEDS.md` and the
   photo catalogue. A placeholder never ships.
 - **The look is routed:** `course-module-ui` (`design_system.py install`, `references/vocabulary.md`); to choose and fill
@@ -306,31 +298,16 @@ of a build and of `fix.py rebuild`; it imports a draft once nothing but picture 
 
 ## Honesty markers
 
-`novikontas-course-start` owns the definitions: `UNKNOWN` asked and not known · `PLACEHOLDER` structure right, content missing · `PROVISIONAL` depends on something
-unapproved (every re-expressed Sub-ILO, every unratified pass mark) · `[VERIFY: <what>]` asserted from a source not
-confirmed. Never invent regulatory content, hours, pass marks or citations; every marker used is listed in
-`factory-notes.md`.
+The markers (`UNKNOWN`, `PLACEHOLDER`, `PROVISIONAL`, `[VERIFY: <what>]`) are defined in `novikontas-course-start`.
+Never invent regulatory content, hours, pass marks or citations; every marker used is listed in `factory-notes.md`.
 
 ## Verify before reporting done
 
-After a change to the factory itself, `scripts/factory_trial.py run` builds the trial modules from scratch and scores
-them against the last trial. The list below is the sign-off of a build, a retrofit and the handover — a fix runs only
-the one check for its kind of change (`fix/GUIDE.md` §4). Read every output (L15); why each check exists:
-`references/verify-in-full.md`.
-
-1. `hours/scripts/check_hours.py` — minutes match the programme
-2. `coverage/scripts/check_syllabus_coverage.py` — every itemised model-course outcome is taught
-3. `tablet/scripts/verify_course.py`, `verify_links.py` (merged asset root), `audit_navigation.py`, `crosscheck_tasks.py`
-4. `course-module-ux`'s measurement lane for the screens
-5. `course-visuals/scripts/check_visuals.py`, `check_assets.py`; in the page `GBVerifyFigures.run()` and `await
-   GBVerifyFigures.motion()` (L20); `course-visuals/review/GUIDE.md`; nothing at `RIGHTS_REVIEW_REQUIRED` ships
-6. `course-visuals/scripts/check_visual_first.py <module> --strict` (L23), then `write_visual_handoff.py <module>`
-7. `course-module-ui/scripts/design_system.py check <module>`; `audit_ui.py --strict` over a **new** module's stylesheets
-8. `scripts/check_slide_text.py <course>` (L22), then `check_script_match.py <course> --module <n>` (L29)
-9. `instructor-led`: `scripts/instructor_led.py check` (L68); `coverage/scripts/sim_coverage.py check` (L66)
-10. `scripts/check_plain_language.py <course>` — your own report, last before sending it (L25)
-11. `retrofit/scripts/detect_expert_edits.py <module> --record --version <v>` — last of all (L24)
-12. In retrofit only — `retrofit/scripts/check_language.py <course> --declare <LANG>` and `classify_module.py` again
+`compile/scripts/build_module.py` builds a module, runs its checks (script match, navigation, audits, package, walk
+review) and prints PASS. The sign-off of a build, a retrofit and the handover is the ordered list in
+`references/verify-in-full.md` (hours, syllabus coverage, tablet verification, visuals, slide text, plain language, expert
+edits last); a fix runs only the one check for its kind of change (`fix/GUIDE.md` §4). Read every output (L15). After a
+change to the factory itself, `scripts/factory_trial.py run` builds the trial modules and scores them against the last trial.
 
 Then write `templates/factory-notes.md` into the course folder: what was made, every marker with its source, the
 achieved ratio, what moved to the handout and why, and a last section of **feedback on this skill** — written during

@@ -1,11 +1,11 @@
 {
-  "_authority": "What a slide may show besides its words, and how a trainee may answer a task - with WHO makes each one: the factory itself, the factory through the nano-banana plugin, or someone outside it. Owner, 2026-09-30 (L37, L38): 'leave place for animations, images, 3D illustrations - graphic things in slides - and mention what kind would be used', and 'make these tests more variable - not only choose A B C D - as much variable as possible ... more digitalized, more realistic, more detailed, more technical; if you cannot perform, explain why and advise how'. Read by scripts/content_script.py (Stage 3: every slide names its visual; every task names its mechanic; the variety floors are checked) and scripts/make_architecture_page.py (Stage 2: the visual plan per module and who makes it). The representations themselves - what teaches which learning need - stay with course-visuals (decide/knowledge/representations.json, learning-needs.json); each kind below names the representation it is built as.",
+  "_authority": "What a slide may show besides its words, and how a trainee may answer a task - with WHO makes each one: the factory itself, the factory through the nano-banana plugin, or someone outside it (L37, L38). Read by scripts/content_script.py (Stage 3: every slide names its visual; every task names its mechanic; the variety floors are checked) and scripts/make_architecture_page.py (Stage 2: the visual plan per module and who makes it). The representations themselves - what teaches which learning need - stay with course-visuals (decide/knowledge/representations.json, learning-needs.json); each kind below names the representation it is built as.",
 
   "made_by": {
     "factory": {"en": "the factory makes it itself", "lv": "fabrika to izveido pati", "ru": "фабрика делает сама",
                 "how": "authored SVG, HTML/CSS/JS, canvas, and three.js scenes built from geometry - all bundled into the course pack, offline (L6)"},
     "nano_banana": {"en": "the factory makes it with the image / video generator (nano-banana)", "lv": "fabrika to izveido ar attēlu / video ģeneratoru (nano-banana)", "ru": "фабрика делает генератором изображений / видео (nano-banana)",
-                    "how": "Gemini images and Veo video through the nano-banana plugin, with the owner's key (configured and working on 2026-09-30). Context and atmosphere only - never equipment a trainee must recognise (L33, Q3) - and labelled 'AI-generated illustration'."},
+                    "how": "Gemini images and Veo video through the nano-banana plugin, with the owner's key. Context and atmosphere only - never equipment a trainee must recognise (L33, Q3) - and labelled 'AI-generated illustration'."},
     "sources": {"en": "taken from the knowledge base, the old course or the source files", "lv": "ņemts no zināšanu bāzes, vecā kursa vai avota failiem", "ru": "берётся из базы знаний, старого курса или исходных файлов",
                 "how": "every picture in the knowledge base and the old course is usable as it is (owner, 2026-10-01) - found, checked, credited where known by course-visuals; what is missing is searched on the internet and downloaded into the course folder, the list confirmed once per module (L33)"},
     "novikontas": {"en": "needs Novikontas: a photo, a short film or a 3D scan of the real equipment", "lv": "vajag Novikontas: fotogrāfiju, īsu video vai reālā aprīkojuma 3D skenējumu", "ru": "нужна Novikontas: фото, короткое видео или 3D-скан реального оборудования",
@@ -55,14 +55,13 @@
   },
 
   "layouts": {
-    "split":       {"en": "text left, picture right", "lv": "teksts pa kreisi, attēls pa labi", "ru": "текст слева, изображение справа", "_share": "text 55 %, picture 45 %"},
-    "visual_wide": {"en": "picture across the slide, text beside or below it", "lv": "attēls pāri slaidam, teksts blakus vai zem tā", "ru": "изображение во весь слайд, текст рядом или под ним", "_share": "picture 65 %, text 35 %"},
-    "visual_full": {"en": "picture fills the slide, text on a band", "lv": "attēls aizpilda slaidu, teksts joslā", "ru": "изображение на весь слайд, текст на полосе", "_share": "for a 3D model, a video or an animation the instructor walks through"}
+    "split":       {"en": "text left, picture right", "lv": "teksts pa kreisi, attēls pa labi", "ru": "текст слева, изображение справа"},
+    "visual_wide": {"en": "picture across the slide, text beside or below it", "lv": "attēls pāri slaidam, teksts blakus vai zem tā", "ru": "изображение во весь слайд, текст рядом или под ним"},
+    "visual_full": {"en": "picture fills the slide, text on a band", "lv": "attēls aizpilda slaidu, teksts joslā", "ru": "изображение на весь слайд, текст на полосе"}
   },
 
   "mechanics": {
-    "_new": "Owner, 2026-10-15 (L49 step 4, 2.28.0): 'tablet interactive tasks - not only drag n drop, choose e.c., something completely different, interesting and creative'. Five ways of answering added for the higher Bloom levels: find the fault (investigate), spot the errors in a filled-in document, build the plan from cards, rebuild an incident timeline, compare options side by side. How each is built on the tablet: course-task-ux section 2a.",
-    "_law": "No free typing on a self-check or module check (owner C11, course-task-ux §2) - every mechanic below is answered by tapping, dragging or setting a control. The 'answer' format is the one line-per-item text the operator edits in the Word file; '*' marks what is right.",
+    "_law": "Typing is avoided: every mechanic below is answered by tapping, dragging or setting a control. The 'answer' format is the one line-per-item text the operator edits in the Word file; '*' marks what is right.",
     "single_choice":      {"family": "choose",  "hands_on": false, "en": "Choose one answer", "lv": "Izvēlies vienu atbildi", "ru": "Выбери один ответ",
                            "answer": "options A, B, C (D); 'correct' is one letter"},
     "multi_select":       {"family": "choose",  "hands_on": false, "en": "Choose all that are right", "lv": "Izvēlies visas pareizās", "ru": "Выбери все верные",
@@ -104,7 +103,7 @@
     "fill_matrix":        {"family": "build",       "hands_on": false, "en": "Fill the table yourself (tap a value, then the cells)",
                            "values": "the values to choose from, separated by commas - e.g. R, A, C, I, - (at least two)",
                            "answer": "the first line is the header: row title | column | column; then one row per line: row name | right value | right value - every row the same number of cells as the header has columns, every value one of 'values'. Up to 6 rows by 5 columns fit the tablet. Bloom 3 (Apply): the trainee builds the grid, e.g. a RACI matrix"},
-    "_new_2_74": "Owner, 2026-10-28 (2.74.0): 'more interesting / modern / technology self checks ... so self checks become practical learning as well', in two parts after each block - Part A checks everything taught before it in the module, Part B is 'a little bit difficult task, where they need to find the answer by themselves' - and '3D deck view, 3D models, equipment in 3D, panorama, on-ship activities'. Ten types, run by gb_interact.js; the approved prototypes are design/task-prototypes/index.html; the formats are scripts/interact_formats.py; how each is built: course-task-ux section 2b. 'part': 'check' is a Part A type, 'challenge' a Part B type.",
+    "_part": "'part': 'check' is a Part A type, 'challenge' a Part B type (run by gb_interact.js; formats in scripts/interact_formats.py).",
     "true_false":         {"family": "choose",      "hands_on": false, "part": "check", "en": "True or false - flick the card", "lv": "Patiesi vai nepatiesi - pavelc kartīti", "ru": "Верно или неверно - смахни карточку",
                            "answer": "one statement per line: statement => why; the true ones marked *; at least four, both kinds"},
     "critique":           {"family": "investigate", "hands_on": false, "part": "challenge", "en": "Check a colleague - keep or correct each claim", "lv": "Pārbaudi kolēģi - atstāj vai izlabo katru apgalvojumu", "ru": "Проверь коллегу - оставь или исправь каждое утверждение",
@@ -137,7 +136,6 @@
   },
 
   "trainee_tablet_experience": {
-    "_law": "L42 (owner, 2026-10-01): 'tablet-friendly UI/UX, user-friendly, but max modern, max technology and max understandable - so people even with zero tablet experience do the tasks, and they are excited.' The full rule: course-task-ux SKILL.md section 0.",
     "first_try_screen_seconds": 20,
     "gestures_allowed": ["tap", "drag - always also tap-then-tap"],
     "gestures_never_the_only_way": ["double-tap", "long-press", "swipe to move on", "pinch"],
@@ -151,7 +149,6 @@
     "proved_by": ["step 6: every task type at tablet size in a browser", "QA: a 'never used a tablet' walkthrough in a colleague's browser", "the owner's real-tablet touch test at the end (L39)"]
   },
   "generation_brief": {
-    "_authority": "Owner, 2026-10-14 (L47, 2.24.0): 'it costs approx 0.10 euro per generation, and if there is 4 developers, and they use fixes and redoings of these pictures like 10-15x, its already all billing gone ... you dont automatically connect to nano banana and do all images, you first find places where these images can be placed ... and then you ask for each place ... help me get from nano banana best result in first try by explaining in details what you want to see.'",
     "eur_per_image": 0.10,
     "video": "a clip costs much more than a picture - say so, and make and approve its still first",
     "flow": [
@@ -174,7 +171,6 @@
     ],
     "kept_in": "working_claude/picture_briefs/M01.json - the answers, the agreed prompt, every picture made and the person's words; scripts/picture_briefs.py",
     "gemini_browser": {
-      "_authority": "Owner, 2026-10-16 (via Aleksis): the AI spent its time thinking which picture to make and where - make the Gemini app in the browser (Google AI Pro, no API cost) do it, with the places and prompts already decided",
       "why": "the Gemini app on the person's own Google AI Pro account costs nothing per picture, so the eight questions per picture are not needed to save money: picture_briefs.py queue drafts every prompt from the approved script, the person reads the whole list once and corrects any line, then nano-banana gemini-browser makes them one after the other",
       "styles": {
         "photo": "A realistic documentary photograph of",
@@ -190,7 +186,6 @@
       },
       "aspect_by_composition": {"photo": "16:9", "stage": "16:9", "beside_drawing": "4:3", "default": "4:3"},
       "beside_drawing": {
-        "_authority": "Owner via Aleksis, 2026-10-16, on the tank-type, hazardous-zone and A-60 drawings: 'i need images there aswell'",
         "why": "a drawing slide keeps its drawing - its labels, layout and boundaries are what the trainee learns and is checked on, and a generator invents plausible pipes and garbles words - and gets the real thing as a generated picture under it (the build sheet's inset, under: figure), the drawing and the picture side by side",
         "kinds": ["schematic", "cutaway", "comparison", "interactive_diagram", "step_animation"],
         "style": "render3d",
@@ -203,10 +198,9 @@
     }
   },
   "three_d": {
-    "_authority": "Owner, 2026-10-07 (L46, 2.22.0): 'now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it makes sense; and it lags a little in these 3D models, maybe optimisation can be considered - but mainly I love these 3D models.' Second message, same day: 'I also don't need you to cut the quality of 3D models - don't make it in all slides, about 50% of the presentation is the max that can be 3D models, but also don't cut quality, and put it only on slides where it makes sense, not only because you can.'",
+    "_authority": "3D has no share and no cap (L46, L67): it is drawn only where its why is spatial (v_why), every model at full quality; a heavy scene is a tablet-performance note (perf3d), not a share.",
     "families": ["3d"],
     "count_from": 3,
-    "_share": "2.116.0 (operator Aleksis Vejs, 2026-11-09, after the Project Management review): the L67 share of 60-80 % 3D is REMOVED. 3D is drawn only where its why is spatial (v_why); a heavy 3D scene is a tablet-performance note (perf3d), not a share. Every 3D model is made at full quality.",
     "fits": [
       "equipment and structures whose shape, inside or arrangement in space is what is taught - cargo tanks and containment systems, hull sections and spaces, pumps, compressors, valves, manifolds, piping runs, the reliquefaction plant, an enclosed space and its access",
       "something the trainee must later recognise or operate on board, seen from every side",
@@ -220,27 +214,23 @@
       "decoration - 3D added only because it can be"
     ],
     "flat_words": ["chart", "graph", "curve", "table", "matrix", "list", "symbol", "pictogram", "document", "binder", "checklist", "permit", "timeline", "flowchart", "cheese", "steps of"],
-    "_flat_words": "A 3D slide whose picture description uses one of these words gets a suggestion: a 3D model of something flat adds weight, not understanding.",
     "fit_words": ["tank", "tanks", "hull", "hold", "space", "spaces", "room", "cofferdam", "airlock", "containment", "membrane",
                   "insulation", "pump", "compressor", "valve", "valves", "manifold", "pipe", "piping", "pipework", "double-walled",
                   "duct", "vent mast", "engine", "vaporizer", "vaporiser", "heater", "exchanger", "station", "coupling", "hose",
                   "inside", "cutaway", "cut-open", "layout", "arrangement", "where on board", "location", "placement"],
-    "_fit_words": "2.49.0 (operator, 2026-10-16: 'make it so they add 3D when needed'). The factory proposes a 3D model unasked: in a module with no 3D yet, the teaching slides whose title, words or planned picture name a shape, an inside or a layout in space (these words, whole-word, English) - best first, at most propose_max - are proposed as model_3d. Never a slide whose picture is a real photograph (L52 keeps it) or whose picture is flat (flat_words). The person keeps or strikes each before approving; a struck one is written in the script's \"declined\" and never proposed again.",
     "pic_min_words": 2,
     "procedure_words": ["step", "steps", "step by step", "procedure", "procedures", "sequence", "in turn", "one after another", "one by one",
                         "lights first", "report", "reporting", "permit", "checklist", "model", "layers of protection", "barrier model",
                         "respond", "response", "drill"],
     "not_fit_kinds": ["flow_animation", "process_animation"],
     "skip_active_lists": ["worked-example"],
-    "_precision": "2.49.2 (the IGF Module 4-15 build: 3D was proposed on procedure slides because they mention a tank, a valve, a station or a space - M09 s03, M11 s04/s08, M13 s04/s07, M14 s04/s05, M15 s02/s04 - and on an idea, M05 s05 'The barrier model - layers of protection'). A slide is proposed only when (1) the fit words are in its TITLE or its PLANNED PICTURE - at least pic_min_words different ones; words only in the slide's text do not count (a tank named in a paragraph is not a tank drawn); (2) neither the title nor the planned picture says a sequence, a document or an idea (procedure_words, besides flat_words - '3D model' in a picture description is the factory's own kind name and is not counted); (3) its picture is not planned as a flow_animation or a process_animation (not_fit_kinds - that is the author saying the lesson is a flow, which a flat animation shows better) and is not a generated (AI) picture - a scene, not a shape; (4) it is not an active slide of a kind in skip_active_lists whose text is a list of steps (a worked example). The ranking is unchanged.",
     "propose_max": 2,
     "propose_first_kinds": ["cutaway", "technical_drawing", "schematic", "interactive_diagram", "comparison", "none"],
-    "_propose_first": "A slide planned as a drawing of a thing (a cutaway, a section, a layout) is proposed before one planned as a step or flow animation - an animation's lesson is the sequence, and turning it into 3D can lose that. Words inside these phrases are not counted: not_fit_phrases.",
     "not_fit_phrases": ["room temperature", "in the room", "space for", "make space", "free space", "inside the module", "location of the"],
     "quality": "Each 3D model that stays gets the care of a main picture: true proportions, real materials (steel, insulation, paint), clear labels, a cut-open view where the inside is taught, and a starting view that already shows the point. Fewer, better.",
-    "interaction": "Every 3D scene can be explored by touch, the same in every module (operator, 2026-10-19: 'I can't click on the elements like 01-03'): drag turns it, pinch or wheel zooms; a TAP on a part (a tap, not a drag) highlights that part alone - it glows blue, the camera frames it and its name shows - and a second tap on it, or a tap beside the parts, puts the view back. The parts a trainee can tap are the ones the labels name. Buttons (Labels, a group such as 'Stop a leak', a scenario) and taps share one mode. Raycast only on a tap, never per frame. Reference: IGF M03 m03_station3d.js (highlight, the tap logic on pointerup). A scene that only turns is not finished.",
+    "interaction": "Every 3D scene can be explored by touch, the same in every module: drag turns it, pinch or wheel zooms; a TAP on a part (a tap, not a drag) highlights that part alone - it glows blue, the camera frames it and its name shows - and a second tap on it, or a tap beside the parts, puts the view back. The parts a trainee can tap are the ones the labels name. Buttons (Labels, a group such as 'Stop a leak', a scenario) and taps share one mode. Raycast only on a tap, never per frame. Reference: IGF M03 m03_station3d.js (highlight, the tap logic on pointerup). A scene that only turns is not finished.",
     "performance": {
-      "_principle": "Never a lesser look to make it faster (owner, 2026-10-07: 'don't cut quality'). The speed comes from how the scenes run - one renderer, built and freed with their slide, nothing drawn or recomputed while nothing changes - not from fewer details, blurrier pictures or plainer light.",
+      "_principle": "Never a lesser look to make it faster. The speed comes from how the scenes run - one renderer, built and freed with their slide, nothing drawn or recomputed while nothing changes - not from fewer details, blurrier pictures or plainer light.",
       "target_fps": 30,
       "first_frame_ms": 1000,
       "max_scenes_alive": 2,
@@ -264,33 +254,28 @@
   },
   "floors": {
     "every_slide_has_a_visual": true,
-    "_every_slide": "Owner, 2026-09-30 (2.18.1): no quota. As many pictures as the theory and the experience call for - wherever a picture, an animation or a realistic 3D illustration reflects what is being taught at that point, put it in; animation and 3D especially. A slide with none gets a suggestion, never a block. A picture that is named must say what it shows (must fix), and an unknown kind is a mistake to correct. 3D is the exception (owner, 2026-10-07, L46): at most half of a module's pictures, and only where it makes sense - see three_d.",
+    "_every_slide": "No quota: as many pictures as the theory and the experience call for. A slide with none gets a suggestion, never a block. A picture that is named must say what it shows (must fix), and an unknown kind is a mistake to correct. 3D has no share and no cap (L46): only where its why is spatial - see three_d.",
     "moving_or_3d_per_module_from_min": 40,
-    "_moving": "A suggestion, not a rule (2.18.1): a module with this many minutes of theory and nothing that moves, turns or can be explored is pointed out, because where something moves, changes state or has an inside, a still picture teaches it worse (course-visuals, learning-needs.json).",
     "ai_scene_words": ["crew", "people", "person", "team", "operator", "seafarer", "ship at", "at sea", "in port", "port", "harbour",
                        "quay", "terminal", "deck", "bridge", "bunkering", "operation", "scene", "situation", "incident", "accident",
                        "emergency", "fire", "explosion", "leak", "release", "cloud", "spill", "drill", "evacuation", "weather", "night"],
     "ai_propose_max": 2,
-    "_ai_scene": "2.49.0 (operator, 2026-10-16: 'add AI generated photos when needed'). Where no real photograph exists, a realistic AI picture can set the scene - never equipment a trainee must recognise (L33), never instead of a photo that can be taken (L52). The factory proposes it unasked: in a module with no AI picture yet, a teaching slide with no picture, or whose planned picture is a schematic or none and whose words name a scene or a situation (these words) - at most ai_propose_max - is proposed as ai_illustration. Planning it costs nothing; each picture is still described, priced and said yes to before it is made (nano-banana, L47). A struck one goes in the script's \"declined\".",
     "real_photo_kinds": ["photo", "annotated_photo", "photo_to_take", "video_real", "model_3d_scan"],
     "real_photo_words": ["real photo", "real photograph", "photograph", "photo of"],
     "real_photo_min_share": 0.5,
-    "_real_photos": "L52 (owner, 2026-10-15: 'add as many real photos as possible'). A teaching slide counts when its picture is a real photograph, a real film or a 3D scan - or its planned picture says a real photograph goes beside the drawing (the build sheet's inset). Fewer than half is pointed out as a suggestion: wherever a camera can show it, a real photograph goes in - as the slide's picture or beside the drawing. Never an AI picture of equipment a trainee must recognise (L33).",
     "photo_things": ["tank", "space", "room", "hold", "mast", "station", "valve", "pipe", "pipework", "line", "hose", "coupling",
                      "manifold", "pump", "compressor", "vaporizer", "vaporiser", "heater", "exchanger", "engine", "boiler", "detector",
                      "sensor", "gauge", "panel", "button", "duct", "vent", "outlet", "trunk", "vessel", "truck", "tanker", "container",
                      "cylinder", "bulkhead", "door", "airlock", "fan", "suit", "glove", "monitor", "nozzle", "arm", "cofferdam", "tray",
                      "curtain", "flange", "bonnet", "unit", "ladder", "hatch", "deckhouse", "funnel", "membrane", "insulation"],
-    "_photo_things": "L57 (operator, 2026-10-15). A part a drawing names counts as a real thing - one a camera can show - when its last word is one of these (plural or not), or when a photo's 'shows' names it. Each such part on a drawn slide gets its real photograph beside the drawing, matched by the photo's 'shows' in _photo_meta.json; a part with no photo is reported at build and goes on working_claude\\PHOTOS_TO_TAKE.md.",
     "photo_strip_max": 4,
     "min_visual_kinds_from_slides": 6,
     "min_visual_kinds": 3,
-    "_kinds": "A suggestion, not a rule (2.18.1): a module of 6 slides or more with fewer than 3 kinds of picture is pointed out - but a picture is never added only for variety (L13).",
     "self_check_min_mechanics": 2,
     "module_check_min_mechanics": 3,
     "single_choice_max_share": 0.4,
     "hands_on_min_per_module": 1,
     "max_same_in_a_row": 2,
-    "_tasks": "A self-check uses at least 2 different mechanics and a module check at least 3; 'choose one answer' is at most 40 % of a module's questions; every module has at least one hands-on question - locate, operate or decide on something that looks like the real thing; never more than 2 questions of the same mechanic in a row. These stay rules (owner, 2026-09-30). The final assessment follows the programme's own format - none of them applies to it."
+    "_tasks": "The final assessment follows the programme's own format - none of these task floors applies to it."
   }
 }

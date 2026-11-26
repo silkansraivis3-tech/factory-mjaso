@@ -682,8 +682,8 @@ def main():
               rules_of(SCRIPT))
         drag = copy.deepcopy(SCRIPT)
         screen(drag, "q01").update(mechanic="match", answer="LNG = about -162 °C\nPropane = about -42 °C")
-        check("match then sort in a self-check - two drag tasks side by side - must be fixed, though the names differ",
-              fam(drag, "t_family_run") == [("t01", cs.FAIL)], fam(drag, "t_family_run"))
+        check("match then sort in a self-check - two drag tasks side by side - is a note, though the names differ",
+              fam(drag, "t_family_run") == [("t01", cs.NOTE)], fam(drag, "t_family_run"))
         mc = copy.deepcopy(SCRIPT)
         screen(mc, "m02").update(mechanic="order", answer="LNG\nEthylene\nPropane")
         screen(mc, "m04").update(mechanic="categorise", answer="Cold: LNG\nPressure: LPG")
@@ -701,7 +701,7 @@ def main():
         check("a short module needs none", fam(SCRIPT, "t_no_team") == [], fam(SCRIPT, "t_no_team"))
         clear = copy.deepcopy(SCRIPT)
         screen(clear, "q01")["question"] = "Which cargo is carried coldest? And why?"
-        check("a question that asks two things must be fixed", fam(clear, "t_two_asks") == [("q01", cs.FAIL)], fam(clear, "t_two_asks"))
+        check("a question that asks two things is a note", fam(clear, "t_two_asks") == [("q01", cs.NOTE)], fam(clear, "t_two_asks"))
         screen(clear, "m02")["question"] = "Which of these is not mostly methane?"
         check("a negative question with 'not' unstressed is a note", fam(clear, "t_not_stressed") == [("m02", cs.NOTE)], fam(clear, "t_not_stressed"))
         screen(clear, "m02")["question"] = "Which of these is NOT mostly methane?"

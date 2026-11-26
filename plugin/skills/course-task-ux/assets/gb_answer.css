@@ -295,7 +295,7 @@ html{scroll-padding-top:var(--state-h);scroll-padding-bottom:var(--dock-h)}
 .part.bad .phead::after{content:"\2715";background:var(--warn)}
 /* a step that is done folds up: its situation and the action that was right (and the one chosen) stay */
 .part.past .opt:not(.right):not(.wrong){display:none}
-.part.past .opt{min-height:52px;font-size:17px}
+.part.past .opt{min-height:56px;font-size:17px}
 /* ... and a scenario's step folds to a summary (2.50.1): its label with the tick or cross, its situation and the right
    action (and the one chosen) in two short lines - so three steps and the verdict of the last one fit a 1280 x 800
    or 1024 x 768 screen together. A step is a .part.step; the incident's parts (.stopping) are not folded. */
@@ -308,7 +308,7 @@ html{scroll-padding-top:var(--state-h);scroll-padding-bottom:var(--dock-h)}
 .part.step.past .opt{flex:1 1 280px;min-height:36px;padding:3px 10px;font-size:15px;line-height:1.3}
 .part.step.past .opt::before{width:26px;height:26px;font-size:14px}
 /* the step in hand, once checked, has nothing left to tap: its choices drop to a shorter row so its verdict stays on screen */
-.part.step.checked:not(.past) .opt{min-height:52px;padding-top:8px;padding-bottom:8px}
+.part.step.checked:not(.past) .opt{min-height:56px;padding-top:8px;padding-bottom:8px}
 .part.step .sit{padding-top:8px;padding-bottom:8px}
 .scr .part.step{margin-bottom:6px}
 /* 2.63.2: the step in hand (and the last one, once checked) sits in the same centred column as the folded steps above it

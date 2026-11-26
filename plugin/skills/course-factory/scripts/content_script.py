@@ -1221,15 +1221,15 @@ def finding(script, sid, field, level, key, **kw):
 
 def variety_check(script):
     """every set varies how the trainee answers, counted by family, not by mechanic name (theory-rules.json task_variety):
-    no two neighbouring questions of one family, no family over its share, enough families. A self-check must; a module
-    check and a final are notes."""
+    no two neighbouring questions of one family, no family over its share, enough families. Always a note: the writer's
+    guide asks for the variety, the build is not stopped by it."""
     V = RULES["task_variety"]
     found = []
     for st in plan_of(script)[1]:
         qs, sid = st["questions"], st["opened_by"]
         if not qs or not sid:
             continue
-        level, name = FAIL if st["kind"] == "self-check" else NOTE, set_name(script, st)
+        level, name = NOTE, set_name(script, st)
         fams = [family_of(q) for q in qs]
         word = lambda f: T(script, "fam_" + f) if LABELS["en"].get("fam_" + f) else f
         runs = [i for i in range(1, len(fams)) if fams[i] == fams[i - 1]]
@@ -1282,7 +1282,7 @@ def clarity_check(script):
                 found.append(finding(script, q["id"], "question", FAIL, "t_calc_unit", unit=unit or "-",
                                      dec=d.get("dec", 0)))
         if ask.count("?") >= 2:
-            found.append(finding(script, q["id"], "question", FAIL, "t_two_asks"))
+            found.append(finding(script, q["id"], "question", NOTE, "t_two_asks"))
         neg = [x for x in NEGATIVE.findall(ask) if not x.isupper()]
         if neg:
             found.append(finding(script, q["id"], "question", NOTE, "t_not_stressed", word=neg[0], up=neg[0].upper()))
@@ -2854,7 +2854,7 @@ def render_html(course, script):
 .slidetext{font-size:17px;line-height:1.5;background:var(--white);border:1px solid var(--line-l);border-radius:var(--r-m);padding:12px 16px}
 .slidetext h3{margin:0 0 8px;color:var(--navy)}
 .tablet{border:1px solid var(--line-l);border-radius:var(--r-l);padding:16px;max-width:520px;background:var(--white)}
-.opt{display:flex;gap:10px;align-items:center;min-height:52px;border:1.5px solid var(--line-l);border-radius:var(--r-m);padding:10px 14px;margin:8px 0}
+.opt{display:flex;gap:10px;align-items:center;min-height:56px;border:1.5px solid var(--line-l);border-radius:var(--r-m);padding:10px 14px;margin:8px 0}
 .opt.right{border-color:var(--good);background:var(--good-wash-l)} .opt b{min-width:1.6em}
 .openbtn{display:inline-block;background:var(--navy);color:var(--white);font-weight:700;letter-spacing:.04em;padding:10px 22px;border-radius:var(--r-m)}
 .panel{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px}
