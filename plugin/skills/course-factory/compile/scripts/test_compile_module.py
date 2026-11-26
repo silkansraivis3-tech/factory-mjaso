@@ -575,6 +575,36 @@ def long_layouts_part(tmp):
           cm.composition(few, {}, True, True, ta) == "wide-left" and cm.composition(few, {}, True, True, 1.2 / 1.0 - 0.15) == "two-col"
           and cm.composition(few, {}, True, True, None) == "two-col", cm.composition(few, {}, True, True, ta))
     check("a build sheet's own composition still wins over the shape", cm.composition(few, {"composition": "two-col"}, True, True, wa) == "two-col")
+    import contextlib
+    sw = lambda s_, b_, a_="wide": cm.shape_wins(dict(s_, id="s03"), b_, [], mdir, "M (s03) %s %s" % (a_, sorted(b_)))
+    named = {"figure": "assets/img/wide.jpg", "template": "reading-with-figure"}
+    seen = io.StringIO()
+    with contextlib.redirect_stdout(seen):
+        moved = sw(few, named)
+        kept = sw(few, dict(named, photo_layout="keep"))
+        tall = sw(few, {"figure": "assets/img/tall.jpg", "template": "figure-stage", "variant": "figure-top"}, "tall")
+        near = sw(few, {"figure": "assets/img/near.jpg", "template": "reading-with-figure"})
+        zoomed = sw(few, {"figure": "assets/img/wide.jpg", "composition": "two-col", "zoom": {"1": [10, 10, 2]}}, "zoom")
+        spotted = sw(few, dict(named, spots={"1": [10, 10]}), "spots")
+        cm.HAND_MARKED.add("s03")
+        hand = sw(few, named, "hand")
+        cm.HAND_MARKED.discard("s03")
+        asked = sw(few, {"figure": "assets/img/wide.jpg", "composition": "stage"}, "stage")
+    check("a wide photograph in a side column the sheet named: the sheet's layout goes, a note says how to keep it",
+          not any(k in moved for k in ("template", "composition")) and "photo_layout" in seen.getvalue()
+          and cm.composition(few, moved, True, True, wa) == "stage", moved)
+    check("\"photo_layout\": \"keep\", a near-square photograph, a hand-marked slide, spots and a layout that fits stay as the sheet has them",
+          kept["template"] == "reading-with-figure" and near["template"] == "reading-with-figure" and hand["template"] == "reading-with-figure"
+          and spotted["template"] == "reading-with-figure" and asked["composition"] == "stage", (kept, near, hand, spotted, asked))
+    check("a tall photograph the sheet spreads across the slide goes in the side column",
+          "template" not in tall and cm.composition(few, tall, True, True, ta) == "wide-left", tall)
+    with contextlib.redirect_stdout(io.StringIO()):
+        column = sw(many, named, "column")
+        framed = sw(many, {"figure": "assets/img/wide.jpg", "composition": "two-col"}, "framed")
+    check("a wide photograph with many words in a template column is already in its own column; one in the framed slot is moved there",
+          column["template"] == "reading-with-figure" and framed["composition"] == "wide-left", (column, framed))
+    check("a wide photograph with a zoom takes its own column (the stage has no zoom ring), the zoom kept in photograph pixels",
+          zoomed["composition"] == "wide-left" and zoomed["zoom"] == {"1": [10, 10, 2]}, zoomed)
     lines = ["w w w w w w w w w w"] * 6
     check("a photograph across the slide with more than the stage's words is the figure-top variant",
           cm.auto_template(some, {}, "stage", True, True, lines[:6], False, False) == ("figure-stage", "figure-top")

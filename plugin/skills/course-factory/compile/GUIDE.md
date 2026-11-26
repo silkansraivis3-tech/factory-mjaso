@@ -208,6 +208,13 @@ and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `
 `"box"` (the picture's box, below), `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.
 
+**A photograph's shape beats a layout named only by habit.** A wide photograph (1.3 or wider) that the sheet's `"template"` /
+`"composition"` puts in a side column or the framed slot is placed across the slide, or in its own column, by its words; a tall
+one (0.85 or narrower) the sheet spreads across the slide goes in the side column - a `Note:` names the slide and how to undo
+it: `"photo_layout": "keep"` in the entry. A hand-marked slide, a slide with `"parts"`, `"blocks"`, `"figure_b"`, `"tiles"` or
+`"spots"`, and a picture that is not a photograph are never moved. `"zoom"` and `"spots"` are in the photograph's own pixels,
+so they hold in any layout; a wide photograph with `"zoom"` or `"photos"` takes its own column, as the stage has neither.
+
 **`"blocks"` ask for their template without naming it (2.127.0).** Beside a picture, `"blocks"` of three line ranges is
 `three-content-blocks`, and `"blocks"` of two with `"figure_b"` is `compare-two` - `"template"` is not needed (before, the
 blocks did nothing without it). A sheet that names a template, or a layout other than the starter's `two-col`, keeps its

@@ -2222,6 +2222,59 @@ def photo_place(words, aspect):
     return "two-col"
 
 
+HAND_MARKED = set()          # slides a person marked in the deck on disk (data-sme, an SME comment): their layout is theirs
+SIDE_TEMPLATES = ("explain-figure", "reading-with-figure", "long-explanation")
+
+
+def named_placement(b):
+    """where the build sheet's own "composition" / "template" puts the slide's picture: "side" (a column or the framed
+    slot), "across" (the stage, a full photograph) - or None when it names nothing, or a layout with a structure of its own"""
+    comp, tid, var = b.get("composition"), (b.get("template") or "").split(".v")[0], b.get("variant") or ""
+    if comp:
+        return "side" if comp in ("two-col", "wide-left", "wide-right") else "across" if comp in ("stage", "photo") else None
+    if tid in SIDE_TEMPLATES:
+        return None if var == "text-only" else "side"
+    if tid == "photo-explain":
+        return "side" if var in ("split", "column") else "across" if var == "full" else None
+    return "across" if tid == "figure-stage" else None
+
+
+def shape_wins(s, b, lines, mdir, where):
+    """a photograph's own shape beats a layout the build sheet named only by habit: a wide one in a side column or the framed
+    slot goes where photo_place puts it, a tall one across the slide goes in the side column. Never when the entry says
+    "photo_layout": "keep", the slide was hand-fixed, the picture is not a photograph, or the layout carries a structure
+    (parts, blocks, a second picture, tiles, spots) the other placement would not build"""
+    rel = (b.get("figure") or "").replace("\\", "/")
+    aspect = photo_aspect(mdir, rel)
+    if not aspect or b.get("photo_layout") == "keep" or s["id"] in HAND_MARKED:
+        return b
+    if any(b.get(k) for k in ("parts", "blocks", "figure_b", "tiles", "spots")):
+        return b
+    named = named_placement(b)
+    if aspect >= PHOTO_WIDE and named == "side":
+        want = photo_place(cs.wc(s.get("text", "")), aspect)
+        if want == "stage" and (b.get("zoom") or b.get("photos")):      # the stage has no zoom ring and no carousel
+            want = "wide-left"
+        tid, var = (b.get("template") or "").split(".v")[0], b.get("variant") or ""
+        if want == "wide-left" and (b.get("composition") in ("wide-left", "wide-right") or not b.get("composition") and (
+                tid in SIDE_TEMPLATES or (tid, var) == ("photo-explain", "column"))):
+            return b                      # already its own column (the compiler gives a photograph named in a template one)
+    elif aspect <= PHOTO_TALL and named == "across":
+        want = "wide-left"
+    else:
+        return b
+    was = b.get("composition") or "%s%s" % (b.get("template"), "/" + b["variant"] if b.get("variant") else "")
+    note_once("Note: %s: the photograph %s is %s (%.2f wide for 1 high) and the build sheet's layout \"%s\" puts it %s - it is "
+              "placed %s instead; to keep the sheet's layout put \"photo_layout\": \"keep\" in this slide's build sheet entry"
+              % (where, rel, "wide" if aspect >= PHOTO_WIDE else "tall", aspect, was,
+                 "in a side column" if named == "side" else "across the slide",
+                 "across the slide" if want == "stage" else "in its own column"))
+    out = dict((k, v) for k, v in b.items() if k not in ("composition", "template", "variant"))
+    if want == "wide-left" and aspect >= PHOTO_WIDE:
+        out["composition"] = want
+    return out
+
+
 def composition(s, b, is_photo, has_fig, aspect=None):
     c = b.get("composition")
     if c:
@@ -3311,9 +3364,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if kind == "slide" and s.get("recap"):
         return recap_html(s, base, m, n, total, lines, bool(b.get("dark")), words_of(script)["tap"])
 
+    if kind == "slide" and not shaped_template(s, b, lines):
+        b = shape_wins(s, b, lines, mdir, where)
     own_comp = b.get("composition")
     if kind == "slide":
-        b = implied_template(s, b, lines)         # 2.127.0: "blocks" (and "figure_b") ask for their template without naming it
+        b = implied_template(s, b, lines)       # 2.127.0: "blocks" (and "figure_b") ask for their template without naming it
     b = asked_composition(b)                      # L61: a template asked for by name decides the composition
     ph_keys = carousel_keys(b, len(lines), probs, where)
     if ph_keys and not b.get("figure"):           # 2.109.0 (F5): no "figure" - the first card's photo is the slide's first picture
@@ -5241,6 +5296,12 @@ def deck_floor(build):
 def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, last=None, chosen=None):
     probs = []
     CUE_FIXES.clear()
+    HAND_MARKED.clear()
+    try:                                  # a slide a person marked in the deck on disk keeps the layout they gave it
+        de, old = _edits(), io.open(os.path.join(mdir, "presentation", "index.html"), encoding="utf-8").read()
+        HAND_MARKED.update(sid for sid, chunk, _ in de.sections_of(old) if de.marks_in_text(chunk))
+    except (OSError, UnicodeDecodeError, ImportError):
+        pass
     m = cs.mid(script.get("module"))
     title = script.get("title") or ""
     screens = practical_before_recap([s for s in script["screens"] if s["kind"] in cs.INSTRUCTOR])
