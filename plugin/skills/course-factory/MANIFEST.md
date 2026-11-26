@@ -14,7 +14,8 @@ The audit and its measurements: `_claude/AUDIT_raivis_complaints_2026-11-25.md` 
 - **Photo shape.** `compile_module.py` `photo_aspect`, `photo_place`, `composition(aspect)`; `layout_fit.py`
   `raster_aspect` (EXIF turn), `aspect()` reads raster images, `demand(photo=)`; the box choice applies to photos.
   `layout-templates.json` boxes `photo_wide` 1.3, `photo_tall` 0.85, `photo_framed_max_aspect` 1.2. Contain kept:
-  spots sit in percent of the image.
+  spots sit in percent of the image. `named_placement` / `shape_wins`: the shape beats a layout an existing build
+  sheet named (a note each time), except `"photo_layout": "keep"`, hand-fixed slides, tiles / parts / spots.
 - **No forced parts.** `content_script.py` `parts_of` `max(1, …)`; `pick_template` ignores a bare `"parts"` that fits;
   NOTE `t_merge_neighbours` (`theory-rules.json` `slide.merge_words` 45); `t_template_mix_none` says change in place;
   `course-type.json` "one idea per screen, and one screen per idea".
