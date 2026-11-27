@@ -243,7 +243,8 @@ score. Begin from the module's ILO map rows (`ilo_map.py show`), the old course'
 knowledge base (`kb_tool.py search`). Before scripts are written in parallel, `STANDARDS.md` gets the course's
 `## Ship profile`. Before each module is drafted, `instructor_led.py plan <course> --module N` picks its activity formats
 by each Sub-ILO's task type (L68) - write the activities in them; a module that comes out one direction is a
-must-fix.
+must-fix - and each Sub-ILO's question mechanics (self-check, module check) - write the questions in them. Fix rounds
+use `content_script.py check` (nothing written); `render` once, for the operator.
 
 - **Proved (L4):** one `fact-checker` agent per module; approval is refused while a claim is unjudged or unproved.
 - **Read cold:** one `task-readiness` agent per module (Haiku) answers each question from the slides before it only;

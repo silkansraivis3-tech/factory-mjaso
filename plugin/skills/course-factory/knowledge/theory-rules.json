@@ -51,12 +51,24 @@
     "max_family_share": 0.4,
     "min_families": 3,
     "from_questions": 4,
-    "_what": "Counted by family (media-and-tasks.json mechanics \"family\") in every set - each self-check, the module check, the final. No two neighbouring questions of one family; from from_questions questions on, no family takes more than max_family_share of the set (rounded to a whole question) and the set uses at least min_families families. A note everywhere (content_script.py t_family_run, t_family_share, t_few_families)."
+    "_what": "Counted by family (media-and-tasks.json mechanics \"family\") in every set - each self-check, the module check, the final. No two neighbouring questions of one family - the note names the order that breaks the runs (a self-check keeps Part A before Part B where it can) or, when no order does, asks for another kind (content_script.py t_family_run); from from_questions questions on, no family takes more than max_family_share of the set (rounded to a whole question) and the set uses at least min_families families (t_family_share, t_few_families). Notes everywhere; task_plan.py plans the variety before the script is written."
+  },
+  "task_plan": {
+    "challenge_from_level": 3,
+    "by_task_type": {
+      "fixed_sequence": ["operate", "locate", "arrange", "investigate", "decide", "build", "choose"],
+      "decision": ["decide", "investigate", "build", "locate", "arrange", "choose", "operate"],
+      "real_time_judgement": ["decide", "operate", "investigate", "locate", "arrange", "build", "choose"],
+      "team_behaviour": ["decide", "investigate", "build", "arrange", "locate", "choose", "operate"]
+    },
+    "equipment_task_types": ["fixed_sequence", "real_time_judgement"],
+    "equipment_mechanics": ["read_instrument", "set_value", "panel_operate", "line_up", "inspect_round", "take_apart", "test_atmosphere", "deck_round", "dress_for_job", "lay_out", "explore"],
+    "_what": "task_plan.py, printed by instructor_led.py plan before a module's script is written: per Sub-ILO a self-check kind (rich from challenge_from_level up) and a module-check kind of another family, the families its task type prefers and the ones least used in the module first, one that reaches the Sub-ILO's Bloom level (bloom.json ceiling); one challenge mechanic (media-and-tasks.json part) where a Sub-ILO asks Apply or higher; the module check's slots in an order with no two neighbours of one family. The equipment mechanics only for Sub-ILOs whose task type is done with the hands. The writer fills the slots; another kind of the same family is fine."
   },
   "team_task": {
     "from_module_minutes": 90,
     "roles": ["Leader", "Recorder", "Checker"],
-    "_what": "One team task a module where a Sub-ILO asks for Bloom 3 or higher, in place of one self-check's Part B: a task slide with \"team\": {\"size\", \"roles\", \"scope\"} that opens its own set (TT1, TT2 ...). Module checks and finals stay individual. A note when a module of from_module_minutes or more has none (content_script.py t_no_team)."
+    "_what": "One team task a module where a Sub-ILO asks for Bloom 3 or higher, in place of one self-check's Part B: a task slide with \"team\": {\"size\", \"roles\", \"scope\"} that opens its own set (TT1, TT2 ...). Module checks and finals stay individual. It follows its self-check, so it is held to no self-check size (min_questions) or theory-first rule (before_self_check) and is no block of its own for spacing. A note when a module of from_module_minutes or more has none (content_script.py t_no_team)."
   },
   "module_check": {
     "min_questions": 5,

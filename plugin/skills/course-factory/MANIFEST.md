@@ -7,6 +7,23 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.144.0 · The questions planned before the script; a check that writes nothing (2026-11-27)
+
+`scripts/task_plan.py` (new): `plan(rows)` gives each Sub-ILO a self-check mechanic (rich from Apply up) and a
+module-check mechanic of another family - the families its task type prefers (`theory-rules.json` `task_plan`
+`by_task_type`), the least used in the module first, one that reaches its Bloom level (`bloom.json` ceiling), the
+equipment mechanics only for hands-on task types, one challenge mechanic where a Sub-ILO asks Apply or higher - and the
+module check's slots (five at least) in an order with no two neighbours of one family. `spread(fams, parts)` is that
+order. `instructor_led.py plan` prints the plan under each module's formats (`--json`: `questions`, `module_check`).
+`content_script.py check` prints what `render` prints and writes nothing (`print_findings`, shared with render), exit 1
+while a must-fix is open; the writer's fixing rounds use it, `render` once. `t_family_run` stays a note (2.143.2) and
+now names the order that keeps the neighbours apart (`fix`: Part A before Part B where it can) and each pair's family
+(the old text named only the first). A team task's set (task slide with `"team"`) skips `t_before_sc`, `t_sc_small` and
+the spacing count - it is a self-check's Part B. `challenge_check`: a module with a question at Bloom 3+ and none of a
+challenge mechanic gets `t_no_challenge_task` (a note, in GROUP_RULES); `task_plan.report` marks the challenge slot.
+Tests: `test_task_plan.py` (new), `test_content_script.py` (check writes nothing, the order, the families, the team
+task, the challenge note).
+
 ## 2.143.2 · Fewer, consistent rules to read; style checks are notes; answer controls 56 px (2026-11-26)
 
 `variety_check` (`t_family_run`, `t_family_share`, `t_few_families`) and `t_two_asks` are notes in every set; the writer's

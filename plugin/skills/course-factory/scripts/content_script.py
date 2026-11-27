@@ -3,6 +3,7 @@
 """Stage 3 - the module content script, word for word, and the operator's corrections to it (L29).
 
     content_script.py render   <course> --module 1           review page + Word file for the operator
+    content_script.py check    <course> --module 1           the findings render prints, nothing written - the writer's rounds
     content_script.py read     <course> --module 1 [--docx F] [--pdf F]   what the operator changed -> PENDING
     content_script.py propose  <course> --module 1 --changes changes.json [--proposed-by "<who>"]   a chat correction / a new or removed screen / a script field -> PENDING
     content_script.py apply    <course> --module 1 --confirmed [--confirmed-by "<name>"]   apply PENDING - only after the operator said yes
@@ -143,6 +144,7 @@ import interact_formats  # noqa: E402  - the interactive task types' formats (2.
 import ilo_map  # noqa: E402  - what this module owes: its rows of the ILO map (2.42.0)
 import course_gate  # noqa: E402  - no module starts before the ILO map is approved and the KB decided (2.42.0)
 import activity_formats as af  # noqa: E402  - the practical-activity formats, chosen by task type (L68, 2.128.0)
+import task_plan  # noqa: E402  - the order that keeps neighbouring questions of one family apart
 
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
 KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
@@ -1008,7 +1010,8 @@ def same_sub_ilo(a, b):
 # the task rules that are about a set or a module's questions as a trainee goes through them: with groups, each group's
 # path (the questions for everyone and the group's own) must meet them, never the mix of all groups no trainee sees
 GROUP_RULES = ("t_sc_small", "t_sc_big", "t_sc_mix", "t_no_challenge", "t_ab_order", "t_not_spaced", "t_mc_small", "m_mix",
-               "m_too_much_choice", "m_no_hands_on", "m_same_in_a_row", "t_family_run", "t_family_share", "t_few_families")
+               "m_too_much_choice", "m_no_hands_on", "m_same_in_a_row", "t_family_run", "t_family_share", "t_few_families",
+               "t_no_challenge_task")
 
 
 def by_group(script, found, check):
@@ -1127,12 +1130,15 @@ def theory_check(script):
         elif k == "task-slide":
             st = set_of.get(s.get("opens"))
             if st and st["kind"] == "self-check":
+                # a team task is a self-check's Part B (theory-rules.json team_task): it follows its self-check with no
+                # new theory between, may be one or two big tasks, and is not a block of its own for the spacing rule
+                team = isinstance(s.get("team"), dict)
                 rb = R["before_self_check"]
-                if since_min < rb["min_minutes"] or since_words < rb["min_words"]:
+                if not team and (since_min < rb["min_minutes"] or since_words < rb["min_words"]):
                     add(s["id"], "", FAIL, "t_before_sc", set=set_name(script, st), min="%g" % since_min, w=int(since_words),
                         fmin=rb["min_minutes"], fw=rb["min_words"])
                 n = len(st["questions"])
-                if n < R["self_check"]["min_questions"]:
+                if not team and n < R["self_check"]["min_questions"]:
                     add(s["id"], "", FAIL, "t_sc_small", set=set_name(script, st), q=n, lo=R["self_check"]["min_questions"])
                 elif n > R["self_check"]["max_questions"]:
                     add(s["id"], "", NOTE, "t_sc_big", set=set_name(script, st), q=n, hi=R["self_check"]["max_questions"])
@@ -1145,16 +1151,17 @@ def theory_check(script):
                 # 2.74.0 (owner, 2026-10-28) - a self-check is Part A, checking what was taught before it in the module (Bloom
                 # 1-2), then Part B, a harder task the trainee solves alone (Bloom 3 or higher). Suggestions, never blocking.
                 lv = [bloom_map.task_level(mech(q), q.get("bloom"))["level"] for q in st["questions"]]
-                if n >= 3 and not any(x >= 3 for x in lv):
+                if (n >= 3 or team) and lv and not any(x >= 3 for x in lv):
                     add(s["id"], "", NOTE, "t_no_challenge", set=set_name(script, st))
                 if any(a >= 3 and b < 3 for a, b in zip(lv, lv[1:])):
                     add(s["id"], "", NOTE, "t_ab_order", set=set_name(script, st))
-                n_sc += 1
-                asked = {t for q in st["questions"] for t in sub_ilos_of(q)}
-                if n_sc >= 2 and earlier_subs and asked and not asked & earlier_subs:
-                    add(s["id"], "", NOTE, "t_not_spaced", set=set_name(script, st))
-                earlier_subs |= block_subs
-                block_subs = set()
+                if not team:
+                    n_sc += 1
+                    asked = {t for q in st["questions"] for t in sub_ilos_of(q)}
+                    if n_sc >= 2 and earlier_subs and asked and not asked & earlier_subs:
+                        add(s["id"], "", NOTE, "t_not_spaced", set=set_name(script, st))
+                    earlier_subs |= block_subs
+                    block_subs = set()
             if st and st["kind"] == "module-check" and len(st["questions"]) < R["module_check"]["min_questions"]:
                 add(s["id"], "", FAIL, "t_mc_small", q=len(st["questions"]), lo=R["module_check"]["min_questions"])
             if st:
@@ -1196,7 +1203,7 @@ def theory_check(script):
                             add(q["id"], "question", FAIL, "t_no_worked_example", task=place(script, q["id"]),
                                 s=", ".join(subs) or "-")
             since_min = since_words = 0.0
-    return found + variety_check(script) + team_check(script) + clarity_check(script), taught_on
+    return found + variety_check(script) + team_check(script) + challenge_check(script) + clarity_check(script), taught_on
 
 
 # ------------------------------------------------------------------ the tasks vary, a team task, each task clear
@@ -1221,8 +1228,9 @@ def finding(script, sid, field, level, key, **kw):
 
 def variety_check(script):
     """every set varies how the trainee answers, counted by family, not by mechanic name (theory-rules.json task_variety):
-    no two neighbouring questions of one family, no family over its share, enough families. Always a note: the writer's
-    guide asks for the variety, the build is not stopped by it."""
+    no two neighbouring questions of one family (the note names the order that breaks the runs; a self-check keeps Part A
+    before Part B where it can), no family over its share, enough families. Always a note: the writer's guide asks for
+    the variety and task_plan.py plans it, the build is not stopped by it."""
     V = RULES["task_variety"]
     found = []
     for st in plan_of(script)[1]:
@@ -1234,8 +1242,14 @@ def variety_check(script):
         word = lambda f: T(script, "fam_" + f) if LABELS["en"].get("fam_" + f) else f
         runs = [i for i in range(1, len(fams)) if fams[i] == fams[i - 1]]
         if runs:
-            found.append(finding(script, sid, "", level, "t_family_run", set=name, fam=word(fams[runs[0]]),
-                                 pairs=", ".join("%d-%d" % (i, i + 1) for i in runs)))
+            parts = ([int(bloom_map.task_level(mech(q), q.get("bloom"))["level"] >= 3) for q in qs]
+                     if st["kind"] == "self-check" else None)
+            order = task_plan.spread(fams, parts) or task_plan.spread(fams)      # Part A before B is only a note
+            f = finding(script, sid, "", level, "t_family_run", set=name,
+                        pairs=", ".join("%d-%d (%s)" % (i, i + 1, word(fams[i])) for i in runs))
+            f["fix"] = (T(script, "t_family_order", order=", ".join(str(i + 1) for i in order)) if order
+                        else T(script, "t_family_none"))
+            found.append(f)
         if len(qs) < V["from_questions"]:
             continue
         most = max(1, int(V["max_family_share"] * len(qs) + 0.5))
@@ -1247,6 +1261,21 @@ def variety_check(script):
             found.append(finding(script, sid, "", level, "t_few_families", set=name, n=len(set(fams)), lo=V["min_families"],
                                  fams=", ".join(word(f) for f in sorted(set(fams), key=fams.index))))
     return found
+
+
+def challenge_check(script):
+    """a module that asks Apply or higher (a question at Bloom 3+) has one question of a challenge mechanic
+    (media-and-tasks.json "part": "challenge" - the one task_plan.py plans) - a note"""
+    if str(script.get("module")).lower() == "final":
+        return []
+    qs = [q for st in plan_of(script)[1] for q in st["questions"]]
+    if not any(bloom_map.task_level(mech(q), q.get("bloom"))["level"] >= 3 for q in qs):
+        return []
+    if any(MEDIA["mechanics"].get(mech(q), {}).get("part") == "challenge" for q in qs):
+        return []
+    names = [v.get("en", k) for k, v in MEDIA["mechanics"].items()
+             if not k.startswith("_") and v.get("part") == "challenge" and k not in RULES["task_plan"]["equipment_mechanics"]]
+    return [finding(script, None, "", NOTE, "t_no_challenge_task", some="; ".join(names))]
 
 
 def team_check(script):
@@ -3833,36 +3862,53 @@ def render(course, module, quiet=False):
         print("Ready for the operator:\n    %s   (opens in the browser, prints to PDF)\n    %s   (Word - correct it here)"
               "\n    %s   (the instructor's panel - short notes per slide, never on a slide)"
               % (p["review"], p["docx"], p["notes_md"]))
-        if probs:
-            print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
-        th, _ = theory_findings(script)
-        for head, found in (("The theory check", th + readiness_findings(course, script)), ("The pictures-and-tasks check", media_findings(script)),
-                            ("The text check", text_findings(script)), ("The ILO map and sources check", ilo_findings(course, script)),
-                            ("The ship profile check (STANDARDS.md)", ship_findings(course, script))):
-            if found:
-                print("\n%s found %d thing(s) - they are at the top of the review page and the Word file:" % (head, len(found)))
-                for f in found:
-                    print("  - [%s] %s%s: %s%s" % ("must fix" if f["level"] == FAIL else "note", f["where"],
-                                                  (", " + f["field"]) if f["field"] else "", f["detail"],
-                                                  (" - use instead: " + f["fix"]) if f["fix"] else ""))
-        sp = split_of(script)
-        if sp["total"] and str(script.get("module")).lower() != "final":
-            print("\nPlain theory %g min, active %g min (%.0f %% active; the aim is %.0f %%)." % (
-                sp["plain"], sp["total"] - sp["plain"], 100 * sp["share"], 100 * sp["target"]))
-            for k, kw in sp["findings"]:
-                print("  - [suggestion] " + T(script, k, **kw))
-        bm = bloom_of(course, script)
-        if bm["findings"]:
-            print("\nThe Bloom map has %d suggestion(s) - on the review page, they never stop the module:" % len(bm["findings"]))
-            for k, kw in bm["findings"]:
-                print("  - " + bloom_map.T(bm["lang"], k, **kw))
+        print_findings(course, script, probs)
     return 1 if probs else 0
+
+
+def print_findings(course, script, probs):
+    """every check's findings, as render prints them -> the number of must-fixes (the shape problems counted)"""
+    if probs:
+        print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
+    th, _ = theory_findings(script)
+    must = len(probs)
+    for head, found in (("The theory check", th + readiness_findings(course, script)), ("The pictures-and-tasks check", media_findings(script)),
+                        ("The text check", text_findings(script)), ("The ILO map and sources check", ilo_findings(course, script)),
+                        ("The ship profile check (STANDARDS.md)", ship_findings(course, script))):
+        if found:
+            print("\n%s found %d thing(s) - they are at the top of the review page and the Word file:" % (head, len(found)))
+            for f in found:
+                must += f["level"] == FAIL
+                print("  - [%s] %s%s: %s%s" % ("must fix" if f["level"] == FAIL else "note", f["where"],
+                                              (", " + f["field"]) if f["field"] else "", f["detail"],
+                                              (" - use instead: " + f["fix"]) if f["fix"] else ""))
+    sp = split_of(script)
+    if sp["total"] and str(script.get("module")).lower() != "final":
+        print("\nPlain theory %g min, active %g min (%.0f %% active; the aim is %.0f %%)." % (
+            sp["plain"], sp["total"] - sp["plain"], 100 * sp["share"], 100 * sp["target"]))
+        for k, kw in sp["findings"]:
+            print("  - [suggestion] " + T(script, k, **kw))
+    bm = bloom_of(course, script)
+    if bm["findings"]:
+        print("\nThe Bloom map has %d suggestion(s) - on the review page, they never stop the module:" % len(bm["findings"]))
+        for k, kw in bm["findings"]:
+            print("  - " + bloom_map.T(bm["lang"], k, **kw))
+    return must
+
+
+def cmd_check(course, module):
+    """the findings render prints, with nothing written: no review page, no Word file, the script's JSON untouched - for
+    the writer's fixing rounds. Exit 1 while a must-fix is open."""
+    script = load(paths(course, module)["script"])
+    must = print_findings(course, script, validate(script))
+    print("\n%s" % ("%d must-fix(es) open." % must if must else "No must-fix open - render it for the operator."))
+    return 1 if must else 0
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("render", "read", "propose", "apply", "discard", "approve", "status", "readiness"):
+    for name in ("render", "check", "read", "propose", "apply", "discard", "approve", "status", "readiness"):
         s = sub.add_parser(name)
         s.add_argument("course")
         s.add_argument("--module", required=True)
@@ -3900,7 +3946,7 @@ def main(argv=None):
             return 2
         if ch is None:
             print(BASIS_NOTE)
-    return {"render": lambda: render(a.course, a.module), "read": lambda: cmd_read(a.course, a.module, a.docx, a.pdf),
+    return {"render": lambda: render(a.course, a.module), "check": lambda: cmd_check(a.course, a.module), "read": lambda: cmd_read(a.course, a.module, a.docx, a.pdf),
             "propose": lambda: cmd_propose(a.course, a.module, a.changes, a.proposed_by),
             "apply": lambda: cmd_apply(a.course, a.module, a.confirmed, a.confirmed_by),
             "discard": lambda: cmd_discard(a.course, a.module),

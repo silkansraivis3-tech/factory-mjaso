@@ -332,7 +332,10 @@ block - then Part B: one harder task the trainee works out alone (Bloom 3+), on 
 operates, investigates or builds, a scenario or a prediction, or anything on a 3D model or an animation (a subject with no
 equipment has them too: spot the error in a real document, check a colleague, find the fault, build the plan, fill the
 matrix). A self-check keeps at most two basic questions (the choose and arrange families) - a must-fix; the family rule
-itself is a note: follow it, the build is not stopped by it. Every module has a hands-on question (locate, read, set,
+itself is a note, and for two neighbours of one family it names the order that keeps them apart - apply it. **The kinds
+are planned for you:** `instructor_led.py plan` prints under each module a mechanic per
+Sub-ILO for its self-check and another for the module check, and the module check's order - write the questions in
+them (another mechanic of the same family is fine where the content asks for it). Every module has a hands-on question (locate, read, set,
 operate, scenario), and the mechanic that looks like the job is the one to pick: a valve line-up for a valve question, a
 detector display for a reading, the GA drawing for "where is it".
 
@@ -344,7 +347,11 @@ detector display for a reading, the GA drawing for "where is it".
 - One team task a module where a Sub-ILO is Bloom 3+ (a module of 90 minutes or more without one gets a note,
   `t_no_team`): a team case, plan or drill with roles (Leader, Recorder, Checker), in place of one self-check's Part B -
   a task slide with `"team": {"size": "3", "roles": ["Leader", "Recorder", "Checker"], "scope": "team"}` that opens its
-  own set (`TT1`). Module checks and the final are answered by each trainee alone.
+  own set (`TT1`), right after its self-check: one or more big tasks, with no size or theory-first rule of a self-check.
+  Module checks and the final are answered by each trainee alone.
+- One challenge task a module that asks Apply or higher - a mechanic with `"part": "challenge"` in
+  `media-and-tasks.json` (critique, calculate, predict, investigate ...); the plan marks it "keep this mechanic", a module
+  without one gets a note (`t_no_challenge_task`).
 
 **Clear what to do.** The task page says under every question what the trainee does (a multi-select how many to tap, a
 calculation its unit and rounding). The question itself asks one thing (two question marks are a must-fix), a
@@ -367,8 +374,12 @@ changes the script and runs the agent again (or writes in the finding's `cleared
 
 
 ```
-python scripts/content_script.py render <course> --module 1
+python scripts/content_script.py check <course> --module 1     # while fixing: the findings, nothing written
+python scripts/content_script.py render <course> --module 1    # once: the operator's copy
 ```
+
+`check` prints what render prints and writes nothing (the script's JSON keeps its layout, so an edit can follow at once);
+it exits 1 while a must-fix is open. Fix with `check`, then render once.
 
 writes `to_review/M01_SCRIPT_REVIEW.html` (opens with a double-click, prints to PDF) and
 `to_review/M01_SCRIPT.docx`, both in two parts: **part 1, the instructor tablet** (every slide, and the

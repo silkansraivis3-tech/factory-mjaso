@@ -386,6 +386,14 @@ def main():
         check("render writes the review page and the Word file, with no problems", code == 0 and os.path.isfile(p["docx"]) and "problems" not in out, out)
         check("the page is in the operator's language, the course text marked English",
               '<html lang="lv">' in page and '<span class="verb" lang="en">Four containment systems</span>' in page)
+        ck = new_course(tmp, "check")
+        pk = cs.paths(ck, 1)
+        before = io.open(pk["script"], encoding="utf-8", newline="").read()
+        code, out = cs_run("check", ck, "--module", "1")
+        check("check prints the findings and writes nothing - no review page, no Word file, the script's text untouched",
+              not os.path.exists(pk["review"]) and not os.path.exists(pk["docx"]) and
+              io.open(pk["script"], encoding="utf-8", newline="").read() == before and "must-fix" in out, out[-300:])
+        check("... and exits 1 only while a must-fix is open", code == (0 if "No must-fix open" in out else 1), code)
         # P2: render keeps the file's own indent and rewrites it only when something changed
         ci = new_course(tmp, "indent4")
         pi = cs.paths(ci, 1)["script"]
@@ -419,8 +427,8 @@ def main():
         check("the module in numbers: minutes against the programme's, words per theory minute",
               lv("s_sum_alloc", a="23") in page and lv("s_sum_title") in page)
         th_card = page.split(lv("s_theory_title"), 1)[-1].split("</div>", 1)[0] if lv("s_theory_title") in page else ""
-        check("a clean module: the theory check found no must-fix - only its long slides' notes",
-              lv("s_textcheck_clean") in page and th_card.count(lv("s_textcheck_note")) == 3 and lv("s_textcheck_must") not in th_card,
+        check("a clean module: the theory check found no must-fix - only its long slides' notes and no challenge task's",
+              lv("s_textcheck_clean") in page and th_card.count(lv("s_textcheck_note")) == 4 and lv("s_textcheck_must") not in th_card,
               th_card[:600])
         # 2.109.0 (F1): the three long fixture slides (90-99 words beside a picture) would be paged with number tabs - the
         # review page says so, and nothing else is found
@@ -558,8 +566,8 @@ def main():
 
         print("\n-- enough theory before every task (L36)")
         TR = cs.RULES
-        check("the example module is clean but for its three long slides - the words on screen past the target are notes",
-              rules_of(SCRIPT) == ["t_long_slide"] * 3
+        check("the example module is clean but for its three long slides and no challenge task (it asks Apply) - notes",
+              rules_of(SCRIPT) == ["t_long_slide"] * 3 + ["t_no_challenge_task"]
               and all(f["level"] == cs.NOTE for f in cs.theory_findings(SCRIPT)[0]), rules_of(SCRIPT))
         thin = copy.deepcopy(SCRIPT)
         screen(thin, "s03")["text"] = "Type A, B, C and membrane."
@@ -682,14 +690,22 @@ def main():
               rules_of(SCRIPT))
         drag = copy.deepcopy(SCRIPT)
         screen(drag, "q01").update(mechanic="match", answer="LNG = about -162 °C\nPropane = about -42 °C")
+        fix = lambda sc, rule: [f["fix"] for f in cs.theory_findings(sc)[0] if f["rule"] == rule]
+        fix_or_detail = lambda sc, rule: " ".join(f["fix"] + f["detail"] for f in cs.theory_findings(sc)[0] if f["rule"] == rule)
         check("match then sort in a self-check - two drag tasks side by side - is a note, though the names differ",
               fam(drag, "t_family_run") == [("t01", cs.NOTE)], fam(drag, "t_family_run"))
+        check("... that names the order that keeps them apart", fix(drag, "t_family_run")[:1] and
+              fix(drag, "t_family_run")[0].startswith("the questions in this order:"), fix(drag, "t_family_run"))
+        check("... and says which family each pair is", "(drag cards)" in next(f["detail"] for f in cs.theory_findings(drag)[0]
+                                                                              if f["rule"] == "t_family_run"))
         mc = copy.deepcopy(SCRIPT)
         screen(mc, "m02").update(mechanic="order", answer="LNG\nEthylene\nPropane")
         screen(mc, "m04").update(mechanic="categorise", answer="Cold: LNG\nPressure: LPG")
         f_run, f_share = fam(mc, "t_family_run"), fam(mc, "t_family_share")
         check("... in a module check it is a note: drag, drag, drag (match, order, sort) in a row",
               f_run == [("t02", cs.NOTE)], f_run)
+        check("... where four drags in five cannot be kept apart: make one another kind",
+              fix(mc, "t_family_run") == [cs.T(mc, "t_family_none")], fix(mc, "t_family_run"))
         check("... and four of five questions dragging cards is over 40 % - a note", f_share == [("t02", cs.NOTE)], f_share)
         check("... and a set of five with two kinds of task uses too few families - a note",
               fam(mc, "t_few_families") == [("t02", cs.NOTE)], fam(mc, "t_few_families"))
@@ -699,6 +715,29 @@ def main():
         screen(big, "t01")["team"] = {"size": "3", "roles": ["Leader", "Recorder", "Checker"], "scope": "team"}
         check("... and none once a task slide plans one", fam(big, "t_no_team") == [], fam(big, "t_no_team"))
         check("a short module needs none", fam(SCRIPT, "t_no_team") == [], fam(SCRIPT, "t_no_team"))
+        tt = copy.deepcopy(SCRIPT)
+        at = next(i for i, x in enumerate(tt["screens"]) if x["id"] == "q03") + 1
+        tt["screens"][at:at] = [
+            {"id": "tt1", "kind": "task-slide", "opens": "TT1", "title": "Team task - plan the cool-down", "text": "Teams of three.",
+             "notes": "- Go.", "minutes": 5, "team": {"size": "3", "roles": ["Leader", "Recorder", "Checker"], "scope": "team"}},
+            dict(screen(SCRIPT, "q03"), id="w01", set="TT1", mechanic="build_the_plan", answer="Cool the lines*\nOpen the hatch")]
+        on_tt = lambda sc: sorted({f["rule"] for f in cs.theory_findings(sc)[0] if f["screen"] == "tt1"})
+        check("a team task right after its self-check, one big task, is held to no self-check size or theory-first rule",
+              not {"t_before_sc", "t_sc_small"} & set(on_tt(tt)), on_tt(tt))
+        screen(tt, "tt1").pop("team")
+        check("... which an ordinary self-check there still is", {"t_before_sc", "t_sc_small"} <= set(on_tt(tt)), on_tt(tt))
+        ch = copy.deepcopy(SCRIPT)
+        for q in ch["screens"]:
+            if q.get("kind") in ("self-check", "module-check"):
+                q.update(mechanic="single_choice", bloom=None)
+        check("a module asking only Remember-Understand needs no challenge task", fam(ch, "t_no_challenge_task") == [],
+              fam(ch, "t_no_challenge_task"))
+        screen(ch, "q03").update(mechanic="scenario")
+        check("one asking Apply or higher with no challenge task gets a note naming some",
+              fam(ch, "t_no_challenge_task") == [("", cs.NOTE)] and "Investigate" in fix_or_detail(ch, "t_no_challenge_task"),
+              fam(ch, "t_no_challenge_task"))
+        screen(ch, "m01").update(mechanic="critique")
+        check("... and none once a question is one (a critique)", fam(ch, "t_no_challenge_task") == [], fam(ch, "t_no_challenge_task"))
         clear = copy.deepcopy(SCRIPT)
         screen(clear, "q01")["question"] = "Which cargo is carried coldest? And why?"
         check("a question that asks two things is a note", fam(clear, "t_two_asks") == [("q01", cs.NOTE)], fam(clear, "t_two_asks"))

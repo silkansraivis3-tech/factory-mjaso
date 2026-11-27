@@ -3,7 +3,8 @@
 """The Instructor-Led Course Development Guideline, checked on a course (L68, knowledge/instructor-led.json).
 
     instructor_led.py plan    <course> [--module 4]     BEFORE a module's script: each Sub-ILO's task type and the 1-2
-                                                        TLAs to write its activities in (2.128.0), into the register
+                                                        TLAs to write its activities in (2.128.0), into the register,
+                                                        and its questions' mechanics (task_plan.py)
     instructor_led.py draft   <course>                  write or complete working_claude/instructor_led.json to fill in
     instructor_led.py check   <course> [--module 4]     the guideline's review checklist, module by module (section 7)
     instructor_led.py approve <course> --by "<name>"    the operator's yes to the course's instructor_led.json
@@ -78,6 +79,7 @@ import bloom_map  # noqa: E402
 import content_script as cs  # noqa: E402
 import ilo_map  # noqa: E402
 import workspace  # noqa: E402
+import task_plan  # noqa: E402  - each Sub-ILO's kinds of question, planned before the script is written
 
 KNOW = json.load(io.open(os.path.join(SKILL, "knowledge", "instructor-led.json"), encoding="utf-8"))
 LIM = KNOW["limits"]
@@ -717,7 +719,10 @@ def plan(course, only=None, write=True):
         if only is not None and ilo_map.mkey(mid) != ilo_map.mkey(only):
             continue
         rows = af.plan(leaf_rows(m, mid), reg, lang, experienced(arch))
-        out.append((mid, rows))
+        tp = task_plan.plan(rows)
+        for p, q in zip(rows, tp["sub_ilos"]):
+            p["questions"] = {"self_check": q["self_check"], "module_check": q["module_check"]}
+        out.append((mid, rows, tp["module_check"]))
         for p in rows:
             r = reg.setdefault(p["sid"], _empty_row())
             if not r.get("task_type"):
@@ -735,7 +740,7 @@ def plan(course, only=None, write=True):
 
 def plan_report(out):
     lines_ = []
-    for mid, rows in out:
+    for mid, rows, mc in out:
         lines_.append("\n%s - write its activities in these formats (\"format\" on an activity screen: the key in [ ])" % mid)
         for p in rows:
             lines_.append("  %s  %s (%s), Bloom %s - %s" % (p["sid"], af.KNOW["task_types"][p["task_type"]]["label"].lower(),
@@ -743,6 +748,7 @@ def plan_report(out):
             for k in p["picks"]:
                 f = af.get(k)
                 lines_.append("        [%s] %s - %s: %s" % (k, f["label"], f["drafts"], f["write"]))
+        lines_.append(task_plan.report({"sub_ilos": [dict(p["questions"], sid=p["sid"]) for p in rows], "module_check": mc}))
     return "\n".join(lines_)
 
 
@@ -862,7 +868,7 @@ def main(argv=None):
             return 2
         out = plan(course, o.module)
         if o.json:
-            print(json.dumps([{"module": mid, "sub_ilos": rows} for mid, rows in out], ensure_ascii=False, indent=1))
+            print(json.dumps([{"module": mid, "sub_ilos": rows, "module_check": mc} for mid, rows, mc in out], ensure_ascii=False, indent=1))
         else:
             print("Practical-activity formats, by Sub-ILO (L68, knowledge/instructor-led.json \"formats\") - a draft: the task "
                   "type is the operator's to confirm in %s" % path(course))
