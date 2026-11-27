@@ -54,7 +54,7 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
   expected: it answers STILL BUILDING meanwhile; keep running the same command with `--wait`.
 
 ## What a builder must also know
-- Draw 2D figures with the 2D kit (`course-visuals/kit2d/SPEC.md`) beside the kit; 3D only where the figure's why is spatial.
+- Fill in the 2D figure starters code chose (`course-visuals/n2d/SPEC.md`): words and data only, never positions; 3D only where the figure's why is spatial.
 - Every figure spec carries `"why"` + `"why_text"` - what the figure's steps serve.
 - When no kit part shows the idea, write a `custom_figure` (an offline, self-contained file whose steps Next drives).
 - The walk review is never the builder's: the workflow's walk judge runs it (by hand: the lead session). The "WALK REVIEW"

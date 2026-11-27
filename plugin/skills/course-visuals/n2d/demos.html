@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n2d - every form and scene</title>
+<link rel="stylesheet" href="n2d.css">
+<style>
+body{margin:0;background:#EEF2F7;color:#14213D;font:15px/1.5 "Segoe UI",Arial,sans-serif;padding:20px}
+h1{font:900 26px Raleway,"Segoe UI",sans-serif;color:#0A2463;margin:0 0 4px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 18px}
+.bar button{font:700 13px "Segoe UI";border:0;border-radius:8px;padding:8px 12px;background:#DCE5F0;cursor:pointer}
+.bar button[aria-pressed="true"]{background:#0A2463;color:#fff}
+.card{background:#fff;border:1px solid #D3DBE5;border-radius:14px;padding:14px;margin-bottom:18px}
+.card h2{font:800 18px Raleway,"Segoe UI",sans-serif;margin:0 0 2px}
+.topic{font:800 11px "Segoe UI";letter-spacing:.08em;text-transform:uppercase;color:#4A5B74}
+.row{display:flex;gap:16px;align-items:flex-start;margin-top:10px;flex-wrap:wrap}
+ol{margin:0;padding-left:20px;width:280px;color:#4A5B74}
+ol li.cur{color:#14213D;font-weight:700}
+.host{position:relative;background:#F6F8FB;border-radius:14px;width:900px;height:640px;max-width:100%}
+body.tablet .host{width:640px;height:520px}
+.nav{display:flex;gap:6px;margin-top:8px}
+.nav button{font:700 13px "Segoe UI";border:0;border-radius:8px;padding:7px 12px;background:#0A2463;color:#fff;cursor:pointer}
+.nav span{align-self:center;color:#4A5B74;font-size:13px}
+</style></head>
+<body>
+<h1>n2d - every form and scene</h1>
+<div>Each figure is written as words and data only (SPEC.md) and lays itself out in its box. Next walks its steps.</div>
+<div class="bar"><button id="proj" aria-pressed="true">Projector box 900 x 640</button><button id="tab" aria-pressed="false">Tablet box 640 x 520</button></div>
+<div id="list"></div>
+<script src="n2d-things.js"></script>
+<script src="n2d.js"></script>
+<script src="demo-specs.js"></script>
+<script>
+(function () {
+  var figs = [];
+  function render() {
+    var list = document.getElementById('list'); list.innerHTML = ''; figs = [];
+    window.N2D_DEMOS.forEach(function (d, i) {
+      var c = document.createElement('section'); c.className = 'card'; c.id = 'demo' + i;
+      c.innerHTML = '<div class="topic"></div><h2></h2><div class="row"><ol></ol><div><div class="host"></div><div class="nav"><button data-d="-1">Back</button><button data-d="1">Next</button><span></span></div></div></div>';
+      c.querySelector('.topic').textContent = d.topic; c.querySelector('h2').textContent = d.title;
+      c.querySelector('ol').innerHTML = d.lines.map(function (l) { var li = document.createElement('li'); li.textContent = l; return li.outerHTML; }).join('');
+      list.appendChild(c);
+      var fig = window.N2D.mount(c.querySelector('.host'), d.spec), lis = c.querySelectorAll('ol li'), info = c.querySelector('.nav span');
+      fig.onstep = function (n) { var ln = [].concat(d.spec.steps[n].line); lis.forEach(function (li, k) { li.classList.toggle('cur', ln.indexOf(k + 1) >= 0); }); info.textContent = 'Step ' + (n + 1) + ' of ' + fig.count; };
+      fig.go(0, true);
+      c.querySelector('.nav').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) fig.go(fig.n + (+b.dataset.d)); });
+      figs.push(fig);
+    });
+  }
+  function size(t) { document.body.classList.toggle('tablet', t); document.getElementById('proj').setAttribute('aria-pressed', !t); document.getElementById('tab').setAttribute('aria-pressed', t); render(); }
+  document.getElementById('proj').onclick = function () { size(false); };
+  document.getElementById('tab').onclick = function () { size(true); };
+  window.__demos = { figs: function () { return figs; }, size: size };
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(render);
+})();
+</script>
+</body></html>

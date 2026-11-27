@@ -129,6 +129,16 @@ kit3d/                          the 3D kit: a 3D scene is a spec of parts, label
 - **Level 3 of the pipeline is not automated.** Judging whether a source is technically credible is
   not a regex. It belongs to the `visual-sourcer` agent.
 
+## n2d - 2D figures as words and data (2.146.0)
+
+`n2d/` draws the 2D figures of new courses; `kit2d/` stays for courses already built. Why: eight rounds of rules and
+repairs on kit2d (2.113-2.137) never satisfied the owner, because the writer placed every part by hand and most
+concept parts restated the slide's sentences in shapes. In n2d the writer writes things, links and steps; code
+lays them out in the box and works out what the picture shows. A spec over its form's capacity is refused, never
+shrunk. Code chooses the form from the slide's words (`scripts/figure_plan.py`). `SPEC.md` is the writer's reference,
+`demos.html` shows every form, and `scripts/test_n2d.py` walks them all. Open: tap-to-explore figures, a time-line
+form, cycle as a form, the owner's review of the pictograms, and a real Yoga Tab 11 run of every form.
+
 ## The 2D kit (2.113.0)
 
 `kit2d/` replaced the figure kit for new 2D figures (owner, 2026-11-06: the 2D kit was "awful", made for one gas

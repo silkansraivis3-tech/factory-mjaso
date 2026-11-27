@@ -1,5 +1,8 @@
 # 2D kit - the figure spec (`*.kit2d.json`)
 
+**New courses draw 2D figures with n2d (`../n2d/SPEC.md`):** words and data only, laid out by code. This kit stays so
+that courses already built keep their `.kit2d.json` figures, and for a 3D slide's 2D fallback.
+
 The 2D kit (`kit2d.js`, `kit2d.css`) draws a 2D teaching figure from a short JSON spec, the way the 3D kit draws a
 scene: a graph, an object in motion (a cutaway with its flow), or a concept (a cycle, a timeline, a matrix, a process).
 Plain SVG, no library. Open `demos.html`, `pm.html`, `more.html` and `courses.html` (a figure for each of five courses) to see every part step by step;

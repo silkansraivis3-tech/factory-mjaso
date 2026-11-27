@@ -53,25 +53,26 @@ def find_deck(arg):
 # the 2D kit's own check (kit2d.js KIT2D.audit) on the figures of the slide in front: words over words, words or shapes cut
 # at the edge, a label on a line - measured once the figure has stopped moving
 # 2.137.7 - only a figure on screen: a drawing put away at its slide's answer stop (the band, IT course M05 s08) has no box
-KIT2D = """(id) => { const s = document.getElementById(id); if (!window.KIT2D || !s) { return null; }
-  const fs = KIT2D.figures.filter(f => s.contains(f.host) && f.host.getClientRects().length && f.host.getBoundingClientRect().height > 2);
+KIT2D = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
+  const on = f => s.contains(f.host) && f.host.getClientRects().length && f.host.getBoundingClientRect().height > 2;
+  const fs = (window.KIT2D ? KIT2D.figures.filter(on) : []).map(f => [f, KIT2D]).concat(window.N2D ? N2D.figures.filter(on).map(f => [f, N2D]) : []);
   if (!fs.length) { return null; }
-  return { idle: fs.every(f => f.idle()), found: [].concat.apply([], fs.map(f => KIT2D.audit(f))) }; }"""
+  return { idle: fs.every(p => p[0].idle()), found: [].concat.apply([], fs.map(p => p[1].audit(p[0]))) }; }"""
 
 
 # 2.116.1 - a figure on the slide in front still drawing a step (kit: a frame loop or a line being laid; 2D kit: not idle)
 BUSY = """(id) => { const s = document.getElementById(id); if (!s) { return false; }
   const kit = [].slice.call(s.querySelectorAll('[data-kit]')).some(h => { const f = h.__kit; return f && f !== 'bad' && (f.raf || f.laying); });
-  const k2 = !!(window.KIT2D && KIT2D.figures.some(f => s.contains(f.host) && !f.idle()));
+  const k2 = !!(window.KIT2D && KIT2D.figures.some(f => s.contains(f.host) && !f.idle())) || !!(window.N2D && N2D.figures.some(f => s.contains(f.host) && !f.idle()));
   return kit || k2; }"""
 
 
 # 2.115.0 - a figure with steps that does not change on any Next is a dead drawing (PM M02 s12, s13: the chart stayed an empty
 # axis on every Next). Its state at a stop: a hash of what it drew.
 KITSTATE = """(id) => { const s = document.getElementById(id); if (!s) { return null; }
-  const hs = [].slice.call(s.querySelectorAll('[data-kit], [data-kit2d], [data-custom-fig]')); if (!hs.length) { return null; }
+  const hs = [].slice.call(s.querySelectorAll('[data-kit], [data-kit2d], [data-n2d], [data-custom-fig]')); if (!hs.length) { return null; }
   let steps = 0, sig = '';
-  hs.forEach(h => { const f = h.__kit || h.__k2; if (f && f !== 'bad') { steps += (f.spec && f.spec.steps || f.steps || []).length; }
+  hs.forEach(h => { const f = h.__kit || h.__k2 || h.__n2; if (f && f !== 'bad') { steps += (f.spec && f.spec.steps || f.steps || []).length; }
     const cs = h.querySelector && h.querySelector('script[data-custom-steps]');       /* 2.116.0: a custom figure's declared steps */
     if (cs) { try { const d = JSON.parse(cs.textContent); steps += (Array.isArray(d) ? d : (d.steps || [])).length; } catch (e) {} }
     const t = h.innerHTML; let x = 0; for (let i = 0; i < t.length; i++) { x = (x * 31 + t.charCodeAt(i)) | 0; } sig += ':' + t.length + ':' + x; });

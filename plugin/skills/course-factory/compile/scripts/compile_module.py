@@ -135,6 +135,8 @@ KIT3D_FILES = ("kit3d.css", "kit3d.js")       # shipped with the module by desig
 KIT3D_PARTS = "assets/kit3d_parts.js"         # 3D parts this course added to the kit (KIT3D.define), until they are merged
 KIT2D_SPEC = ".kit2d.json"                   # a 2D figure made from the 2D kit (course-visuals/kit2d/SPEC.md)
 KIT2D_FILES = ("kit2d.css", "kit2d.js")       # shipped with the module by design_system.py, like kit3d.js
+N2D_SPEC = ".n2d.json"                       # a 2D figure written as words and data (course-visuals/n2d/SPEC.md)
+N2D_FILES = ("n2d.css", "n2d-things.js", "n2d.js")
 PHOTO_FILES = ("gb_zoom.css", "gb_zoom.js")    # every picture opens full screen with its record (L51, L56), like gb_deck.js
 COMPOSITIONS = ("opener", "flow", "two-col", "wide-left", "wide-right", "stage")
 STAGE_MAX_WORDS = 45
@@ -753,6 +755,33 @@ def kit2d_figure(text, s, probs, where):
             '<script type="application/json" id="%s">%s</script></div>' % (light, sid, sid, data))
 
 
+def n2d_figure(text, s, probs, where, figdir):
+    """a 2D figure written as words and data (course-visuals/n2d, SPEC.md): the module's systems ("world") joined in, the
+    spec checked against its form's capacity (n2d_check.py: refused with the reason, never shrunk), then into the page as
+    it is - n2d.js lays it out in its box and the deck's Next walks its steps"""
+    sys.path.insert(0, os.path.join(SKILLS, "course-visuals", "n2d", "scripts"))
+    import n2d_check
+    try:
+        spec = json.loads(text)
+    except ValueError as err:
+        probs.append("%s: its 2D figure is not valid JSON - %s" % (where, err))
+        return ""
+    if isinstance(spec, dict) and spec.get("_todo"):
+        probs.append("%s: its 2D figure is still the starter - write %s" % (where, spec["_todo"]))
+        return ""
+    worlds = n2d_check.load_worlds(figdir) if figdir else {}
+    n_lines = len(cs.lines_of(s.get("text")) or []) or None
+    found = n2d_check.check(spec, worlds, n_lines)
+    probs += ["%s: its 2D figure %s (course-visuals\\n2d\\SPEC.md)" % (where, p) for p in found]
+    if found:
+        return ""
+    spec, _ = n2d_check.resolve(spec, worlds)
+    sid = "n2-" + s["id"]
+    data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    return ('<div class="fill fig n2d-fig lt-light" data-script-ignore><div class="n2d-stage" data-n2d="#%s"></div>'
+            '<script type="application/json" id="%s">%s</script></div>' % (sid, sid, data))
+
+
 # 2.60.0 - a 3D scene's control hint ("Drag to turn - tap a part to look closer") is the scene's own words for the screen,
 # not the script's: its holder [data-hint] is marked data-script-ignore as the figure goes in, so check_script_match counts
 # it instead of failing the build (IGF M05 s06, M13 s07, M15 s05 - each builder marked it by hand after a FAIL)
@@ -850,6 +879,8 @@ def figure_html(mdir, figdir, s, b, probs, where):
         return kit3d_figure(body, s, probs, where, b), "", False
     if cs.flat_3d(s, b, body):                         # 2.49.7 (IGF M01 s05): a 3D slide is never quietly built in 2D
         probs.append(FLAT_3D % (where, s.get("visual_kind"), rel))
+    if rel.lower().endswith(N2D_SPEC):                # its form is its reason: no separate why to declare
+        return n2d_figure(body, s, probs, where, figdir), "", False
     if rel.lower().endswith(KIT2D_SPEC):
         why_check("kit2d", body, s, b, probs, where)
         return kit2d_figure(body, s, probs, where), "", False
@@ -1867,7 +1898,7 @@ def unsupported_facts(script, build, figdir, mdir, course):
     for sid, b in sorted((build.get("screens") or {}).items()):
         cited = {re.sub(r"\s+", "", k.lower()) for k in (b.get("facts") or {})}
         for rel in (b.get("figure"), b.get("aside")):
-            if not rel or not str(rel).lower().endswith((".kit.json", ".kit2d.json", ".svg", ".html")):
+            if not rel or not str(rel).lower().endswith((".kit.json", ".kit2d.json", N2D_SPEC, ".svg", ".html")):
                 continue
             raw, err = read_figure(mdir, rel, figdir)
             if err or not raw:
@@ -1948,7 +1979,7 @@ def figure_answer_mismatches(script, build, figdir, mdir):
     found = []
     for s in script.get("screens", []):
         b = (build.get("screens") or {}).get(s["id"]) or {}
-        if not (s.get("reveal") and str(b.get("figure") or "").lower().endswith((".kit.json", ".kit2d.json"))) or b.get("numbers_differ"):
+        if not (s.get("reveal") and str(b.get("figure") or "").lower().endswith((".kit.json", ".kit2d.json", N2D_SPEC))) or b.get("numbers_differ"):
             continue
         raw, err = read_figure(mdir, b["figure"], figdir)
         if err or not raw:
@@ -2983,7 +3014,7 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         why_box = ('<div class="lt-why" data-k="1"><span class="stamp" data-script-ignore>%s</span><div>%s</div></div>'
                    % (e(w["true" if right == "t" else "false"]), why))
         tfk = ""
-        if fig and re.search(r'\bdata-kit(?:2d|3d)?[="]', side):
+        if fig and re.search(r'\bdata-(?:kit(?:2d|3d)?|n2d)[="]', side):
             # 2.137.0 - beside a drawing, why never opens over it: over it the stamp and the lines hid the drawing's own answer
             # (Aleksis, IT course M02 s04: "the false always shows and blocks other elements"). 2.137.4 - nor under it: a why of
             # four lines left the drawing 94 px tall (IT course M03 s17 at 1024 x 768). It opens in the words' column, under
@@ -3701,7 +3732,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         else:
             words = table_html(lines) if tid == "reference-table" else words_html(lines, emph=emph)
             # 2.125.1 - words beside a photograph walk line by line too (see the plain return below; L67)
-            if len(lines) >= 2 and not re.search(r'\bdata-kit(?:2d|3d)?[="]', fig or "") and not b.get("static") \
+            if len(lines) >= 2 and not re.search(r'\bdata-(?:kit(?:2d|3d)?|n2d)[="]', fig or "") and not b.get("static") \
                     and s.get("kind") != "activity":      # a task screen stays still (PM FINAL a04, up between defences)
                 words = step_marks(words if isinstance(words, list) else [words], ph_marks)
                 d["class"] += " lt-walk"
@@ -3747,7 +3778,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     # 2.125.1 - every slide moves on Next (L67): words beside a photograph, a table or plain words walk line by line - the
     # line now lit, the ones not reached yet dimmed. A drawing with steps of its own (kit) walks its lines itself; the
     # build sheet's "static": true keeps a slide still (PM review: 21 of 64 slides "don't play the steps")
-    if len(lines) >= 2 and not re.search(r'\bdata-kit(?:2d|3d)?[="]', fig or "") and not b.get("static") \
+    if len(lines) >= 2 and not re.search(r'\bdata-(?:kit(?:2d|3d)?|n2d)[="]', fig or "") and not b.get("static") \
             and s.get("kind") != "activity":
         words = step_marks(words if isinstance(words, list) else [words], {})
         d["class"] += " lt-walk"
@@ -4944,6 +4975,30 @@ def kit2d_slide(script, s):
     return kind == "chart" or things * 2 < len(lines)
 
 
+def n2d_starter(s, entry, figdir, out):
+    """code chooses what a drawing slide gets (figure_plan.py): a 2D form or scene - its starter named in "figure", with one
+    step a line and "_todo" naming what the writer writes - or a real photo, the task screen, or no figure, said in
+    "_brief". Never over a figure the sheet already names."""
+    sys.path.insert(0, os.path.join(SKILLS, "course-visuals", "n2d", "scripts"))
+    import figure_plan
+    if entry.get("figure"):
+        return
+    c = figure_plan.choose(s)
+    entry["_brief"] = "%s - %s The writer writes: %s." % (c["form"], c["why"], c["writes"])
+    spec = figure_plan.starter(s, c)
+    if spec is None:
+        if c["form"] in ("task", "none") and not str(entry.get("no_figure") or "").strip():
+            entry["no_figure"] = c["why"]
+        return
+    name = s["id"] + N2D_SPEC
+    entry.update({"figure": name, "composition": "two-col"})
+    if not os.path.isfile(os.path.join(figdir, name)):
+        entry["_figure"] = ("starter chosen by code (course-visuals\\n2d\\SPEC.md, demos.html): write its words and data - "
+                            "no positions or sizes - then delete \"_todo\". BUILD it as it is; change it only for what the build prints.")
+        if out is not None:
+            out[s["id"]] = spec
+
+
 def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(), pool=None, taken=None):
     """the starter figure of every slide whose picture the kit can draw - written into `out` ({slide id: spec}) when its
     file is not there yet (never overwritten) - and the slide's entry in `build_screens` set to name it.
@@ -4963,10 +5018,13 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
         two_d = s["id"] in fallback
         if not two_d and (s["id"] in skip or cs.parse_kind(s.get("visual_kind", "")) not in STARTER_FIGURE_KINDS):
             continue
+        if not two_d and kit2d_slide(script, s):          # an idea, a sequence or numbers: code chooses the 2D figure
+            n2d_starter(s, build_screens[s["id"]], figdir, out)
+            continue
         recent = [lk for n, lk in looks if at - n < KIT2D_APART]
         if any(kit2d_family(lk) == "boxes" for n, lk in looks if at - n < KIT2D_BOXES_APART):
             recent.append("boxes")                        # 2.136.0 - no two box drawings closer than KIT2D_BOXES_APART
-        spec = starter_kit2d(script, s, recent) if kit2d_slide(script, s) else None    # an idea, a sequence or numbers: the 2D kit
+        spec = starter_kit2d(script, s, recent) if kit2d_slide(script, s) else None    # a 3D slide's 2D fallback: the 2D kit
         spec = spec or starter_figure(script, s, pool, taken)
         if not spec:
             continue
@@ -5398,6 +5456,8 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     shipped += [(x, os.path.join(SKILLS, "course-visuals", "kit3d", x)) for x in (KIT3D_FILES if uses_kit3d else ())]
     uses_kit2d = any(" data-kit2d=" in x for x in slides)       # the 2D kit (course-visuals/kit2d)
     shipped += [(x, os.path.join(SKILLS, "course-visuals", "kit2d", x)) for x in (KIT2D_FILES if uses_kit2d else ())]
+    uses_n2d = any(" data-n2d=" in x for x in slides)           # the 2D kit for new courses (course-visuals/n2d)
+    shipped += [(x, os.path.join(SKILLS, "course-visuals", "n2d", x)) for x in (N2D_FILES if uses_n2d else ())]
     sys.path.insert(0, os.path.join(SKILLS, "course-module-ui", "scripts"))
     import design_system
     for x, canon in shipped:                  # shipped like the deck engine: the factory's copy, byte for byte
@@ -5446,7 +5506,9 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         head.append('<link rel="stylesheet" href="../assets/kit3d.css">')
     if uses_kit2d:
         head.append('<link rel="stylesheet" href="../assets/kit2d.css">')
-    head += ['<link rel="stylesheet" href="../%s">' % a(x) for x in build.get("styles", [])]
+    if uses_n2d:
+        head.append('<link rel="stylesheet" href="../assets/n2d.css">')
+    head +=['<link rel="stylesheet" href="../%s">' % a(x) for x in build.get("styles", [])]
     head.append("</head>")
     rule = build.get("landing_rule") or ""
     landing = ['<div id="landing">', '  <div class="landing-card">',
@@ -5472,7 +5534,9 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         body.append('<script src="../%s"></script>' % KIT_PARTS)
     if uses_kit2d:                      # before GBDeck.init: kit2d.js registers each figure's slide hooks too
         body.append('<script src="../assets/kit2d.js"></script>')
-    own = ['<script src="../%s"></script>' % a(x) for x in build.get("scripts", [])]
+    if uses_n2d:                        # before GBDeck.init: n2d.js registers each figure's slide hooks
+        body += ['<script src="../assets/n2d-things.js"></script>', '<script src="../assets/n2d.js"></script>']
+    own =['<script src="../%s"></script>' % a(x) for x in build.get("scripts", [])]
     if uses_kit3d:                      # three.js, then kit3d.js (+ the course's own parts): before GBDeck.init, which reads the
         k3 = ['<script src="../assets/kit3d.js"></script>']      # slide hooks kit3d.js registers - and after the sheet's own scripts,
         if kit3d_parts:                                          # unless the sheet names three.min.js: kit3d.js then follows it
@@ -5946,6 +6010,11 @@ def main(argv=None):
         sheet_screens = cs.load(bp).get("screens") or {}
         exercise_proposal(o.course, script)             # 2.63.2: a module's practical exercise gets its slide, unasked
         for sid, spec in specs.items():                 # 2.50.0: starter figure-kit specs - edited, never written from nothing
+            if spec.get("form"):                        # the 2D kit for new courses: code chose the form, the writer fills it in
+                cs.save(os.path.join(figdir, "%s%s" % (sid, N2D_SPEC)), spec)
+                print("  starter 2D figure: figures\\%s\\%s%s - %s, %d steps (write its words and data: course-visuals\\n2d\\SPEC.md)"
+                      % (cs.mid(o.module), sid, N2D_SPEC, spec.get("scene") or spec["form"], len(spec["steps"])))
+                continue
             ext = KIT2D_SPEC if spec.pop("_k2", False) else ".kit.json"
             cs.save(os.path.join(figdir, "%s%s" % (sid, ext)), spec)
             print("  starter figure: figures\\%s\\%s%s - %d parts, %d steps (edit it: the parts are placed on a grid)%s"

@@ -330,23 +330,18 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   in `_photo_meta.json`. A generated picture sets a scene only: equipment a trainee must recognise is a real photograph or
   a drawing, never a generated picture. A real photo still missing is listed in `PHOTOS_TO_TAKE.md` - a list, never a stop
   and never a question to the operator. The course's own small pictures are reused, enlarged by the build (Real-ESRGAN).
-- **A 2D figure - drawn with the 2D kit (2.113.0).** A graph, an object in motion or a concept is a short JSON spec,
-  `working_claude\figures\MNN\sNN.kit2d.json` (`course-visuals\kit2d\SPEC.md` is the format; `demos.html` and `pm.html`
-  show every part), named as the slide's `"figure": "sNN.kit2d.json"`. The compile ships `kit2d.js` and `kit2d.css`; the
-  deck's Next walks its steps; `fit_gate.py` fails a step where its words overlap, are cut at the edge or lie on a line.
-  Give the spec's `size` the shape of the slide's picture box: a wide figure in a tall box is shown small.
-  `--init-build` composes the starter itself for a chart, comparison, animation or interactive-diagram slide whose
-  lines are not mostly equipment and spaces. It reads the slide's own words and weighs every figure they can make - bars
-  of its numbers, a time line of its times, a cycle when the words go round, people speaking, two things compared, a
-  pyramid of ranked levels, a schedule, a grid, a graph, or a process laid out across, in two rows, down the page or
-  stepping down - and takes the best fit whose look the 2D figures of the 4 slides before it do not have. The build
-  sheet's `"_brief"` says what the figure shows, why this kind, what else fits, and when one of the kit's detailed scenes
-  (`courses.html`) could tell it better. Build it as it is, or make the kind that tells the slide better - the parts are
-  in SPEC.md. Two 2D figures that look alike (the same main part, or boxes laid out the same way) less than 5 slides
-  apart fail the compile, which names what else the slide's words make. Where the words cannot give the values (a
-  chart's points, a task's weeks, a grid's rows) its `"_todo"` says so, and the compile reports it until the values from
-  the course's sources are in and the key is gone. Equipment layouts and the tested IGF patterns keep the figure kit's
-  starter.
+- **A 2D figure - written as words and data (n2d, 2.146.0).** Code picks what a chart, comparison, animation or
+  interactive-diagram slide gets (`course-visuals\n2d\scripts\figure_plan.py`, run by `--init-build`). The result is a path, zones,
+  steps, options, amounts or a named scene, or else a real photo, the task screen or no figure, and the build sheet's
+  `"_brief"` says which and why. For a figure it writes the starter `working_claude\figures\MNN\sNN.n2d.json`, with one
+  step a line and `"_todo"` naming what to fill in: the things (pictures from the library), their short names, and what
+  each step does. Never positions or sizes: the figure lays itself out in its box (`course-visuals\n2d\SPEC.md`;
+  `demos.html` shows every form). A system shown on several slides is written once in `worlds.n2d.json` and named by
+  `"world"`. The compile checks it (`n2d_check.py`): a spec over its form's capacity, with a name over 3 words or a
+  thing with no picture, is refused with the reason. Change the words: nothing is shrunk. It ships `n2d.js`; the deck's
+  Next walks the steps, and `fit_gate.py` runs `N2D.audit` on each. Figures that look alike may stand side by side.
+  Courses already built keep their `.kit2d.json` figures (`course-visuals\kit2d\SPEC.md`), which build as before.
+  Equipment layouts and the tested IGF patterns keep the figure kit's starter.
 - **A `model_3d` slide (2.49.0, L46) - drawn with the 3D kit.** Do not write three.js. Write the scene as a short
   JSON spec, `working_claude\figures\MNN\sNN.kit3d.json` (parts, labels, steps: `course-visuals\kit3d\SPEC.md` is the
   format, `PARTS.md` lists every part; the finished IGF scenes are ported in `course-visuals\kit3d\examples\`), and

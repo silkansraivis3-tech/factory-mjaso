@@ -218,13 +218,14 @@ equipment; 3D kit where the why is `spatial`; custom when none shows it. A part 
 when it will be reused (below). **A 3D model is a 3D-kit spec**,
 `sNN.kit3d.json` (`kit3d/SPEC.md`, `kit3d/PARTS.md`; made from the nine hand-made IGF scenes): parts in metres,
 labels on the parts, steps the deck's Next walks - full screen, clickable labels, the build-ahead and the poster
-come with it; never a hand-written three.js file per slide. **A 2D figure is a 2D-kit spec**, `sNN.kit2d.json`
-(`kit2d/SPEC.md`; see `kit2d/demos.html` and `kit2d/pm.html`): a graph, an object in motion (a cutaway with its flow) or
-a concept (cycle, timeline, matrix, process, trade-off) - depth, labels clear of each other, motion on Next and the
-trainee's controls come with it, and `fit_gate.py` runs its overlap check on every step. Each is composed for its
-slide from the slide's own words, never the same look within 5 slides (the compile checks). **Kit first, custom allowed:** when no kit part shows the idea well, a custom figure - a self-contained offline `.html` / `.svg`
+come with it; never a hand-written three.js file per slide. **A 2D figure is an n2d spec**, `sNN.n2d.json`
+(`n2d/SPEC.md`; see `n2d/demos.html`): words and data only - real things (pictures from the library, never named
+boxes), how they connect, and what each step does - and code lays it out in its box. Code picks the form from the
+slide's words (`n2d/scripts/figure_plan.py`): a path, zones, steps, options, amounts or a scene (pump line,
+crossing), or else a photo, the task screen or no figure. A spec over its form's capacity is refused, never shrunk. Courses already built keep
+their `.kit2d.json` figures (`kit2d/SPEC.md`). **Kit first, custom allowed:** when no kit part shows the idea well, a custom figure - a self-contained offline `.html` / `.svg`
 (`"custom_figure"` in the build sheet; steps Next drives; the same checks) - is allowed, and a good one is offered to the kit
-afterwards (`kit2d/SPEC.md`, "Custom figures"). **Every figure - kit, 3D or custom - carries `"why"` + `"why_text"`**: the reason it is
+afterwards (`kit2d/SPEC.md`, "Custom figures"). **Every figure - kit, 3D or custom - carries `"why"` + `"why_text"`** (an n2d figure's form and its `"say"` are its reason): the reason it is
 drawn (mechanism, sequence, comparison, quantity-change, spatial, real-thing-recognition, still) and what the trainee sees change; 3D
 only where the reason is `spatial` ("draw the drawings 2d kit and 3d with a reason, dont just put it in just because"). Canvas only where SVG genuinely fails;
 a generated illustration only when a realistic scene is the right medium. **Never generated imagery

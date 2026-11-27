@@ -138,12 +138,13 @@
        line (its stop) replays its step. Only a slide with a question (li.you): other stop slides keep kit.js's own step hook. Complete at the last stop,
        so kit.js's own step hook (which would step the figure on after the stops and light line 1 again) has nothing left to do. */
     function (s) {
-      var host = q('[data-kit]', s) || q('[data-kit2d]', s);   /* kit.js (host.__kit) or the 2D kit (host.__k2, 2.133.2) */
+      var host = q('[data-kit]', s) || q('[data-kit2d]', s) || q('[data-n2d]', s);   /* kit.js (host.__kit), the 2D kit (host.__k2) or n2d (host.__n2) */
       var ask = !!q('li.you', s);       /* the last two stops are the question and the answer */
       if (!host || !ask) { return null; }
       var at = -1, total = 0;
       var fig = function () {
         if (host.__kit) { return host.__kit; }
+        if (host.__n2 && host.__n2 !== 'bad') { host.__n2.onstep = null; return host.__n2; }
         var f2 = host.__k2;
         if (!f2 || f2 === 'bad') { return null; }
         f2.onStep = null;               /* the stops light the lines here, not the 2D kit's own deck hook */
@@ -163,7 +164,7 @@
         var c = want(k, n);
         at = k; total = n;
         var f = fig();
-        if (c >= 0 && f) { if (f.go) { f.go(c); } else { f.goStep(c); } }
+        if (c >= 0 && f) { if (f === host.__n2) { f.go(Math.max(0, c - 1)); } else if (f.go) { f.go(c); } else { f.goStep(c); } }   /* n2d: step k is the k-th step played */
       };
       s.__figSync = function () { if (at >= 0) { run(at, total); } };
       return run;

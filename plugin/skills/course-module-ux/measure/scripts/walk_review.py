@@ -316,7 +316,8 @@ def figure_why(course, module):
     # the reason may live in the figure's own spec (figures/MNN/sNN.kit.json, .kit2d.json, .kit3d.json). 2.137.6 - only the
     # spec the build sheet names: an old sNN.kit.json left beside the sNN.kit2d.json that replaced it gave the reviewer the
     # old drawing's purpose (IT course M04 s08 "entry points"), and a slide whose drawing was taken off still "declared" one
-    for spec in sorted(glob.glob(os.path.join(_work(course), "working_claude", "figures", name, "*.kit*.json"))):
+    figs = os.path.join(_work(course), "working_claude", "figures", name)
+    for spec in sorted(glob.glob(os.path.join(figs, "*.kit*.json")) + glob.glob(os.path.join(figs, "s*.n2d.json"))):
         base = os.path.basename(spec)
         sid = base.split(".")[0]
         if sid in named and named[sid] != base:
@@ -324,6 +325,8 @@ def figure_why(course, module):
         s = load_json(spec) or {}
         if sid not in out and isinstance(s, dict) and (s.get("why") or s.get("why_text")):
             out[sid] = (s.get("why", ""), s.get("why_text", ""))
+        elif sid not in out and isinstance(s, dict) and s.get("form") and s.get("say"):    # n2d: its form is its reason
+            out[sid] = (s.get("scene") or s["form"], s["say"])
     return out
 
 
