@@ -76,7 +76,7 @@ approved or its slides move, `python scripts/ilo_map.py refresh <course> [--modu
 `where_taught` / `checked_by` from the `"sub_ilo"` tags (the approved Main ILO and Sub-ILO wording is never touched).
 
 **The module's activity formats come before its words (L68).** A course where every practical is solo or pair project work
-is narrow, so the module varies its formats. Before drafting a module run `python scripts/instructor_led.py plan <course> --module N`: each
+is narrow, so the module varies its formats. The skeleton (§1) already holds them; `python scripts/instructor_led.py plan <course> --module N` says why: each
 Sub-ILO's task type (its verb, or the register's) picks one or two TLAs of the guideline's pool, varied across the module,
 with how each is written (`instructor-led/GUIDE.md` §0). Write the module's active slides and activity screens in those
 formats: a decision as a case dilemma (`"active": "scenario"`), a refutation (`"claim"`), a contrast pair or a worked
@@ -104,6 +104,34 @@ A sub-topic with no passage is a gap, and the gate stops: add sources for it to 
 --why "..." --by "..."`). Never write the script first and look for sources afterwards: the claims then have nothing to stand on.
 
 ## 1 · Write the script
+
+**Start from the skeleton - the structure is made by code, you write the words.**
+
+```
+python scripts/module_skeleton.py make <course> --module 4      writes working_claude/script/M04.json
+```
+
+It holds the module in teaching order, from the ILO map, the programme's hours and the plan (`instructor_led.py plan`):
+blocks of Sub-ILOs, each closed by a self-check; per Sub-ILO its theory slides (minutes, picture slot) and the active slide
+the plan picked (a worked example where a task works something out); the block's activity screens in their planned formats,
+tagged with their Sub-ILOs; the self-check's task slide and its questions in their planned mechanics, Part A then Part B; the
+team task where the module qualifies; the recap and the module check last. The minutes add up to the programme's; a
+Sub-ILO's plain theory stops at a cap and the rest of its time is a second active slide and the activities (20 / 80). Where
+the course's other modules have groups of trainees, every set's last question is written once for each group (one version
+for everyone where the subject does not differ; `--no-groups` for none). Every word
+field is empty, and each screen's `"to_write"` says what its words are and how many - follow it.
+
+- **Write the words in place, and keep the structure:** the screens, their ids, kinds, order, minutes, `sub_ilo` tags,
+  activity formats, question mechanics and picture slots. Another mechanic of the same family is fine where the content
+  asks for it; a slide may be added where the words need one (its minutes taken from a slide of the same Sub-ILO, so the
+  sum holds). Fill `"sources"`. Write `"points"` where the skeleton left the key (the slide before has none) and leave it
+  out elsewhere.
+- **One pass, then check:** write every screen, then `content_script.py check`. While fields are empty it says one must-fix,
+  *words still to write*, with the screens grouped by what they miss, and holds back the checks that read those words
+  (enough theory before a self-check, an answer taught first, a worked example ...) until they are written; a structural
+  problem is said at once. `render` drops each written screen's `"to_write"`.
+- A module already written is not remade: `make` refuses a script that is there (`--force` keeps it in `script/old`).
+  `show` prints the outline and writes nothing.
 
 `<course>/working_claude/script/M01.json` — the whole lesson **in the order it is taught**. It runs on two
 tablets (L35), and the script says which screen is where:
@@ -333,8 +361,9 @@ operates, investigates or builds, a scenario or a prediction, or anything on a 3
 equipment has them too: spot the error in a real document, check a colleague, find the fault, build the plan, fill the
 matrix). A self-check keeps at most two basic questions (the choose and arrange families) - a must-fix; the family rule
 itself is a note, and for two neighbours of one family it names the order that keeps them apart - apply it. **The kinds
-are planned for you:** `instructor_led.py plan` prints under each module a mechanic per
-Sub-ILO for its self-check and another for the module check, and the module check's order - write the questions in
+are planned for you:** the skeleton's questions carry them (`instructor_led.py plan` prints a mechanic per Sub-ILO for its
+self-check and another for the module check, and the module check's order; the skeleton adds a quick Part A question on
+an earlier block and lifts a question to the Sub-ILO's level where the plan's does not reach it) - write the questions in
 them (another mechanic of the same family is fine where the content asks for it). Every module has a hands-on question (locate, read, set,
 operate, scenario), and the mechanic that looks like the job is the one to pick: a valve line-up for a valve question, a
 detector display for a reading, the GA drawing for "where is it".

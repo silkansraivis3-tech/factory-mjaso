@@ -35,7 +35,8 @@ inspection; a team outcome a closed-loop or challenge-and-response drill with an
 debrief. The register gets the task type (`"_task_type_from"` says where it came from) and the TLA names where it has none -
 a draft; the operator confirms the task type (R2).
 
-Then write the module in those formats. An activity screen names its format - `"format": "scenario-run"` (the keys are
+Then write the module in those formats - `module_skeleton.py make` puts them in the module's skeleton (`script/GUIDE.md`
+§1), and writes the same register draft. An activity screen names its format - `"format": "scenario-run"` (the keys are
 `"formats"` `"pool"`) - and may carry the words its practical's cards are drafted from, approved with the script:
 `"objective"`, `"roles"`, `"safety"` (lines; required in the script for a simulator or real equipment - never drafted),
 `"observe"` (2-3 lines), `"events"` (a scenario run's planned events), `"team"`. The script check makes a module a

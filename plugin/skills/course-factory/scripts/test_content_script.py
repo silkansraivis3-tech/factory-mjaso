@@ -319,6 +319,46 @@ def readiness_part():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def skeleton_part():
+    """a skeleton's empty word fields (module_skeleton.py): one must-fix that lists them, the checks that read them wait"""
+    print("\n-- a skeleton's words to write: one must-fix, the checks that read the words wait for them")
+    check("a written script has nothing to write - its empty fields are not a skeleton's (no \"to_write\")",
+          cs.to_write(SCRIPT) == {} and not [x for x in cs.validate(SCRIPT) if x.startswith("words still to write")])
+    sk = copy.deepcopy(SCRIPT)
+    s1 = screen(sk, "s01")
+    s1.update(text="", notes="", to_write="Teach 1.1 ...")
+    sk.update(skeleton={"made": "2026-11-27"}, sources=[])
+    tw = cs.to_write(sk)
+    check("a screen with \"to_write\" lists its empty word fields; a skeleton's empty sources are the script's own",
+          tw.get("s01") == ["text", "notes"] and tw.get("") == ["sources"], tw)
+    probs = cs.validate(sk)
+    check("validate says it once, the screens grouped by what they miss", probs and probs[0].startswith("words still to write")
+          and "s01: text, notes" in probs[0], probs[:2])
+    plain = copy.deepcopy(sk)
+    del screen(plain, "s01")["to_write"]
+    check("the content hash leaves the hint out (render drops it once the screen is written, the approval holds)",
+          cs.content_hash(sk) == cs.content_hash(plain))
+    tmp = tempfile.mkdtemp(prefix="cs_skeleton_")
+    try:
+        sk2 = copy.deepcopy(SCRIPT)
+        sk2["minutes_allocated"] = float(sk2.get("minutes_allocated") or 0) + 7
+        for sid in ("s01", "s02"):
+            screen(sk2, sid)["to_write"] = "Teach ..."
+        screen(sk2, "s02").update(text="", notes="")
+        c = new_course(tmp, "c", sk2)
+        held = [f for f in cs.theory_findings(sk2)[0] if f["rule"] == "t_not_taught"]
+        code, out = cs_run("check", c, "--module", "1")
+        check("check: the words to write and a structural problem (the minutes) are must-fixes; 'not taught before' (the "
+              "empty slide's words) waits for the words", held and code == 1 and "words still to write" in out
+              and "must be equal (L1)" in out and held[0]["detail"] not in out, out[-1500:])
+        cs_run("render", c, "--module", "1")
+        got = cs.load(cs.paths(c, 1)["script"])
+        check("render drops the hint of a written screen and keeps the one still to write",
+              "to_write" not in screen(got, "s01") and "to_write" in screen(got, "s02"), [screen(got, x).get("to_write") for x in ("s01", "s02")])
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def expert_change_part():
     """the expert's change after the ILO review reaches the work: an approved script stops status, render and the build"""
     print("\n-- the expert changed an outcome after the script was approved: status, render and the build stop")
@@ -1665,6 +1705,7 @@ def main():
     theory_before_task_part()
     readiness_part()
     expert_change_part()
+    skeleton_part()
     print("\n" + "=" * 72)
     print("%d passed, %d failed" % (len(PASS), len(FAIL)))
     if FAIL:

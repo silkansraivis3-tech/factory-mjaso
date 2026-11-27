@@ -268,7 +268,9 @@ script's "sources". Every Sub-ILO is taught on a slide and checked by a question
 on both) - script/GUIDE.md "Before writing".
 
 THE WORDS ARE TYPED ONCE (L29). Your module's content script is
-working_claude/script/M${two(m)}.json (course-factory script/GUIDE.md). Write it, make its
+working_claude/script/M${two(m)}.json (course-factory script/GUIDE.md). Start from its skeleton -
+python ${SCRIPTS}/scripts/module_skeleton.py make "${A.course}" --module ${m.id} writes the
+structure with every word field empty (script/GUIDE.md §1). Write the words into it, make its
 review page and Word file, and STOP there - report "awaiting approval". The operator
 approves each script; nothing is built from words nobody approved.
 

@@ -105,6 +105,12 @@ propose --proposed-by and apply --confirmed-by name them; FEEDBACK_LOG.md keeps 
 confirmed by Y]"). A Word or PDF read is "the operator (their Word file)". Left out, a name is "not stated" -
 never assumed to be the operator's. Approval is the operator's own act: see script/GUIDE.md.
 
+A SCRIPT STARTED FROM ITS SKELETON
+module_skeleton.py writes a module's structure with every word field empty and a "to_write" on each screen. While such a
+field is empty, validate says one thing - the words still to write, screens grouped by what they miss - and check holds
+back the findings that read those words (WAIT_FOR_WORDS); a structural finding is said at once. render drops "to_write"
+from a written screen; the content hash leaves it out.
+
 Standard library only - it runs on any colleague's computer. PDF comments need the pypdf package;
 without it, read says so and asks for the comments in Word or in the chat instead.
 """
@@ -250,7 +256,9 @@ def save(p, obj):
 
 
 def content_hash(script):
-    return hashlib.sha256(json.dumps(script.get("screens", []), ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+    """the screens' content - a skeleton's "to_write" hints left out (render drops them once a screen is written)"""
+    screens = [{k: v for k, v in s.items() if k != "to_write"} if isinstance(s, dict) else s for s in script.get("screens", [])]
+    return hashlib.sha256(json.dumps(screens, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 
 
 def T(script, key, **kw):
@@ -757,9 +765,54 @@ def team_line(script, t):
              scope=T(script, "s_scope_" + (t.get("scope") if t.get("scope") in TEAM_SCOPES else "team")))
 
 
+# the words a skeleton leaves to write (module_skeleton.py): a word field there and empty. The checks that read those words
+# wait for them (WAIT_FOR_WORDS) - the structure is checked from the first run
+WORD_FIELDS = ("title", "text", "points", "notes", "visual", "ask", "reveal", "choices", "why", "right", "claim", "asks", "before",
+               "roles", "safety", "observe", "events", "question", "options", "correct", "answer", "values", "feedback", "brief")
+WAIT_FOR_WORDS = ("t_density", "t_before_sc", "t_no_worked_example", "t_not_taught", "t_term_not_shown", "t_room_not_taught",
+                  "t_calc_unit", "t_task_on_slide", "t_thin_notes", "t_merge_neighbours", "i_no_sources", "i_clause_not_checked",
+                  "v_no_what", "p_shows", "r_recap_points")
+
+
+def to_write(script):
+    """{screen id: [its empty word fields]} of a skeleton's screens (those that still carry "to_write") - "" for the script's
+    own (title, sources). Only a field that is there counts: "points" stays optional, and "visual" only where a picture is
+    planned"""
+    out = {}
+    if script.get("skeleton"):
+        for f in ("title", "sources"):
+            if not script.get(f):
+                out.setdefault("", []).append(f)
+    for s in script.get("screens", []):
+        if "to_write" not in s:
+            continue
+        pic = parse_kind(s.get("visual_kind", "")) not in ("", "none") or (s.get("kind") in TASKS and uses(s, "visual"))
+        miss = [f for f in WORD_FIELDS if f in s and f != "points" and (f != "visual" or pic)
+                and (s[f] in ("", None) or s[f] == [])]
+        p = s.get("picture")
+        if isinstance(p, dict) and p.get("kind") not in (None, "", "none") and not str(p.get("shows") or "").strip():
+            miss.append("picture.shows")
+        if miss:
+            out[s.get("id")] = miss
+    return out
+
+
+def to_write_line(tw):
+    """the words still to write, screens grouped by the fields they miss"""
+    by = {}
+    for sid, fs in tw.items():
+        by.setdefault(", ".join(fs), []).append(sid or "the script")
+    n = sum(len(v) for v in tw.values())
+    return ("words still to write - %d field(s) on %d screen(s) (the checks that read them wait for them): %s"
+            % (n, len([k for k in tw if k]), "; ".join("%s: %s" % (", ".join(ids), fs) for fs, ids in by.items())))
+
+
 def validate(script):
     probs, seen = [], set()
     screens = script.get("screens", [])
+    tw = to_write(script)
+    if tw:
+        probs.append(to_write_line(tw))
     for i, s in enumerate(screens):
         sid = s.get("id")
         if not sid or sid in seen:
@@ -774,7 +827,7 @@ def validate(script):
                 k for k in af.ORDER if af.FORMATS[k]["drafts"] == "activity"))))
         if s.get("kind") == "slide" and s.get("visual_kind") and parse_kind(s["visual_kind"]) not in VISUAL_KINDS + ["none"]:
             probs.append("%s: unknown kind of visual %r - use one of: %s" % (sid, s["visual_kind"], ", ".join(VISUAL_KINDS)))
-        if s.get("kind") in TASKS:
+        if s.get("kind") in TASKS and sid not in tw:
             probs += read_answer(s)[0]
             if not s.get("feedback"):
                 probs.append("%s: no feedback for the trainee after answering" % sid)
@@ -3856,6 +3909,10 @@ def render(course, module, quiet=False):
     render_docx(course, script, p["docx"])
     os.makedirs(os.path.dirname(p["notes_md"]), exist_ok=True)
     io.open(p["notes_md"], "w", encoding="utf-8", newline="\n").write(instructor_notes_md(script))
+    tw = to_write(script)
+    for s in script.get("screens", []):          # a written screen keeps no skeleton hint
+        if "to_write" in s and s.get("id") not in tw:
+            del s["to_write"]
     script["docx_hash"] = content_hash(script)
     save(p["script"], script)
     if not quiet:
@@ -3872,9 +3929,11 @@ def print_findings(course, script, probs):
         print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
     th, _ = theory_findings(script)
     must = len(probs)
+    wait = bool(to_write(script))
     for head, found in (("The theory check", th + readiness_findings(course, script)), ("The pictures-and-tasks check", media_findings(script)),
                         ("The text check", text_findings(script)), ("The ILO map and sources check", ilo_findings(course, script)),
                         ("The ship profile check (STANDARDS.md)", ship_findings(course, script))):
+        found = [f for f in found if not (wait and f.get("rule") in WAIT_FOR_WORDS)]
         if found:
             print("\n%s found %d thing(s) - they are at the top of the review page and the Word file:" % (head, len(found)))
             for f in found:

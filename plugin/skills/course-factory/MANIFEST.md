@@ -7,6 +7,36 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.145.0 · The module's skeleton made by code; the writer writes only words (2026-11-27)
+
+`scripts/module_skeleton.py` (new): `make <course> --module N` writes `working_claude/script/MNN.json` before a word is
+written (`show` prints the outline; `--force` keeps a script that is there in `script/old`; `--minutes` where the
+programme has no hours; `--no-groups`). From the ILO map, `programme.json` (theory and practical hours x
+`academic_hour_min`) and `instructor_led.plan` (which it runs, writing the same register draft): blocks of two Sub-ILOs,
+each closed by a self-check; per Sub-ILO plain slides (minutes, words on screen and in the notes from
+`min_words_per_theory_minute`, a photo or figure slot, `"points"` only where the slide before has none - L62) and the
+active slide the plan picked (a worked example where a task works something out - `t_no_worked_example`); past
+`plain_max_per_sub_ilo` a second active slide and the rest to the activities; one activity a block in its planned format,
+tagged with its Sub-ILOs that need one (`i_not_practised`, `a_type_unserved`), split past `activity_max_minutes`, with
+its cycle's timing; the self-check's questions in `task_plan`'s mechanics, a quick Part A on an earlier block from the
+second block, filled to three and to the rich/basic mix (`t_sc_mix`), Part A before Part B; the module check and the
+self-check lifted to each Sub-ILO's level where the plan's mechanic does not reach it (bloom B5, `b_sub_unchecked`,
+`b_sub_unpractised`); the team task after the highest block's self-check where the module qualifies; with groups of
+trainees (another module's script has `"groups"`) every set's last question once per group; the recap; the module
+check last; the minutes equal to the programme's (the practical hours on the activities and active slides).
+Numbers: `theory-rules.json` `skeleton`. Every word field is empty; each screen's `"to_write"` says what and how many.
+`content_script.py`: `to_write(script)` (the empty word fields of screens that carry `"to_write"`, and a skeleton's
+empty `sources`) is one validate line, *words still to write*, screens grouped by what they miss; `print_findings` holds
+back `WAIT_FOR_WORDS` (density, theory before a self-check, taught first, worked example, calculation unit, picture
+`shows` ...) while anything is to write; `render` drops a written screen's hint; `content_hash` leaves hints out. A script
+without hints is unchanged. Docs: `script/GUIDE.md` §1 (start from the skeleton), SKILL.md Stage 3, `instructor-led/GUIDE.md`,
+`build_course.js` (the script writer's prompt). Tests: `test_module_skeleton.py` (new: four task types, IT- and PM-like
+modules, groups, theory only, too few minutes, the command; the bare skeleton's only must-fix is the words; filled to its
+targets no structural finding), `test_content_script.py` (the words to write, held findings, the hint dropped, the hash).
+Trial (Sonnet writers, the 2.144.0 prompt, fresh copies): IT M05 first-check must-fixes 14 -> 5, tool calls 74 -> 35,
+10 -> 5.8 min; PM M01 7 at the first check, 62 tool calls, 8.6 min (47 calls and 7.5 min on 2.144.0, which wrote no team
+task); no first-check must-fix was the skeleton's structure in either.
+
 ## 2.144.0 · The questions planned before the script; a check that writes nothing (2026-11-27)
 
 `scripts/task_plan.py` (new): `plan(rows)` gives each Sub-ILO a self-check mechanic (rich from Apply up) and a

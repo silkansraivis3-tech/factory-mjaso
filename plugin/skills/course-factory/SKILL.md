@@ -241,10 +241,13 @@ instructor tablet** — each slide's exact words, picture slot, minutes, notes, 
 task begins; **part 2, the trainee tablet** — each task, one question a screen, answers, feedback, the trainee's own
 score. Begin from the module's ILO map rows (`ilo_map.py show`), the old course's keep / modernise / add and the
 knowledge base (`kb_tool.py search`). Before scripts are written in parallel, `STANDARDS.md` gets the course's
-`## Ship profile`. Before each module is drafted, `instructor_led.py plan <course> --module N` picks its activity formats
-by each Sub-ILO's task type (L68) - write the activities in them; a module that comes out one direction is a
-must-fix - and each Sub-ILO's question mechanics (self-check, module check) - write the questions in them. Fix rounds
-use `content_script.py check` (nothing written); `render` once, for the operator.
+`## Ship profile`. **Each module starts from its skeleton:** `module_skeleton.py make <course> --module N` writes the
+module's structure by code - blocks, minutes adding up to the programme's, slides with picture slots, the activity
+formats `instructor_led.py plan` picks by each Sub-ILO's task type (L68), the questions in their planned mechanics, the
+team task, the recap, the module check - with every word field empty and a `"to_write"` on each screen. The writer writes
+the words into it and keeps the structure (`script/GUIDE.md` §1). Fix rounds use `content_script.py check` (nothing
+written; empty fields are one must-fix, *words still to write*, and the checks that read them wait); `render` once, for
+the operator.
 
 - **Proved (L4):** one `fact-checker` agent per module; approval is refused while a claim is unjudged or unproved.
 - **Read cold:** one `task-readiness` agent per module (Haiku) answers each question from the slides before it only;

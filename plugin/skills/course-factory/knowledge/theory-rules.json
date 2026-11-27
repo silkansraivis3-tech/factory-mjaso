@@ -65,6 +65,26 @@
     "equipment_mechanics": ["read_instrument", "set_value", "panel_operate", "line_up", "inspect_round", "take_apart", "test_atmosphere", "deck_round", "dress_for_job", "lay_out", "explore"],
     "_what": "task_plan.py, printed by instructor_led.py plan before a module's script is written: per Sub-ILO a self-check kind (rich from challenge_from_level up) and a module-check kind of another family, the families its task type prefers and the ones least used in the module first, one that reaches the Sub-ILO's Bloom level (bloom.json ceiling); one challenge mechanic (media-and-tasks.json part) where a Sub-ILO asks Apply or higher; the module check's slots in an order with no two neighbours of one family. The equipment mechanics only for Sub-ILOs whose task type is done with the hands. The writer fills the slots; another kind of the same family is fine."
   },
+  "skeleton": {
+    "block_size": 2,
+    "block_alone_from_minutes": 60,
+    "plain_max_per_sub_ilo": 12,
+    "active_slide_max_minutes": 8,
+    "figure_kinds": ["schematic", "step_animation", "comparison", "chart"],
+    "plain_slide_max_minutes": 6,
+    "plain_slide_min_minutes": 3,
+    "active_slide_minutes": 4,
+    "activity_max_minutes": 45,
+    "activity_min_minutes": 10,
+    "activity_minutes_from_theory": 12,
+    "recap_minutes": 2,
+    "task_slide_extra_minutes": 1,
+    "team_minutes": 6,
+    "team_questions": 2,
+    "text_words": 40,
+    "active_notes_words": 60,
+    "_what": "module_skeleton.py, before a module's script is written: the blocks in teaching order (block_size Sub-ILOs each, a self-check closing each), the minutes adding up to the programme's (the practical hours to the activity screens, the theory hours to the slides and task slides), each plain slide's words (text_words on screen, the rest of min_words_per_theory_minute x its minutes in the notes), an active slide where the plan picked one or a task works something out, the activity screens in their planned formats, the self-check, team task and module check questions in task_plan.py's mechanics, the recap and the module check last. Its word fields are empty; content_script.py check lists them as words to write."
+  },
   "team_task": {
     "from_module_minutes": 90,
     "roles": ["Leader", "Recorder", "Checker"],
